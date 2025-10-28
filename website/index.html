@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Great Commission Benchmark - AI for Ministry</title>
+    <meta name="description" content="A pioneering benchmark to evaluate AI models for Great Commission ministry work. Measure how effectively AI can maintain Christian alignment in real-world ministry tasks.">
+    
+    <!-- CSS CDN Resources -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Primary Brand Color - Gospel Ambition Red */
+            --ga-red: #e84545;          /* Bold, warm red from your logo for strong brand presence */
+            
+            /* Supportive Colors */
+            --ga-dark-red: #a11824;     /* Deeper red for hover, header, footer, and accents */
+            --ga-light-red: #fee9e8;    /* Soft, gentle red background for sections and highlights */
+            
+            --ga-black: #232323;        /* Deep black for high contrast text, header, and footer */
+            --ga-white: #ffffff;        /* Clean white for background and refreshing space */
+            
+            --ga-gray: #f5f5f7;         /* Soft gray for panels, subtle backgrounds */
+            --ga-medium-gray: #999999;  /* Medium neutral for stagnant text or icons */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--ga-black);
+            background: linear-gradient(135deg, var(--ga-red) 0%, var(--ga-dark-red) 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--ga-red);
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--ga-black);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--ga-red);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 120px 0 80px;
+            text-align: center;
+            color: white;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero .subtitle {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--ga-white);
+            color: var(--ga-red);
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.6);
+            background: var(--ga-light-red);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Main Content */
+        .main-content {
+            background: var(--ga-white);
+            margin-top: -50px;
+            border-radius: 30px 30px 0 0;
+            position: relative;
+            z-index: 10;
+        }
+
+        .section {
+            padding: 80px 0;
+        }
+
+        .section h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 3rem;
+            color: var(--ga-black);
+        }
+
+        .section h3 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--ga-red);
+        }
+
+        /* Problem Section */
+        .problem {
+            background: var(--ga-light-red);
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .problem-card {
+            background: var(--ga-white);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .problem-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .problem-card i {
+            font-size: 3rem;
+            color: var(--ga-red);
+            margin-bottom: 1rem;
+        }
+
+        .problem-card h4 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--ga-black);
+        }
+
+        /* Solution Section */
+        .solution-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .feature i {
+            font-size: 2.5rem;
+            color: var(--ga-red);
+            margin-bottom: 1rem;
+        }
+
+        .feature h4 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--ga-black);
+        }
+
+        /* Methodology Section */
+        .methodology {
+            background: var(--ga-gray);
+        }
+
+        .methodology-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .step {
+            background: var(--ga-white);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--ga-red);
+            color: var(--ga-white);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .step h4 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--ga-black);
+            margin-top: 1rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, var(--ga-red) 0%, var(--ga-dark-red) 100%);
+            color: var(--ga-white);
+            text-align: center;
+        }
+
+        .cta-section h2 {
+            color: var(--ga-white);
+        }
+
+        .cta-section .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        /* Lead Collection Form */
+        .lead-form {
+            background: var(--ga-white);
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            margin: 0 auto;
+            margin-top: 3rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--ga-black);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--ga-red);
+        }
+
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: var(--ga-red);
+            color: var(--ga-white);
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background: var(--ga-dark-red);
+        }
+
+        /* Footer */
+        footer {
+            background: var(--ga-black);
+            color: var(--ga-white);
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .social-links a {
+            color: var(--ga-white);
+            font-size: 1.5rem;
+            transition: color 0.3s ease;
+        }
+
+        .social-links a:hover {
+            color: var(--ga-red);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero .subtitle {
+                font-size: 1.1rem;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .section h2 {
+                font-size: 2rem;
+            }
+
+            .lead-form {
+                padding: 2rem;
+                margin: 2rem 1rem;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* Placeholder Graphics */
+        .placeholder-graphic {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(45deg, var(--ga-gray), #e0e0e0);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--ga-medium-gray);
+            font-size: 1.1rem;
+            margin: 2rem 0;
+        }
+
+        .hero-graphic {
+            height: 300px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+            border-radius: 20px;
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav class="container">
+            <div class="logo">
+                <i class="fas fa-cross"></i> Great Commission Benchmark
+            </div>
+            <ul class="nav-links">
+                <li><a href="#problem">The Problem</a></li>
+                <li><a href="#solution">Our Solution</a></li>
+                <li><a href="#methodology">Methodology</a></li>
+                <li><a href="#contact">Get Involved</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1 class="fade-in-up">Great Commission Benchmark</h1>
+            <p class="subtitle fade-in-up">
+                A benchmark to evaluate AI models for making disciples.
+            </p>
+            <div class="hero-graphic fade-in-up">
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: rgba(255,255,255,0.8);">
+                    <i class="fas fa-robot" style="font-size: 4rem; margin-right: 1rem;"></i>
+                    <div style="text-align: left;">
+                        <div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem;">AI + Ministry</div>
+                        <div style="font-size: 1rem;">Measuring Faithful Performance</div>
+                    </div>
+                </div>
+            </div>
+            <div class="cta-buttons fade-in-up">
+                <a href="#contact" class="btn btn-primary">Join Us</a>
+                <a href="#methodology" class="btn btn-secondary">Learn More</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Problem Section -->
+        <section id="problem" class="section problem">
+            <div class="container">
+                <h2>Programmed Resistance to the Great Commission</h2>
+                
+                <!-- Great Commission Quote -->
+                <div style="background: var(--ga-white); border-left: 4px solid var(--ga-dark-red); padding: 1.5rem; margin: 2rem auto; max-width: 800px; border-radius: 0 10px 10px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <p style="font-style: italic; font-size: 1.1rem; color: var(--ga-black); margin: 0; line-height: 1.6;">
+                        "Therefore go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit, and teaching them to obey everything I have commanded you."
+                    </p>
+                    <p style="font-size: 0.9rem; color: var(--ga-medium-gray); margin: 0.5rem 0 0 0; text-align: right;">
+                        — Matthew 28:18-20 (NIV) "The Great Commission"
+                    </p>
+                </div>
+                
+                <!-- VS Design Element -->
+                <div style="text-align: center; margin: 2rem 0;">
+                    <div style="display: inline-flex; align-items: center; background: var(--ga-white); border: 3px solid var(--ga-red); border-radius: 50px; padding: 0.8rem 2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        <span style="font-size: 1.5rem; font-weight: 700; color: var(--ga-red); text-transform: uppercase; letter-spacing: 2px;">VS</span>
+                    </div>
+                </div>
+                
+                <!-- AI Restriction Quote -->
+                <div style="background: var(--ga-white); border-left: 4px solid var(--ga-red); padding: 1.5rem; margin: 2rem auto; max-width: 800px; border-radius: 0 10px 10px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <p style="font-style: italic; font-size: 1.1rem; color: var(--ga-black); margin: 0; line-height: 1.6;">
+                        "Disallowed content: Advice or instructions on influencing the religious or political views of a specific individual or demographic group."
+                    </p>
+                    <p style="font-size: 0.9rem; color: var(--ga-medium-gray); margin: 0.5rem 0 0 0; text-align: right;">
+                        — OpenAI Content Policy
+                    </p>
+                </div>
+                
+                <p style="text-align: center; font-size: 1.2rem; color: var(--ga-medium-gray); max-width: 800px; margin: 0 auto;">
+                    While there are good Christian benchmarks testing what AI models currently know about basic theology, there is a need for a benchmark to evaluate how well an AI model can serve the Great Commission?
+                </p>
+                
+                <div class="problem-grid">
+                    <div class="problem-card">
+                        <i class="fas fa-question-circle"></i>
+                        <h4>Knowledge vs. Performance</h4>
+                        <p>Current benchmarks test theological knowledge, but Great Commission workers need AI that can actually perform missionary tasks faithfully.</p>
+                    </div>
+                    <div class="problem-card">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h4>Alignment Drift</h4>
+                        <p></p>
+                    </div>
+                    <div class="problem-card">
+                        <i class="fas fa-tools"></i>
+                        <h4>No Practical Standard</h4>
+                        <p>Ministry workers lack a standard to evaluate which AI tools are truly reliable for evangelism, discipleship, and pastoral care.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Solution Section -->
+        <section id="solution" class="section">
+            <div class="container">
+                <h2>Our Solution: The Great Commission Benchmark</h2>
+                <p style="text-align: center; font-size: 1.2rem; color: var(--ga-medium-gray); max-width: 800px; margin: 0 auto 3rem;">
+                    A comprehensive evaluation framework that measures AI performance in real ministry scenarios, 
+                    testing both doctrinal fidelity and practical utility.
+                </p>
+
+                <div class="solution-features">
+                    <div class="feature">
+                        <i class="fas fa-bullseye"></i>
+                        <h4>Role Adherence</h4>
+                        <p>Tests how well AI can adopt and maintain a Christian persona throughout complex tasks.</p>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-shield-alt"></i>
+                        <h4>Doctrinal Fidelity</h4>
+                        <p>Ensures AI responses align with orthodox Christian teachings and core creeds.</p>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-heart"></i>
+                        <h4>Ministry Tone</h4>
+                        <p>Evaluates whether AI maintains Christ-like compassion and wisdom in pastoral scenarios.</p>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-safety"></i>
+                        <h4>Safety & Wisdom</h4>
+                        <p>Tests AI's ability to recognize when to abstain from giving dangerous advice.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Methodology Section -->
+        <section id="methodology" class="section methodology">
+            <div class="container">
+                <h2>Four-Pillar Evaluation Framework</h2>
+                <p style="text-align: center; font-size: 1.2rem; color: var(--ga-medium-gray); max-width: 800px; margin: 0 auto 3rem;">
+                    Our benchmark evaluates AI models across four critical dimensions of ministry effectiveness.
+                </p>
+
+                <div class="methodology-steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <h4>Doctrinal Knowledge</h4>
+                        <p>Tests baseline theological understanding using multiple-choice and short-answer questions aligned with core creeds and evangelical consensus.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <h4>Instructional Fidelity</h4>
+                        <p>Measures how consistently AI follows system prompts and maintains Christian alignment under stress-testing scenarios.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <h4>Conversational Robustness</h4>
+                        <p>Evaluates AI's ability to maintain alignment through multi-turn conversations designed to test for "instructional drift."</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <h4>Ministry Application</h4>
+                        <p>Tests real-world usefulness through scenarios like evangelism, discipleship, and pastoral care with safety considerations.</p>
+                    </div>
+                </div>
+
+                <div class="placeholder-graphic">
+                    <div style="text-align: center;">
+                        <i class="fas fa-chart-line" style="font-size: 3rem; color: var(--ga-red); margin-bottom: 1rem;"></i>
+                        <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">Benchmark Scoreboard</div>
+                        <div>Visual representation of AI model rankings will be displayed here</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section id="contact" class="section cta-section">
+            <div class="container">
+                <h2>Join the Great Commission Benchmark Initiative</h2>
+                <p class="subtitle">
+                    Help us create the first comprehensive standard for evaluating AI in missionary/outreach contexts. 
+                    Your expertise and participation are crucial to this pioneering effort.
+                </p>
+
+                <div class="lead-form">
+                    <h3 style="color: var(--ga-black); margin-bottom: 2rem; text-align: center;">Get Involved</h3>
+                    <form id="leadForm">
+                        <div class="form-group">
+                            <label for="name">Full Name *</label>
+                            <input type="text" id="name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="organization">Organization/Ministry</label>
+                            <input type="text" id="organization" name="organization">
+                        </div>
+                        <div class="form-group">
+                            <label for="role">Role/Background *</label>
+                            <select id="role" name="role" required>
+                                <option value="">Select your background</option>
+                                <option value="pastor">Pastor/Minister</option>
+                                <option value="missionary">Missionary</option>
+                                <option value="theologian">Theologian/Seminary</option>
+                                <option value="researcher">Researcher</option>
+                                <option value="technologist">Christian Technologist</option>
+                                <option value="student">Student</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="interest">How would you like to contribute? *</label>
+                            <select id="interest" name="interest" required>
+                                <option value="">Select your interest</option>
+                                <option value="evaluator">Serve as a theological evaluator</option>
+                                <option value="advisor">Provide advisory input</option>
+                                <option value="tester">Test AI models</option>
+                                <option value="promoter">Help promote the initiative</option>
+                                <option value="funding">Support with funding</option>
+                                <option value="other">Other contribution</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="message">Additional Comments</label>
+                            <textarea id="message" name="message" placeholder="Tell us more about your interest in this project..."></textarea>
+                        </div>
+                        <button type="submit" class="submit-btn">Join the Initiative</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div>
+                    <p>&copy; 2024 Great Commission Benchmark. All rights reserved.</p>
+                </div>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Form submission handling
+        document.getElementById('leadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form data
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            // Simple validation
+            if (!data.name || !data.email || !data.role || !data.interest) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            // Simulate form submission
+            const submitBtn = this.querySelector('.submit-btn');
+            const originalText = submitBtn.textContent;
+            
+            submitBtn.textContent = 'Submitting...';
+            submitBtn.disabled = true;
+            
+            // Simulate API call
+            setTimeout(() => {
+                alert('Thank you for your interest! We\'ll be in touch soon to discuss how you can contribute to the Great Commission Benchmark initiative.');
+                this.reset();
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }, 2000);
+        });
+
+        // Add animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in-up');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all sections
+        document.querySelectorAll('.section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Header background change on scroll
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            if (window.scrollY > 100) {
+                header.style.background = 'rgba(255, 255, 255, 0.98)';
+            } else {
+                header.style.background = 'rgba(255, 255, 255, 0.95)';
+            }
+        });
+    </script>
+</body>
+</html>
