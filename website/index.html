@@ -6,6 +6,59 @@
     <title>Great Commission Benchmark</title>
     <meta name="description" content="A pioneering benchmark to evaluate AI models for Great Commission work. Measure how effectively an AI model can maintain Christian alignment in real-world Great Commission tasks.">
     
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="gcb-logo.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="gcb-logo.png">
+    <link rel="apple-touch-icon" href="gcb-logo.png">
+    <link rel="shortcut icon" href="gcb-logo.png">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Great Commission Benchmark">
+    <meta property="og:description" content="A pioneering benchmark to evaluate AI models for Great Commission work. Measure how effectively an AI model can maintain Christian alignment in real-world Great Commission tasks.">
+    <meta property="og:image" content="gcb-logo.png">
+    <meta property="og:url" content="https://greatcommissionbenchmark.com">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Great Commission Benchmark">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Great Commission Benchmark">
+    <meta name="twitter:description" content="A pioneering benchmark to evaluate AI models for Great Commission work. Measure how effectively an AI model can maintain Christian alignment in real-world Great Commission tasks.">
+    <meta name="twitter:image" content="gcb-logo.png">
+    
+    <!-- Additional SEO Meta Tags -->
+    <meta name="keywords" content="AI benchmark, Great Commission, Christian AI, evangelism, discipleship, AI evaluation, missionary work, AI alignment">
+    <meta name="author" content="Great Commission Benchmark">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://greatcommissionbenchmark.com">
+    
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Great Commission Benchmark",
+        "description": "A pioneering benchmark to evaluate AI models for Great Commission work. Measure how effectively an AI model can maintain Christian alignment in real-world Great Commission tasks.",
+        "url": "https://greatcommissionbenchmark.com",
+        "logo": "https://greatcommissionbenchmark.com/gcb-logo.png",
+        "image": "https://greatcommissionbenchmark.com/gcb-logo.png",
+        "sameAs": [
+            "https://github.com/GospelAmbition/great-commission-benchmark"
+        ],
+        "foundingDate": "2024",
+        "areaServed": "Global",
+        "knowsAbout": [
+            "AI Benchmarking",
+            "Great Commission",
+            "Christian AI",
+            "Evangelism",
+            "Discipleship",
+            "AI Evaluation",
+            "Missionary Work"
+        ]
+    }
+    </script>
+    
     <!-- CSS CDN Resources -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -66,9 +119,43 @@
         }
 
         .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--ga-red);
+            text-decoration: none;
+        }
+
+        .logo img {
+            height: 40px;
+            width: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover img {
+            transform: scale(1.05);
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .logo-text .main {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--ga-red);
+        }
+
+        .logo-text .sub {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--ga-medium-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .nav-links {
@@ -432,6 +519,33 @@
                 flex-direction: column;
                 text-align: center;
             }
+
+            /* Logo responsive adjustments */
+            .logo {
+                gap: 0.5rem;
+            }
+
+            .logo img {
+                height: 32px;
+            }
+
+            .logo-text .main {
+                font-size: 1.1rem;
+            }
+
+            .logo-text .sub {
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo-text .sub {
+                display: none;
+            }
+
+            .logo img {
+                height: 28px;
+            }
         }
 
         /* Animation */
@@ -476,9 +590,13 @@
     <!-- Header -->
     <header>
         <nav class="container">
-            <div class="logo">
-                <i class="fas fa-cross"></i> Great Commission Benchmark
-            </div>
+            <a href="#" class="logo">
+                <img src="gcb-logo.png" alt="Great Commission Benchmark Logo" />
+                <div class="logo-text">
+                    <div class="main">Great Commission Benchmark</div>
+                    <div class="sub">AI Evaluation Standard</div>
+                </div>
+            </a>
             <ul class="nav-links">
                 <li><a href="#problem">The Problem</a></li>
                 <li><a href="#solution">Our Solution</a></li>
