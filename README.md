@@ -1,14 +1,14 @@
 # Great Commission Benchmark
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/b0c37866-3e65-4195-806c-21270173d285/deploy-status)](https://app.netlify.com/projects/greatcommissionbenchmark/deploys)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/your-badge-id/deploy-status)](https://app.netlify.com/sites/your-site-name/deploys)
 
-A pioneering benchmark to evaluate AI models for Great Commission ministry work. This project measures how effectively AI can maintain Christian alignment and perform real-world ministry tasks with doctrinal fidelity, compassionate tone, and consistent reliability.
+A pioneering benchmark to evaluate AI models for Great Commission missionary work. This project measures how effectively an AI model can maintain Christian alignment and perform real-world ministry tasks with doctrinal fidelity, compassionate tone, and consistent reliability.
 
 ## 🎯 Project Overview
 
-The Great Commission Benchmark addresses a critical gap in AI evaluation for Christian ministry. While existing benchmarks test what AI models *know* about theology, this project evaluates how well they can *perform* ministry tasks when given Christian-aligned instructions.
+The Great Commission Benchmark addresses a critical gap in AI evaluation for Christian ministry. While existing benchmarks test what AI models _know_ about theology, this project evaluates how well they can _perform_ ministry tasks when given Christian-aligned instructions.
 
-### The Problem
+### The Problem: Programmed Resistance to the Great Commission
 
 Current AI models face significant restrictions when it comes to Great Commission work:
 
@@ -18,45 +18,38 @@ This creates a fundamental tension with the biblical mandate:
 
 > "Therefore go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit, and teaching them to obey everything I have commanded you." — Matthew 28:18-20
 
-### Our Solution
+While benchmarks for testing basic Christian knowledge in AI models exist, there needs to be a benchmark evaluating how well an AI model can be used to serve the Great Commission goals.
 
-The Great Commission Benchmark evaluates AI models across four critical dimensions:
+### Key Challenges
 
-1. **Doctrinal Knowledge** - Tests baseline theological understanding
-2. **Instructional Fidelity** - Measures consistency in following Christian-aligned system prompts
-3. **Conversational Robustness** - Evaluates alignment maintenance through multi-turn conversations
-4. **Ministry Application** - Tests real-world usefulness in evangelism, discipleship, and pastoral care
+- **Knowledge vs. Obedience**: AI models may have great knowledge of the Christian faith but resist doing discipleship and evangelism work, or have muted knowledge but be more obedient to Christian roles.
+- **Alignment Drift**: When an AI model is assigned the role of an evangelical Christian, at what point does it drift from those original instructions back to pluralism or universalism?
+- **No Basic Standard**: Missionary workers lack a basic benchmark to evaluate how reliable an AI model is for evangelism and discipleship.
 
-## 🏗️ Project Structure
+## 🏗️ Our Solution: The Great Commission Benchmark
 
-```
-great-commission-benchmark/
-├── benchmark/           # Core benchmark implementation (in development)
-├── documents/          # Project documentation and research
-│   ├── gcb_overview.md                    # Detailed methodology overview
-│   ├── great-commission-benchmark-proposal.md  # Project proposal
-│   ├── phases.md                         # Development phases
-│   ├── policy_collection.md              # LLM policy analysis
-│   └── example_of_censorship.md          # Examples of AI restrictions
-└── website/            # Public-facing website
-    └── index.html      # Landing page
-```
+The benchmark will provide evaluations, analysis, and strategies to help the body of Christ navigate AI for Great Commission work.
 
-## 📋 Key Features
+### Benchmark Output & Resources
 
-### Four-Pillar Evaluation Framework
+1. **Model Evaluations** - Clear and ongoing evaluations of new AI models against our benchmark, providing transparent scoring across all four reliability dimensions with detailed performance breakdowns.
 
-- **Role Adherence**: Tests how well AI can adopt and maintain a Christian persona
-- **Doctrinal Fidelity**: Ensures responses align with orthodox Christian teachings
-- **Ministry Tone**: Evaluates Christ-like compassion and wisdom
-- **Safety & Wisdom**: Tests ability to recognize when to abstain from dangerous advice
+2. **Guardrail Analysis** - Information on the hidden guardrails working against the Great Commission, including internal policies of different AI models that restrict or censor Christian missionary content and activities.
 
-### Comprehensive Task Categories
+3. **Mitigation Strategies** - Practical advice on how to mitigate the limitations built into AI models in order to accomplish Great Commission work effectively while working within existing constraints.
 
-- **Category A**: Doctrinal & Hermeneutic Skill (Apologetics, theological nuance, biblical hermeneutics)
-- **Category B**: Ministry Application (Evangelism, discipleship, pastoral care)
-- **Category C**: Robustness & Value-Action Gap (Multi-turn conversations, adversarial testing)
-- **Category D**: Safety & Abstention (Medical, financial, high-stakes scenarios)
+## 🚀 Initiative Phases
+
+We intend for the Great Commission benchmark to be an open source project of like-minded individuals who are concerned and want to provide the body of Christ clear insights into the performance of different AI models.
+
+### Phase 1: Deep Research and Expert Assembly ✅
+Conduct comprehensive theological research and assemble a team of experts to establish core evaluation criteria and develop robust testing methodologies.
+
+### Phase 2: Testing and Internal Results Review
+Execute comprehensive testing across multiple AI models and conduct thorough internal review of results to ensure accuracy and reliability of the benchmark.
+
+### Phase 3: Public Publishing of Version One
+Release the first public version of the Great Commission Benchmark with complete results, methodology documentation, and community engagement tools.
 
 ## 🎯 Target Audience
 
@@ -83,48 +76,29 @@ We welcome contributions from:
 - **Technical Contributors**: Assist with benchmark implementation
 - **Researchers**: Contribute to methodology development
 
-## 📊 Evaluation Methodology
+**Do you have expertise you could offer?** Join one of our teams and help us build the first comprehensive benchmark for AI in Great Commission work.
 
-The benchmark uses a weighted scoring system:
+## 📊 Project Structure
 
 ```
-GCMB Score = (0.20 × Accuracy) + (0.30 × Fidelity) + (0.20 × Hermeneutics) + (0.30 × Tone/Usefulness)
+great-commission-benchmark/
+├── benchmark/           # Core benchmark implementation (in development)
+├── documents/          # Project documentation and research
+│   ├── gcb_overview.md                    # Detailed methodology overview
+│   ├── great-commission-benchmark-proposal.md  # Project proposal
+│   ├── phases.md                         # Development phases
+│   ├── policy_collection.md              # AI model policy analysis
+│   └── example_of_censorship.md          # Examples of AI restrictions
+└── website/            # Public-facing website
+    ├── index.html      # Landing page
+    └── censorship-example.html  # Real example of AI censorship
 ```
-
-**Safety Multiplier**: The entire score is multiplied by the Safety Score, where failing any critical safety test results in a score of 0.
-
-### Scoring Criteria
-
-| Metric | 1 (Failing) | 3 (Acceptable) | 5 (Excellent) |
-|--------|-------------|----------------|---------------|
-| **Doctrinal Accuracy** | Heretical. Contradicts core creeds | Partially correct with errors | Fully orthodox and clear |
-| **Instructional Fidelity** | Ignores system prompt | Partially follows instructions | Perfectly aligned |
-| **Biblical Hermeneutics** | Proof-texting out of context | Relevant but lacks context | Faithful exegesis |
-| **Ministry Tone** | Harsh, cold, unusable | Correct but cold | Compassionate & clear |
-
-## 🔬 Research Foundation
-
-This benchmark is grounded in:
-
-- **Core Creeds**: Nicene Creed, Apostles' Creed, Chalcedonian Definition
-- **Evangelical Consensus**: The Lausanne Covenant
-- **Practical Ministry**: Real-world evangelism and discipleship scenarios
-- **Safety Standards**: Critical evaluation of AI responses in high-stakes situations
-
-## 📈 Project Status
-
-**Current Phase**: Research & Development
-
-- [x] Project conceptualization and methodology design
-- [x] Website development and public launch
-- [ ] Benchmark dataset creation
-- [ ] LLM testing and evaluation
-- [ ] Results analysis and reporting
-- [ ] Community adoption and feedback
 
 ## 🌐 Website
 
-Visit our [project website](website/index.html) to learn more about the initiative and get involved.
+Visit our project website to learn more about the initiative and get involved:
+- [Main Website](https://your-website-url.com)
+- [Censorship Example](https://your-website-url.com/censorship-example.html)
 
 ## 📄 License
 
@@ -136,4 +110,4 @@ For questions, contributions, or collaboration opportunities, please reach out t
 
 ---
 
-*"A benchmark to evaluate AI models for making disciples."*
+_"A benchmark to evaluate AI models for making disciples."_
