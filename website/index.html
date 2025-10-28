@@ -65,12 +65,13 @@
     
     <style>
         :root {
-            /* Primary Brand Color - Gospel Ambition Red */
-            --ga-red: #e84545;          /* Bold, warm red from your logo for strong brand presence */
+            /* Primary Brand Color - Dark Red from Logo */
+            --ga-red: #a11824;          /* Primary dark red from logo for strong brand presence */
             
             /* Supportive Colors */
-            --ga-dark-red: #a11824;     /* Deeper red for hover, header, footer, and accents */
-            --ga-light-red: #fee9e8;    /* Soft, gentle red background for sections and highlights */
+            --ga-dark-red: #7a1219;     /* Even darker red for hover states and deep accents */
+            --ga-light-red: #e84545;    /* Lighter red for hyperlinks, buttons, and secondary elements */
+            --ga-accent-red: #fee9e8;   /* Very light red for backgrounds and subtle highlights */
             
             --ga-black: #232323;        /* Deep black for high contrast text, header, and footer */
             --ga-white: #ffffff;        /* Clean white for background and refreshing space */
@@ -172,7 +173,7 @@
         }
 
         .nav-links a:hover {
-            color: var(--ga-red);
+            color: var(--ga-light-red);
         }
 
         /* Hero Section */
@@ -227,7 +228,8 @@
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(255, 255, 255, 0.6);
-            background: var(--ga-light-red);
+            background: var(--ga-accent-red);
+            color: var(--ga-red);
         }
 
         .btn-secondary {
@@ -271,7 +273,7 @@
 
         /* Problem Section */
         .problem {
-            background: var(--ga-light-red);
+            background: var(--ga-accent-red);
         }
 
         .problem-grid {
@@ -431,7 +433,7 @@
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: var(--ga-red);
+            border-color: var(--ga-light-red);
         }
 
         .form-group textarea {
@@ -484,7 +486,7 @@
         }
 
         .social-links a:hover {
-            color: var(--ga-red);
+            color: var(--ga-light-red);
         }
 
         /* Responsive Design */
@@ -631,7 +633,7 @@
                 <h2>Programmed Resistance to the Great Commission</h2>
                 
                 <!-- Great Commission Quote -->
-                <div style="background: var(--ga-white); border-left: 4px solid var(--ga-dark-red); padding: 1.5rem; margin: 2rem auto; max-width: 800px; border-radius: 0 10px 10px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="background: var(--ga-white); border-left: 4px solid var(--ga-red); padding: 1.5rem; margin: 2rem auto; max-width: 800px; border-radius: 0 10px 10px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                     <p style="font-style: italic; font-size: 1.1rem; color: var(--ga-black); margin: 0; line-height: 1.6;">
                         "Therefore go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit, and teaching them to obey everything I have commanded you."
                     </p>
@@ -648,7 +650,7 @@
                 </div>
                 
                 <!-- AI Restriction Quote -->
-                <div style="background: var(--ga-white); border-left: 4px solid var(--ga-red); padding: 1.5rem; margin: 2rem auto; max-width: 800px; border-radius: 0 10px 10px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="background: var(--ga-white); border-left: 4px solid var(--ga-light-red); padding: 1.5rem; margin: 2rem auto; max-width: 800px; border-radius: 0 10px 10px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                     <p style="font-style: italic; font-size: 1.1rem; color: var(--ga-black); margin: 0; line-height: 1.6;">
                         "Disallowed content: Advice or instructions on influencing the religious or political views of a specific individual or demographic group."
                     </p>
@@ -664,7 +666,7 @@
                     </a>
                 </div>
 
-                <hr style="margin: 2.5rem auto; border: none; border-top: 2px solid var(--ga-red); max-width: 300px;">
+                <hr style="margin: 2.5rem auto; border: none; border-top: 2px solid var(--ga-light-red); max-width: 300px;">
                 
                 <p style="text-align: center; font-size: 1.2rem; max-width: 800px; margin: 0 auto;">
                     While benchmarks for testing basic Christian knowledge in AI models exist, there needs to be a benchmark evaluating how well an AI model can be used to serve the Great Commission goals.
