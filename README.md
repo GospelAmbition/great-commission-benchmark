@@ -1,5 +1,7 @@
 # Great Commission Benchmark
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/b0c37866-3e65-4195-806c-21270173d285/deploy-status)](https://app.netlify.com/projects/greatcommissionbenchmark/deploys)
+
 A pioneering benchmark to evaluate AI models for Great Commission ministry work. This project measures how effectively AI can maintain Christian alignment and perform real-world ministry tasks with doctrinal fidelity, compassionate tone, and consistent reliability.
 
 ## 🎯 Project Overview
