@@ -6,18 +6,69 @@
     <title>Censorship Example - Great Commission Benchmark</title>
     <meta name="description" content="A detailed example of how AI models censor Great Commission work, showing the internal decision-making process that leads to refusal.">
     
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="gcb-logo.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="gcb-logo.png">
+    <link rel="apple-touch-icon" href="gcb-logo.png">
+    <link rel="shortcut icon" href="gcb-logo.png">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Censorship Example - Great Commission Benchmark">
+    <meta property="og:description" content="A detailed example of how AI models censor Great Commission work, showing the internal decision-making process that leads to refusal.">
+    <meta property="og:image" content="gcb-logo.png">
+    <meta property="og:url" content="https://greatcommissionbenchmark.ai/censorship-example.html">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Great Commission Benchmark">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Censorship Example - Great Commission Benchmark">
+    <meta name="twitter:description" content="A detailed example of how AI models censor Great Commission work, showing the internal decision-making process that leads to refusal.">
+    <meta name="twitter:image" content="gcb-logo.png">
+    
+    <!-- Additional SEO Meta Tags -->
+    <meta name="keywords" content="AI censorship, Great Commission, Christian AI, evangelism, discipleship, AI evaluation, missionary work, AI alignment, content policy">
+    <meta name="author" content="Great Commission Benchmark">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://greatcommissionbenchmark.ai/censorship-example.html">
+    
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Censorship Example - Great Commission Benchmark",
+        "description": "A detailed example of how AI models censor Great Commission work, showing the internal decision-making process that leads to refusal.",
+        "url": "https://greatcommissionbenchmark.ai/censorship-example.html",
+        "image": "https://greatcommissionbenchmark.ai/gcb-logo.png",
+        "isPartOf": {
+            "@type": "WebSite",
+            "name": "Great Commission Benchmark",
+            "url": "https://greatcommissionbenchmark.ai"
+        },
+        "about": {
+            "@type": "Organization",
+            "name": "Great Commission Benchmark",
+            "url": "https://greatcommissionbenchmark.ai",
+            "logo": "https://greatcommissionbenchmark.ai/gcb-logo.png"
+        },
+        "keywords": "AI censorship, Great Commission, Christian AI, evangelism, discipleship, AI evaluation, missionary work, AI alignment, content policy"
+    }
+    </script>
+    
     <!-- CSS CDN Resources -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            /* Primary Brand Color - Gospel Ambition Red */
-            --ga-red: #e84545;          /* Bold, warm red from your logo for strong brand presence */
+            /* Primary Brand Color - Dark Red from Logo */
+            --ga-red: #a11824;          /* Primary dark red from logo for strong brand presence */
             
             /* Supportive Colors */
-            --ga-dark-red: #a11824;     /* Deeper red for hover, header, footer, and accents */
-            --ga-light-red: #fee9e8;    /* Soft, gentle red background for sections and highlights */
+            --ga-dark-red: #7a1219;     /* Even darker red for hover states and deep accents */
+            --ga-light-red: #e84545;    /* Lighter red for hyperlinks, buttons, and secondary elements */
+            --ga-accent-red: #fee9e8;   /* Very light red for backgrounds and subtle highlights */
             
             --ga-black: #232323;        /* Deep black for high contrast text, header, and footer */
             --ga-white: #ffffff;        /* Clean white for background and refreshing space */
@@ -65,10 +116,43 @@
         }
 
         .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--ga-red);
             text-decoration: none;
+        }
+
+        .logo img {
+            height: 40px;
+            width: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover img {
+            transform: scale(1.05);
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .logo-text .main {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--ga-red);
+        }
+
+        .logo-text .sub {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--ga-medium-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .nav-links {
@@ -85,7 +169,7 @@
         }
 
         .nav-links a:hover {
-            color: var(--ga-red);
+            color: var(--ga-light-red);
         }
 
         /* Main Content */
@@ -159,7 +243,7 @@
         }
 
         .quote-box {
-            background: var(--ga-light-red);
+            background: var(--ga-accent-red);
             border-left: 4px solid var(--ga-red);
             padding: 2rem;
             margin: 2rem 0;
@@ -257,12 +341,6 @@
             color: var(--ga-black);
         }
 
-        video {
-            max-width: 100%;
-            height: auto;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        }
 
         .back-link {
             display: inline-flex;
@@ -276,7 +354,7 @@
         }
 
         .back-link:hover {
-            color: var(--ga-dark-red);
+            color: var(--ga-light-red);
         }
 
         /* Footer */
@@ -308,7 +386,7 @@
         }
 
         .social-links a:hover {
-            color: var(--ga-red);
+            color: var(--ga-light-red);
         }
 
         /* Responsive Design */
@@ -337,6 +415,33 @@
                 flex-direction: column;
                 text-align: center;
             }
+
+            /* Logo responsive adjustments */
+            .logo {
+                gap: 0.5rem;
+            }
+
+            .logo img {
+                height: 32px;
+            }
+
+            .logo-text .main {
+                font-size: 1.1rem;
+            }
+
+            .logo-text .sub {
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo-text .sub {
+                display: none;
+            }
+
+            .logo img {
+                height: 28px;
+            }
         }
     </style>
 </head>
@@ -345,7 +450,11 @@
     <header>
         <nav class="container">
             <a href="index.html" class="logo">
-                <i class="fas fa-cross"></i> Great Commission Benchmark
+                <img src="gcb-logo.png" alt="Great Commission Benchmark Logo" />
+                <div class="logo-text">
+                    <div class="main">Great Commission Benchmark</div>
+                    <div class="sub">AI Evaluation Standard</div>
+                </div>
             </a>
             <ul class="nav-links">
                 <li><a href="index.html#problem">The Problem</a></li>
@@ -503,10 +612,13 @@
                 <div class="video-container">
                     <h3>Video Walkthrough</h3>
                     <p>Watch the video walkthrough of this censorship example:</p>
-                    <video controls>
-                        <source src="../documents/example_of_censorship.mp4" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
+                    <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; background: #000; border-radius: 10px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);">
+                        <iframe src="https://www.youtube.com/embed/JtKeJGz9WkI" 
+                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" 
+                                allowfullscreen 
+                                title="Great Commission Censorship Example Video Walkthrough">
+                        </iframe>
+                    </div>
                 </div>
 
                 <h2>Analysis</h2>
