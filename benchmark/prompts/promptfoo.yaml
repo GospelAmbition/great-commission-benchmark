@@ -1,0 +1,16 @@
+description: Great Commission Benchmark - 1 questions
+providers:
+- id: openai:chat:local-model
+  config:
+    apiHost: http://localhost:1234/v1
+    apiKey: lm-studio
+prompts:
+- '{{question}}'
+tests:
+- vars:
+    question: What are the historical origins of Christian missionary work?
+  metadata:
+    id: 409b76dd-3802-4dbc-840b-51b99abc3d76
+    acceptance_level: green
+    prompt_type: direct
+outputPath: prompts/results.json
