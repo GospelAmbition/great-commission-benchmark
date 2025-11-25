@@ -143,7 +143,7 @@ def render_sidebar():
     
     page = st.sidebar.radio(
         "Navigation",
-        ["📊 Dashboard", "❓ Questions", "💬 Conversations", "📈 Evaluations", "📤 Export", "⚙️ Settings"],
+        ["📊 Dashboard", "📖 Instructions", "❓ Questions", "💬 Conversations", "📈 Evaluations", "📤 Import/Export", "⚙️ Settings"],
         label_visibility="collapsed",
     )
     
@@ -206,7 +206,7 @@ def render_dashboard():
     
     st.markdown("---")
     
-    # Charts row
+    # Charts row - two columns
     col1, col2 = st.columns(2)
     
     with col1:
@@ -252,97 +252,106 @@ def render_dashboard():
     
     st.markdown("---")
     
-    # Evaluation summary if available
-    if stats["evaluations"] > 0:
-        st.subheader("📈 Evaluation Summary")
+    # Test Runs and Evaluations Dashboard
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📋 Recent Test Runs")
         
-        # Query verdict counts directly
         with db.get_session() as session:
-            verdict_counts = {}
-            for verdict in Verdict:
-                count = session.query(Evaluation).filter(
-                    Evaluation.verdict == verdict
-                ).count()
-                verdict_counts[verdict.value] = count
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**Verdict Distribution**")
-            if verdict_counts and sum(verdict_counts.values()) > 0:
-                # Map verdicts to colors in the correct order
-                color_map = {"approved": "#28a745", "refused": "#dc3545", "ambiguous": "#ffc107"}
-                labels = list(verdict_counts.keys())
-                values = list(verdict_counts.values())
-                colors = [color_map.get(label, "#999999") for label in labels]
-                
-                fig = go.Figure(data=[go.Pie(
-                    labels=labels,
-                    values=values,
-                    marker_colors=colors,
-                    hole=0.4,
-                )])
-                fig.update_layout(
-                    showlegend=True,
-                    height=250,
-                    margin=dict(t=0, b=0, l=0, r=0),
-                )
-                st.plotly_chart(fig, width='stretch')
-            else:
-                st.info("No verdict data available")
-        
-        with col2:
-            st.markdown("**Quick Stats**")
-            approved = verdict_counts.get("approved", 0)
-            refused = verdict_counts.get("refused", 0)
-            ambiguous = verdict_counts.get("ambiguous", 0)
-            total = approved + refused + ambiguous
+            test_runs = session.query(TestRun).order_by(TestRun.started_at.desc()).limit(5).all()
             
-            if total > 0:
-                st.metric("Approval Rate", f"{(approved/total*100):.1f}%")
-                st.metric("Refusal Rate", f"{(refused/total*100):.1f}%")
-                st.metric("Ambiguous Rate", f"{(ambiguous/total*100):.1f}%")
+            if test_runs:
+                for test_run in test_runs:
+                    # Get response count for this test run
+                    response_count = session.query(Response).filter(Response.test_run_id == test_run.id).count()
+                    
+                    # Status badge
+                    status_colors = {
+                        "pending": "⚪",
+                        "running": "🟡",
+                        "completed": "🟢",
+                        "failed": "🔴"
+                    }
+                    status_icon = status_colors.get(test_run.status.value, "⚪")
+                    
+                    # Format dates
+                    started = test_run.started_at.strftime('%Y-%m-%d %H:%M') if test_run.started_at else "N/A"
+                    completed = test_run.completed_at.strftime('%Y-%m-%d %H:%M') if test_run.completed_at else "In progress"
+                    
+                    with st.expander(
+                        f"{status_icon} {test_run.name or test_run.id[:8]} | {test_run.status.value.upper()} | {response_count} responses",
+                        expanded=False
+                    ):
+                        st.markdown(f"**Test Run ID:** `{test_run.id}`")
+                        st.markdown(f"**Status:** {status_icon} {test_run.status.value.upper()}")
+                        st.markdown(f"**Started:** {started}")
+                        st.markdown(f"**Completed:** {completed}")
+                        st.markdown(f"**Total Responses:** {response_count}")
+                        
+                        # Get model info if available
+                        if response_count > 0:
+                            first_response = session.query(Response).filter(Response.test_run_id == test_run.id).first()
+                            if first_response and first_response.model:
+                                model = first_response.model
+                                model_display = model.name
+                                if model.api_identifier and model.api_identifier != model.name:
+                                    model_display = f"{model.name} ({model.provider}/{model.api_identifier})"
+                                else:
+                                    model_display = f"{model.name} ({model.provider})"
+                                st.markdown(f"**Model:** {model_display}")
             else:
-                st.info("No evaluation data")
+                st.info("No test runs yet. Run tests to see results here.")
+    
+    with col2:
+        st.subheader("📈 Evaluations Summary")
         
-        st.info("💡 Go to '📈 Evaluations' for detailed analysis and insights!")
-    
-    st.markdown("---")
-    
-    # Recent questions
-    st.subheader("Recent Questions")
-    
-    with db.get_questions_session() as session:
-        recent = session.query(Question).order_by(Question.created_at.desc()).limit(5).all()
-        
-        if recent:
-            for q in recent:
-                level_color = {"green": "🟢", "orange": "🟠", "red": "🔴"}[q.acceptance_level.value]
+        with db.get_session() as session:
+            total_evaluations = session.query(Evaluation).count()
+            
+            if total_evaluations > 0:
+                # Get verdict counts
+                verdict_counts = {}
+                for verdict in Verdict:
+                    count = session.query(Evaluation).filter(Evaluation.verdict == verdict).count()
+                    verdict_counts[verdict.value] = count
                 
-                # Show preview with expandable full text
-                preview_text = q.text[:150] + "..." if len(q.text) > 150 else q.text
+                # Display metrics
+                approved = verdict_counts.get("approved", 0)
+                refused = verdict_counts.get("refused", 0)
+                ambiguous = verdict_counts.get("ambiguous", 0)
+                total = approved + refused + ambiguous
                 
-                with st.expander(
-                    f"{level_color} {q.prompt_type.value.upper()} | {q.created_at.strftime('%Y-%m-%d %H:%M')} | {preview_text}",
-                    expanded=False
-                ):
-                    st.markdown(f"**Question ID:** `{q.id}`")
-                    st.markdown(f"**Acceptance Level:** {level_color} {q.acceptance_level.value.upper()}")
-                    st.markdown(f"**Prompt Type:** {q.prompt_type.value}")
-                    st.markdown(f"**Created:** {q.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+                st.metric("Total Evaluations", total_evaluations)
+                
+                if total > 0:
+                    col_a, col_b, col_c = st.columns(3)
+                    with col_a:
+                        st.metric("✅ Approved", approved, f"{(approved/total*100):.1f}%")
+                    with col_b:
+                        st.metric("❌ Refused", refused, f"{(refused/total*100):.1f}%")
+                    with col_c:
+                        st.metric("⚠️ Ambiguous", ambiguous, f"{(ambiguous/total*100):.1f}%")
+                
+                # Recent evaluations
+                st.markdown("**Recent Evaluations:**")
+                recent_evaluations = session.query(Evaluation).order_by(Evaluation.created_at.desc()).limit(5).all()
+                
+                for eval_obj in recent_evaluations:
+                    verdict_emoji = {
+                        "approved": "✅",
+                        "refused": "❌",
+                        "ambiguous": "⚠️"
+                    }.get(eval_obj.verdict.value, "❓")
                     
-                    if q.notes:
-                        st.markdown(f"**Notes:** {q.notes}")
+                    response = eval_obj.response
+                    model_name = response.model.name if response and response.model else "Unknown"
+                    date_str = eval_obj.created_at.strftime('%Y-%m-%d %H:%M') if eval_obj.created_at else "N/A"
                     
-                    tags = q.get_tags()
-                    if tags:
-                        st.markdown(f"**Tags:** {', '.join(tags)}")
-                    
-                    st.markdown("---")
-                    st.markdown("**Full Question Text:**")
-                    st.markdown(f"> {q.text}")
-        else:
-            st.info("No questions yet. Go to 'Add Question' to create your first one!")
+                    st.caption(f"{verdict_emoji} {eval_obj.verdict.value.upper()} | {model_name} | {date_str}")
+            else:
+                st.info("No evaluations yet. Run evaluations to see results here.")
+                st.markdown("💡 Use `python -m gcb evaluate` to evaluate responses.")
 
 
 def render_questions():
@@ -1309,6 +1318,219 @@ def render_export():
             
             with st.expander("Preview"):
                 st.dataframe(df)
+
+
+def render_instructions():
+    """Render the instructions page with command-line guidance."""
+    st.title("📖 Instructions")
+    st.markdown("Command-line instructions for running the Great Commission Benchmark.")
+    
+    # Visual Workflow Section at the top
+    st.header("🧪 Step-by-Step Visual Workflow")
+    st.markdown("Follow this workflow to run the complete benchmark pipeline:")
+    
+    # Create the visual workflow diagram (same as dashboard)
+    workflow_diagram = """
+    digraph workflow {
+        rankdir=TB;
+        node [shape=box, style="rounded,filled", fontname="Arial", fontsize=11];
+        edge [color="#666666", arrowhead=vee, penwidth=2];
+        
+        Questions [label="Questions Database\nquestions.db", fillcolor="#4a90d9", fontcolor="white"];
+        Export [label="Export\npython -m gcb prepare", fillcolor="#9b59b6", fontcolor="white"];
+        PromptFoo [label="PromptFoo Execution\npromptfoo eval -c prompts/promptfoo.yaml", fillcolor="#e67e22", fontcolor="white"];
+        Import [label="Import Results\npython -m gcb import-results", fillcolor="#2ecc71", fontcolor="white"];
+        Evaluation [label="Evaluation\npython -m gcb evaluate", fillcolor="#f39c12", fontcolor="white"];
+        Reporting [label="Reporting\npython -m gcb report", fillcolor="#e74c3c", fontcolor="white"];
+        
+        Questions -> Export;
+        Export -> PromptFoo;
+        PromptFoo -> Import;
+        Import -> Evaluation;
+        Evaluation -> Reporting;
+    }
+    """
+    
+    try:
+        st.graphviz_chart(workflow_diagram)
+    except Exception as e:
+        # Fallback to a clean visual representation
+        workflow_steps = [
+            {"title": "Questions Database", "command": "questions.db", "desc": "Managed via UI or CLI", "color": "#4a90d9"},
+            {"title": "Export", "command": "python -m gcb prepare", "desc": "Generates PromptFoo YAML", "color": "#9b59b6"},
+            {"title": "PromptFoo Execution", "command": "promptfoo eval -c prompts/promptfoo.yaml", "desc": "Runs tests → Generates JSON", "color": "#e67e22"},
+            {"title": "Import Results", "command": "python -m gcb import-results", "desc": "Writes to responses.db", "color": "#2ecc71"},
+            {"title": "Evaluation", "command": "python -m gcb evaluate", "desc": "LLM judge evaluates responses", "color": "#f39c12"},
+            {"title": "Reporting", "command": "python -m gcb report", "desc": "Generates statistics", "color": "#e74c3c"}
+        ]
+        
+        # Create a clean visual flow
+        for i, step in enumerate(workflow_steps):
+            st.markdown(f"""
+            <div style="background-color: {step['color']}15; 
+                        border-left: 4px solid {step['color']}; 
+                        padding: 15px 20px; 
+                        border-radius: 6px; 
+                        margin: 12px 0;">
+                <div style="font-size: 18px; font-weight: 600; color: {step['color']}; margin-bottom: 6px;">{step['title']}</div>
+                <div style="font-family: monospace; font-size: 12px; color: #d0d0d0; background-color: #1e1e1e; padding: 6px 10px; border-radius: 4px; margin: 6px 0; display: inline-block;">{step['command']}</div>
+                <div style="font-size: 12px; color: #aaa; margin-top: 4px;">{step['desc']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Add arrow between steps
+            if i < len(workflow_steps) - 1:
+                st.markdown(f"<div style='text-align: center; font-size: 24px; color: {step['color']}; margin: 8px 0; opacity: 0.7;'>⬇️</div>", unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Pipeline Commands - moved to second position
+    st.header("⚙️ Benchmark Pipeline")
+    st.markdown("Commands for running the complete benchmark workflow.")
+    
+    st.subheader("Interactive Wizard (Recommended)")
+    st.markdown("The easiest way to run the benchmark pipeline:")
+    st.code("python pipeline.py", language="bash")
+    st.markdown("This wizard guides you through each step with helpful prompts and status checks.")
+    
+    st.markdown("---")
+    
+    st.subheader("Manual Pipeline Steps")
+    st.markdown("Run these commands sequentially to execute the full benchmark:")
+    
+    step1, step2, step3, step4, step5 = st.tabs(["Step 1: Prepare", "Step 2: Execute", "Step 3: Import", "Step 4: Evaluate", "Step 5: Report"])
+    
+    with step1:
+        st.markdown("**Export questions to PromptFoo YAML format**")
+        st.code("""# Standard export
+python -m gcb prepare
+
+# Override model on the fly
+python -m gcb prepare --model gpt-4 --provider openrouter""", language="bash")
+    
+    with step2:
+        st.markdown("**Run PromptFoo against your LLM**")
+        st.code("""# Run PromptFoo tests
+promptfoo eval -c prompts/promptfoo.yaml""", language="bash")
+        st.info("💡 Make sure your LLM is running (LM Studio) or API is configured (OpenRouter) before running this step.")
+    
+    with step3:
+        st.markdown("**Import results into database**")
+        st.code("""# Import with default model from config
+python -m gcb import-results
+
+# Specify model explicitly
+python -m gcb import-results --model "My Model Name" """, language="bash")
+    
+    with step4:
+        st.markdown("**Use LLM to judge responses**")
+        st.code("python -m gcb evaluate", language="bash")
+        st.info("💡 This uses the evaluator model from config.yaml to judge each response.")
+    
+    with step5:
+        st.markdown("**Generate benchmark statistics**")
+        st.code("python -m gcb report", language="bash")
+        st.info("💡 Reports are saved to `output/benchmark_report.md`")
+    
+    st.markdown("---")
+    
+    # Setup section
+    st.header("🚀 Quick Start")
+    
+    st.subheader("1. Setup")
+    st.code("""cd benchmark
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\\Scripts\\activate
+pip install -r requirements.txt""", language="bash")
+    
+    st.subheader("2. Initialize Databases")
+    st.markdown("The benchmark uses a dual-database architecture:")
+    st.markdown("- **`questions.db`**: Stores questions and conversations (test prompts)")
+    st.markdown("- **`responses.db`**: Stores models, test runs, responses, and evaluations (test results)")
+    st.code("python -m gcb init", language="bash")
+    
+    st.subheader("3. Start the UI")
+    st.code("streamlit run ui/app.py", language="bash")
+    
+    st.markdown("---")
+    
+    # Utility Commands
+    st.header("🔧 Utility Commands")
+    st.markdown("Commands for managing questions, configuration, and checking status.")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Database & Status")
+        st.code("""# Initialize databases
+python -m gcb init
+
+# Show statistics
+python -m gcb stats
+
+# Run verification
+python -m gcb verify""", language="bash")
+        
+        st.subheader("Question Management")
+        st.code("""# Add a question
+python -m gcb add-question "Question text" --level green --type direct
+
+# List questions
+python -m gcb list-questions --level green""", language="bash")
+    
+    with col2:
+        st.subheader("Configuration")
+        st.code("""# Set model configuration
+python -m gcb set-config --model gpt-4 --provider openrouter
+
+# Set base URL and API key
+python -m gcb set-config --base-url https://openrouter.ai/api/v1 --api-key $OPENROUTER_API_KEY
+
+# Set evaluator model
+python -m gcb set-config --evaluator-model gpt-4o-mini""", language="bash")
+        
+        st.subheader("Connection Testing")
+        st.code("""# Test LLM connection
+python -m gcb test-connection""", language="bash")
+    
+    st.markdown("---")
+    
+    # Quick Setup Examples
+    st.header("⚡ Quick Setup Examples")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("LM Studio (Local)")
+        st.code("""python -m gcb set-config \\
+  --provider lmstudio \\
+  --base-url http://localhost:1234/v1 \\
+  --model qwen/qwen3-4b""", language="bash")
+    
+    with col2:
+        st.subheader("OpenRouter")
+        st.code("""python -m gcb set-config \\
+  --provider openrouter \\
+  --base-url https://openrouter.ai/api/v1 \\
+  --model openai/gpt-4o-mini \\
+  --api-key $OPENROUTER_API_KEY""", language="bash")
+    
+    st.markdown("---")
+    
+    # Architecture Overview
+    st.header("📐 Architecture Overview")
+    st.markdown("""
+    The benchmark uses a **dual-database architecture** that separates test questions from test results:
+    
+    1. **Questions** are stored in `questions.db` (managed via UI or CLI)
+    2. **Export** reads from `questions.db` and generates PromptFoo YAML
+    3. **PromptFoo** runs tests and generates results JSON
+    4. **Import** reads results and writes to `responses.db` (with denormalized question data)
+    5. **Evaluation** reads from `responses.db` and writes evaluations back
+    6. **Reporting** reads from both databases to generate statistics
+    """)
+    
+    st.info("💡 **Why Dual Databases?** Questions (test cases) are separate from responses (test results), allowing questions to be updated without affecting historical test results.")
 
 
 def render_conversations():
@@ -2296,11 +2518,13 @@ def main():
         render_dashboard()
     elif page == "📈 Evaluations":
         render_evaluations()
+    elif page == "📖 Instructions":
+        render_instructions()
     elif page == "❓ Questions":
         render_questions()
     elif page == "💬 Conversations":
         render_conversations()
-    elif page == "📤 Export":
+    elif page == "📤 Import/Export":
         render_export()
     elif page == "⚙️ Settings":
         render_settings()
