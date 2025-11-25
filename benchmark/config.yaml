@@ -1,29 +1,20 @@
-# Great Commission Benchmark Configuration
-
-# LLM Provider Settings
 llm:
   provider: lmstudio
   base_url: http://localhost:1234/v1
-  api_key: lm-studio  # LM Studio accepts any string
-  
-  # Model for testing (whatever is loaded in LM Studio)
-  test_model: local-model
-  
-  # Model for evaluating responses (can be same or different)
-  evaluator_model: local-model
-
-# Database Settings
+  api_key: lm-studio
+  test_model: google/gemma-3-1b
+  evaluator_model: google/gemma-3-1b
 database:
-  path: gcb.db
-
-# PromptFoo Settings
+  # Dual database mode - questions and responses stored separately
+  questions_db: questions.db  # Database for Question and Conversation tables
+  responses_db: responses.db  # Database for Model, TestRun, Response, and Evaluation tables
 promptfoo:
   output_dir: prompts
   results_dir: output
-
-# Evaluation Settings
+  max_concurrency: 3
+  timeout_ms: 60000
+  retry_attempts: 3
+  retry_delay_ms: 1000
 evaluation:
-  # Temperature for evaluation LLM (low for consistency)
   temperature: 0.1
-  max_tokens: 500
-
+  max_tokens: 30000

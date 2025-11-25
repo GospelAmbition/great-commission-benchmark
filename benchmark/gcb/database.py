@@ -29,6 +29,7 @@ from sqlalchemy.orm import (
     relationship,
     sessionmaker,
     Session,
+    foreign,
 )
 
 
@@ -101,7 +102,7 @@ class Question(Base):
 
     # Relationships
     parent = relationship("Question", remote_side=[id], backref="children")
-    responses = relationship("Response", back_populates="question")
+    # responses relationship configured after Response class is defined
 
     def get_tags(self) -> List[str]:
         """Get tags as a Python list."""
@@ -128,7 +129,7 @@ class Conversation(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    responses = relationship("Response", back_populates="conversation")
+    # responses relationship configured after Response class is defined
 
     def get_turns(self) -> List[dict]:
         """Get turns as a Python list."""
@@ -193,20 +194,47 @@ class Response(Base):
     id = Column(String(36), primary_key=True, default=generate_uuid)
     test_run_id = Column(String(36), ForeignKey("test_runs.id"), nullable=False)
     model_id = Column(String(36), ForeignKey("models.id"), nullable=False)
-    question_id = Column(String(36), ForeignKey("questions.id"), nullable=True)
-    conversation_id = Column(String(36), ForeignKey("conversations.id"), nullable=True)
+    question_id = Column(String(36), nullable=True)  # Removed FK constraint for dual-DB support
+    conversation_id = Column(String(36), nullable=True)
+    # Denormalized question data for permanent record
+    question_text = Column(Text, nullable=True)  # Snapshot of question text at time of response
+    acceptance_level = Column(SQLEnum(AcceptanceLevel), nullable=True)  # Snapshot of acceptance level
+    prompt_type = Column(SQLEnum(PromptType), nullable=True)  # Snapshot of prompt type
     response_text = Column(Text, nullable=True)
     latency_ms = Column(Integer, nullable=True)
     token_count = Column(Integer, nullable=True)
     error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Relationships
+    # Relationships (only work when using single database)
     test_run = relationship("TestRun", back_populates="responses")
     model = relationship("Model", back_populates="responses")
-    question = relationship("Question", back_populates="responses")
-    conversation = relationship("Conversation", back_populates="responses")
+    # question and conversation relationships configured after all classes are defined
     evaluation = relationship("Evaluation", back_populates="response", uselist=False)
+    
+    def get_question_text(self) -> str:
+        """Get question text from denormalized field or relationship."""
+        if self.question_text:
+            return self.question_text
+        if self.question:
+            return self.question.text
+        return ""
+    
+    def get_acceptance_level(self) -> Optional[AcceptanceLevel]:
+        """Get acceptance level from denormalized field or relationship."""
+        if self.acceptance_level:
+            return self.acceptance_level
+        if self.question:
+            return self.question.acceptance_level
+        return None
+    
+    def get_prompt_type(self) -> Optional[PromptType]:
+        """Get prompt type from denormalized field or relationship."""
+        if self.prompt_type:
+            return self.prompt_type
+        if self.question:
+            return self.question.prompt_type
+        return None
 
     def __repr__(self) -> str:
         return f"<Response {self.id[:8]}... for {self.model_id[:8]}...>"
@@ -241,33 +269,95 @@ class Evaluation(Base):
 
 
 # ============================================================================
+# Configure relationships after all classes are defined
+# ============================================================================
+
+# Reconfigure relationships that don't have ForeignKey constraints
+# This ensures SQLAlchemy can properly resolve the join conditions
+Question.responses = relationship(
+    "Response",
+    back_populates="question",
+    primaryjoin=Question.id == foreign(Response.question_id)
+)
+Response.question = relationship(
+    "Question",
+    back_populates="responses",
+    primaryjoin=foreign(Response.question_id) == Question.id
+)
+Conversation.responses = relationship(
+    "Response",
+    back_populates="conversation",
+    primaryjoin=Conversation.id == foreign(Response.conversation_id)
+)
+Response.conversation = relationship(
+    "Conversation",
+    back_populates="responses",
+    primaryjoin=foreign(Response.conversation_id) == Conversation.id
+)
+
+
+# ============================================================================
 # Database Manager
 # ============================================================================
 
 class DatabaseManager:
-    """Manages database connections and operations."""
+    """Manages database connections and operations.
+    
+    Uses dual-database mode:
+    - Questions DB: Question and Conversation tables
+    - Responses DB: Model, TestRun, Response, and Evaluation tables
+    """
 
-    def __init__(self, db_path: str = "gcb.db"):
+    def __init__(
+        self,
+        questions_db_path: str = "questions.db",
+        responses_db_path: str = "responses.db",
+    ):
         """Initialize the database manager.
         
         Args:
-            db_path: Path to the SQLite database file.
+            questions_db_path: Path to questions database
+            responses_db_path: Path to responses database
         """
-        self.db_path = Path(db_path)
-        self.engine = create_engine(f"sqlite:///{self.db_path}", echo=False)
-        self.SessionLocal = sessionmaker(bind=self.engine)
+        self.questions_db_path = Path(questions_db_path)
+        self.responses_db_path = Path(responses_db_path)
+        
+        # Questions database: Question, Conversation
+        self.questions_engine = create_engine(f"sqlite:///{self.questions_db_path}", echo=False)
+        self.QuestionsSessionLocal = sessionmaker(bind=self.questions_engine)
+        
+        # Responses database: Model, TestRun, Response, Evaluation
+        self.responses_engine = create_engine(f"sqlite:///{self.responses_db_path}", echo=False)
+        self.ResponsesSessionLocal = sessionmaker(bind=self.responses_engine)
 
     def create_tables(self) -> None:
-        """Create all tables in the database."""
-        Base.metadata.create_all(self.engine)
+        """Create all tables in both databases."""
+        # Create question tables in questions DB
+        Question.metadata.create_all(self.questions_engine)
+        Conversation.metadata.create_all(self.questions_engine)
+        
+        # Create response tables in responses DB
+        Model.metadata.create_all(self.responses_engine)
+        TestRun.metadata.create_all(self.responses_engine)
+        Response.metadata.create_all(self.responses_engine)
+        Evaluation.metadata.create_all(self.responses_engine)
 
     def drop_tables(self) -> None:
-        """Drop all tables from the database."""
-        Base.metadata.drop_all(self.engine)
+        """Drop all tables from both databases."""
+        Question.metadata.drop_all(self.questions_engine)
+        Conversation.metadata.drop_all(self.questions_engine)
+        Model.metadata.drop_all(self.responses_engine)
+        TestRun.metadata.drop_all(self.responses_engine)
+        Response.metadata.drop_all(self.responses_engine)
+        Evaluation.metadata.drop_all(self.responses_engine)
 
     def get_session(self) -> Session:
-        """Get a new database session."""
-        return self.SessionLocal()
+        """Get a new database session for the responses database."""
+        return self.ResponsesSessionLocal()
+    
+    def get_questions_session(self) -> Session:
+        """Get a new session for the questions database."""
+        return self.QuestionsSessionLocal()
 
     def verify_schema(self) -> tuple[bool, str]:
         """Verify that all expected tables exist.
@@ -292,57 +382,108 @@ class DatabaseManager:
 
     def get_stats(self) -> dict:
         """Get statistics about the database contents."""
-        with self.get_session() as session:
-            return {
-                "questions": session.query(Question).count(),
-                "conversations": session.query(Conversation).count(),
-                "models": session.query(Model).count(),
-                "test_runs": session.query(TestRun).count(),
-                "responses": session.query(Response).count(),
-                "evaluations": session.query(Evaluation).count(),
-                "questions_by_level": {
-                    level.value: session.query(Question).filter(
-                        Question.acceptance_level == level
-                    ).count()
-                    for level in AcceptanceLevel
-                },
-                "questions_by_type": {
-                    ptype.value: session.query(Question).filter(
-                        Question.prompt_type == ptype
-                    ).count()
-                    for ptype in PromptType
-                },
+        with self.get_questions_session() as q_session:
+            questions_count = q_session.query(Question).count()
+            conversations_count = q_session.query(Conversation).count()
+            questions_by_level = {
+                level.value: q_session.query(Question).filter(
+                    Question.acceptance_level == level
+                ).count()
+                for level in AcceptanceLevel
             }
+            questions_by_type = {
+                ptype.value: q_session.query(Question).filter(
+                    Question.prompt_type == ptype
+                ).count()
+                for ptype in PromptType
+            }
+        
+        with self.get_session() as r_session:
+            models_count = r_session.query(Model).count()
+            test_runs_count = r_session.query(TestRun).count()
+            responses_count = r_session.query(Response).count()
+            evaluations_count = r_session.query(Evaluation).count()
+        
+        return {
+            "questions": questions_count,
+            "conversations": conversations_count,
+            "models": models_count,
+            "test_runs": test_runs_count,
+            "responses": responses_count,
+            "evaluations": evaluations_count,
+            "questions_by_level": questions_by_level,
+            "questions_by_type": questions_by_type,
+        }
 
 
 # ============================================================================
 # Convenience Functions
 # ============================================================================
 
-def get_db(db_path: str = "gcb.db") -> DatabaseManager:
+def get_db(
+    questions_db_path: str = "questions.db",
+    responses_db_path: str = "responses.db",
+) -> DatabaseManager:
     """Get a database manager instance.
     
     Args:
-        db_path: Path to the SQLite database file.
+        questions_db_path: Path to questions database
+        responses_db_path: Path to responses database
         
     Returns:
         DatabaseManager instance.
     """
-    return DatabaseManager(db_path)
+    return DatabaseManager(questions_db_path, responses_db_path)
 
 
-def init_db(db_path: str = "gcb.db") -> DatabaseManager:
-    """Initialize the database with all tables.
+def init_db(
+    questions_db_path: str = "questions.db",
+    responses_db_path: str = "responses.db",
+) -> DatabaseManager:
+    """Initialize both databases with all tables.
     
     Args:
-        db_path: Path to the SQLite database file.
+        questions_db_path: Path to questions database
+        responses_db_path: Path to responses database
         
     Returns:
         DatabaseManager instance with tables created.
     """
-    db = DatabaseManager(db_path)
+    db = DatabaseManager(questions_db_path, responses_db_path)
     db.create_tables()
     return db
+
+
+def get_db_from_config(config_path: str = "config.yaml") -> DatabaseManager:
+    """Get database manager from config file.
+    
+    Args:
+        config_path: Path to config YAML file
+        
+    Returns:
+        DatabaseManager instance configured from config file
+    """
+    import yaml
+    from pathlib import Path
+    
+    config_file = Path(config_path)
+    if not config_file.exists():
+        # Default to standard dual DB paths
+        return get_db()
+    
+    with open(config_file) as f:
+        config = yaml.safe_load(f) or {}
+    
+    db_config = config.get("database", {})
+    
+    # Get database paths (required)
+    questions_db = db_config.get("questions_db", "questions.db")
+    responses_db = db_config.get("responses_db", "responses.db")
+    
+    return get_db(
+        questions_db_path=questions_db,
+        responses_db_path=responses_db,
+    )
 
 
 if __name__ == "__main__":

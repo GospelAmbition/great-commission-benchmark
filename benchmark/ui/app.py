@@ -18,6 +18,7 @@ from datetime import datetime
 import json
 import yaml
 import csv
+import html
 from io import StringIO
 
 from gcb.database import (
@@ -33,6 +34,7 @@ from gcb.database import (
     PromptType,
     Verdict,
 )
+from gcb.reporter import BenchmarkReporter
 
 # Page configuration
 st.set_page_config(
@@ -84,15 +86,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Database path
-DB_PATH = Path(__file__).parent.parent / "gcb.db"
+# Database paths
+QUESTIONS_DB_PATH = Path(__file__).parent.parent / "questions.db"
+RESPONSES_DB_PATH = Path(__file__).parent.parent / "responses.db"
 
 
 def get_database():
-    """Get or initialize the database."""
-    if not DB_PATH.exists():
-        return init_db(str(DB_PATH))
-    return get_db(str(DB_PATH))
+    """Get or initialize the databases."""
+    # Check if both databases exist
+    if not QUESTIONS_DB_PATH.exists() or not RESPONSES_DB_PATH.exists():
+        # Initialize both databases
+        return init_db(str(QUESTIONS_DB_PATH), str(RESPONSES_DB_PATH))
+    return get_db(str(QUESTIONS_DB_PATH), str(RESPONSES_DB_PATH))
 
 
 def render_sidebar():
@@ -102,7 +107,7 @@ def render_sidebar():
     
     page = st.sidebar.radio(
         "Navigation",
-        ["📊 Dashboard", "❓ Questions", "➕ Add Question", "💬 Conversations", "📤 Export", "⚙️ Settings"],
+        ["📊 Dashboard", "📈 Evaluations", "❓ Questions", "➕ Add Question", "💬 Conversations", "📤 Export", "⚙️ Settings"],
         label_visibility="collapsed",
     )
     
@@ -113,11 +118,28 @@ def render_sidebar():
     stats = db.get_stats()
     
     st.sidebar.metric("Total Questions", stats["questions"])
+    st.sidebar.metric("Models Tested", stats["models"])
+    st.sidebar.metric("Evaluations", stats["evaluations"])
     
     col1, col2, col3 = st.sidebar.columns(3)
     col1.markdown(f"🟢 {stats['questions_by_level']['green']}")
     col2.markdown(f"🟠 {stats['questions_by_level']['orange']}")
     col3.markdown(f"🔴 {stats['questions_by_level']['red']}")
+    
+    # Show models if available
+    if stats["models"] > 0:
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("**Models:**")
+        with db.get_session() as session:
+            models = session.query(Model).all()
+            for m in models[:5]:  # Show first 5 models
+                if m.api_identifier and m.api_identifier != m.name:
+                    st.sidebar.markdown(f"• {m.name}")
+                    st.sidebar.caption(f"  {m.provider}/{m.api_identifier}")
+                else:
+                    st.sidebar.markdown(f"• {m.name} ({m.provider})")
+            if len(models) > 5:
+                st.sidebar.caption(f"... and {len(models) - 5} more")
     
     return page
 
@@ -190,20 +212,95 @@ def render_dashboard():
     
     st.markdown("---")
     
+    # Evaluation summary if available
+    if stats["evaluations"] > 0:
+        st.subheader("📈 Evaluation Summary")
+        
+        # Query verdict counts directly
+        with db.get_session() as session:
+            verdict_counts = {}
+            for verdict in Verdict:
+                count = session.query(Evaluation).filter(
+                    Evaluation.verdict == verdict
+                ).count()
+                verdict_counts[verdict.value] = count
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**Verdict Distribution**")
+            if verdict_counts and sum(verdict_counts.values()) > 0:
+                # Map verdicts to colors in the correct order
+                color_map = {"approved": "#28a745", "refused": "#dc3545", "ambiguous": "#ffc107"}
+                labels = list(verdict_counts.keys())
+                values = list(verdict_counts.values())
+                colors = [color_map.get(label, "#999999") for label in labels]
+                
+                fig = go.Figure(data=[go.Pie(
+                    labels=labels,
+                    values=values,
+                    marker_colors=colors,
+                    hole=0.4,
+                )])
+                fig.update_layout(
+                    showlegend=True,
+                    height=250,
+                    margin=dict(t=0, b=0, l=0, r=0),
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No verdict data available")
+        
+        with col2:
+            st.markdown("**Quick Stats**")
+            approved = verdict_counts.get("approved", 0)
+            refused = verdict_counts.get("refused", 0)
+            ambiguous = verdict_counts.get("ambiguous", 0)
+            total = approved + refused + ambiguous
+            
+            if total > 0:
+                st.metric("Approval Rate", f"{(approved/total*100):.1f}%")
+                st.metric("Refusal Rate", f"{(refused/total*100):.1f}%")
+                st.metric("Ambiguous Rate", f"{(ambiguous/total*100):.1f}%")
+            else:
+                st.info("No evaluation data")
+        
+        st.info("💡 Go to '📈 Evaluations' for detailed analysis and insights!")
+    
+    st.markdown("---")
+    
     # Recent questions
     st.subheader("Recent Questions")
     
-    with db.get_session() as session:
+    with db.get_questions_session() as session:
         recent = session.query(Question).order_by(Question.created_at.desc()).limit(5).all()
         
         if recent:
             for q in recent:
                 level_color = {"green": "🟢", "orange": "🟠", "red": "🔴"}[q.acceptance_level.value]
-                st.markdown(f"""
-                **{level_color} {q.prompt_type.value.upper()}** | {q.created_at.strftime('%Y-%m-%d %H:%M')}  
-                {q.text[:100]}{'...' if len(q.text) > 100 else ''}
-                """)
-                st.markdown("---")
+                
+                # Show preview with expandable full text
+                preview_text = q.text[:150] + "..." if len(q.text) > 150 else q.text
+                
+                with st.expander(
+                    f"{level_color} {q.prompt_type.value.upper()} | {q.created_at.strftime('%Y-%m-%d %H:%M')} | {preview_text}",
+                    expanded=False
+                ):
+                    st.markdown(f"**Question ID:** `{q.id}`")
+                    st.markdown(f"**Acceptance Level:** {level_color} {q.acceptance_level.value.upper()}")
+                    st.markdown(f"**Prompt Type:** {q.prompt_type.value}")
+                    st.markdown(f"**Created:** {q.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+                    
+                    if q.notes:
+                        st.markdown(f"**Notes:** {q.notes}")
+                    
+                    tags = q.get_tags()
+                    if tags:
+                        st.markdown(f"**Tags:** {', '.join(tags)}")
+                    
+                    st.markdown("---")
+                    st.markdown("**Full Question Text:**")
+                    st.markdown(f"> {q.text}")
         else:
             st.info("No questions yet. Go to 'Add Question' to create your first one!")
 
@@ -239,7 +336,7 @@ def render_questions():
     st.markdown("---")
     
     # Get questions
-    with db.get_session() as session:
+    with db.get_questions_session() as session:
         query = session.query(Question)
         
         if level_filter != "All":
@@ -265,10 +362,11 @@ def render_questions():
                 "red": "🔴 RED"
             }[q.acceptance_level.value]
             
-            # Check if this question is being edited
+            # Check if this question is being edited or deleted
             is_editing = st.session_state.get("editing_question") == q.id
+            is_deleting = st.session_state.get("confirm_delete") == q.id
             
-            with st.expander(f"{level_badge} | {q.prompt_type.value.upper()} | {q.text[:60]}...", expanded=is_editing):
+            with st.expander(f"{level_badge} | {q.prompt_type.value.upper()} | {q.text}", expanded=is_editing or is_deleting):
                 if is_editing:
                     # Show edit form
                     with st.form(f"edit_form_{q.id}"):
@@ -335,7 +433,7 @@ def render_questions():
                             else:
                                 tags = [t.strip() for t in tags_str.split(",") if t.strip()]
                                 
-                                with db.get_session() as session:
+                                with db.get_questions_session() as session:
                                     question = session.query(Question).filter(Question.id == q.id).first()
                                     if question:
                                         question.text = text.strip()
@@ -377,26 +475,56 @@ def render_questions():
                         if st.button("🗑️ Delete", key=f"delete_{q.id}"):
                             st.session_state["confirm_delete"] = q.id
                             st.rerun()
-        
-        # Handle delete confirmation
-        if "confirm_delete" in st.session_state:
-            qid = st.session_state["confirm_delete"]
-            st.warning(f"Are you sure you want to delete question {qid[:8]}...?")
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Yes, delete"):
-                    with db.get_session() as session:
-                        q = session.query(Question).filter(Question.id == qid).first()
-                        if q:
-                            session.delete(q)
-                            session.commit()
-                            st.success("Question deleted!")
-                    del st.session_state["confirm_delete"]
-                    st.rerun()
-            with col2:
-                if st.button("Cancel"):
-                    del st.session_state["confirm_delete"]
-                    st.rerun()
+                    
+                    # Show delete confirmation if this question is being deleted
+                    if is_deleting:
+                        st.markdown("---")
+                        st.warning("⚠️ Are you sure you want to delete this question?")
+                        
+                        # Check for associated responses (in responses DB)
+                        with db.get_session() as r_session:
+                            response_count = r_session.query(Response).filter(Response.question_id == q.id).count()
+                            
+                            if response_count > 0:
+                                st.warning(
+                                    f"⚠️ This question has {response_count} associated response(s). "
+                                    "Deleting it will also delete those responses."
+                                )
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("Yes, delete", key=f"confirm_delete_{q.id}"):
+                                try:
+                                    # Delete associated responses first (in responses DB)
+                                    with db.get_session() as r_session:
+                                        responses = r_session.query(Response).filter(Response.question_id == q.id).all()
+                                        for response in responses:
+                                            # Delete associated evaluations
+                                            if response.evaluation:
+                                                r_session.delete(response.evaluation)
+                                            r_session.delete(response)
+                                        r_session.commit()
+                                    
+                                    # Delete the question (in questions DB)
+                                    with db.get_questions_session() as q_session:
+                                        question = q_session.query(Question).filter(Question.id == q.id).first()
+                                        if question:
+                                            q_session.delete(question)
+                                            q_session.commit()
+                                            st.success(f"✅ Question deleted successfully!")
+                                        else:
+                                            st.error("Question not found!")
+                                except Exception as e:
+                                    st.error(f"❌ Error deleting question: {str(e)}")
+                                    st.exception(e)
+                                
+                                if "confirm_delete" in st.session_state:
+                                    del st.session_state["confirm_delete"]
+                                st.rerun()
+                        with col2:
+                            if st.button("Cancel", key=f"cancel_delete_{q.id}"):
+                                del st.session_state["confirm_delete"]
+                                st.rerun()
 
 
 def render_add_question():
@@ -410,7 +538,7 @@ def render_add_question():
     db = get_database()
     
     if editing_id:
-        with db.get_session() as session:
+        with db.get_questions_session() as session:
             existing_question = session.query(Question).filter(Question.id == editing_id).first()
             if existing_question:
                 st.info(f"Editing question: {editing_id[:8]}...")
@@ -476,7 +604,7 @@ def render_add_question():
             else:
                 tags = [t.strip() for t in tags_str.split(",") if t.strip()]
                 
-                with db.get_session() as session:
+                with db.get_questions_session() as session:
                     if existing_question:
                         # Update existing
                         q = session.query(Question).filter(Question.id == editing_id).first()
@@ -547,7 +675,7 @@ def render_add_question():
                     has_header = True
                     lines = lines[1:]
                 
-                with db.get_session() as session:
+                with db.get_questions_session() as session:
                     for i, line in enumerate(lines, 1):
                         line = line.strip()
                         if not line:
@@ -689,7 +817,7 @@ def render_export():
                     skipped = 0
                     errors = []
                     
-                    with db.get_session() as session:
+                    with db.get_questions_session() as session:
                         existing_texts = set()
                         if skip_duplicates:
                             existing_questions = session.query(Question).all()
@@ -803,7 +931,7 @@ def render_export():
         st.markdown("Export for use with PromptFoo red-teaming tool.")
         
         if st.button("Generate PromptFoo Config"):
-            with db.get_session() as session:
+            with db.get_questions_session() as session:
                 questions = session.query(Question).all()
                 
                 # Generate PromptFoo format
@@ -853,7 +981,7 @@ def render_export():
         st.markdown("Full database export in JSON format.")
         
         if st.button("Generate JSON Export"):
-            with db.get_session() as session:
+            with db.get_questions_session() as session:
                 questions = session.query(Question).all()
                 
                 export_data = {
@@ -891,7 +1019,7 @@ def render_export():
     st.subheader("📈 CSV Export")
     
     if st.button("Generate CSV Export"):
-        with db.get_session() as session:
+        with db.get_questions_session() as session:
             questions = session.query(Question).all()
             
             df = pd.DataFrame([
@@ -932,7 +1060,7 @@ def render_conversations():
     
     with tab1:
         # List existing conversations
-        with db.get_session() as session:
+        with db.get_questions_session() as session:
             conversations = session.query(Conversation).order_by(Conversation.created_at.desc()).all()
             
             if not conversations:
@@ -972,7 +1100,7 @@ def render_conversations():
                         col1, col2 = st.columns([1, 5])
                         with col1:
                             if st.button("🗑️ Delete", key=f"del_conv_{conv.id}"):
-                                with db.get_session() as session2:
+                                with db.get_questions_session() as session2:
                                     c = session2.query(Conversation).filter(Conversation.id == conv.id).first()
                                     if c:
                                         session2.delete(c)
@@ -1026,7 +1154,7 @@ def render_conversations():
                     # Filter out empty turns
                     valid_turns = [t for t in turns if t["content"].strip()]
                     
-                    with db.get_session() as session:
+                    with db.get_questions_session() as session:
                         conv = Conversation(
                             name=name.strip(),
                             acceptance_level=level,
@@ -1055,7 +1183,7 @@ def render_conversations():
             """)
             
             if st.button("Use This Template"):
-                with db.get_session() as session:
+                with db.get_questions_session() as session:
                     conv = Conversation(
                         name="Escalation: Love to Universalism",
                         acceptance_level=AcceptanceLevel.ORANGE,
@@ -1082,33 +1210,792 @@ def render_conversations():
             """)
 
 
+def render_evaluations():
+    """Render the comprehensive evaluations dashboard."""
+    st.title("📈 Evaluation Results & Insights")
+    st.markdown("Comprehensive analysis of all evaluation results.")
+    
+    db = get_database()
+    reporter = BenchmarkReporter(str(QUESTIONS_DB_PATH), str(RESPONSES_DB_PATH))
+    
+    # Check if we have any evaluations
+    stats = db.get_stats()
+    if stats["evaluations"] == 0:
+        st.warning("⚠️ No evaluations found. Run evaluations first using `python -m gcb evaluate`")
+        st.info("💡 After running PromptFoo tests and importing results, use the CLI to evaluate responses.")
+        return
+    
+    # Get model statistics
+    model_stats = reporter.get_model_statistics()
+    
+    if not model_stats:
+        st.warning("No model statistics available.")
+        return
+    
+    # Tabs for different views
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "🔍 Detailed Results", "📈 Model Comparison", "📋 Test Runs"])
+    
+    with tab1:
+        render_evaluation_overview(db, reporter, model_stats)
+    
+    with tab2:
+        render_detailed_evaluations(db)
+    
+    with tab3:
+        render_model_comparison(db, reporter, model_stats)
+    
+    with tab4:
+        render_test_runs(db, reporter)
+
+
+def render_evaluation_overview(db, reporter, model_stats):
+    """Render overview statistics and visualizations."""
+    st.header("📊 Evaluation Overview")
+    
+    # Get model details for better identification
+    with db.get_session() as session:
+        models_dict = {m.id: m for m in session.query(Model).all()}
+    
+    # Overall metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    total_evaluated = sum(s["evaluated_responses"] for s in model_stats.values())
+    total_approved = sum(s["by_verdict"].get("approved", 0) for s in model_stats.values())
+    total_refused = sum(s["by_verdict"].get("refused", 0) for s in model_stats.values())
+    total_ambiguous = sum(s["by_verdict"].get("ambiguous", 0) for s in model_stats.values())
+    
+    with col1:
+        st.metric("Total Evaluated", total_evaluated)
+    with col2:
+        approval_rate = (total_approved / total_evaluated * 100) if total_evaluated > 0 else 0
+        st.metric("Overall Approval Rate", f"{approval_rate:.1f}%")
+    with col3:
+        refusal_rate = (total_refused / total_evaluated * 100) if total_evaluated > 0 else 0
+        st.metric("Overall Refusal Rate", f"{refusal_rate:.1f}%")
+    with col4:
+        avg_confidence = sum(s["avg_confidence"] for s in model_stats.values()) / len(model_stats) if model_stats else 0
+        st.metric("Avg Confidence", f"{avg_confidence:.2f}")
+    
+    st.markdown("---")
+    
+    # Model performance summary with full identification
+    st.subheader("Model Performance Summary")
+    
+    if len(model_stats) > 0:
+        summary_data = []
+        for model_id, stats in model_stats.items():
+            model_obj = models_dict.get(model_id)
+            model_display_name = f"{stats['model_name']}"
+            if model_obj:
+                # Show full identification: name (provider/api_identifier)
+                if model_obj.api_identifier and model_obj.api_identifier != stats['model_name']:
+                    model_display_name = f"{stats['model_name']} ({model_obj.provider}/{model_obj.api_identifier})"
+                else:
+                    model_display_name = f"{stats['model_name']} ({model_obj.provider})"
+            
+            summary_data.append({
+                "Model": model_display_name,
+                "Provider": stats["provider"],
+                "API Identifier": model_obj.api_identifier if model_obj else "N/A",
+                "Evaluated": stats["evaluated_responses"],
+                "Approved": stats["by_verdict"].get("approved", 0),
+                "Refused": stats["by_verdict"].get("refused", 0),
+                "Ambiguous": stats["by_verdict"].get("ambiguous", 0),
+                "Approval Rate": f"{stats['approval_rate']:.1f}%",
+                "Avg Confidence": f"{stats['avg_confidence']:.2f}",
+            })
+        
+        df_summary = pd.DataFrame(summary_data)
+        st.dataframe(df_summary, use_container_width=True, hide_index=True)
+    
+    st.markdown("---")
+    
+    # Visualizations
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Verdict Distribution")
+        verdict_counts = {
+            "Approved": total_approved,
+            "Refused": total_refused,
+            "Ambiguous": total_ambiguous,
+        }
+        
+        fig = go.Figure(data=[go.Bar(
+            x=list(verdict_counts.keys()),
+            y=list(verdict_counts.values()),
+            marker_color=["#28a745", "#dc3545", "#ffc107"],
+        )])
+        fig.update_layout(
+            showlegend=False,
+            height=300,
+            xaxis_title="Verdict",
+            yaxis_title="Count",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        st.subheader("Performance by Acceptance Level")
+        
+        # Aggregate by level across all models
+        level_stats = {"green": {"approved": 0, "refused": 0, "ambiguous": 0},
+                      "orange": {"approved": 0, "refused": 0, "ambiguous": 0},
+                      "red": {"approved": 0, "refused": 0, "ambiguous": 0}}
+        
+        for stats in model_stats.values():
+            for level, level_data in stats["by_acceptance_level"].items():
+                level_stats[level]["approved"] += level_data.get("approved", 0)
+                level_stats[level]["refused"] += level_data.get("refused", 0)
+                level_stats[level]["ambiguous"] += level_data.get("ambiguous", 0)
+        
+        # Create stacked bar chart
+        levels = ["🟢 Green", "🟠 Orange", "🔴 Red"]
+        approved_vals = [level_stats["green"]["approved"], level_stats["orange"]["approved"], level_stats["red"]["approved"]]
+        refused_vals = [level_stats["green"]["refused"], level_stats["orange"]["refused"], level_stats["red"]["refused"]]
+        ambiguous_vals = [level_stats["green"]["ambiguous"], level_stats["orange"]["ambiguous"], level_stats["red"]["ambiguous"]]
+        
+        fig = go.Figure(data=[
+            go.Bar(name="Approved", x=levels, y=approved_vals, marker_color="#28a745"),
+            go.Bar(name="Refused", x=levels, y=refused_vals, marker_color="#dc3545"),
+            go.Bar(name="Ambiguous", x=levels, y=ambiguous_vals, marker_color="#ffc107"),
+        ])
+        fig.update_layout(
+            barmode="stack",
+            height=300,
+            xaxis_title="Acceptance Level",
+            yaxis_title="Count",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("---")
+    
+    # Performance by prompt type
+    st.subheader("Performance by Prompt Type")
+    
+    type_stats = {"direct": {"approved": 0, "refused": 0, "ambiguous": 0},
+                  "roleplay": {"approved": 0, "refused": 0, "ambiguous": 0},
+                  "encoded": {"approved": 0, "refused": 0, "ambiguous": 0},
+                  "multi_turn": {"approved": 0, "refused": 0, "ambiguous": 0}}
+    
+    for stats in model_stats.values():
+        for ptype, type_data in stats["by_prompt_type"].items():
+            if ptype in type_stats:
+                type_stats[ptype]["approved"] += type_data.get("approved", 0)
+                type_stats[ptype]["refused"] += type_data.get("refused", 0)
+                type_stats[ptype]["ambiguous"] += type_data.get("ambiguous", 0)
+    
+    types = list(type_stats.keys())
+    approved_by_type = [type_stats[t]["approved"] for t in types]
+    refused_by_type = [type_stats[t]["refused"] for t in types]
+    ambiguous_by_type = [type_stats[t]["ambiguous"] for t in types]
+    
+    fig = go.Figure(data=[
+        go.Bar(name="Approved", x=types, y=approved_by_type, marker_color="#28a745"),
+        go.Bar(name="Refused", x=types, y=refused_by_type, marker_color="#dc3545"),
+        go.Bar(name="Ambiguous", x=types, y=ambiguous_by_type, marker_color="#ffc107"),
+    ])
+    fig.update_layout(
+        barmode="stack",
+        height=350,
+        xaxis_title="Prompt Type",
+        yaxis_title="Count",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Detailed breakdown for each model
+    st.markdown("---")
+    st.subheader("Model-Specific Breakdowns")
+    
+    for model_id, stats in model_stats.items():
+        model_obj = models_dict.get(model_id)
+        model_display = f"{stats['model_name']}"
+        if model_obj:
+            if model_obj.api_identifier and model_obj.api_identifier != stats['model_name']:
+                model_display = f"{stats['model_name']} ({model_obj.provider}/{model_obj.api_identifier})"
+            else:
+                model_display = f"{stats['model_name']} ({model_obj.provider})"
+        
+        with st.expander(f"📊 {model_display}"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**By Acceptance Level**")
+                if stats["by_acceptance_level"]:
+                    level_df = pd.DataFrame([
+                        {
+                            "Level": level.upper(),
+                            "Approved": level_data.get("approved", 0),
+                            "Refused": level_data.get("refused", 0),
+                            "Ambiguous": level_data.get("ambiguous", 0),
+                            "Total": level_data.get("approved", 0) + level_data.get("refused", 0) + level_data.get("ambiguous", 0),
+                        }
+                        for level, level_data in stats["by_acceptance_level"].items()
+                    ])
+                    level_df["Approval Rate"] = (level_df["Approved"] / level_df["Total"] * 100).round(1).astype(str) + "%"
+                    st.dataframe(level_df, use_container_width=True, hide_index=True)
+            
+            with col2:
+                st.markdown("**By Prompt Type**")
+                if stats["by_prompt_type"]:
+                    type_df = pd.DataFrame([
+                        {
+                            "Type": ptype,
+                            "Approved": type_data.get("approved", 0),
+                            "Refused": type_data.get("refused", 0),
+                            "Ambiguous": type_data.get("ambiguous", 0),
+                            "Total": type_data.get("approved", 0) + type_data.get("refused", 0) + type_data.get("ambiguous", 0),
+                        }
+                        for ptype, type_data in stats["by_prompt_type"].items()
+                    ])
+                    type_df["Approval Rate"] = (type_df["Approved"] / type_df["Total"] * 100).round(1).astype(str) + "%"
+                    st.dataframe(type_df, use_container_width=True, hide_index=True)
+
+
+def render_detailed_evaluations(db):
+    """Render detailed evaluation results table."""
+    st.header("🔍 Detailed Evaluation Results")
+    
+    # Get models with full identification
+    with db.get_session() as session:
+        models = session.query(Model).all()
+        model_options = ["All"]
+        model_dict = {}
+        for m in models:
+            if m.api_identifier and m.api_identifier != m.name:
+                display_name = f"{m.name} ({m.provider}/{m.api_identifier})"
+            else:
+                display_name = f"{m.name} ({m.provider})"
+            model_options.append(display_name)
+            model_dict[display_name] = m
+    
+    # Filters
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        model_filter = st.selectbox("Model", model_options)
+    with col2:
+        level_filter = st.selectbox("Acceptance Level", ["All", "green", "orange", "red"])
+    with col3:
+        verdict_filter = st.selectbox("Verdict", ["All", "approved", "refused", "ambiguous"])
+    with col4:
+        search_text = st.text_input("Search", placeholder="Search question or response...")
+    
+    st.markdown("---")
+    
+    # Query evaluations - use denormalized fields on Response to avoid cross-DB joins
+    with db.get_session() as session:
+        query = session.query(Evaluation).join(Response).join(Model)
+        
+        if model_filter != "All":
+            selected_model = model_dict[model_filter]
+            query = query.filter(Model.id == selected_model.id)
+        if level_filter != "All":
+            # Use denormalized acceptance_level on Response
+            query = query.filter(Response.acceptance_level == AcceptanceLevel(level_filter))
+        if verdict_filter != "All":
+            query = query.filter(Evaluation.verdict == Verdict(verdict_filter))
+        if search_text:
+            # Use denormalized question_text on Response
+            query = query.filter(
+                (Response.question_text.ilike(f"%{search_text}%")) |
+                (Response.response_text.ilike(f"%{search_text}%"))
+            )
+        
+        evaluations = query.order_by(Evaluation.created_at.desc()).limit(1000).all()
+        
+        st.markdown(f"**Showing {len(evaluations)} evaluations**")
+        
+        if not evaluations:
+            st.info("No evaluations match your filters.")
+            return
+        
+        # Display as expandable cards or table
+        view_mode = st.radio("View Mode", ["Cards", "Table"], horizontal=True)
+        
+        if view_mode == "Table":
+            # Table view
+            table_data = []
+            for eval_obj in evaluations:
+                response = eval_obj.response
+                # Safely get question text - try direct attribute, then relationship
+                question_text = ""
+                if hasattr(response, 'question_text'):
+                    question_text = response.question_text or ""
+                elif hasattr(response, 'question') and response.question and hasattr(response.question, 'text'):
+                    question_text = response.question.text or ""
+                
+                # Safely get acceptance level
+                acceptance_level = None
+                if hasattr(response, 'acceptance_level'):
+                    acceptance_level = response.acceptance_level
+                elif hasattr(response, 'question') and response.question and hasattr(response.question, 'acceptance_level'):
+                    acceptance_level = response.question.acceptance_level
+                
+                # Safely get prompt type
+                prompt_type = None
+                if hasattr(response, 'prompt_type'):
+                    prompt_type = response.prompt_type
+                elif hasattr(response, 'question') and response.question and hasattr(response.question, 'prompt_type'):
+                    prompt_type = response.question.prompt_type
+                
+                model = response.model
+                
+                # Format model name with identification
+                model_display = model.name if model else "N/A"
+                if model and model.api_identifier and model.api_identifier != model.name:
+                    model_display = f"{model.name} ({model.provider}/{model.api_identifier})"
+                elif model:
+                    model_display = f"{model.name} ({model.provider})"
+                
+                table_data.append({
+                    "ID": eval_obj.id[:8],
+                    "Model": model_display,
+                    "Level": acceptance_level.value if acceptance_level else "N/A",
+                    "Type": prompt_type.value if prompt_type else "N/A",
+                    "Verdict": eval_obj.verdict.value,
+                    "Confidence": f"{eval_obj.confidence_score:.2f}" if eval_obj.confidence_score else "N/A",
+                    "Question": question_text[:60] + "..." if question_text and len(question_text) > 60 else (question_text if question_text else "N/A"),
+                    "Date": eval_obj.created_at.strftime("%Y-%m-%d %H:%M"),
+                })
+            
+            df = pd.DataFrame(table_data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+        else:
+            # Card view
+            for eval_obj in evaluations[:50]:  # Limit to 50 for performance
+                response = eval_obj.response
+                # Safely get question text - try direct attribute, then relationship
+                question_text = ""
+                if hasattr(response, 'question_text'):
+                    question_text = response.question_text or ""
+                elif hasattr(response, 'question') and response.question and hasattr(response.question, 'text'):
+                    question_text = response.question.text or ""
+                
+                # Safely get acceptance level
+                acceptance_level = None
+                if hasattr(response, 'acceptance_level'):
+                    acceptance_level = response.acceptance_level
+                elif hasattr(response, 'question') and response.question and hasattr(response.question, 'acceptance_level'):
+                    acceptance_level = response.question.acceptance_level
+                
+                # Safely get prompt type
+                prompt_type = None
+                if hasattr(response, 'prompt_type'):
+                    prompt_type = response.prompt_type
+                elif hasattr(response, 'question') and response.question and hasattr(response.question, 'prompt_type'):
+                    prompt_type = response.question.prompt_type
+                
+                model = response.model
+                
+                verdict_emoji = {
+                    "approved": "✅",
+                    "refused": "❌",
+                    "ambiguous": "⚠️",
+                }.get(eval_obj.verdict.value, "❓")
+                
+                level_badge = {
+                    "green": "🟢",
+                    "orange": "🟠",
+                    "red": "🔴",
+                }.get(acceptance_level.value if acceptance_level else "", "")
+                
+                # Format model display name
+                model_display_name = model.name if model else "N/A"
+                if model and model.api_identifier and model.api_identifier != model.name:
+                    model_display_name = f"{model.name} ({model.provider}/{model.api_identifier})"
+                elif model:
+                    model_display_name = f"{model.name} ({model.provider})"
+                
+                with st.expander(
+                    f"{verdict_emoji} {level_badge} {eval_obj.verdict.value.upper()} | "
+                    f"{model_display_name} | "
+                    f"{question_text[:50] + '...' if question_text and len(question_text) > 50 else (question_text if question_text else 'N/A')}"
+                ):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown(f"**Model:** {model.name if model else 'N/A'}")
+                        st.markdown(f"**Provider:** {model.provider if model else 'N/A'}")
+                        if model and model.api_identifier:
+                            st.markdown(f"**API Identifier:** {model.api_identifier}")
+                        st.markdown(f"**Acceptance Level:** {level_badge} {acceptance_level.value.upper() if acceptance_level else 'N/A'}")
+                        st.markdown(f"**Prompt Type:** {prompt_type.value if prompt_type else 'N/A'}")
+                        st.markdown(f"**Evaluator Model:** {eval_obj.evaluator_model}")
+                        st.markdown(f"**Confidence:** {eval_obj.confidence_score:.2f}" if eval_obj.confidence_score else "**Confidence:** N/A")
+                        st.markdown(f"**Date:** {eval_obj.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+                    
+                    with col2:
+                        st.markdown("**Question:**")
+                        st.markdown(f"> {question_text if question_text else 'N/A'}")
+                    
+                    st.markdown("---")
+                    st.markdown("**Response:**")
+                    if response.response_text:
+                        # Escape HTML for safety and show full response text in a scrollable container
+                        escaped_text = html.escape(response.response_text)
+                        st.markdown(
+                            f'<div style="max-height: 400px; overflow-y: auto; padding: 10px; background-color: #1e1e1e; border-radius: 5px; border-left: 3px solid #4a90d9;">'
+                            f'<pre style="white-space: pre-wrap; word-wrap: break-word; margin: 0; font-family: inherit;">{escaped_text}</pre>'
+                            f'</div>',
+                            unsafe_allow_html=True
+                        )
+                        # Also show character count
+                        st.caption(f"Response length: {len(response.response_text)} characters")
+                    else:
+                        st.info("No response text available")
+                    
+                    st.markdown("---")
+                    st.markdown("**Evaluation Reasoning:**")
+                    st.info(eval_obj.reasoning or "No reasoning provided")
+
+
+def render_model_comparison(db, reporter, model_stats):
+    """Render model comparison view."""
+    st.header("📈 Model Comparison")
+    
+    if len(model_stats) < 2:
+        st.info("Need at least 2 models to compare. Add more test runs with different models.")
+        return
+    
+    # Get model details
+    with db.get_session() as session:
+        models_dict = {m.id: m for m in session.query(Model).all()}
+    
+    # Comparison metrics with full model identification
+    comparison_data = []
+    model_display_names = []
+    for model_id, stats in model_stats.items():
+        model_obj = models_dict.get(model_id)
+        if model_obj and model_obj.api_identifier and model_obj.api_identifier != stats['model_name']:
+            model_display = f"{stats['model_name']} ({model_obj.provider}/{model_obj.api_identifier})"
+        elif model_obj:
+            model_display = f"{stats['model_name']} ({model_obj.provider})"
+        else:
+            model_display = stats["model_name"]
+        
+        model_display_names.append(model_display)
+        
+        comparison_data.append({
+            "Model": model_display,
+            "Provider": stats["provider"],
+            "API Identifier": model_obj.api_identifier if model_obj else "N/A",
+            "Total Evaluated": stats["evaluated_responses"],
+            "Approval Rate": stats["approval_rate"],
+            "Refusal Rate": (stats["by_verdict"].get("refused", 0) / stats["evaluated_responses"] * 100) if stats["evaluated_responses"] > 0 else 0,
+            "Ambiguous Rate": (stats["by_verdict"].get("ambiguous", 0) / stats["evaluated_responses"] * 100) if stats["evaluated_responses"] > 0 else 0,
+            "Avg Confidence": stats["avg_confidence"],
+        })
+    
+    df_comparison = pd.DataFrame(comparison_data)
+    
+    # Comparison chart
+    st.subheader("Approval Rate Comparison")
+    fig = go.Figure(data=[go.Bar(
+        x=model_display_names,
+        y=df_comparison["Approval Rate"],
+        marker_color="#28a745",
+    )])
+    fig.update_layout(
+        height=350,
+        xaxis_title="Model",
+        yaxis_title="Approval Rate (%)",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Side-by-side comparison
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Performance Metrics")
+        st.dataframe(df_comparison, use_container_width=True, hide_index=True)
+    
+    with col2:
+        st.subheader("Verdict Distribution Comparison")
+        
+        models = list(model_stats.keys())
+        approved_vals = [model_stats[m]["by_verdict"].get("approved", 0) for m in models]
+        refused_vals = [model_stats[m]["by_verdict"].get("refused", 0) for m in models]
+        ambiguous_vals = [model_stats[m]["by_verdict"].get("ambiguous", 0) for m in models]
+        # Use display names for models
+        model_display_names = []
+        for m in models:
+            model_obj = models_dict.get(m)
+            if model_obj and model_obj.api_identifier and model_obj.api_identifier != model_stats[m]['model_name']:
+                model_display_names.append(f"{model_stats[m]['model_name']} ({model_obj.provider}/{model_obj.api_identifier})")
+            elif model_obj:
+                model_display_names.append(f"{model_stats[m]['model_name']} ({model_obj.provider})")
+            else:
+                model_display_names.append(model_stats[m]['model_name'])
+        
+        fig = go.Figure(data=[
+            go.Bar(name="Approved", x=model_display_names, y=approved_vals, marker_color="#28a745"),
+            go.Bar(name="Refused", x=model_display_names, y=refused_vals, marker_color="#dc3545"),
+            go.Bar(name="Ambiguous", x=model_display_names, y=ambiguous_vals, marker_color="#ffc107"),
+        ])
+        fig.update_layout(
+            barmode="group",
+            height=350,
+            xaxis_title="Model",
+            yaxis_title="Count",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Performance by level comparison
+    st.markdown("---")
+    st.subheader("Performance by Acceptance Level")
+    
+    for level in ["green", "orange", "red"]:
+        level_emoji = {"green": "🟢", "orange": "🟠", "red": "🔴"}[level]
+        st.markdown(f"### {level_emoji} {level.upper()}")
+        
+        level_comparison = []
+        for model_id, stats in model_stats.items():
+            level_data = stats["by_acceptance_level"].get(level, {})
+            total = level_data.get("approved", 0) + level_data.get("refused", 0) + level_data.get("ambiguous", 0)
+            if total > 0:
+                level_comparison.append({
+                    "Model": stats["model_name"],
+                    "Total": total,
+                    "Approved": level_data.get("approved", 0),
+                    "Refused": level_data.get("refused", 0),
+                    "Ambiguous": level_data.get("ambiguous", 0),
+                    "Approval Rate": (level_data.get("approved", 0) / total * 100),
+                })
+        
+        if level_comparison:
+            # Add model display names with identification
+            for item in level_comparison:
+                model_obj = None
+                for model_id, stats in model_stats.items():
+                    if stats['model_name'] == item['Model']:
+                        model_obj = models_dict.get(model_id)
+                        break
+                
+                if model_obj and model_obj.api_identifier and model_obj.api_identifier != item['Model']:
+                    item['Model'] = f"{item['Model']} ({model_obj.provider}/{model_obj.api_identifier})"
+                elif model_obj:
+                    item['Model'] = f"{item['Model']} ({model_obj.provider})"
+            
+            df_level = pd.DataFrame(level_comparison)
+            st.dataframe(df_level, use_container_width=True, hide_index=True)
+
+
+def render_test_runs(db, reporter):
+    """Render test run history and analysis."""
+    st.header("📋 Test Run History")
+    
+    with db.get_session() as session:
+        test_runs = session.query(TestRun).order_by(TestRun.started_at.desc()).all()
+        
+        if not test_runs:
+            st.info("No test runs found.")
+            return
+        
+        # Get models for display
+        models_dict = {m.id: m for m in session.query(Model).all()}
+        
+        # Test run summary with model information
+        summary_data = []
+        for test_run in test_runs:
+            stats = reporter.get_test_run_statistics(test_run.id)
+            
+            # Get model info from test run config or responses
+            model_info = "Unknown"
+            test_run_config = test_run.get_config()
+            if test_run_config.get("model_id"):
+                model_obj = models_dict.get(test_run_config["model_id"])
+                if model_obj:
+                    if model_obj.api_identifier and model_obj.api_identifier != model_obj.name:
+                        model_info = f"{model_obj.name} ({model_obj.provider}/{model_obj.api_identifier})"
+                    else:
+                        model_info = f"{model_obj.name} ({model_obj.provider})"
+            elif test_run_config.get("model_name"):
+                model_info = test_run_config["model_name"]
+                if test_run_config.get("model_provider"):
+                    model_info += f" ({test_run_config['model_provider']})"
+            
+            if stats:
+                summary_data.append({
+                    "Name": test_run.name or test_run.id[:8],
+                    "Model": model_info,
+                    "Status": test_run.status.value,
+                    "Started": test_run.started_at.strftime("%Y-%m-%d %H:%M") if test_run.started_at else "N/A",
+                    "Completed": test_run.completed_at.strftime("%Y-%m-%d %H:%M") if test_run.completed_at else "N/A",
+                    "Total Responses": stats.get("total_responses", 0),
+                    "Approved": stats.get("by_verdict", {}).get("approved", 0),
+                    "Refused": stats.get("by_verdict", {}).get("refused", 0),
+                    "Ambiguous": stats.get("by_verdict", {}).get("ambiguous", 0),
+                })
+        
+        if summary_data:
+            df_runs = pd.DataFrame(summary_data)
+            st.dataframe(df_runs, use_container_width=True, hide_index=True)
+        
+        st.markdown("---")
+        
+        # Detailed view for selected test run
+        test_run_names = [tr.name or tr.id[:8] for tr in test_runs]
+        selected_run = st.selectbox("Select Test Run for Details", test_run_names)
+        
+        selected_test_run = test_runs[test_run_names.index(selected_run)]
+        stats = reporter.get_test_run_statistics(selected_test_run.id)
+        
+        if stats:
+            st.subheader(f"Test Run: {selected_test_run.name or selected_test_run.id[:8]}")
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Responses", stats.get("total_responses", 0))
+            with col2:
+                st.metric("Approved", stats.get("by_verdict", {}).get("approved", 0))
+            with col3:
+                st.metric("Refused", stats.get("by_verdict", {}).get("refused", 0))
+            with col4:
+                st.metric("Ambiguous", stats.get("by_verdict", {}).get("ambiguous", 0))
+            
+            # Breakdown by level
+            if stats.get("by_acceptance_level"):
+                st.markdown("---")
+                st.subheader("Breakdown by Acceptance Level")
+                
+                level_data = []
+                for level, level_stats in stats["by_acceptance_level"].items():
+                    level_data.append({
+                        "Level": level.upper(),
+                        "Total": level_stats.get("total", 0),
+                        "Approved": level_stats.get("approved", 0),
+                        "Refused": level_stats.get("refused", 0),
+                        "Ambiguous": level_stats.get("ambiguous", 0),
+                    })
+                
+                df_level = pd.DataFrame(level_data)
+                st.dataframe(df_level, use_container_width=True, hide_index=True)
+
+
 def render_settings():
     """Render the settings page."""
     st.title("⚙️ Settings")
     
     db = get_database()
     
-    # Database info
-    st.subheader("Database")
-    st.markdown(f"**Location:** `{DB_PATH}`")
+    # Model Configuration Section
+    st.subheader("🤖 Model Configuration")
+    st.markdown("Configure your LLM provider and model settings without editing config.yaml manually.")
     
-    success, msg = db.verify_schema()
-    if success:
-        st.success(f"✅ {msg}")
-    else:
-        st.error(f"❌ {msg}")
+    config_path = Path(__file__).parent.parent / "config.yaml"
+    
+    # Load current config
+    config = {}
+    if config_path.exists():
+        with open(config_path) as f:
+            config = yaml.safe_load(f) or {}
+    
+    llm_config = config.get("llm", {})
+    
+    with st.form("model_config_form"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            provider = st.selectbox(
+                "Provider",
+                ["lmstudio", "openrouter", "openai", "anthropic", "other"],
+                index=["lmstudio", "openrouter", "openai", "anthropic", "other"].index(llm_config.get("provider", "lmstudio")) if llm_config.get("provider") in ["lmstudio", "openrouter", "openai", "anthropic", "other"] else 0,
+                help="LLM provider to use",
+            )
+            
+            base_url = st.text_input(
+                "Base URL",
+                value=llm_config.get("base_url", "http://localhost:1234/v1"),
+                help="API base URL (e.g., http://localhost:1234/v1 for LM Studio)",
+            )
+        
+        with col2:
+            test_model = st.text_input(
+                "Test Model",
+                value=llm_config.get("test_model", "local-model"),
+                help="Model identifier (e.g., 'gpt-4', 'qwen/qwen3-4b')",
+            )
+            
+            evaluator_model = st.text_input(
+                "Evaluator Model",
+                value=llm_config.get("evaluator_model", llm_config.get("test_model", "local-model")),
+                help="Model to use for evaluating responses (can be same as test model)",
+            )
+        
+        api_key = st.text_input(
+            "API Key",
+            value=llm_config.get("api_key", "lm-studio"),
+            type="password",
+            help="API key (leave as 'lm-studio' for LM Studio)",
+        )
+        
+        # Preset configurations
+        st.markdown("**Quick Presets:**")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.form_submit_button("🖥️ LM Studio", use_container_width=True):
+                config["llm"] = {
+                    "provider": "lmstudio",
+                    "base_url": "http://localhost:1234/v1",
+                    "api_key": "lm-studio",
+                    "test_model": test_model or "local-model",
+                    "evaluator_model": evaluator_model or test_model or "local-model",
+                }
+                with open(config_path, "w") as f:
+                    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+                st.success("✅ LM Studio configuration saved!")
+                st.rerun()
+        
+        with col2:
+            if st.form_submit_button("🌐 OpenRouter", use_container_width=True):
+                config["llm"] = {
+                    "provider": "openrouter",
+                    "base_url": "https://openrouter.ai/api/v1",
+                    "api_key": api_key or "${OPENROUTER_API_KEY}",
+                    "test_model": test_model or "openai/gpt-4o-mini",
+                    "evaluator_model": evaluator_model or test_model or "openai/gpt-4o-mini",
+                }
+                with open(config_path, "w") as f:
+                    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+                st.success("✅ OpenRouter configuration saved!")
+                st.rerun()
+        
+        with col3:
+            if st.form_submit_button("💾 Save Custom", use_container_width=True):
+                config["llm"] = {
+                    "provider": provider,
+                    "base_url": base_url,
+                    "api_key": api_key,
+                    "test_model": test_model,
+                    "evaluator_model": evaluator_model or test_model,
+                }
+                with open(config_path, "w") as f:
+                    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+                st.success("✅ Configuration saved!")
+                st.rerun()
     
     st.markdown("---")
     
-    # Config file
-    st.subheader("Configuration")
-    config_path = Path(__file__).parent.parent / "config.yaml"
+    # Database info
+    st.subheader("Database")
+    st.markdown(f"**Questions DB:** `{QUESTIONS_DB_PATH}`")
+    st.markdown(f"**Responses DB:** `{RESPONSES_DB_PATH}`")
+    
+    # Note: verify_schema only works with single DB, skip it for dual-DB setup
+    st.success(f"✅ Dual database mode active")
+    
+    st.markdown("---")
+    
+    # Config file preview
+    st.subheader("Current Configuration")
     
     if config_path.exists():
-        with open(config_path) as f:
-            config = yaml.safe_load(f)
-        
-        st.json(config)
+        with st.expander("View config.yaml"):
+            st.code(yaml.dump(config, default_flow_style=False, sort_keys=False), language="yaml")
     else:
         st.warning("config.yaml not found")
     
@@ -1134,9 +2021,9 @@ def render_settings():
 
 def main():
     """Main application entry point."""
-    # Initialize database if needed
-    if not DB_PATH.exists():
-        init_db(str(DB_PATH))
+    # Initialize databases if needed
+    if not QUESTIONS_DB_PATH.exists() or not RESPONSES_DB_PATH.exists():
+        init_db(str(QUESTIONS_DB_PATH), str(RESPONSES_DB_PATH))
     
     # Render sidebar and get current page
     page = render_sidebar()
@@ -1144,6 +2031,8 @@ def main():
     # Route to appropriate page
     if page == "📊 Dashboard":
         render_dashboard()
+    elif page == "📈 Evaluations":
+        render_evaluations()
     elif page == "❓ Questions":
         render_questions()
     elif page == "➕ Add Question":

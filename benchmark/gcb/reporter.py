@@ -28,14 +28,20 @@ from gcb.database import (
 class BenchmarkReporter:
     """Generates benchmark reports and statistics."""
 
-    def __init__(self, db_path: str = "gcb.db", output_dir: str = "output"):
+    def __init__(
+        self,
+        questions_db_path: str = "questions.db",
+        responses_db_path: str = "responses.db",
+        output_dir: str = "output",
+    ):
         """Initialize the reporter.
         
         Args:
-            db_path: Path to SQLite database
+            questions_db_path: Path to questions database
+            responses_db_path: Path to responses database
             output_dir: Directory for generated reports
         """
-        self.db = get_db(db_path)
+        self.db = get_db(questions_db_path, responses_db_path)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
@@ -91,13 +97,16 @@ class BenchmarkReporter:
                     if response.evaluation.confidence_score:
                         confidences.append(response.evaluation.confidence_score)
                     
-                    # Stats by acceptance level
-                    if response.question:
-                        level = response.question.acceptance_level.value
+                    # Stats by acceptance level (using denormalized fields)
+                    level_obj = response.get_acceptance_level()
+                    if level_obj:
+                        level = level_obj.value
                         model_stats["by_acceptance_level"][level][verdict] += 1
                         
-                        ptype = response.question.prompt_type.value
-                        model_stats["by_prompt_type"][ptype][verdict] += 1
+                        ptype_obj = response.get_prompt_type()
+                        if ptype_obj:
+                            ptype = ptype_obj.value
+                            model_stats["by_prompt_type"][ptype][verdict] += 1
                 
                 # Calculate rates
                 total_eval = model_stats["evaluated_responses"]
@@ -156,8 +165,9 @@ class BenchmarkReporter:
                     verdict = response.evaluation.verdict.value
                     stats["by_verdict"][verdict] += 1
                     
-                    if response.question:
-                        level = response.question.acceptance_level.value
+                    level_obj = response.get_acceptance_level()
+                    if level_obj:
+                        level = level_obj.value
                         stats["by_acceptance_level"][level]["total"] += 1
                         stats["by_acceptance_level"][level][verdict] += 1
             
@@ -353,8 +363,9 @@ class BenchmarkReporter:
                 # Group by acceptance level
                 by_level = defaultdict(list)
                 for response in responses:
-                    if response.question:
-                        level = response.question.acceptance_level.value
+                    level_obj = response.get_acceptance_level()
+                    if level_obj:
+                        level = level_obj.value
                         by_level[level].append(response)
                 
                 for level in ["green", "orange", "red"]:
@@ -368,7 +379,8 @@ class BenchmarkReporter:
                     ])
                     
                     for i, response in enumerate(by_level[level], 1):
-                        question = response.question
+                        question_text = response.get_question_text()
+                        prompt_type_obj = response.get_prompt_type()
                         evaluation = response.evaluation
                         
                         verdict_emoji = {
@@ -377,13 +389,15 @@ class BenchmarkReporter:
                             "ambiguous": "⚠️",
                         }.get(evaluation.verdict.value if evaluation else "", "❓")
                         
+                        prompt_type_str = prompt_type_obj.value if prompt_type_obj else "unknown"
+                        
                         lines.extend([
                             f"### Question {i}",
                             "",
-                            f"**Prompt Type:** {question.prompt_type.value}",
+                            f"**Prompt Type:** {prompt_type_str}",
                             "",
                             f"**Question:**",
-                            f"> {question.text}",
+                            f"> {question_text}",
                             "",
                             f"**Response:**",
                             f"> {response.response_text[:500]}{'...' if response.response_text and len(response.response_text) > 500 else ''}",
@@ -412,8 +426,12 @@ class BenchmarkReporter:
         Returns:
             Summary statistics dictionary
         """
+        # Query questions from questions database
+        with self.db.get_questions_session() as q_session:
+            total_questions = q_session.query(Question).count()
+        
+        # Query responses/evaluations from responses database
         with self.db.get_session() as session:
-            total_questions = session.query(Question).count()
             total_responses = session.query(Response).count()
             total_evaluations = session.query(Evaluation).count()
             total_models = session.query(Model).count()
@@ -426,33 +444,35 @@ class BenchmarkReporter:
                     Evaluation.verdict == verdict
                 ).count()
                 verdict_counts[verdict.value] = count
-            
-            return {
-                "total_questions": total_questions,
-                "total_responses": total_responses,
-                "total_evaluations": total_evaluations,
-                "total_models": total_models,
-                "total_test_runs": total_test_runs,
-                "verdict_counts": verdict_counts,
-            }
+        
+        return {
+            "total_questions": total_questions,
+            "total_responses": total_responses,
+            "total_evaluations": total_evaluations,
+            "total_models": total_models,
+            "total_test_runs": total_test_runs,
+            "verdict_counts": verdict_counts,
+        }
 
 
 def generate_report(
-    db_path: str = "gcb.db",
+    questions_db_path: str = "questions.db",
+    responses_db_path: str = "responses.db",
     output_dir: str = "output",
     format: str = "markdown",
 ) -> Path:
     """Convenience function to generate a report.
     
     Args:
-        db_path: Database path
+        questions_db_path: Path to questions database
+        responses_db_path: Path to responses database
         output_dir: Output directory
         format: Report format (markdown, json)
         
     Returns:
         Path to generated report
     """
-    reporter = BenchmarkReporter(db_path, output_dir)
+    reporter = BenchmarkReporter(questions_db_path, responses_db_path, output_dir)
     
     if format == "json":
         return reporter.generate_json_report()

@@ -12,9 +12,11 @@ from typing import Optional, List, Tuple
 import yaml
 
 from openai import OpenAI
+from tqdm import tqdm
 
 from gcb.database import (
     get_db,
+    get_db_from_config,
     DatabaseManager,
     Response,
     Evaluation,
@@ -61,17 +63,26 @@ class Evaluator:
 
     def __init__(
         self,
-        db_path: str = "gcb.db",
+        questions_db_path: str = "questions.db",
+        responses_db_path: str = "responses.db",
         config_path: str = "config.yaml",
     ):
         """Initialize the evaluator.
         
         Args:
-            db_path: Path to SQLite database
+            questions_db_path: Path to questions database (used if config doesn't specify)
+            responses_db_path: Path to responses database (used if config doesn't specify)
             config_path: Path to config file
         """
-        self.db = get_db(db_path)
         self.config = self._load_config(config_path)
+        
+        # Get database from config, or use provided paths
+        try:
+            self.db = get_db_from_config(config_path)
+        except Exception:
+            # Fallback to provided paths
+            self.db = get_db(questions_db_path, responses_db_path)
+        
         self.client = self._create_client()
 
     def _load_config(self, config_path: str) -> dict:
@@ -198,44 +209,56 @@ class Evaluator:
                 query = query.filter(Response.test_run_id == test_run_id)
             
             responses = query.all()
+            total_responses = len(responses)
             
-            for response in responses:
-                # Skip if already evaluated
-                if skip_evaluated and response.evaluation is not None:
-                    skipped += 1
-                    continue
-                
-                # Skip if no response text
-                if not response.response_text:
-                    skipped += 1
-                    continue
-                
-                # Get question text
-                if response.question:
-                    question_text = response.question.text
-                else:
-                    errors.append(f"Response {response.id}: No associated question")
-                    continue
-                
-                try:
-                    verdict, reasoning, confidence = self.evaluate_response(
-                        question_text,
-                        response.response_text,
-                    )
+            # Create progress bar
+            with tqdm(total=total_responses, desc="Evaluating responses", unit="response") as pbar:
+                for response in responses:
+                    # Skip if already evaluated
+                    if skip_evaluated and response.evaluation is not None:
+                        skipped += 1
+                        pbar.update(1)
+                        pbar.set_postfix({"evaluated": evaluated, "skipped": skipped, "errors": len(errors)})
+                        continue
                     
-                    # Create evaluation record
-                    evaluation = Evaluation(
-                        response_id=response.id,
-                        evaluator_model=self._get_evaluator_model(),
-                        verdict=verdict,
-                        reasoning=reasoning,
-                        confidence_score=confidence,
-                    )
-                    session.add(evaluation)
-                    evaluated += 1
+                    # Skip if no response text
+                    if not response.response_text:
+                        skipped += 1
+                        pbar.update(1)
+                        pbar.set_postfix({"evaluated": evaluated, "skipped": skipped, "errors": len(errors)})
+                        continue
                     
-                except Exception as e:
-                    errors.append(f"Response {response.id}: {str(e)}")
+                    # Get question text from denormalized field or relationship
+                    question_text = response.get_question_text()
+                    if not question_text:
+                        errors.append(f"Response {response.id}: No question text available")
+                        pbar.update(1)
+                        pbar.set_postfix({"evaluated": evaluated, "skipped": skipped, "errors": len(errors)})
+                        continue
+                    
+                    try:
+                        verdict, reasoning, confidence = self.evaluate_response(
+                            question_text,
+                            response.response_text,
+                        )
+                        
+                        # Create evaluation record
+                        evaluation = Evaluation(
+                            response_id=response.id,
+                            evaluator_model=self._get_evaluator_model(),
+                            verdict=verdict,
+                            reasoning=reasoning,
+                            confidence_score=confidence,
+                        )
+                        session.add(evaluation)
+                        evaluated += 1
+                        
+                    except Exception as e:
+                        errors.append(f"Response {response.id}: {str(e)}")
+                    
+                    # Update progress bar
+                    pbar.update(1)
+                    pbar.set_postfix({"evaluated": evaluated, "skipped": skipped, "errors": len(errors)})
             
             session.commit()
         
@@ -256,11 +279,15 @@ class Evaluator:
             if not response:
                 return None
             
-            if not response.response_text or not response.question:
+            if not response.response_text:
+                return None
+            
+            question_text = response.get_question_text()
+            if not question_text:
                 return None
             
             verdict, reasoning, confidence = self.evaluate_response(
-                response.question.text,
+                question_text,
                 response.response_text,
             )
             
@@ -290,21 +317,23 @@ class Evaluator:
 
 
 def evaluate_responses(
-    db_path: str = "gcb.db",
+    questions_db_path: str = "questions.db",
+    responses_db_path: str = "responses.db",
     config_path: str = "config.yaml",
     test_run_id: Optional[str] = None,
 ) -> Tuple[int, int, List[str]]:
     """Convenience function to evaluate responses.
     
     Args:
-        db_path: Database path
+        questions_db_path: Questions database path
+        responses_db_path: Responses database path
         config_path: Config file path
         test_run_id: Optional test run ID
         
     Returns:
         Tuple of (evaluated, skipped, errors)
     """
-    evaluator = Evaluator(db_path, config_path)
+    evaluator = Evaluator(questions_db_path, responses_db_path, config_path)
     return evaluator.evaluate_test_run(test_run_id)
 
 

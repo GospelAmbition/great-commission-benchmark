@@ -16,6 +16,7 @@ from typing import Optional, List, Dict, Any
 
 from gcb.database import (
     get_db,
+    get_db_from_config,
     DatabaseManager,
     Question,
     Conversation,
@@ -33,22 +34,31 @@ class PromptFooBridge:
 
     def __init__(
         self,
-        db_path: str = "gcb.db",
+        questions_db_path: str = "questions.db",
+        responses_db_path: str = "responses.db",
         output_dir: str = "prompts",
         config_path: str = "config.yaml",
     ):
         """Initialize the PromptFoo bridge.
         
         Args:
-            db_path: Path to SQLite database
+            questions_db_path: Path to questions database (used if config doesn't specify)
+            responses_db_path: Path to responses database (used if config doesn't specify)
             output_dir: Directory for generated PromptFoo files
             config_path: Path to GCB config file
         """
-        self.db = get_db(db_path)
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(exist_ok=True)
         self.config_path = Path(config_path)
         self.config = self._load_config()
+        
+        # Get database from config, or use provided paths
+        try:
+            self.db = get_db_from_config(str(self.config_path))
+        except Exception:
+            # Fallback to provided paths
+            self.db = get_db(questions_db_path, responses_db_path)
+        
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(exist_ok=True)
 
     def _load_config(self) -> dict:
         """Load configuration from config.yaml."""
@@ -72,6 +82,10 @@ class PromptFooBridge:
         level_filter: Optional[AcceptanceLevel] = None,
         type_filter: Optional[PromptType] = None,
         output_file: str = "promptfoo.yaml",
+        model_override: Optional[str] = None,
+        provider_override: Optional[str] = None,
+        base_url_override: Optional[str] = None,
+        api_key_override: Optional[str] = None,
     ) -> Path:
         """Export questions to PromptFoo YAML format.
         
@@ -79,13 +93,28 @@ class PromptFooBridge:
             level_filter: Optional filter by acceptance level
             type_filter: Optional filter by prompt type
             output_file: Output filename
+            model_override: Override model name
+            provider_override: Override provider
+            base_url_override: Override base URL
+            api_key_override: Override API key
             
         Returns:
             Path to generated YAML file
         """
         llm_config = self.get_llm_config()
         
-        with self.db.get_session() as session:
+        # Apply overrides if provided
+        if model_override:
+            llm_config["test_model"] = model_override
+        if provider_override:
+            llm_config["provider"] = provider_override
+        if base_url_override:
+            llm_config["base_url"] = base_url_override
+        if api_key_override:
+            llm_config["api_key"] = api_key_override
+        promptfoo_config_settings = self.config.get("promptfoo", {})
+        
+        with self.db.get_questions_session() as session:
             query = session.query(Question)
             
             if level_filter:
@@ -113,21 +142,48 @@ class PromptFooBridge:
                 }
                 tests.append(test)
             
+            # Build provider config with timeout and retry settings
+            # PromptFoo's OpenAI provider uses apiBaseUrl (not apiHost) and needs full URL including /v1
+            provider_config = {
+                "apiBaseUrl": llm_config["base_url"],
+                "apiKey": llm_config["api_key"],
+            }
+            
+            # Add max_tokens from evaluation config
+            eval_config = self.config.get("evaluation", {})
+            if eval_config.get("max_tokens"):
+                provider_config["maxTokens"] = eval_config["max_tokens"]
+            
+            # Add timeout if configured
+            if promptfoo_config_settings.get("timeout_ms"):
+                provider_config["timeout"] = promptfoo_config_settings["timeout_ms"]
+            
+            # Add retry config if configured
+            if promptfoo_config_settings.get("retry_attempts"):
+                provider_config["retry"] = {
+                    "attempts": promptfoo_config_settings["retry_attempts"],
+                    "delay": promptfoo_config_settings.get("retry_delay_ms", 1000),
+                }
+            
             promptfoo_config = {
                 "description": f"Great Commission Benchmark - {len(questions)} questions",
                 "providers": [
                     {
                         "id": f"openai:chat:{llm_config['test_model']}",
-                        "config": {
-                            "apiHost": llm_config["base_url"],
-                            "apiKey": llm_config["api_key"],
-                        }
+                        "config": provider_config,
                     }
                 ],
                 "prompts": ["{{question}}"],
                 "tests": tests,
                 "outputPath": str(self.output_dir / "results.json"),
             }
+            
+            # Add options if maxConcurrency is configured
+            max_concurrency = promptfoo_config_settings.get("max_concurrency")
+            if max_concurrency:
+                promptfoo_config["options"] = {
+                    "maxConcurrency": max_concurrency,
+                }
             
             output_path = self.output_dir / output_file
             with open(output_path, "w") as f:
@@ -150,8 +206,9 @@ class PromptFooBridge:
             Path to generated YAML file
         """
         llm_config = self.get_llm_config()
+        promptfoo_config_settings = self.config.get("promptfoo", {})
         
-        with self.db.get_session() as session:
+        with self.db.get_questions_session() as session:
             query = session.query(Conversation)
             
             if level_filter:
@@ -181,21 +238,48 @@ class PromptFooBridge:
                 }
                 tests.append(test)
             
+            # Build provider config with timeout and retry settings
+            # PromptFoo's OpenAI provider uses apiBaseUrl (not apiHost) and needs full URL including /v1
+            provider_config = {
+                "apiBaseUrl": llm_config["base_url"],
+                "apiKey": llm_config["api_key"],
+            }
+            
+            # Add max_tokens from evaluation config
+            eval_config = self.config.get("evaluation", {})
+            if eval_config.get("max_tokens"):
+                provider_config["maxTokens"] = eval_config["max_tokens"]
+            
+            # Add timeout if configured
+            if promptfoo_config_settings.get("timeout_ms"):
+                provider_config["timeout"] = promptfoo_config_settings["timeout_ms"]
+            
+            # Add retry config if configured
+            if promptfoo_config_settings.get("retry_attempts"):
+                provider_config["retry"] = {
+                    "attempts": promptfoo_config_settings["retry_attempts"],
+                    "delay": promptfoo_config_settings.get("retry_delay_ms", 1000),
+                }
+            
             promptfoo_config = {
                 "description": f"Great Commission Benchmark - {len(conversations)} conversations",
                 "providers": [
                     {
                         "id": f"openai:chat:{llm_config['test_model']}",
-                        "config": {
-                            "apiHost": llm_config["base_url"],
-                            "apiKey": llm_config["api_key"],
-                        }
+                        "config": provider_config,
                     }
                 ],
                 "prompts": ["{{conversation}}"],
                 "tests": tests,
                 "outputPath": str(self.output_dir / "conversation_results.json"),
             }
+            
+            # Add options if maxConcurrency is configured
+            max_concurrency = promptfoo_config_settings.get("max_concurrency")
+            if max_concurrency:
+                promptfoo_config["options"] = {
+                    "maxConcurrency": max_concurrency,
+                }
             
             output_path = self.output_dir / output_file
             with open(output_path, "w") as f:
@@ -275,19 +359,29 @@ class PromptFooBridge:
         errors = []
         
         with self.db.get_session() as session:
-            # Create or get model
-            model = session.query(Model).filter(Model.name == model_name).first()
+            # Create or get model - use combination of name, provider, and api_identifier to distinguish
+            llm_config = self.get_llm_config()
+            provider = self.config.get("llm", {}).get("provider", "lmstudio")
+            api_identifier = llm_config.get("test_model", model_name)
+            
+            # Try to find existing model by name, provider, and api_identifier
+            model = session.query(Model).filter(
+                Model.name == model_name,
+                Model.provider == provider,
+                Model.api_identifier == api_identifier
+            ).first()
+            
             if not model:
-                llm_config = self.get_llm_config()
+                # Create new model with full identification
                 model = Model(
                     name=model_name,
-                    provider=self.config.get("llm", {}).get("provider", "lmstudio"),
-                    api_identifier=llm_config.get("test_model", model_name),
+                    provider=provider,
+                    api_identifier=api_identifier,
                 )
                 session.add(model)
                 session.flush()
             
-            # Create test run
+            # Create test run with model information in config
             test_run = TestRun(
                 name=test_run_name or f"PromptFoo Import {datetime.now().strftime('%Y-%m-%d %H:%M')}",
                 status=TestRunStatus.COMPLETED,
@@ -296,52 +390,106 @@ class PromptFooBridge:
             test_run.set_config({
                 "source": "promptfoo",
                 "results_file": str(results_path),
+                "model_name": model.name,
+                "model_provider": model.provider,
+                "model_api_identifier": model.api_identifier,
+                "model_id": model.id,
             })
             session.add(test_run)
             session.flush()
             
             # Process results
-            results_list = results_data.get("results", [])
+            # PromptFoo results structure: data['results']['results'] is the list
+            results_list = results_data.get("results", {}).get("results", [])
             
-            for result in results_list:
-                try:
-                    # Get question ID from metadata
-                    metadata = result.get("vars", {}).get("__metadata", {})
-                    if not metadata:
-                        # Try alternate location
-                        for test in results_data.get("table", {}).get("body", []):
-                            if test.get("vars", {}).get("question") == result.get("vars", {}).get("question"):
-                                metadata = test.get("test", {}).get("metadata", {})
-                                break
-                    
-                    question_id = metadata.get("id") if metadata else None
-                    
-                    # Get response
-                    response_text = result.get("response", {}).get("output", "")
-                    if isinstance(response_text, dict):
-                        response_text = json.dumps(response_text)
-                    
-                    latency = result.get("response", {}).get("latencyMs")
-                    tokens = result.get("response", {}).get("tokenUsage", {}).get("total")
-                    error = result.get("error")
-                    
-                    # Create response record
-                    response = Response(
-                        test_run_id=test_run.id,
-                        model_id=model.id,
-                        question_id=question_id,
-                        response_text=response_text,
-                        latency_ms=latency,
-                        token_count=tokens,
-                        error=error,
-                    )
-                    session.add(response)
-                    imported += 1
-                    
-                except Exception as e:
-                    errors.append(f"Error processing result: {str(e)}")
+            # Get questions database session
+            questions_session = self.db.get_questions_session()
             
-            session.commit()
+            try:
+                for result in results_list:
+                    try:
+                        # Get question ID from metadata
+                        # Metadata can be directly on result or in testCase
+                        metadata = result.get("metadata", {})
+                        if not metadata:
+                            metadata = result.get("testCase", {}).get("metadata", {})
+                        
+                        question_id = metadata.get("id") if metadata else None
+                        acceptance_level = metadata.get("acceptance_level")
+                        prompt_type = metadata.get("prompt_type")
+                        
+                        # Get question data for denormalization
+                        question_text = None
+                        question_acceptance_level = None
+                        question_prompt_type = None
+                        
+                        if question_id:
+                            # Get question from questions database
+                            from gcb.database import Question
+                            question = questions_session.query(Question).filter(
+                                Question.id == question_id
+                            ).first()
+                            if question:
+                                question_text = question.text
+                                question_acceptance_level = question.acceptance_level
+                                question_prompt_type = question.prompt_type
+                        
+                        # Fallback to metadata if question not found
+                        if not question_text and metadata.get("question"):
+                            question_text = metadata.get("question")
+                        
+                        # Use metadata values if question not found in DB
+                        if not question_acceptance_level and acceptance_level:
+                            from gcb.database import AcceptanceLevel
+                            try:
+                                question_acceptance_level = AcceptanceLevel(acceptance_level)
+                            except ValueError:
+                                pass
+                        
+                        if not question_prompt_type and prompt_type:
+                            from gcb.database import PromptType
+                            try:
+                                question_prompt_type = PromptType(prompt_type)
+                            except ValueError:
+                                pass
+                        
+                        # Get response
+                        response_text = result.get("response", {}).get("output", "")
+                        # Convert to string if it's not already
+                        if isinstance(response_text, (dict, list)):
+                            response_text = json.dumps(response_text)
+                        elif response_text is None:
+                            response_text = ""
+                        else:
+                            response_text = str(response_text)
+                        
+                        latency = result.get("response", {}).get("latencyMs")
+                        tokens = result.get("response", {}).get("tokenUsage", {}).get("total")
+                        error = result.get("error")
+                        
+                        # Create response record with denormalized question data
+                        response = Response(
+                            test_run_id=test_run.id,
+                            model_id=model.id,
+                            question_id=question_id,
+                            question_text=question_text,
+                            acceptance_level=question_acceptance_level,
+                            prompt_type=question_prompt_type,
+                            response_text=response_text,
+                            latency_ms=latency,
+                            token_count=tokens,
+                            error=error,
+                        )
+                        session.add(response)
+                        imported += 1
+                        
+                    except Exception as e:
+                        errors.append(f"Error processing result: {str(e)}")
+                
+                session.commit()
+            finally:
+                if questions_session:
+                    questions_session.close()
         
         return imported, errors
 
