@@ -70,7 +70,7 @@ dmypy.json
 # Output
 output/
 results.md
-*.md
+
 
 # Environment variables
 .env
