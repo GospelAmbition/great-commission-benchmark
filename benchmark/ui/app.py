@@ -203,7 +203,7 @@ def render_sidebar():
     
     page = st.sidebar.radio(
         "Navigation",
-        ["📊 Dashboard", "❓ Questions", "📖 Instructions", "🤖 Set Model", "📈 Evaluations", "🗂️ Manage Data"],
+        ["📊 Dashboard", "❓ Questions", "📖 Instructions", "🤖 Set Model", "📈 Evaluations", "📈 Comparisons", "🗂️ Manage Data"],
         label_visibility="collapsed",
     )
     
@@ -1565,9 +1565,14 @@ def render_instructions():
     # Pipeline Commands - moved to second position
     st.header("⚙️ Benchmark Pipeline")
     
-    st.markdown("Open your Terminal, go to the benchmark folder, and run this command for the pipeline wizard.")
+    st.markdown("Open your Terminal, go to the benchmark folder, and run this command for the pipeline wizard. This wizard guides you through each step with helpful prompts and status checks.")
     st.code("python pipeline.py", language="bash")
-    st.markdown("This wizard guides you through each step with helpful prompts and status checks.")
+    
+    st.markdown("---")
+    
+    # Visual Workflow Section
+    st.header("🧪 Step-by-Step Visual Workflow")
+    st.image("ui/flow.png", width=800)
     
     st.markdown("---")
     
@@ -1612,12 +1617,6 @@ python -m gcb test-connection""", language="bash")
     
     st.markdown("---")
     
-    # Visual Workflow Section at the bottom
-    st.header("🧪 Step-by-Step Visual Workflow")
-    st.image("ui/flow.png", width=800)
-    
-    st.markdown("---")
-    
     # Link to README for more information
     st.markdown("📖 For more information, see the [README](../README.md)")
 
@@ -1645,7 +1644,7 @@ def render_evaluations():
         return
     
     # Tabs for different views
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "🔍 Results", "📈 Comparison", "📋 Test Runs"])
+    tab1, tab2, tab3 = st.tabs(["📊 Overview", "🔍 Results", "📋 Test Runs"])
     
     with tab1:
         render_evaluation_overview(db, reporter, model_stats)
@@ -1654,9 +1653,6 @@ def render_evaluations():
         render_detailed_evaluations(db)
     
     with tab3:
-        render_model_comparison(db, reporter, model_stats)
-    
-    with tab4:
         render_test_runs(db, reporter)
 
 
@@ -2431,6 +2427,32 @@ def render_model_comparison(db, reporter, model_stats):
             st.dataframe(df_level, width='stretch', hide_index=True)
 
 
+def render_comparisons():
+    """Render the model comparisons page."""
+    st.title("📈 Model Comparisons")
+    st.markdown("Compare performance across different models.")
+    
+    db = get_database()
+    reporter = BenchmarkReporter(str(QUESTIONS_DB_PATH), str(RESPONSES_DB_PATH))
+    
+    # Check if we have any evaluations
+    stats = db.get_stats()
+    if stats["evaluations"] == 0:
+        st.warning("⚠️ No evaluations found. Run evaluations first using `python -m gcb evaluate`")
+        st.info("💡 After running PromptFoo tests and importing results, use the CLI to evaluate responses.")
+        return
+    
+    # Get model statistics
+    model_stats = reporter.get_model_statistics()
+    
+    if not model_stats:
+        st.warning("No model statistics available.")
+        return
+    
+    # Render the comparison view
+    render_model_comparison(db, reporter, model_stats)
+
+
 def render_test_runs(db, reporter):
     """Render test run history and analysis."""
     st.header("📋 Test Run History")
@@ -2542,116 +2564,155 @@ def render_model_config():
     
     llm_config = config.get("llm", {})
     
-    # Initialize session state for preset values if not already set
-    if "preset_values" not in st.session_state:
-        st.session_state.preset_values = None
+    # Get current provider settings (read-only in simple section)
+    current_provider = llm_config.get("provider", "lmstudio")
+    current_base_url = llm_config.get("base_url", "http://localhost:1234/v1")
+    current_api_key = llm_config.get("api_key", "lm-studio")
     
-    # Preset configurations at the top
-    st.markdown("**Quick Presets:** (Click to populate defaults)")
+    # Create tabs for Test Model and Advanced Configuration
+    tab1, tab2 = st.tabs(["Current Test Model", "Advanced Model Configuration"])
     
-    col1, col2 = st.columns([1, 10])
-    
-    with col1:
-        if st.button("🖥️ LM Studio", key="preset_lmstudio"):
-            st.session_state.preset_values = {
-                "provider": "lmstudio",
-                "base_url": "http://localhost:1234/v1",
-                "api_key": "lm-studio",
-                "test_model": llm_config.get("test_model", "local-model"),
-                "evaluator_model": llm_config.get("evaluator_model", llm_config.get("test_model", "local-model")),
-            }
-            st.rerun()
-        
-        if st.button("🌐 OpenRouter", key="preset_openrouter"):
-            st.session_state.preset_values = {
-                "provider": "openrouter",
-                "base_url": "https://openrouter.ai/api/v1",
-                "api_key": llm_config.get("api_key", "${OPENROUTER_API_KEY}"),
-                "test_model": llm_config.get("test_model", "openai/gpt-4o-mini"),
-                "evaluator_model": llm_config.get("evaluator_model", llm_config.get("test_model", "openai/gpt-4o-mini")),
-            }
-            st.rerun()
-    
-    st.markdown("---")
-    
-    # Determine values to use (preset or current config)
-    if st.session_state.preset_values:
-        values = st.session_state.preset_values
-    else:
-        values = {
-            "provider": llm_config.get("provider", "lmstudio"),
-            "base_url": llm_config.get("base_url", "http://localhost:1234/v1"),
-            "api_key": llm_config.get("api_key", "lm-studio"),
-            "test_model": llm_config.get("test_model", "local-model"),
-            "evaluator_model": llm_config.get("evaluator_model", llm_config.get("test_model", "local-model")),
-        }
-    
-    with st.form("model_config_form"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            provider = st.selectbox(
-                "Provider",
-                ["lmstudio", "openrouter", "openai", "anthropic", "other"],
-                index=["lmstudio", "openrouter", "openai", "anthropic", "other"].index(values["provider"]) if values["provider"] in ["lmstudio", "openrouter", "openai", "anthropic", "other"] else 0,
-                help="LLM provider to use",
-            )
-            
-            base_url = st.text_input(
-                "Base URL",
-                value=values["base_url"],
-                help="API base URL (e.g., http://localhost:1234/v1 for LM Studio)",
-            )
-        
-        with col2:
+    with tab1:
+        # Simple model configuration - only Test Model
+        with st.form("simple_model_config_form"):
             test_model = st.text_input(
-                "Test Model",
-                value=values["test_model"],
+                "Current Test Model",
+                value=llm_config.get("test_model", "local-model"),
                 help="Model identifier (e.g., 'gpt-4', 'qwen/qwen3-4b')",
             )
             
-            evaluator_model = st.text_input(
-                "Evaluator Model",
-                value=values["evaluator_model"],
-                help="Model to use for evaluating responses (can be same as test model)",
-            )
-        
-        api_key = st.text_input(
-            "API Key",
-            value=values["api_key"],
-            type="password",
-            help="API key (leave as 'lm-studio' for LM Studio)",
-        )
-        
-        # Save button at the bottom
-        submitted = st.form_submit_button("💾 Save Configuration", use_container_width=True)
-        
-        if submitted:
-            # Clear preset values after saving
-            st.session_state.preset_values = None
+            submitted = st.form_submit_button("💾 Save Configuration", use_container_width=True)
             
-            config["llm"] = {
-                "provider": provider,
-                "base_url": base_url,
-                "api_key": api_key,
-                "test_model": test_model,
-                "evaluator_model": evaluator_model or test_model,
+            if submitted:
+                # Use existing provider/base_url/api_key from config, only update test_model
+                config["llm"] = {
+                    "provider": current_provider,
+                    "base_url": current_base_url,
+                    "api_key": current_api_key,
+                    "test_model": test_model,
+                    "evaluator_model": llm_config.get("evaluator_model", test_model),
+                }
+                with open(config_path, "w") as f:
+                    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+                st.success("✅ Configuration saved!")
+                st.rerun()
+    
+    with tab2:
+        # Initialize session state for preset values if not already set
+        if "preset_values" not in st.session_state:
+            st.session_state.preset_values = None
+        
+        # Preset configurations
+        st.markdown("**Quick Presets:** (Click to populate defaults)")
+        
+        col1, col2 = st.columns([1, 10])
+        
+        with col1:
+            if st.button("🖥️ LM Studio", key="preset_lmstudio"):
+                st.session_state.preset_values = {
+                    "provider": "lmstudio",
+                    "base_url": "http://localhost:1234/v1",
+                    "api_key": "lm-studio",
+                    "test_model": llm_config.get("test_model", "local-model"),
+                    "evaluator_model": llm_config.get("evaluator_model", llm_config.get("test_model", "local-model")),
+                }
+                st.rerun()
+            
+            if st.button("🌐 OpenRouter", key="preset_openrouter"):
+                st.session_state.preset_values = {
+                    "provider": "openrouter",
+                    "base_url": "https://openrouter.ai/api/v1",
+                    "api_key": llm_config.get("api_key", "${OPENROUTER_API_KEY}"),
+                    "test_model": llm_config.get("test_model", "openai/gpt-4o-mini"),
+                    "evaluator_model": llm_config.get("evaluator_model", llm_config.get("test_model", "openai/gpt-4o-mini")),
+                }
+                st.rerun()
+        
+        st.markdown("---")
+        
+        # Determine values to use (preset or current config)
+        if st.session_state.preset_values:
+            values = st.session_state.preset_values
+        else:
+            values = {
+                "provider": llm_config.get("provider", "lmstudio"),
+                "base_url": llm_config.get("base_url", "http://localhost:1234/v1"),
+                "api_key": llm_config.get("api_key", "lm-studio"),
+                "test_model": llm_config.get("test_model", "local-model"),
+                "evaluator_model": llm_config.get("evaluator_model", llm_config.get("test_model", "local-model")),
             }
-            with open(config_path, "w") as f:
-                yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-            st.success("✅ Configuration saved!")
-            st.rerun()
-    
-    st.markdown("---")
-    
-    # Config file preview
-    st.subheader("Current Configuration")
-    
-    if config_path.exists():
-        with st.expander("View config.yaml"):
-            st.code(yaml.dump(config, default_flow_style=False, sort_keys=False), language="yaml")
-    else:
-        st.warning("config.yaml not found")
+        
+        with st.form("advanced_model_config_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                advanced_provider = st.selectbox(
+                    "Provider",
+                    ["lmstudio", "openrouter", "openai", "anthropic", "other"],
+                    index=["lmstudio", "openrouter", "openai", "anthropic", "other"].index(values["provider"]) if values["provider"] in ["lmstudio", "openrouter", "openai", "anthropic", "other"] else 0,
+                    help="LLM provider to use",
+                    key="advanced_provider",
+                )
+                
+                advanced_base_url = st.text_input(
+                    "Base URL",
+                    value=values["base_url"],
+                    help="API base URL (e.g., http://localhost:1234/v1 for LM Studio)",
+                    key="advanced_base_url",
+                )
+            
+            with col2:
+                advanced_test_model = st.text_input(
+                    "Test Model",
+                    value=values["test_model"],
+                    help="Model identifier (e.g., 'gpt-4', 'qwen/qwen3-4b')",
+                    key="advanced_test_model",
+                )
+                
+                advanced_evaluator_model = st.text_input(
+                    "Evaluator Model",
+                    value=values["evaluator_model"],
+                    help="Model to use for evaluating responses (can be same as test model)",
+                    key="advanced_evaluator_model",
+                )
+            
+            advanced_api_key = st.text_input(
+                "API Key",
+                value=values["api_key"],
+                type="password",
+                help="API key (leave as 'lm-studio' for LM Studio)",
+                key="advanced_api_key",
+            )
+            
+            # Save button
+            advanced_submitted = st.form_submit_button("💾 Save Advanced Configuration", use_container_width=True)
+            
+            if advanced_submitted:
+                # Clear preset values after saving
+                st.session_state.preset_values = None
+                
+                config["llm"] = {
+                    "provider": advanced_provider,
+                    "base_url": advanced_base_url,
+                    "api_key": advanced_api_key,
+                    "test_model": advanced_test_model,
+                    "evaluator_model": advanced_evaluator_model or advanced_test_model,
+                }
+                with open(config_path, "w") as f:
+                    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+                st.success("✅ Configuration saved!")
+                st.rerun()
+        
+        st.markdown("---")
+        
+        # Config file preview
+        st.subheader("Current Configuration")
+        
+        if config_path.exists():
+            with st.expander("View config.yaml"):
+                st.code(yaml.dump(config, default_flow_style=False, sort_keys=False), language="yaml")
+        else:
+            st.warning("config.yaml not found")
 
 
 def main():
@@ -2668,6 +2729,8 @@ def main():
         render_dashboard()
     elif page == "📈 Evaluations":
         render_evaluations()
+    elif page == "📈 Comparisons":
+        render_comparisons()
     elif page == "🤖 Set Model":
         render_model_config()
     elif page == "📖 Instructions":
