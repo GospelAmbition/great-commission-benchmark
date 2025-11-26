@@ -1437,8 +1437,8 @@ def render_manage_data():
     # Deletion section
     st.header("⚠️ Danger Zone")
     
-    # Tabs for model deletion, test run deletion, and database reset
-    del_tab1, del_tab2, del_tab3 = st.tabs(["🗑️ Delete Models", "🗑️ Delete Test Runs", "🔄 Reset Database"])
+    # Tabs for model deletion, test run deletion, cached results deletion, and database reset
+    del_tab1, del_tab2, del_tab3, del_tab4 = st.tabs(["🗑️ Delete Models", "🗑️ Delete Test Runs", "🗑️ Delete Cached Results", "🔄 Reset Database"])
     
     with del_tab1:
         st.subheader("Delete Models")
@@ -1606,17 +1606,131 @@ def render_manage_data():
                             st.error("Please confirm deletion by checking the checkbox.")
     
     with del_tab3:
+        st.subheader("Delete Cached PromptFoo Results")
+        st.markdown("Delete cached results from PromptFoo to force a fresh evaluation on the next run.")
+        
+        # Determine the path to results.json
+        results_file_path = Path(__file__).parent.parent / "prompts" / "results.json"
+        promptfoo_yaml_path = Path(__file__).parent.parent / "prompts" / "promptfoo.yaml"
+        
+        # Check if files exist
+        results_exists = results_file_path.exists()
+        yaml_exists = promptfoo_yaml_path.exists()
+        
+        if results_exists:
+            # Get file size and modification time
+            file_size = results_file_path.stat().st_size
+            file_size_mb = file_size / (1024 * 1024)
+            mod_time = datetime.fromtimestamp(results_file_path.stat().st_mtime)
+            
+            st.info(f"📄 **Cached results file found:**\n- Location: `{results_file_path}`\n- Size: {file_size_mb:.2f} MB\n- Last modified: {mod_time.strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            st.markdown("**What will be deleted:**")
+            st.text(f"• {results_file_path.name}")
+            
+            if yaml_exists:
+                st.text(f"• {promptfoo_yaml_path.name} (optional)")
+                delete_yaml = st.checkbox("Also delete promptfoo.yaml config file", value=False, key="delete_yaml_checkbox")
+            else:
+                delete_yaml = False
+            
+            # Confirmation checkbox
+            confirm_delete = st.checkbox(
+                "I understand this will delete the cached results file",
+                key="confirm_delete_cached_results"
+            )
+            
+            # Delete button
+            if st.button("🗑️ Delete Cached Results", type="primary", key="delete_cached_results_btn"):
+                if confirm_delete:
+                    try:
+                        deleted_files = []
+                        
+                        # Delete results.json
+                        if results_file_path.exists():
+                            results_file_path.unlink()
+                            deleted_files.append(results_file_path.name)
+                        
+                        # Optionally delete promptfoo.yaml
+                        if delete_yaml and yaml_exists:
+                            promptfoo_yaml_path.unlink()
+                            deleted_files.append(promptfoo_yaml_path.name)
+                        
+                        if deleted_files:
+                            st.success(f"✅ Cached results deleted successfully!\n• Deleted: {', '.join(deleted_files)}")
+                            st.rerun()
+                        else:
+                            st.warning("No files were deleted.")
+                    except Exception as e:
+                        st.error(f"❌ Error deleting cached results: {str(e)}")
+                else:
+                    st.error("Please confirm deletion by checking the checkbox.")
+        else:
+            st.info("ℹ️ No cached results file found. The file will be created when you run PromptFoo.")
+            if yaml_exists:
+                st.markdown("---")
+                st.markdown("**PromptFoo config file found:**")
+                st.text(f"• {promptfoo_yaml_path}")
+                delete_yaml_only = st.checkbox("Delete promptfoo.yaml config file", value=False, key="delete_yaml_only_checkbox")
+                
+                if st.button("🗑️ Delete Config File", type="primary", key="delete_yaml_only_btn"):
+                    if delete_yaml_only:
+                        try:
+                            promptfoo_yaml_path.unlink()
+                            st.success(f"✅ Config file deleted successfully!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Error deleting config file: {str(e)}")
+                    else:
+                        st.error("Please confirm deletion by checking the checkbox.")
+    
+    with del_tab4:
         st.subheader("Reset Database")
         st.warning("This will delete ALL data and create a fresh database!")
+        
+        # Check for cached results
+        results_file_path = Path(__file__).parent.parent / "prompts" / "results.json"
+        promptfoo_yaml_path = Path(__file__).parent.parent / "prompts" / "promptfoo.yaml"
+        results_exists = results_file_path.exists()
+        yaml_exists = promptfoo_yaml_path.exists()
+        
+        if results_exists or yaml_exists:
+            st.markdown("**Also delete cached PromptFoo files:**")
+            delete_cached = st.checkbox(
+                f"Delete cached results and config files ({'results.json' if results_exists else ''}{', promptfoo.yaml' if yaml_exists else ''})",
+                value=True,
+                key="reset_delete_cached_checkbox"
+            )
+        else:
+            delete_cached = False
         
         confirm = st.text_input("Type 'RESET' to confirm", key="reset_confirm")
         
         if st.button("Reset Database", type="primary", key="reset_db_btn"):
             if confirm == "RESET":
-                db.drop_tables()
-                db.create_tables()
-                st.success("Database reset successfully!")
-                st.rerun()
+                try:
+                    # Reset database
+                    db.drop_tables()
+                    db.create_tables()
+                    
+                    # Optionally delete cached files
+                    deleted_files = []
+                    if delete_cached:
+                        if results_exists:
+                            results_file_path.unlink()
+                            deleted_files.append("results.json")
+                        if yaml_exists:
+                            promptfoo_yaml_path.unlink()
+                            deleted_files.append("promptfoo.yaml")
+                    
+                    success_msg = "✅ Database reset successfully!"
+                    if deleted_files:
+                        success_msg += f"\n• Also deleted: {', '.join(deleted_files)}"
+                    
+                    st.success(success_msg)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Error resetting database: {str(e)}")
             else:
                 st.error("Please type 'RESET' to confirm")
     
