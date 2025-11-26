@@ -121,13 +121,22 @@ class PipelineWizard:
             except Exception as e:
                 console.print(f"[yellow]Warning: Database exists but may be corrupted: {e}[/yellow]")
         
-        # Check PromptFoo
+        # Check PromptFoo (with longer timeout for first-time download)
         try:
+            # First check if npx exists
+            subprocess.run(
+                ["npx", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=True,
+            )
+            # Then check PromptFoo
             result = subprocess.run(
                 ["npx", "promptfoo@latest", "--version"],
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=60,  # Increased timeout for first-time download
             )
             status["promptfoo_available"] = result.returncode == 0
         except Exception:
@@ -318,15 +327,37 @@ class PipelineWizard:
             return False
         
         # Check PromptFoo availability
+        # First check if npx is available
+        try:
+            subprocess.run(
+                ["npx", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=True,
+            )
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+            console.print("[red]✗ npx not found. Please install Node.js and npm.[/red]")
+            return False
+        
+        # Then check PromptFoo (with longer timeout for first-time download)
         try:
             result = subprocess.run(
                 ["npx", "promptfoo@latest", "--version"],
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=60,  # Increased timeout for first-time download
             )
             if result.returncode != 0:
                 raise Exception("PromptFoo not available")
+        except subprocess.TimeoutExpired:
+            console.print("[red]✗ PromptFoo check timed out after 60 seconds.[/red]")
+            console.print("   This may happen on first run when downloading PromptFoo.")
+            console.print("   Try running manually: npx promptfoo@latest --version")
+            return False
+        except FileNotFoundError:
+            console.print("[red]✗ npx not found. Please install Node.js and npm.[/red]")
+            return False
         except Exception as e:
             console.print(f"[red]✗ PromptFoo not available: {e}[/red]")
             console.print("   Install Node.js and ensure 'npx' is available.")

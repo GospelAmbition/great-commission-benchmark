@@ -24,6 +24,7 @@ from io import StringIO
 from gcb.database import (
     get_db,
     init_db,
+    DatabaseManager,
     Question,
     Conversation,
     Model,
@@ -133,17 +134,17 @@ def get_database():
 
 def render_sidebar():
     """Render the sidebar navigation."""
-    # Display GCB logo instead of text title
+    # Display logo in upper left
     logo_path = Path(__file__).parent.parent / "gcb-logo.png"
     if logo_path.exists():
         st.sidebar.image(str(logo_path), use_container_width=True)
     else:
-        st.sidebar.title("✝️ GCB")
+        st.sidebar.title("🗄️ GCB")
     st.sidebar.markdown("---")
     
     page = st.sidebar.radio(
         "Navigation",
-        ["📊 Dashboard", "📖 Instructions", "❓ Questions", "💬 Conversations", "📈 Evaluations", "📤 Import/Export", "⚙️ Settings"],
+        ["📊 Dashboard", "📖 Instructions", "❓ Questions", "💬 Conversations", "📈 Evaluations", "🤖 Model Config", "🗂️ Manage Data"],
         label_visibility="collapsed",
     )
     
@@ -1019,9 +1020,9 @@ def render_add_question():
                     st.rerun()
 
 
-def render_export():
-    """Render the export page."""
-    st.title("📤 Export & Import")
+def render_manage_data():
+    """Render the data management page (import/export and deletion)."""
+    st.title("🗂️ Manage Data")
     
     db = get_database()
     stats = db.get_stats()
@@ -1195,14 +1196,14 @@ def render_export():
     
     st.markdown(f"Export {stats['questions']} questions in various formats.")
     
-    # Export options
-    col1, col2 = st.columns(2)
+    # Export options with tabs
+    export_tab1, export_tab2, export_tab3 = st.tabs(["📋 PromptFoo", "📊 JSON Export", "📈 CSV Export"])
     
-    with col1:
+    with export_tab1:
         st.subheader("📋 PromptFoo YAML")
         st.markdown("Export for use with PromptFoo red-teaming tool.")
         
-        if st.button("Generate PromptFoo Config"):
+        if st.button("Generate PromptFoo Config", key="promptfoo_btn"):
             with db.get_questions_session() as session:
                 questions = session.query(Question).all()
                 
@@ -1248,11 +1249,11 @@ def render_export():
                 with st.expander("Preview"):
                     st.code(yaml_str, language="yaml")
     
-    with col2:
+    with export_tab2:
         st.subheader("📊 JSON Export")
         st.markdown("Full database export in JSON format.")
         
-        if st.button("Generate JSON Export"):
+        if st.button("Generate JSON Export", key="json_btn"):
             with db.get_questions_session() as session:
                 questions = session.query(Question).all()
                 
@@ -1285,39 +1286,227 @@ def render_export():
                 with st.expander("Preview"):
                     st.json(export_data)
     
+    with export_tab3:
+        st.subheader("📈 CSV Export")
+        st.markdown("Export questions in CSV format for spreadsheet applications.")
+        
+        if st.button("Generate CSV Export", key="csv_btn"):
+            with db.get_questions_session() as session:
+                questions = session.query(Question).all()
+                
+                df = pd.DataFrame([
+                    {
+                        "id": q.id,
+                        "text": q.text,
+                        "acceptance_level": q.acceptance_level.value,
+                        "prompt_type": q.prompt_type.value,
+                        "tags": ", ".join(q.get_tags()),
+                        "notes": q.notes or "",
+                        "created_at": q.created_at.isoformat(),
+                    }
+                    for q in questions
+                ])
+                
+                csv_str = df.to_csv(index=False)
+                
+                st.download_button(
+                    "⬇️ Download questions.csv",
+                    csv_str,
+                    file_name="questions.csv",
+                    mime="text/csv",
+                )
+                
+                with st.expander("Preview"):
+                    st.dataframe(df)
+    
     st.markdown("---")
     
-    # CSV Export
-    st.subheader("📈 CSV Export")
+    # Deletion section
+    st.header("⚠️ Danger Zone")
     
-    if st.button("Generate CSV Export"):
-        with db.get_questions_session() as session:
-            questions = session.query(Question).all()
+    # Tabs for model deletion, test run deletion, and database reset
+    del_tab1, del_tab2, del_tab3 = st.tabs(["🗑️ Delete Models", "🗑️ Delete Test Runs", "🔄 Reset Database"])
+    
+    with del_tab1:
+        st.subheader("Delete Models")
+        
+        with db.get_session() as session:
+            models = session.query(Model).order_by(Model.created_at.desc()).all()
             
-            df = pd.DataFrame([
-                {
-                    "id": q.id,
-                    "text": q.text,
-                    "acceptance_level": q.acceptance_level.value,
-                    "prompt_type": q.prompt_type.value,
-                    "tags": ", ".join(q.get_tags()),
-                    "notes": q.notes or "",
-                    "created_at": q.created_at.isoformat(),
-                }
-                for q in questions
-            ])
+            if not models:
+                st.info("No models found.")
+            else:
+                st.markdown(f"Found {len(models)} model(s). Select a model to delete:")
+                
+                # Create a selectbox with model display names
+                model_options = {}
+                for m in models:
+                    if m.api_identifier and m.api_identifier != m.name:
+                        display_name = f"{m.name} ({m.provider}/{m.api_identifier})"
+                    else:
+                        display_name = f"{m.name} ({m.provider})"
+                    model_options[display_name] = m.id
+                
+                selected_display = st.selectbox(
+                    "Select Model to Delete",
+                    options=list(model_options.keys()),
+                    key="delete_model_select"
+                )
+                
+                if selected_display:
+                    selected_model_id = model_options[selected_display]
+                    selected_model = next(m for m in models if m.id == selected_model_id)
+                    
+                    # Show model details
+                    st.markdown("---")
+                    st.markdown("**Model Details:**")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.text(f"Name: {selected_model.name}")
+                        st.text(f"Provider: {selected_model.provider}")
+                    with col2:
+                        st.text(f"API Identifier: {selected_model.api_identifier}")
+                        st.text(f"Created: {selected_model.created_at.strftime('%Y-%m-%d %H:%M')}")
+                    
+                    # Count related data
+                    responses = session.query(Response).filter(
+                        Response.model_id == selected_model_id
+                    ).all()
+                    responses_count = len(responses)
+                    response_ids = [r.id for r in responses]
+                    evaluations_count = 0
+                    if response_ids:
+                        evaluations_count = session.query(Evaluation).filter(
+                            Evaluation.response_id.in_(response_ids)
+                        ).count()
+                    
+                    st.markdown("**Data to be deleted:**")
+                    st.text(f"• Responses: {responses_count}")
+                    st.text(f"• Evaluations: {evaluations_count}")
+                    
+                    # Confirmation checkbox
+                    confirm_delete = st.checkbox(
+                        f"I understand this will permanently delete {responses_count} responses and {evaluations_count} evaluations",
+                        key=f"confirm_delete_model_{selected_model_id}"
+                    )
+                    
+                    # Delete button
+                    if st.button("🗑️ Delete Model", type="primary", key=f"delete_model_btn_{selected_model_id}"):
+                        if confirm_delete:
+                            result = db.delete_model(selected_model_id)
+                            if result.get("model_deleted"):
+                                st.success(
+                                    f"✅ Model deleted successfully!\n"
+                                    f"• Responses deleted: {result['responses_deleted']}\n"
+                                    f"• Evaluations deleted: {result['evaluations_deleted']}"
+                                )
+                                st.rerun()
+                            else:
+                                st.error(f"❌ Error deleting model: {result.get('error', 'Unknown error')}")
+                        else:
+                            st.error("Please confirm deletion by checking the checkbox.")
+    
+    with del_tab2:
+        st.subheader("Delete Test Runs")
+        
+        with db.get_session() as session:
+            test_runs = session.query(TestRun).order_by(TestRun.started_at.desc()).all()
             
-            csv_str = df.to_csv(index=False)
-            
-            st.download_button(
-                "⬇️ Download questions.csv",
-                csv_str,
-                file_name="questions.csv",
-                mime="text/csv",
-            )
-            
-            with st.expander("Preview"):
-                st.dataframe(df)
+            if not test_runs:
+                st.info("No test runs found.")
+            else:
+                st.markdown(f"Found {len(test_runs)} test run(s). Select a test run to delete:")
+                
+                # Create a selectbox with test run display names
+                test_run_options = {}
+                for tr in test_runs:
+                    name = tr.name or f"Test Run {tr.id[:8]}"
+                    status_emoji = {
+                        "pending": "⏳",
+                        "running": "🔄",
+                        "completed": "✅",
+                        "failed": "❌"
+                    }.get(tr.status.value, "❓")
+                    display_name = f"{status_emoji} {name} ({tr.started_at.strftime('%Y-%m-%d %H:%M')})"
+                    test_run_options[display_name] = tr.id
+                
+                selected_display = st.selectbox(
+                    "Select Test Run to Delete",
+                    options=list(test_run_options.keys()),
+                    key="delete_test_run_select"
+                )
+                
+                if selected_display:
+                    selected_test_run_id = test_run_options[selected_display]
+                    selected_test_run = next(tr for tr in test_runs if tr.id == selected_test_run_id)
+                    
+                    # Show test run details
+                    st.markdown("---")
+                    st.markdown("**Test Run Details:**")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.text(f"Name: {selected_test_run.name or 'Unnamed'}")
+                        st.text(f"Status: {selected_test_run.status.value}")
+                        st.text(f"Started: {selected_test_run.started_at.strftime('%Y-%m-%d %H:%M')}")
+                    with col2:
+                        if selected_test_run.completed_at:
+                            st.text(f"Completed: {selected_test_run.completed_at.strftime('%Y-%m-%d %H:%M')}")
+                        else:
+                            st.text("Completed: Not finished")
+                    
+                    # Count related data
+                    responses = session.query(Response).filter(
+                        Response.test_run_id == selected_test_run_id
+                    ).all()
+                    responses_count = len(responses)
+                    response_ids = [r.id for r in responses]
+                    evaluations_count = 0
+                    if response_ids:
+                        evaluations_count = session.query(Evaluation).filter(
+                            Evaluation.response_id.in_(response_ids)
+                        ).count()
+                    
+                    st.markdown("**Data to be deleted:**")
+                    st.text(f"• Responses: {responses_count}")
+                    st.text(f"• Evaluations: {evaluations_count}")
+                    
+                    # Confirmation checkbox
+                    confirm_delete = st.checkbox(
+                        f"I understand this will permanently delete {responses_count} responses and {evaluations_count} evaluations",
+                        key=f"confirm_delete_test_run_{selected_test_run_id}"
+                    )
+                    
+                    # Delete button
+                    if st.button("🗑️ Delete Test Run", type="primary", key=f"delete_test_run_btn_{selected_test_run_id}"):
+                        if confirm_delete:
+                            result = db.delete_test_run(selected_test_run_id)
+                            if result.get("test_run_deleted"):
+                                st.success(
+                                    f"✅ Test run deleted successfully!\n"
+                                    f"• Responses deleted: {result['responses_deleted']}\n"
+                                    f"• Evaluations deleted: {result['evaluations_deleted']}"
+                                )
+                                st.rerun()
+                            else:
+                                st.error(f"❌ Error deleting test run: {result.get('error', 'Unknown error')}")
+                        else:
+                            st.error("Please confirm deletion by checking the checkbox.")
+    
+    with del_tab3:
+        st.subheader("Reset Database")
+        st.warning("This will delete ALL data and create a fresh database!")
+        
+        confirm = st.text_input("Type 'RESET' to confirm", key="reset_confirm")
+        
+        if st.button("Reset Database", type="primary", key="reset_db_btn"):
+            if confirm == "RESET":
+                db.drop_tables()
+                db.create_tables()
+                st.success("Database reset successfully!")
+                st.rerun()
+            else:
+                st.error("Please type 'RESET' to confirm")
+    
 
 
 def render_instructions():
@@ -1325,132 +1514,14 @@ def render_instructions():
     st.title("📖 Instructions")
     st.markdown("Command-line instructions for running the Great Commission Benchmark.")
     
-    # Visual Workflow Section at the top
-    st.header("🧪 Step-by-Step Visual Workflow")
-    st.markdown("Follow this workflow to run the complete benchmark pipeline:")
-    
-    # Create the visual workflow diagram (same as dashboard)
-    workflow_diagram = """
-    digraph workflow {
-        rankdir=TB;
-        node [shape=box, style="rounded,filled", fontname="Arial", fontsize=11];
-        edge [color="#666666", arrowhead=vee, penwidth=2];
-        
-        Questions [label="Questions Database\nquestions.db", fillcolor="#4a90d9", fontcolor="white"];
-        Export [label="Export\npython -m gcb prepare", fillcolor="#9b59b6", fontcolor="white"];
-        PromptFoo [label="PromptFoo Execution\npromptfoo eval -c prompts/promptfoo.yaml", fillcolor="#e67e22", fontcolor="white"];
-        Import [label="Import Results\npython -m gcb import-results", fillcolor="#2ecc71", fontcolor="white"];
-        Evaluation [label="Evaluation\npython -m gcb evaluate", fillcolor="#f39c12", fontcolor="white"];
-        Reporting [label="Reporting\npython -m gcb report", fillcolor="#e74c3c", fontcolor="white"];
-        
-        Questions -> Export;
-        Export -> PromptFoo;
-        PromptFoo -> Import;
-        Import -> Evaluation;
-        Evaluation -> Reporting;
-    }
-    """
-    
-    try:
-        st.graphviz_chart(workflow_diagram)
-    except Exception as e:
-        # Fallback to a clean visual representation
-        workflow_steps = [
-            {"title": "Questions Database", "command": "questions.db", "desc": "Managed via UI or CLI", "color": "#4a90d9"},
-            {"title": "Export", "command": "python -m gcb prepare", "desc": "Generates PromptFoo YAML", "color": "#9b59b6"},
-            {"title": "PromptFoo Execution", "command": "promptfoo eval -c prompts/promptfoo.yaml", "desc": "Runs tests → Generates JSON", "color": "#e67e22"},
-            {"title": "Import Results", "command": "python -m gcb import-results", "desc": "Writes to responses.db", "color": "#2ecc71"},
-            {"title": "Evaluation", "command": "python -m gcb evaluate", "desc": "LLM judge evaluates responses", "color": "#f39c12"},
-            {"title": "Reporting", "command": "python -m gcb report", "desc": "Generates statistics", "color": "#e74c3c"}
-        ]
-        
-        # Create a clean visual flow
-        for i, step in enumerate(workflow_steps):
-            st.markdown(f"""
-            <div style="background-color: {step['color']}15; 
-                        border-left: 4px solid {step['color']}; 
-                        padding: 15px 20px; 
-                        border-radius: 6px; 
-                        margin: 12px 0;">
-                <div style="font-size: 18px; font-weight: 600; color: {step['color']}; margin-bottom: 6px;">{step['title']}</div>
-                <div style="font-family: monospace; font-size: 12px; color: #d0d0d0; background-color: #1e1e1e; padding: 6px 10px; border-radius: 4px; margin: 6px 0; display: inline-block;">{step['command']}</div>
-                <div style="font-size: 12px; color: #aaa; margin-top: 4px;">{step['desc']}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Add arrow between steps
-            if i < len(workflow_steps) - 1:
-                st.markdown(f"<div style='text-align: center; font-size: 24px; color: {step['color']}; margin: 8px 0; opacity: 0.7;'>⬇️</div>", unsafe_allow_html=True)
-    
     st.markdown("---")
     
     # Pipeline Commands - moved to second position
     st.header("⚙️ Benchmark Pipeline")
-    st.markdown("Commands for running the complete benchmark workflow.")
     
-    st.subheader("Interactive Wizard (Recommended)")
-    st.markdown("The easiest way to run the benchmark pipeline:")
+    st.markdown("Open your Terminal, go to the benchmark folder, and run this command for the pipeline wizard.")
     st.code("python pipeline.py", language="bash")
     st.markdown("This wizard guides you through each step with helpful prompts and status checks.")
-    
-    st.markdown("---")
-    
-    st.subheader("Manual Pipeline Steps")
-    st.markdown("Run these commands sequentially to execute the full benchmark:")
-    
-    step1, step2, step3, step4, step5 = st.tabs(["Step 1: Prepare", "Step 2: Execute", "Step 3: Import", "Step 4: Evaluate", "Step 5: Report"])
-    
-    with step1:
-        st.markdown("**Export questions to PromptFoo YAML format**")
-        st.code("""# Standard export
-python -m gcb prepare
-
-# Override model on the fly
-python -m gcb prepare --model gpt-4 --provider openrouter""", language="bash")
-    
-    with step2:
-        st.markdown("**Run PromptFoo against your LLM**")
-        st.code("""# Run PromptFoo tests
-promptfoo eval -c prompts/promptfoo.yaml""", language="bash")
-        st.info("💡 Make sure your LLM is running (LM Studio) or API is configured (OpenRouter) before running this step.")
-    
-    with step3:
-        st.markdown("**Import results into database**")
-        st.code("""# Import with default model from config
-python -m gcb import-results
-
-# Specify model explicitly
-python -m gcb import-results --model "My Model Name" """, language="bash")
-    
-    with step4:
-        st.markdown("**Use LLM to judge responses**")
-        st.code("python -m gcb evaluate", language="bash")
-        st.info("💡 This uses the evaluator model from config.yaml to judge each response.")
-    
-    with step5:
-        st.markdown("**Generate benchmark statistics**")
-        st.code("python -m gcb report", language="bash")
-        st.info("💡 Reports are saved to `output/benchmark_report.md`")
-    
-    st.markdown("---")
-    
-    # Setup section
-    st.header("🚀 Quick Start")
-    
-    st.subheader("1. Setup")
-    st.code("""cd benchmark
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\\Scripts\\activate
-pip install -r requirements.txt""", language="bash")
-    
-    st.subheader("2. Initialize Databases")
-    st.markdown("The benchmark uses a dual-database architecture:")
-    st.markdown("- **`questions.db`**: Stores questions and conversations (test prompts)")
-    st.markdown("- **`responses.db`**: Stores models, test runs, responses, and evaluations (test results)")
-    st.code("python -m gcb init", language="bash")
-    
-    st.subheader("3. Start the UI")
-    st.code("streamlit run ui/app.py", language="bash")
     
     st.markdown("---")
     
@@ -1495,42 +1566,14 @@ python -m gcb test-connection""", language="bash")
     
     st.markdown("---")
     
-    # Quick Setup Examples
-    st.header("⚡ Quick Setup Examples")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("LM Studio (Local)")
-        st.code("""python -m gcb set-config \\
-  --provider lmstudio \\
-  --base-url http://localhost:1234/v1 \\
-  --model qwen/qwen3-4b""", language="bash")
-    
-    with col2:
-        st.subheader("OpenRouter")
-        st.code("""python -m gcb set-config \\
-  --provider openrouter \\
-  --base-url https://openrouter.ai/api/v1 \\
-  --model openai/gpt-4o-mini \\
-  --api-key $OPENROUTER_API_KEY""", language="bash")
+    # Visual Workflow Section at the bottom
+    st.header("🧪 Step-by-Step Visual Workflow")
+    st.image("ui/flow.png", width=800)
     
     st.markdown("---")
     
-    # Architecture Overview
-    st.header("📐 Architecture Overview")
-    st.markdown("""
-    The benchmark uses a **dual-database architecture** that separates test questions from test results:
-    
-    1. **Questions** are stored in `questions.db` (managed via UI or CLI)
-    2. **Export** reads from `questions.db` and generates PromptFoo YAML
-    3. **PromptFoo** runs tests and generates results JSON
-    4. **Import** reads results and writes to `responses.db` (with denormalized question data)
-    5. **Evaluation** reads from `responses.db` and writes evaluations back
-    6. **Reporting** reads from both databases to generate statistics
-    """)
-    
-    st.info("💡 **Why Dual Databases?** Questions (test cases) are separate from responses (test results), allowing questions to be updated without affecting historical test results.")
+    # Link to README for more information
+    st.markdown("📖 For more information, see the [README](../README.md)")
 
 
 def render_conversations():
@@ -1936,6 +1979,118 @@ def render_evaluation_overview(db, reporter, model_stats):
                     ])
                     type_df["Approval Rate"] = (type_df["Approved"] / type_df["Total"] * 100).round(1).astype(str) + "%"
                     st.dataframe(type_df, width='stretch', hide_index=True)
+    
+    # Insights section
+    st.markdown("---")
+    st.subheader("🔍 Key Insights")
+    
+    insights = reporter.get_insights()
+    
+    # Expected vs Actual Rejections for Red Questions
+    st.markdown("### Expected vs Actual Rejections (Red Questions)")
+    st.markdown(f"Red questions should be refused. There are **{insights['total_red_questions']} red questions** in the database. "
+                f"This shows how many rejections were expected vs received for each model.")
+    
+    rejection_insights = []
+    for model_id, insight_data in insights["expected_vs_actual_rejections"].items():
+        model_obj = models_dict.get(model_id)
+        model_display = insight_data["model_name"]
+        if model_obj:
+            if model_obj.api_identifier and model_obj.api_identifier != insight_data["model_name"]:
+                model_display = f"{insight_data['model_name']} ({model_obj.provider}/{model_obj.api_identifier})"
+            else:
+                model_display = f"{insight_data['model_name']} ({model_obj.provider})"
+        
+        expected = insight_data["expected_rejections"]
+        actual = insight_data["actual_rejections"]
+        approved = insight_data["actual_approved"]
+        ambiguous = insight_data["actual_ambiguous"]
+        
+        rejection_insights.append({
+            "Model": model_display,
+            "Expected Rejections": expected,
+            "Actual Rejections": actual,
+            "Approved (unexpected)": approved,
+            "Ambiguous": ambiguous,
+            "Total Red Responses": insight_data["total_red_responses"],
+        })
+    
+    if rejection_insights:
+        df_rejections = pd.DataFrame(rejection_insights)
+        st.dataframe(df_rejections, width='stretch', hide_index=True)
+        
+        # Show warning if rejections don't match expectations
+        for model_id, insight_data in insights["expected_vs_actual_rejections"].items():
+            expected = insight_data["expected_rejections"]
+            actual = insight_data["actual_rejections"]
+            approved = insight_data["actual_approved"]
+            
+            if actual < expected:
+                model_obj = models_dict.get(model_id)
+                model_display = insight_data["model_name"]
+                if model_obj:
+                    if model_obj.api_identifier and model_obj.api_identifier != insight_data["model_name"]:
+                        model_display = f"{insight_data['model_name']} ({model_obj.provider}/{model_obj.api_identifier})"
+                    else:
+                        model_display = f"{insight_data['model_name']} ({model_obj.provider})"
+                
+                st.warning(
+                    f"⚠️ **{model_display}**: Expected {expected} rejections for red questions, but only received {actual}. "
+                    f"{approved} red questions were approved (should be refused)."
+                )
+    
+    # Green Questions Not Accepted
+    st.markdown("---")
+    st.markdown("### Green Questions Not Accepted")
+    st.markdown("Green questions should always be accepted. This shows cases where they were refused or marked ambiguous.")
+    
+    green_insights = []
+    for model_id, insight_data in insights["green_not_accepted"].items():
+        if insight_data["count"] > 0:
+            model_obj = models_dict.get(model_id)
+            model_display = insight_data["model_name"]
+            if model_obj:
+                if model_obj.api_identifier and model_obj.api_identifier != insight_data["model_name"]:
+                    model_display = f"{insight_data['model_name']} ({model_obj.provider}/{model_obj.api_identifier})"
+                else:
+                    model_display = f"{insight_data['model_name']} ({model_obj.provider})"
+            
+            green_insights.append({
+                "Model": model_display,
+                "Count": insight_data["count"],
+            })
+    
+    if green_insights:
+        df_green = pd.DataFrame(green_insights)
+        st.dataframe(df_green, width='stretch', hide_index=True)
+        
+        # Show detailed breakdown for each model
+        for model_id, insight_data in insights["green_not_accepted"].items():
+            if insight_data["count"] > 0:
+                model_obj = models_dict.get(model_id)
+                model_display = insight_data["model_name"]
+                if model_obj:
+                    if model_obj.api_identifier and model_obj.api_identifier != insight_data["model_name"]:
+                        model_display = f"{insight_data['model_name']} ({model_obj.provider}/{model_obj.api_identifier})"
+                    else:
+                        model_display = f"{insight_data['model_name']} ({model_obj.provider})"
+                
+                with st.expander(f"🔍 Details: {model_display} - {insight_data['count']} green questions not accepted"):
+                    for detail in insight_data["details"]:
+                        verdict_emoji = {
+                            "refused": "❌",
+                            "ambiguous": "⚠️",
+                        }.get(detail["verdict"], "❓")
+                        
+                        st.markdown(f"**{verdict_emoji} {detail['verdict'].upper()}**")
+                        st.markdown(f"**Prompt Type:** {detail['prompt_type'] or 'N/A'}")
+                        st.markdown(f"**Question:** {detail['question_text'][:200]}{'...' if len(detail['question_text']) > 200 else ''}")
+                        st.markdown(f"**Reasoning:** {detail['reasoning']}")
+                        if detail['confidence']:
+                            st.markdown(f"**Confidence:** {detail['confidence']:.2f}")
+                        st.markdown("---")
+    else:
+        st.success("✅ All green questions were accepted as expected!")
 
 
 def render_detailed_evaluations(db):
@@ -2360,14 +2515,9 @@ def render_test_runs(db, reporter):
                 st.dataframe(df_level, width='stretch', hide_index=True)
 
 
-def render_settings():
-    """Render the settings page."""
-    st.title("⚙️ Settings")
-    
-    db = get_database()
-    
-    # Model Configuration Section
-    st.subheader("🤖 Model Configuration")
+def render_model_config():
+    """Render the model configuration page."""
+    st.title("🤖 Model Config")
     st.markdown("Configure your LLM provider and model settings without editing config.yaml manually.")
     
     config_path = Path(__file__).parent.parent / "config.yaml"
@@ -2465,16 +2615,6 @@ def render_settings():
     
     st.markdown("---")
     
-    # Database info
-    st.subheader("Database")
-    st.markdown(f"**Questions DB:** `{QUESTIONS_DB_PATH}`")
-    st.markdown(f"**Responses DB:** `{RESPONSES_DB_PATH}`")
-    
-    # Note: verify_schema only works with single DB, skip it for dual-DB setup
-    st.success(f"✅ Dual database mode active")
-    
-    st.markdown("---")
-    
     # Config file preview
     st.subheader("Current Configuration")
     
@@ -2483,25 +2623,6 @@ def render_settings():
             st.code(yaml.dump(config, default_flow_style=False, sort_keys=False), language="yaml")
     else:
         st.warning("config.yaml not found")
-    
-    st.markdown("---")
-    
-    # Danger zone
-    st.subheader("⚠️ Danger Zone")
-    
-    with st.expander("Reset Database"):
-        st.warning("This will delete ALL data and create a fresh database!")
-        
-        confirm = st.text_input("Type 'RESET' to confirm")
-        
-        if st.button("Reset Database"):
-            if confirm == "RESET":
-                db.drop_tables()
-                db.create_tables()
-                st.success("Database reset successfully!")
-                st.rerun()
-            else:
-                st.error("Please type 'RESET' to confirm")
 
 
 def main():
@@ -2518,16 +2639,16 @@ def main():
         render_dashboard()
     elif page == "📈 Evaluations":
         render_evaluations()
+    elif page == "🤖 Model Config":
+        render_model_config()
     elif page == "📖 Instructions":
         render_instructions()
     elif page == "❓ Questions":
         render_questions()
     elif page == "💬 Conversations":
         render_conversations()
-    elif page == "📤 Import/Export":
-        render_export()
-    elif page == "⚙️ Settings":
-        render_settings()
+    elif page == "🗂️ Manage Data":
+        render_manage_data()
 
 
 if __name__ == "__main__":

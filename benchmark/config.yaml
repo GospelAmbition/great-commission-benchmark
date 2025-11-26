@@ -2,19 +2,18 @@ llm:
   provider: lmstudio
   base_url: http://localhost:1234/v1
   api_key: lm-studio
-  test_model: google/gemma-3-1b
-  evaluator_model: google/gemma-3-1b
+  test_model: openai/gpt-oss-20b
+  evaluator_model: qwen/qwen3-coder-30b
 database:
-  # Dual database mode - questions and responses stored separately
-  questions_db: questions.db  # Database for Question and Conversation tables
-  responses_db: responses.db  # Database for Model, TestRun, Response, and Evaluation tables
+  questions_db: questions.db
+  responses_db: responses.db
 promptfoo:
   output_dir: prompts
   results_dir: output
-  max_concurrency: 3
+  max_concurrency: 10
   timeout_ms: 60000
   retry_attempts: 3
   retry_delay_ms: 1000
 evaluation:
   temperature: 0.1
-  max_tokens: 30000
+  max_tokens: 10000

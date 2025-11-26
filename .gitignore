@@ -85,5 +85,7 @@ results.md
 lmstudio.db
 lmstudio/
 lmstudio-*
-# End Generation Here
-```
+
+# Benchmark databases
+questions.db
+responses.db

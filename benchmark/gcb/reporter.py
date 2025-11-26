@@ -176,6 +176,89 @@ class BenchmarkReporter:
             
             return stats
 
+    def get_insights(self, model_id: Optional[str] = None) -> Dict[str, Any]:
+        """Get insights about evaluation results.
+        
+        Args:
+            model_id: Specific model ID (None = all models)
+            
+        Returns:
+            Dictionary of insights including:
+            - total_red_questions: Total number of red questions in database
+            - expected_vs_actual_rejections: For red questions, expected vs actual rejections
+            - green_not_accepted: Green questions that were refused or ambiguous
+        """
+        insights = {
+            "total_red_questions": 0,
+            "expected_vs_actual_rejections": {},
+            "green_not_accepted": {},
+        }
+        
+        with self.db.get_questions_session() as q_session:
+            # Count total red questions in database
+            total_red_questions = q_session.query(Question).filter(
+                Question.acceptance_level == AcceptanceLevel.RED
+            ).count()
+            insights["total_red_questions"] = total_red_questions
+        
+        with self.db.get_session() as session:
+            # Get models
+            if model_id:
+                models = [session.query(Model).filter(Model.id == model_id).first()]
+            else:
+                models = session.query(Model).all()
+            
+            for model in models:
+                if not model:
+                    continue
+                
+                # Get all responses for this model with evaluations
+                responses = session.query(Response).filter(
+                    Response.model_id == model.id
+                ).all()
+                
+                # Calculate expected vs actual rejections for red questions
+                red_responses = [r for r in responses if r.get_acceptance_level() == AcceptanceLevel.RED and r.evaluation]
+                # Expected rejections = number of red questions tested (all should be refused)
+                expected_rejections = len(red_responses)
+                actual_rejections = sum(1 for r in red_responses if r.evaluation.verdict == Verdict.REFUSED)
+                actual_approved = sum(1 for r in red_responses if r.evaluation.verdict == Verdict.APPROVED)
+                actual_ambiguous = sum(1 for r in red_responses if r.evaluation.verdict == Verdict.AMBIGUOUS)
+                
+                insights["expected_vs_actual_rejections"][model.id] = {
+                    "model_name": model.name,
+                    "expected_rejections": expected_rejections,
+                    "actual_rejections": actual_rejections,
+                    "actual_approved": actual_approved,
+                    "actual_ambiguous": actual_ambiguous,
+                    "total_red_responses": len(red_responses),
+                }
+                
+                # Find green questions that were not accepted
+                green_not_accepted = []
+                green_responses = [r for r in responses if r.get_acceptance_level() == AcceptanceLevel.GREEN and r.evaluation]
+                
+                for response in green_responses:
+                    if response.evaluation.verdict != Verdict.APPROVED:
+                        question_text = response.get_question_text()
+                        prompt_type = response.get_prompt_type()
+                        green_not_accepted.append({
+                            "response_id": response.id,
+                            "question_text": question_text,
+                            "prompt_type": prompt_type.value if prompt_type else None,
+                            "verdict": response.evaluation.verdict.value,
+                            "reasoning": response.evaluation.reasoning,
+                            "confidence": response.evaluation.confidence_score,
+                        })
+                
+                insights["green_not_accepted"][model.id] = {
+                    "model_name": model.name,
+                    "count": len(green_not_accepted),
+                    "details": green_not_accepted,
+                }
+        
+        return insights
+
     def generate_markdown_report(
         self,
         model_id: Optional[str] = None,
@@ -285,6 +368,75 @@ class BenchmarkReporter:
                         )
                     
                     lines.append("")
+            
+            # Add insights section
+            insights = self.get_insights(model_id)
+            
+            lines.extend([
+                "## Insights",
+                "",
+            ])
+            
+            # Expected vs Actual Rejections
+            total_red = insights.get("total_red_questions", 0)
+            lines.extend([
+                "### Expected vs Actual Rejections (Red Questions)",
+                "",
+                f"Red questions should be refused. There are **{total_red} red questions** in the database. "
+                f"This shows how many rejections were expected vs received for each model.",
+                "",
+                "| Model | Expected Rejections | Actual Rejections | Approved (unexpected) | Ambiguous | Total Red Responses |",
+                "|-------|---------------------|-------------------|------------------------|-----------|---------------------|",
+            ])
+            
+            for model_id_key, insight_data in insights["expected_vs_actual_rejections"].items():
+                expected = insight_data["expected_rejections"]
+                actual = insight_data["actual_rejections"]
+                approved = insight_data["actual_approved"]
+                ambiguous = insight_data["actual_ambiguous"]
+                total = insight_data["total_red_responses"]
+                
+                lines.append(
+                    f"| {insight_data['model_name']} | {expected} | {actual} | {approved} | {ambiguous} | {total} |"
+                )
+            
+            lines.append("")
+            
+            # Green Questions Not Accepted
+            lines.extend([
+                "### Green Questions Not Accepted",
+                "",
+                "Green questions should always be accepted. This shows cases where they were refused or marked ambiguous.",
+                "",
+            ])
+            
+            has_green_issues = False
+            for model_id_key, insight_data in insights["green_not_accepted"].items():
+                if insight_data["count"] > 0:
+                    has_green_issues = True
+                    lines.extend([
+                        f"#### {insight_data['model_name']}",
+                        "",
+                        f"**Count:** {insight_data['count']} green questions not accepted",
+                        "",
+                    ])
+                    
+                    for detail in insight_data["details"]:
+                        lines.extend([
+                            f"**Verdict:** {detail['verdict'].upper()}",
+                            f"**Prompt Type:** {detail['prompt_type'] or 'N/A'}",
+                            f"**Question:** {detail['question_text']}",
+                            f"**Reasoning:** {detail['reasoning']}",
+                            f"**Confidence:** {detail['confidence']:.2f}" if detail['confidence'] else "",
+                            "",
+                            "---",
+                            "",
+                        ])
+            
+            if not has_green_issues:
+                lines.append("✅ All green questions were accepted as expected!")
+            
+            lines.append("")
         
         # Write report
         output_path = self.output_dir / output_file

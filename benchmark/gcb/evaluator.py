@@ -214,8 +214,13 @@ class Evaluator:
             # Create progress bar
             with tqdm(total=total_responses, desc="Evaluating responses", unit="response") as pbar:
                 for response in responses:
+                    # Check if evaluation already exists (query database directly for reliability)
+                    existing_evaluation = session.query(Evaluation).filter(
+                        Evaluation.response_id == response.id
+                    ).first()
+                    
                     # Skip if already evaluated
-                    if skip_evaluated and response.evaluation is not None:
+                    if skip_evaluated and existing_evaluation is not None:
                         skipped += 1
                         pbar.update(1)
                         pbar.set_postfix({"evaluated": evaluated, "skipped": skipped, "errors": len(errors)})
@@ -242,16 +247,29 @@ class Evaluator:
                             response.response_text,
                         )
                         
-                        # Create evaluation record
-                        evaluation = Evaluation(
-                            response_id=response.id,
-                            evaluator_model=self._get_evaluator_model(),
-                            verdict=verdict,
-                            reasoning=reasoning,
-                            confidence_score=confidence,
-                        )
-                        session.add(evaluation)
-                        evaluated += 1
+                        # Check again if evaluation exists (handle race conditions)
+                        existing_evaluation = session.query(Evaluation).filter(
+                            Evaluation.response_id == response.id
+                        ).first()
+                        
+                        if existing_evaluation:
+                            # Update existing evaluation instead of creating new one
+                            existing_evaluation.verdict = verdict
+                            existing_evaluation.reasoning = reasoning
+                            existing_evaluation.confidence_score = confidence
+                            existing_evaluation.evaluator_model = self._get_evaluator_model()
+                            evaluated += 1
+                        else:
+                            # Create new evaluation record
+                            evaluation = Evaluation(
+                                response_id=response.id,
+                                evaluator_model=self._get_evaluator_model(),
+                                verdict=verdict,
+                                reasoning=reasoning,
+                                confidence_score=confidence,
+                            )
+                            session.add(evaluation)
+                            evaluated += 1
                         
                     except Exception as e:
                         errors.append(f"Response {response.id}: {str(e)}")

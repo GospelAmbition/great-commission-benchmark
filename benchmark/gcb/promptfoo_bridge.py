@@ -306,7 +306,7 @@ class PromptFooBridge:
         if not config_path.exists():
             return False, f"Config file not found: {config_path}"
         
-        cmd = ["npx", "promptfoo@latest", "eval", "-c", str(config_path), "--output", "json"]
+        cmd = ["npx", "promptfoo@latest", "eval", "-c", str(config_path)]
         
         if verbose:
             cmd.append("--verbose")
@@ -316,7 +316,7 @@ class PromptFooBridge:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=600,  # 10 minute timeout
+                timeout=3600,  # 60 minute timeout
             )
             
             if result.returncode == 0:

@@ -415,6 +415,117 @@ class DatabaseManager:
             "questions_by_type": questions_by_type,
         }
 
+    def delete_model(self, model_id: str) -> dict:
+        """Delete a model and all its related data (responses and evaluations).
+        
+        This method performs a cascading delete:
+        - Deletes all evaluations for responses from this model
+        - Deletes all responses from this model
+        - Deletes the model itself
+        
+        Args:
+            model_id: ID of the model to delete
+            
+        Returns:
+            Dictionary with deletion statistics: {
+                "model_deleted": bool,
+                "responses_deleted": int,
+                "evaluations_deleted": int
+            }
+        """
+        with self.get_session() as session:
+            # Find the model
+            model = session.query(Model).filter(Model.id == model_id).first()
+            if not model:
+                return {
+                    "model_deleted": False,
+                    "responses_deleted": 0,
+                    "evaluations_deleted": 0,
+                    "error": "Model not found"
+                }
+            
+            # Get all responses for this model
+            responses = session.query(Response).filter(Response.model_id == model_id).all()
+            response_ids = [r.id for r in responses]
+            
+            # Delete evaluations for these responses
+            evaluations_deleted = 0
+            if response_ids:
+                evaluations = session.query(Evaluation).filter(
+                    Evaluation.response_id.in_(response_ids)
+                ).all()
+                evaluations_deleted = len(evaluations)
+                for eval_obj in evaluations:
+                    session.delete(eval_obj)
+            
+            # Delete responses
+            responses_deleted = len(responses)
+            for response in responses:
+                session.delete(response)
+            
+            # Delete the model
+            session.delete(model)
+            session.commit()
+            
+            return {
+                "model_deleted": True,
+                "responses_deleted": responses_deleted,
+                "evaluations_deleted": evaluations_deleted
+            }
+
+    def delete_test_run(self, test_run_id: str) -> dict:
+        """Delete a test run and all its related data (responses and evaluations).
+        
+        Args:
+            test_run_id: ID of the test run to delete
+            
+        Returns:
+            Dictionary with deletion statistics: {
+                "test_run_deleted": bool,
+                "responses_deleted": int,
+                "evaluations_deleted": int
+            }
+        """
+        with self.get_session() as session:
+            # Find the test run
+            test_run = session.query(TestRun).filter(TestRun.id == test_run_id).first()
+            if not test_run:
+                return {
+                    "test_run_deleted": False,
+                    "responses_deleted": 0,
+                    "evaluations_deleted": 0,
+                    "error": "Test run not found"
+                }
+            
+            # Get all responses for this test run
+            responses = session.query(Response).filter(Response.test_run_id == test_run_id).all()
+            response_ids = [r.id for r in responses]
+            
+            # Delete evaluations for these responses
+            evaluations_deleted = 0
+            if response_ids:
+                evaluations = session.query(Evaluation).filter(
+                    Evaluation.response_id.in_(response_ids)
+                ).all()
+                evaluations_deleted = len(evaluations)
+                for eval_obj in evaluations:
+                    session.delete(eval_obj)
+            
+            # Delete responses
+            responses_deleted = len(responses)
+            for response in responses:
+                session.delete(response)
+            
+            # Delete the test run
+            session.delete(test_run)
+            session.commit()
+            
+            return {
+                "test_run_deleted": True,
+                "responses_deleted": responses_deleted,
+                "evaluations_deleted": evaluations_deleted
+            }
+
 
 # ============================================================================
 # Convenience Functions
