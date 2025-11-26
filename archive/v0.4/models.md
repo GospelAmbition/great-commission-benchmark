@@ -1,1 +1,0 @@
-openai/gpt-oss-safeguard-20b
