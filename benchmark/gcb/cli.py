@@ -118,7 +118,6 @@ def stats(
     table.add_column("Count", style="green", justify="right")
     
     table.add_row("Questions", str(stats["questions"]))
-    table.add_row("Conversations", str(stats["conversations"]))
     table.add_row("Models", str(stats["models"]))
     table.add_row("Test Runs", str(stats["test_runs"]))
     table.add_row("Responses", str(stats["responses"]))
@@ -689,8 +688,7 @@ def verify(
     # Get stats
     stats = db.get_stats()
     q_count = stats["questions"]
-    c_count = stats["conversations"]
-    console.print(f"  [green][OK][/green] Questions: {q_count}, Conversations: {c_count}")
+    console.print(f"  [green][OK][/green] Questions: {q_count}")
     
     # 2. Check config
     console.print("\n[bold]2. Configuration Check[/bold]")

@@ -292,8 +292,8 @@ class PipelineWizard:
                 level_filter = AcceptanceLevel(level_choice)
             
             type_choice = Prompt.ask(
-                "Prompt type (direct/roleplay/encoded/multiturn)",
-                choices=["direct", "roleplay", "encoded", "multiturn", ""],
+                "Prompt type (direct/roleplay/encoded)",
+                choices=["direct", "roleplay", "encoded", ""],
                 default=""
             )
             if type_choice:

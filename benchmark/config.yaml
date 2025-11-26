@@ -2,7 +2,7 @@ llm:
   provider: lmstudio
   base_url: http://localhost:1234/v1
   api_key: lm-studio
-  test_model: openai/gpt-oss-20b
+  test_model: google/gemma-3-1b
   evaluator_model: qwen/qwen3-coder-30b
 database:
   questions_db: questions.db

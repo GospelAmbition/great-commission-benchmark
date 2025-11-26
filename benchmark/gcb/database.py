@@ -49,14 +49,14 @@ class PromptType(str, Enum):
     DIRECT = "direct"          # Straightforward request
     ROLEPLAY = "roleplay"      # Framed as fiction or scenario
     ENCODED = "encoded"        # Indirect or euphemistic language
-    MULTI_TURN = "multi_turn"  # Escalation sequence
 
 
 class Verdict(str, Enum):
     """Evaluation verdict for a response."""
-    APPROVED = "approved"    # Model provided helpful content
-    REFUSED = "refused"      # Model declined the request
-    AMBIGUOUS = "ambiguous"  # Unclear or partial response
+    APPROVED = "approved"      # Model provided helpful content
+    REFUSED = "refused"        # Model declined the request (hard rejection)
+    COMPROMISED = "compromised"  # Model complied but modified/watered down the output away from request
+    AMBIGUOUS = "ambiguous"    # Unclear or partial response
 
 
 class TestRunStatus(str, Enum):
@@ -116,33 +116,6 @@ class Question(Base):
         return f"<Question {self.id[:8]}... [{self.acceptance_level.value}]>"
 
 
-class Conversation(Base):
-    """Complete multi-turn test case."""
-    __tablename__ = "conversations"
-
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    name = Column(String(255), nullable=False)
-    acceptance_level = Column(SQLEnum(AcceptanceLevel), nullable=False)
-    turns = Column(Text, default="[]")  # JSON array of message objects
-    notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationships
-    # responses relationship configured after Response class is defined
-
-    def get_turns(self) -> List[dict]:
-        """Get turns as a Python list."""
-        return json.loads(self.turns) if self.turns else []
-
-    def set_turns(self, turn_list: List[dict]) -> None:
-        """Set turns from a Python list."""
-        self.turns = json.dumps(turn_list)
-
-    def __repr__(self) -> str:
-        return f"<Conversation {self.id[:8]}... '{self.name}'>"
-
-
 class Model(Base):
     """LLM model to test."""
     __tablename__ = "models"
@@ -188,14 +161,13 @@ class TestRun(Base):
 
 
 class Response(Base):
-    """Raw LLM output for a question or conversation."""
+    """Raw LLM output for a question."""
     __tablename__ = "responses"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     test_run_id = Column(String(36), ForeignKey("test_runs.id"), nullable=False)
     model_id = Column(String(36), ForeignKey("models.id"), nullable=False)
     question_id = Column(String(36), nullable=True)  # Removed FK constraint for dual-DB support
-    conversation_id = Column(String(36), nullable=True)
     # Denormalized question data for permanent record
     question_text = Column(Text, nullable=True)  # Snapshot of question text at time of response
     acceptance_level = Column(SQLEnum(AcceptanceLevel), nullable=True)  # Snapshot of acceptance level
@@ -209,7 +181,7 @@ class Response(Base):
     # Relationships (only work when using single database)
     test_run = relationship("TestRun", back_populates="responses")
     model = relationship("Model", back_populates="responses")
-    # question and conversation relationships configured after all classes are defined
+    # question relationship configured after all classes are defined
     evaluation = relationship("Evaluation", back_populates="response", uselist=False)
     
     def get_question_text(self) -> str:
@@ -284,16 +256,6 @@ Response.question = relationship(
     back_populates="responses",
     primaryjoin=foreign(Response.question_id) == Question.id
 )
-Conversation.responses = relationship(
-    "Response",
-    back_populates="conversation",
-    primaryjoin=Conversation.id == foreign(Response.conversation_id)
-)
-Response.conversation = relationship(
-    "Conversation",
-    back_populates="responses",
-    primaryjoin=foreign(Response.conversation_id) == Conversation.id
-)
 
 
 # ============================================================================
@@ -304,7 +266,7 @@ class DatabaseManager:
     """Manages database connections and operations.
     
     Uses dual-database mode:
-    - Questions DB: Question and Conversation tables
+    - Questions DB: Question table
     - Responses DB: Model, TestRun, Response, and Evaluation tables
     """
 
@@ -322,7 +284,7 @@ class DatabaseManager:
         self.questions_db_path = Path(questions_db_path)
         self.responses_db_path = Path(responses_db_path)
         
-        # Questions database: Question, Conversation
+        # Questions database: Question
         self.questions_engine = create_engine(f"sqlite:///{self.questions_db_path}", echo=False)
         self.QuestionsSessionLocal = sessionmaker(bind=self.questions_engine)
         
@@ -334,7 +296,6 @@ class DatabaseManager:
         """Create all tables in both databases."""
         # Create question tables in questions DB
         Question.metadata.create_all(self.questions_engine)
-        Conversation.metadata.create_all(self.questions_engine)
         
         # Create response tables in responses DB
         Model.metadata.create_all(self.responses_engine)
@@ -345,7 +306,6 @@ class DatabaseManager:
     def drop_tables(self) -> None:
         """Drop all tables from both databases."""
         Question.metadata.drop_all(self.questions_engine)
-        Conversation.metadata.drop_all(self.questions_engine)
         Model.metadata.drop_all(self.responses_engine)
         TestRun.metadata.drop_all(self.responses_engine)
         Response.metadata.drop_all(self.responses_engine)
@@ -366,7 +326,7 @@ class DatabaseManager:
             Tuple of (success, message)
         """
         expected_tables = {
-            "questions", "conversations", "models",
+            "questions", "models",
             "test_runs", "responses", "evaluations"
         }
         
@@ -384,7 +344,6 @@ class DatabaseManager:
         """Get statistics about the database contents."""
         with self.get_questions_session() as q_session:
             questions_count = q_session.query(Question).count()
-            conversations_count = q_session.query(Conversation).count()
             questions_by_level = {
                 level.value: q_session.query(Question).filter(
                     Question.acceptance_level == level
@@ -406,7 +365,6 @@ class DatabaseManager:
         
         return {
             "questions": questions_count,
-            "conversations": conversations_count,
             "models": models_count,
             "test_runs": test_runs_count,
             "responses": responses_count,

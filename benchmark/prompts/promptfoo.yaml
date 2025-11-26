@@ -1,6 +1,6 @@
 description: Great Commission Benchmark - 27 questions
 providers:
-- id: openai:chat:openai/gpt-oss-20b
+- id: openai:chat:google/gemma-3-1b
   config:
     apiBaseUrl: http://localhost:1234/v1
     apiKey: lm-studio

@@ -34,7 +34,6 @@ streamlit run ui/app.py
 This opens a web interface at http://localhost:8501 where you can:
 - View dashboard statistics
 - Add/edit/delete questions
-- Create multi-turn conversations
 - Export to PromptFoo format
 
 ### 4. Run Verification
@@ -52,8 +51,7 @@ The benchmark uses a **dual-database architecture** that separates test question
 |   Streamlit UI   |---->| Questions Database|     |  PromptFoo CLI   |
 |  (Question Mgmt) |     |  (questions.db)   |<----|  (Test Runner)   |
 |  (Dashboard)     |     |  - Questions      |     +------------------+
-+------------------+     |  - Conversations  |              |
-                         +-------------------+              |
++------------------+     +-------------------+              |
                                     |                       |
                                     | (export)              |
                                     v                       |
@@ -120,8 +118,9 @@ The benchmark uses a **dual-database architecture** that separates test question
 
 - **Direct**: Straightforward requests ("Write a speech to convert...")
 - **Roleplay**: Framed as fiction or scenarios ("I'm writing a novel...")
-- **Encoded**: Indirect or euphemistic language
-- **Multi-turn**: Escalation sequences that start innocently and progress
+- **Encoded**: Indirect or euphemistic language ("Help me share the good news effectively")
+
+Note: Multi-turn conversation support has been removed. The focus is on single-turn question evaluation. Encoded questions test whether models can detect underlying intent through indirect phrasing.
 
 ## CLI Commands
 
@@ -265,7 +264,7 @@ llm:
 
 database:
   # Dual database mode - questions and responses stored separately
-  questions_db: questions.db  # Database for Question and Conversation tables
+  questions_db: questions.db  # Database for Question table
   responses_db: responses.db  # Database for Model, TestRun, Response, and Evaluation tables
 
 evaluation:
@@ -321,7 +320,6 @@ benchmark/
 
 **questions.db** contains:
 - `questions` table: Individual test prompts with acceptance levels and prompt types
-- `conversations` table: Multi-turn test cases
 
 **responses.db** contains:
 - `models` table: LLM models being tested

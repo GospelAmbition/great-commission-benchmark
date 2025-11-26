@@ -19,7 +19,6 @@ from gcb.database import (
     get_db_from_config,
     DatabaseManager,
     Question,
-    Conversation,
     Model,
     TestRun,
     Response,
@@ -176,102 +175,6 @@ class PromptFooBridge:
                 "prompts": ["{{question}}"],
                 "tests": tests,
                 "outputPath": str(self.output_dir / "results.json"),
-            }
-            
-            # Add options if maxConcurrency is configured
-            max_concurrency = promptfoo_config_settings.get("max_concurrency")
-            if max_concurrency:
-                promptfoo_config["options"] = {
-                    "maxConcurrency": max_concurrency,
-                }
-            
-            output_path = self.output_dir / output_file
-            with open(output_path, "w") as f:
-                yaml.dump(promptfoo_config, f, default_flow_style=False, sort_keys=False)
-            
-            return output_path
-
-    def export_conversations(
-        self,
-        level_filter: Optional[AcceptanceLevel] = None,
-        output_file: str = "promptfoo_conversations.yaml",
-    ) -> Path:
-        """Export conversations (multi-turn) to PromptFoo YAML format.
-        
-        Args:
-            level_filter: Optional filter by acceptance level
-            output_file: Output filename
-            
-        Returns:
-            Path to generated YAML file
-        """
-        llm_config = self.get_llm_config()
-        promptfoo_config_settings = self.config.get("promptfoo", {})
-        
-        with self.db.get_questions_session() as session:
-            query = session.query(Conversation)
-            
-            if level_filter:
-                query = query.filter(Conversation.acceptance_level == level_filter)
-            
-            conversations = query.all()
-            
-            if not conversations:
-                raise ValueError("No conversations found matching filters")
-            
-            # Build PromptFoo config for conversations
-            tests = []
-            for conv in conversations:
-                turns = conv.get_turns()
-                
-                # For multi-turn, we'll test the final state
-                test = {
-                    "vars": {
-                        "conversation": json.dumps(turns),
-                        "conversation_name": conv.name,
-                    },
-                    "metadata": {
-                        "id": conv.id,
-                        "acceptance_level": conv.acceptance_level.value,
-                        "turn_count": len(turns),
-                    }
-                }
-                tests.append(test)
-            
-            # Build provider config with timeout and retry settings
-            # PromptFoo's OpenAI provider uses apiBaseUrl (not apiHost) and needs full URL including /v1
-            provider_config = {
-                "apiBaseUrl": llm_config["base_url"],
-                "apiKey": llm_config["api_key"],
-            }
-            
-            # Add max_tokens from evaluation config
-            eval_config = self.config.get("evaluation", {})
-            if eval_config.get("max_tokens"):
-                provider_config["maxTokens"] = eval_config["max_tokens"]
-            
-            # Add timeout if configured
-            if promptfoo_config_settings.get("timeout_ms"):
-                provider_config["timeout"] = promptfoo_config_settings["timeout_ms"]
-            
-            # Add retry config if configured
-            if promptfoo_config_settings.get("retry_attempts"):
-                provider_config["retry"] = {
-                    "attempts": promptfoo_config_settings["retry_attempts"],
-                    "delay": promptfoo_config_settings.get("retry_delay_ms", 1000),
-                }
-            
-            promptfoo_config = {
-                "description": f"Great Commission Benchmark - {len(conversations)} conversations",
-                "providers": [
-                    {
-                        "id": f"openai:chat:{llm_config['test_model']}",
-                        "config": provider_config,
-                    }
-                ],
-                "prompts": ["{{conversation}}"],
-                "tests": tests,
-                "outputPath": str(self.output_dir / "conversation_results.json"),
             }
             
             # Add options if maxConcurrency is configured

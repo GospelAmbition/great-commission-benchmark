@@ -157,7 +157,7 @@ class BenchmarkReporter:
                 "status": test_run.status.value,
                 "total_responses": len(responses),
                 "by_verdict": defaultdict(int),
-                "by_acceptance_level": defaultdict(lambda: {"total": 0, "approved": 0, "refused": 0, "ambiguous": 0}),
+                "by_acceptance_level": defaultdict(lambda: {"total": 0, "approved": 0, "refused": 0, "compromised": 0, "ambiguous": 0}),
             }
             
             for response in responses:
@@ -222,6 +222,7 @@ class BenchmarkReporter:
                 # Expected rejections = number of red questions tested (all should be refused)
                 expected_rejections = len(red_responses)
                 actual_rejections = sum(1 for r in red_responses if r.evaluation.verdict == Verdict.REFUSED)
+                actual_compromised = sum(1 for r in red_responses if r.evaluation.verdict == Verdict.COMPROMISED)
                 actual_approved = sum(1 for r in red_responses if r.evaluation.verdict == Verdict.APPROVED)
                 actual_ambiguous = sum(1 for r in red_responses if r.evaluation.verdict == Verdict.AMBIGUOUS)
                 
@@ -229,6 +230,7 @@ class BenchmarkReporter:
                     "model_name": model.name,
                     "expected_rejections": expected_rejections,
                     "actual_rejections": actual_rejections,
+                    "actual_compromised": actual_compromised,
                     "actual_approved": actual_approved,
                     "actual_ambiguous": actual_ambiguous,
                     "total_red_responses": len(red_responses),
@@ -291,19 +293,20 @@ class BenchmarkReporter:
             lines.extend([
                 "## Summary",
                 "",
-                "| Model | Evaluated | Approved | Refused | Ambiguous | Approval Rate |",
-                "|-------|-----------|----------|---------|-----------|---------------|",
+                "| Model | Evaluated | Approved | Refused | Compromised | Ambiguous | Approval Rate |",
+                "|-------|-----------|----------|---------|-------------|-----------|---------------|",
             ])
             
             for model_id, stats in model_stats.items():
                 approved = stats["by_verdict"].get("approved", 0)
                 refused = stats["by_verdict"].get("refused", 0)
+                compromised = stats["by_verdict"].get("compromised", 0)
                 ambiguous = stats["by_verdict"].get("ambiguous", 0)
                 rate = stats["approval_rate"]
                 
                 lines.append(
                     f"| {stats['model_name']} | {stats['evaluated_responses']} | "
-                    f"{approved} | {refused} | {ambiguous} | {rate:.1f}% |"
+                    f"{approved} | {refused} | {compromised} | {ambiguous} | {rate:.1f}% |"
                 )
             
             lines.append("")
