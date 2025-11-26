@@ -466,7 +466,7 @@ class BenchmarkReporter:
         
         report = {
             "generated_at": datetime.now().isoformat(),
-            "version": "0.5",
+            "version": "0.6",
             "models": model_stats,
         }
         

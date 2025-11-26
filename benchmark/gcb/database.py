@@ -320,25 +320,43 @@ class DatabaseManager:
         return self.QuestionsSessionLocal()
 
     def verify_schema(self) -> tuple[bool, str]:
-        """Verify that all expected tables exist.
+        """Verify that all expected tables exist in both databases.
         
         Returns:
             Tuple of (success, message)
         """
-        expected_tables = {
-            "questions", "models",
-            "test_runs", "responses", "evaluations"
-        }
-        
         from sqlalchemy import inspect
-        inspector = inspect(self.engine)
-        existing_tables = set(inspector.get_table_names())
         
-        missing = expected_tables - existing_tables
+        # Expected tables in questions database
+        expected_questions_tables = {"questions"}
+        
+        # Expected tables in responses database
+        expected_responses_tables = {"models", "test_runs", "responses", "evaluations"}
+        
+        # Check questions database
+        questions_inspector = inspect(self.questions_engine)
+        questions_tables = set(questions_inspector.get_table_names())
+        missing_questions = expected_questions_tables - questions_tables
+        
+        # Check responses database
+        responses_inspector = inspect(self.responses_engine)
+        responses_tables = set(responses_inspector.get_table_names())
+        missing_responses = expected_responses_tables - responses_tables
+        
+        missing = missing_questions | missing_responses
         if missing:
             return False, f"Missing tables: {', '.join(missing)}"
         
-        return True, f"All {len(expected_tables)} tables exist"
+        return True, f"All {len(expected_questions_tables) + len(expected_responses_tables)} tables exist"
+    
+    def is_initialized(self) -> bool:
+        """Check if databases are initialized (tables exist).
+        
+        Returns:
+            True if all required tables exist, False otherwise
+        """
+        success, _ = self.verify_schema()
+        return success
 
     def get_stats(self) -> dict:
         """Get statistics about the database contents."""

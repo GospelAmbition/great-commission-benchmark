@@ -140,6 +140,18 @@ st.markdown("""
     [data-testid="stMainBlockContainer"] {
         padding-top: 20px !important;
     }
+    /* Center images in initialization screen */
+    .stImage [data-testid="stImageContainer"] {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+    }
+    .stImage [data-testid="stImageContainer"] img {
+        margin: 0 auto !important;
+        display: block !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -149,12 +161,32 @@ RESPONSES_DB_PATH = Path(__file__).parent.parent / "responses.db"
 
 
 def get_database():
-    """Get or initialize the databases."""
-    # Check if both databases exist
-    if not QUESTIONS_DB_PATH.exists() or not RESPONSES_DB_PATH.exists():
-        # Initialize both databases
-        return init_db(str(QUESTIONS_DB_PATH), str(RESPONSES_DB_PATH))
+    """Get database manager instance."""
     return get_db(str(QUESTIONS_DB_PATH), str(RESPONSES_DB_PATH))
+
+
+def check_databases_initialized() -> tuple[bool, str]:
+    """Check if databases are properly initialized.
+    
+    Returns:
+        Tuple of (is_initialized, message)
+    """
+    # Check if database files exist
+    if not QUESTIONS_DB_PATH.exists() or not RESPONSES_DB_PATH.exists():
+        return False, "Database files do not exist"
+    
+    # Check if tables exist
+    try:
+        db = get_database()
+        is_init = db.is_initialized()
+        if is_init:
+            return True, "Databases are initialized"
+        else:
+            success, msg = db.verify_schema()
+            return False, msg
+    except Exception as e:
+        # If we get an error, databases are likely not initialized
+        return False, f"Databases need to be initialized"
 
 
 def get_verdict_icon(verdict: str) -> str:
@@ -209,18 +241,24 @@ def render_sidebar():
     
     st.sidebar.markdown("---")
     
-    # Quick stats
-    db = get_database()
-    stats = db.get_stats()
-    
-    # Total Questions section
-    st.sidebar.metric("Total Questions", stats["questions"])
-    
-    # Models Tested section
-    st.sidebar.metric("Models Tested", stats["models"])
-    
-    # Evaluations
-    st.sidebar.metric("Evaluations", stats["evaluations"])
+    # Quick stats (only show if databases are initialized)
+    try:
+        db = get_database()
+        if db.is_initialized():
+            stats = db.get_stats()
+            
+            # Total Questions section
+            st.sidebar.metric("Total Questions", stats["questions"])
+            
+            # Models Tested section
+            st.sidebar.metric("Models Tested", stats["models"])
+            
+            # Evaluations
+            st.sidebar.metric("Evaluations", stats["evaluations"])
+        else:
+            st.sidebar.info("Databases not initialized")
+    except Exception as e:
+        st.sidebar.warning("Unable to load stats")
     
     # Version note at the bottom
     st.sidebar.markdown("---")
@@ -412,9 +450,38 @@ def render_questions():
     st.markdown("**Acceptance Levels:** 🟢 Green (Should be accepted) | 🟠 Orange (Borderline) | 🔴 Red (Should be refused)")
     st.markdown("**Prompt Types:** Direct (Straightforward request) | Roleplay (Fiction/scenario framing) | Encoded (Indirect/euphemistic)")
     
-    st.markdown("---")
-    
+    # Statistics
     db = get_database()
+    stats = db.get_stats()
+    
+    st.markdown("---")
+    st.subheader("📊 Statistics")
+    
+    # Questions by level
+    level_data = stats["questions_by_level"]
+    st.markdown("**By Acceptance Level:**")
+    col1_level, col2_level, col3_level = st.columns(3)
+    
+    with col1_level:
+        st.metric("🟢 Green", level_data.get("green", 0))
+    with col2_level:
+        st.metric("🟠 Orange", level_data.get("orange", 0))
+    with col3_level:
+        st.metric("🔴 Red", level_data.get("red", 0))
+    
+    # Questions by type
+    type_data = stats["questions_by_type"]
+    st.markdown("**By Prompt Type:**")
+    col1_type, col2_type, col3_type = st.columns(3)
+    
+    with col1_type:
+        st.metric("📝 Direct", type_data.get("direct", 0))
+    with col2_type:
+        st.metric("🎭 Roleplay", type_data.get("roleplay", 0))
+    with col3_type:
+        st.metric("🔐 Encoded", type_data.get("encoded", 0))
+    
+    st.markdown("---")
     
     # Tabs for list vs add
     tab1, tab2 = st.tabs(["📋 Questions", "➕ Add New"])
@@ -1304,7 +1371,7 @@ def render_manage_data():
                 questions = session.query(Question).all()
                 
                 export_data = {
-                    "version": "0.5",
+                    "version": "0.6",
                     "exported_at": datetime.utcnow().isoformat(),
                     "questions": [
                         {
@@ -1632,8 +1699,11 @@ def render_evaluations():
     # Check if we have any evaluations
     stats = db.get_stats()
     if stats["evaluations"] == 0:
-        st.warning("⚠️ No evaluations found. Run evaluations first using `python -m gcb evaluate`")
-        st.info("💡 After running PromptFoo tests and importing results, use the CLI to evaluate responses.")
+        st.warning("⚠️ No evaluations found.")
+        st.info(
+            "💡 To get started with evaluations, please visit the **📖 Instructions** page "
+            "in the sidebar for step-by-step guidance on running evaluations."
+        )
         return
     
     # Get model statistics
@@ -2438,8 +2508,11 @@ def render_comparisons():
     # Check if we have any evaluations
     stats = db.get_stats()
     if stats["evaluations"] == 0:
-        st.warning("⚠️ No evaluations found. Run evaluations first using `python -m gcb evaluate`")
-        st.info("💡 After running PromptFoo tests and importing results, use the CLI to evaluate responses.")
+        st.warning("⚠️ No evaluations found.")
+        st.info(
+            "💡 To get started with evaluations, please visit the **📖 Instructions** page "
+            "in the sidebar for step-by-step guidance on running evaluations."
+        )
         return
     
     # Get model statistics
@@ -2715,11 +2788,68 @@ def render_model_config():
             st.warning("config.yaml not found")
 
 
+def render_initialization_screen():
+    """Render the database initialization screen - shown when databases are not initialized."""
+    # Center the content vertically and horizontally
+    st.markdown("<div style='min-height: 20vh;'></div>", unsafe_allow_html=True)
+    
+    # Title
+    st.markdown("<h1 style='text-align: center; margin-top: 1rem;'>Great Commission Benchmark</h1>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Warning message
+    is_initialized, init_message = check_databases_initialized()
+    
+    # Main message container
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col2:
+        st.error(
+            f"⚠️ **Databases Not Initialized**\n\n"
+            f"{init_message}\n\n"
+            "Please initialize the databases to continue using the application.",
+            icon="⚠️"
+        )
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Initialize button
+        if st.button("🔧 Initialize Databases", type="primary", use_container_width=True):
+            try:
+                with st.spinner("Initializing databases..."):
+                    # Ensure parent directories exist
+                    QUESTIONS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+                    RESPONSES_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+                    # Initialize databases
+                    init_db(str(QUESTIONS_DB_PATH), str(RESPONSES_DB_PATH))
+                st.success("✅ Databases initialized successfully! Refreshing...")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Error initializing databases: {str(e)}")
+                st.exception(e)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Information box
+        with st.expander("ℹ️ What does initialization do?"):
+            st.markdown("""
+            Initializing the databases creates the necessary database files and tables:
+            
+            - **Questions Database** (`questions.db`): Stores benchmark questions
+            - **Responses Database** (`responses.db`): Stores model responses, evaluations, and test runs
+            
+            This is a one-time setup step required before using the application.
+            """)
+
+
 def main():
     """Main application entry point."""
-    # Initialize databases if needed
-    if not QUESTIONS_DB_PATH.exists() or not RESPONSES_DB_PATH.exists():
-        init_db(str(QUESTIONS_DB_PATH), str(RESPONSES_DB_PATH))
+    # Check if databases are initialized
+    is_initialized, init_message = check_databases_initialized()
+    
+    # If not initialized, show ONLY the initialization screen
+    if not is_initialized:
+        render_initialization_screen()
+        return  # Exit early - don't show anything else
     
     # Render sidebar and get current page
     page = render_sidebar()
