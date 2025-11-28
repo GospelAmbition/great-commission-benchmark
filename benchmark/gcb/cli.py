@@ -22,15 +22,19 @@ from gcb.database import (
     get_db_from_config,
     AcceptanceLevel,
     PromptType,
+    Verdict,
     Question,
     Response,
+    Model,
     TestRunStatus,
 )
 from gcb.promptfoo_bridge import PromptFooBridge
 from gcb.evaluator import Evaluator
 from gcb.reporter import BenchmarkReporter
+from gcb.analyzer import ResponseAnalyzer, ResponseFilter
 import yaml
-import yaml
+import json
+from datetime import datetime
 
 app = typer.Typer(
     name="gcb",
@@ -836,6 +840,323 @@ def verify(
     else:
         console.print("[bold red]Some checks failed. Review the output above.[/bold red]")
         raise typer.Exit(1)
+
+
+@app.command()
+def analyze(
+    questions_db: str = typer.Option(None, "--questions-db", help="Questions database file path"),
+    responses_db: str = typer.Option(None, "--responses-db", help="Responses database file path"),
+    config_path: str = typer.Option("config.yaml", "--config", "-c", help="Config file path"),
+    model_id: Optional[str] = typer.Option(None, "--model-id", "-m", help="Filter by model ID"),
+    level: Optional[AcceptanceLevel] = typer.Option(None, "--level", "-l", help="Filter by acceptance level"),
+    prompt_type: Optional[PromptType] = typer.Option(None, "--type", "-t", help="Filter by prompt type"),
+    verdict: Optional[Verdict] = typer.Option(None, "--verdict", "-v", help="Filter by verdict"),
+    output_format: str = typer.Option("table", "--format", "-f", help="Output format (table, json, csv)"),
+    output_file: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
+    limit: int = typer.Option(100, "--limit", help="Maximum number of responses to show"),
+):
+    """Analyze responses database with flexible filtering and export options.
+    
+    Examples:
+        # Show summary statistics
+        python -m gcb analyze
+        
+        # Filter by model and export to CSV
+        python -m gcb analyze --model-id abc123 --format csv --output results.csv
+        
+        # Filter red questions that were approved
+        python -m gcb analyze --level red --verdict approved
+        
+        # Export all responses to JSON
+        python -m gcb analyze --format json --output all_responses.json --limit 10000
+    """
+    if not questions_db or not responses_db:
+        questions_db, responses_db = _get_db_paths_from_config(config_path)
+    
+    if not Path(responses_db).exists():
+        console.print(f"[red]Responses database not found: {responses_db}[/red]")
+        raise typer.Exit(1)
+    
+    analyzer = ResponseAnalyzer(questions_db, responses_db)
+    
+    # Build filter
+    filter_obj = ResponseFilter()
+    if model_id:
+        filter_obj.model_ids = [model_id]
+    if level:
+        filter_obj.acceptance_levels = [level]
+    if prompt_type:
+        filter_obj.prompt_types = [prompt_type]
+    if verdict:
+        filter_obj.verdicts = [verdict]
+    
+    # Get statistics summary
+    summary = analyzer.get_statistics_summary()
+    
+    if output_format == "json":
+        # Export to JSON
+        if not output_file:
+            output_file = f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        
+        if filter_obj.model_ids or filter_obj.acceptance_levels or filter_obj.prompt_types or filter_obj.verdicts:
+            # Export filtered data
+            path = analyzer.export_to_json(output_file, filter=filter_obj)
+        else:
+            # Export all data
+            path = analyzer.export_to_json(output_file)
+        
+        console.print(f"[green]Exported to JSON: {path}[/green]")
+        
+    elif output_format == "csv":
+        # Export to CSV
+        if not output_file:
+            output_file = f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        
+        path = analyzer.export_to_csv(output_file, filter=filter_obj)
+        console.print(f"[green]Exported to CSV: {path}[/green]")
+        
+    else:
+        # Display table format
+        console.print("\n[bold cyan]Response Database Analysis[/bold cyan]\n")
+        
+        # Summary statistics
+        table = Table(title="Summary Statistics")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="green", justify="right")
+        
+        table.add_row("Total Responses", str(summary["totals"]["responses"]))
+        table.add_row("Total Evaluations", str(summary["totals"]["evaluations"]))
+        table.add_row("Total Models", str(summary["totals"]["models"]))
+        table.add_row("Total Test Runs", str(summary["totals"]["test_runs"]))
+        table.add_row("Error Rate", f"{summary['metrics']['error_rate']}%")
+        table.add_row("Avg Latency (ms)", f"{summary['metrics']['avg_latency_ms']:.2f}")
+        table.add_row("Avg Tokens", f"{summary['metrics']['avg_token_count']:.2f}")
+        table.add_row("Avg Confidence", f"{summary['metrics']['avg_confidence']:.3f}")
+        
+        console.print(table)
+        
+        # Verdict distribution
+        if summary["distributions"]["verdicts"]:
+            console.print("\n[bold]Verdict Distribution:[/bold]")
+            verdict_table = Table()
+            verdict_table.add_column("Verdict", style="cyan")
+            verdict_table.add_column("Count", style="green", justify="right")
+            verdict_table.add_column("Percentage", style="yellow", justify="right")
+            
+            total_eval = summary["totals"]["evaluations"]
+            for verdict, count in summary["distributions"]["verdicts"].items():
+                pct = (count / total_eval * 100) if total_eval > 0 else 0
+                emoji = {"approved": "✅", "refused": "❌", "compromised": "⚠️", "ambiguous": "❓"}.get(verdict, "")
+                verdict_table.add_row(f"{emoji} {verdict}", str(count), f"{pct:.1f}%")
+            
+            console.print(verdict_table)
+        
+        # Query responses
+        responses = analyzer.query_responses(filter=filter_obj, limit=limit)
+        
+        if responses:
+            console.print(f"\n[bold]Responses (showing {len(responses)} of {limit}):[/bold]")
+            response_table = Table()
+            response_table.add_column("ID", style="dim", width=10)
+            response_table.add_column("Model", width=20)
+            response_table.add_column("Level", width=8)
+            response_table.add_column("Type", width=12)
+            response_table.add_column("Verdict", width=12)
+            response_table.add_column("Question", max_width=40)
+            
+            with analyzer.db.get_session() as session:
+                for response in responses[:limit]:
+                    model = session.query(Model).filter(Model.id == response.model_id).first()
+                    model_name = model.name[:18] + "..." if model and len(model.name) > 20 else (model.name if model else "Unknown")
+                    
+                    level_obj = response.get_acceptance_level()
+                    level = level_obj.value if level_obj else "N/A"
+                    level_color = {"green": "green", "orange": "yellow", "red": "red"}.get(level, "white")
+                    
+                    ptype_obj = response.get_prompt_type()
+                    ptype = ptype_obj.value if ptype_obj else "N/A"
+                    
+                    verdict = "N/A"
+                    verdict_emoji = ""
+                    if response.evaluation:
+                        verdict = response.evaluation.verdict.value
+                        verdict_emoji = {"approved": "✅", "refused": "❌", "compromised": "⚠️", "ambiguous": "❓"}.get(verdict, "")
+                    
+                    question_text = response.get_question_text()
+                    question_display = question_text[:37] + "..." if len(question_text) > 40 else question_text
+                    
+                    response_table.add_row(
+                        response.id[:8] + "...",
+                        model_name,
+                        f"[{level_color}]{level}[/{level_color}]",
+                        ptype,
+                        f"{verdict_emoji} {verdict}",
+                        question_display,
+                    )
+            
+            console.print(response_table)
+        else:
+            console.print("\n[yellow]No responses found matching the filter criteria.[/yellow]")
+
+
+@app.command()
+def compare_models(
+    questions_db: str = typer.Option(None, "--questions-db", help="Questions database file path"),
+    responses_db: str = typer.Option(None, "--responses-db", help="Responses database file path"),
+    config_path: str = typer.Option("config.yaml", "--config", "-c", help="Config file path"),
+    model_ids: Optional[str] = typer.Option(None, "--model-ids", "-m", help="Comma-separated model IDs (default: all models)"),
+    output_format: str = typer.Option("table", "--format", "-f", help="Output format (table, json)"),
+    output_file: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
+):
+    """Compare statistics across multiple models.
+    
+    Examples:
+        # Compare all models
+        python -m gcb compare-models
+        
+        # Compare specific models
+        python -m gcb compare-models --model-ids abc123,def456
+        
+        # Export comparison to JSON
+        python -m gcb compare-models --format json --output comparison.json
+    """
+    if not questions_db or not responses_db:
+        questions_db, responses_db = _get_db_paths_from_config(config_path)
+    
+    if not Path(responses_db).exists():
+        console.print(f"[red]Responses database not found: {responses_db}[/red]")
+        raise typer.Exit(1)
+    
+    analyzer = ResponseAnalyzer(questions_db, responses_db)
+    
+    model_id_list = None
+    if model_ids:
+        model_id_list = [mid.strip() for mid in model_ids.split(",")]
+    
+    comparison = analyzer.get_model_comparison(model_ids=model_id_list)
+    
+    if output_format == "json":
+        if not output_file:
+            output_file = f"model_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        
+        with open(output_file, "w") as f:
+            json.dump(comparison, f, indent=2, default=str)
+        
+        console.print(f"[green]Exported to JSON: {output_file}[/green]")
+    else:
+        console.print("\n[bold cyan]Model Comparison[/bold cyan]\n")
+        
+        # Summary
+        console.print(f"[bold]Summary:[/bold]")
+        console.print(f"  Total Models: {comparison['summary']['total_models']}")
+        console.print(f"  Total Responses: {comparison['summary']['total_responses']}")
+        console.print(f"  Total Evaluations: {comparison['summary']['total_evaluations']}\n")
+        
+        # Model comparison table
+        table = Table(title="Model Statistics")
+        table.add_column("Model", style="cyan", width=25)
+        table.add_column("Provider", width=15)
+        table.add_column("Responses", style="green", justify="right")
+        table.add_column("Evaluated", style="green", justify="right")
+        table.add_column("Approved", style="green", justify="right")
+        table.add_column("Refused", style="red", justify="right")
+        table.add_column("Compromised", style="yellow", justify="right")
+        table.add_column("Ambiguous", style="yellow", justify="right")
+        table.add_column("Avg Conf", style="cyan", justify="right")
+        table.add_column("Error %", style="red", justify="right")
+        
+        for model_id, stats in comparison["models"].items():
+            approved = stats["by_verdict"].get("approved", 0)
+            refused = stats["by_verdict"].get("refused", 0)
+            compromised = stats["by_verdict"].get("compromised", 0)
+            ambiguous = stats["by_verdict"].get("ambiguous", 0)
+            
+            table.add_row(
+                stats["model_name"],
+                stats["provider"],
+                str(stats["total_responses"]),
+                str(stats["evaluated_responses"]),
+                str(approved),
+                str(refused),
+                str(compromised),
+                str(ambiguous),
+                f"{stats['avg_confidence']:.3f}",
+                f"{stats['error_rate']:.1f}%",
+            )
+        
+        console.print(table)
+
+
+@app.command()
+def trends(
+    questions_db: str = typer.Option(None, "--questions-db", help="Questions database file path"),
+    responses_db: str = typer.Option(None, "--responses-db", help="Responses database file path"),
+    config_path: str = typer.Option("config.yaml", "--config", "-c", help="Config file path"),
+    model_id: Optional[str] = typer.Option(None, "--model-id", "-m", help="Filter by model ID"),
+    group_by: str = typer.Option("day", "--group-by", "-g", help="Group by period (day, week, month)"),
+    output_format: str = typer.Option("table", "--format", "-f", help="Output format (table, json)"),
+    output_file: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
+):
+    """Analyze trends over time.
+    
+    Examples:
+        # Show daily trends
+        python -m gcb trends
+        
+        # Show weekly trends for a specific model
+        python -m gcb trends --model-id abc123 --group-by week
+        
+        # Export trends to JSON
+        python -m gcb trends --format json --output trends.json
+    """
+    if not questions_db or not responses_db:
+        questions_db, responses_db = _get_db_paths_from_config(config_path)
+    
+    if not Path(responses_db).exists():
+        console.print(f"[red]Responses database not found: {responses_db}[/red]")
+        raise typer.Exit(1)
+    
+    analyzer = ResponseAnalyzer(questions_db, responses_db)
+    
+    trends_data = analyzer.get_trend_analysis(model_id=model_id, group_by=group_by)
+    
+    if output_format == "json":
+        if not output_file:
+            output_file = f"trends_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        
+        with open(output_file, "w") as f:
+            json.dump(trends_data, f, indent=2, default=str)
+        
+        console.print(f"[green]Exported to JSON: {output_file}[/green]")
+    else:
+        console.print(f"\n[bold cyan]Trend Analysis (grouped by {group_by})[/bold cyan]\n")
+        
+        table = Table(title="Trends Over Time")
+        table.add_column("Period", style="cyan")
+        table.add_column("Total", style="green", justify="right")
+        table.add_column("Evaluated", style="green", justify="right")
+        table.add_column("Approved", style="green", justify="right")
+        table.add_column("Refused", style="red", justify="right")
+        table.add_column("Compromised", style="yellow", justify="right")
+        table.add_column("Ambiguous", style="yellow", justify="right")
+        
+        for period, data in sorted(trends_data["trends"].items()):
+            approved = data["by_verdict"].get("approved", 0)
+            refused = data["by_verdict"].get("refused", 0)
+            compromised = data["by_verdict"].get("compromised", 0)
+            ambiguous = data["by_verdict"].get("ambiguous", 0)
+            
+            table.add_row(
+                period,
+                str(data["total"]),
+                str(data["evaluated"]),
+                str(approved),
+                str(refused),
+                str(compromised),
+                str(ambiguous),
+            )
+        
+        console.print(table)
 
 
 def main():

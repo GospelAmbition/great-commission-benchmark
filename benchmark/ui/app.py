@@ -20,6 +20,9 @@ import yaml
 import csv
 import html
 from io import StringIO
+import shutil
+import subprocess
+import os
 
 from gcb.database import (
     get_db,
@@ -35,6 +38,7 @@ from gcb.database import (
     Verdict,
 )
 from gcb.reporter import BenchmarkReporter
+from gcb import __version__
 from sqlalchemy import func
 
 # Page configuration
@@ -235,7 +239,7 @@ def render_sidebar():
     
     page = st.sidebar.radio(
         "Navigation",
-        ["📊 Dashboard", "❓ Questions", "📖 Instructions", "🤖 Set Model", "📈 Evaluations", "📈 Comparisons", "🗂️ Manage Data"],
+        ["📊 Dashboard", "❓ Questions", "📈 Evaluations", "📈 Comparisons", "⚙️ Pipeline", "🗂️ Manage Data"],
         label_visibility="collapsed",
     )
     
@@ -262,7 +266,7 @@ def render_sidebar():
     
     # Version note at the bottom
     st.sidebar.markdown("---")
-    st.sidebar.caption("v0.5")
+    st.sidebar.caption(f"v{__version__}")
     
     return page
 
@@ -270,20 +274,16 @@ def render_sidebar():
 def render_dashboard():
     """Render the dashboard page."""
     st.title("📊 Dashboard")
-    st.markdown("Overview of your benchmark question database.")
+    st.markdown("Overview of the full pipeline.")
     
     db = get_database()
     stats = db.get_stats()
     
-    # Top metrics
-    col1, col2 = st.columns(2)
+    # Questions section
+    st.subheader("Questions")
     
-    with col1:
-        st.metric("Total Questions", stats["questions"])
-    with col2:
-        st.metric("Models Tested", stats["models"])
-    
-    st.markdown("---")
+    # Total Questions metric
+    st.metric("Total Questions", stats["questions"])
     
     # Question counts by acceptance level
     level_data = stats["questions_by_level"]
@@ -306,6 +306,87 @@ def render_dashboard():
         st.metric("🎭 Roleplay Questions", type_data.get("roleplay", 0))
     with col3_type:
         st.metric("🔐 Encoded Questions", type_data.get("encoded", 0))
+    
+    st.markdown("---")
+    
+    # Models section
+    st.subheader("Models")
+    
+    # Models Tested metric
+    st.metric("Models Tested", stats["models"])
+    
+    # Get model statistics
+    reporter = BenchmarkReporter(str(QUESTIONS_DB_PATH), str(RESPONSES_DB_PATH))
+    model_stats = reporter.get_model_statistics()
+    
+    with db.get_session() as session:
+        models = session.query(Model).order_by(Model.created_at.desc()).all()
+        
+        if models:
+            # Display models in a grid (5 per row)
+            for i in range(0, len(models), 5):
+                cols = st.columns(5)
+                for j, model in enumerate(models[i:i+5]):
+                    with cols[j]:
+                        # Get statistics for this model
+                        stats = model_stats.get(model.id, {})
+                        
+                        # Get evaluation statistics
+                        evaluated = stats.get("evaluated_responses", 0)
+                        total_responses = stats.get("total_responses", 0)
+                        approval_rate = stats.get("approval_rate", 0.0)
+                        
+                        verdict_counts = stats.get("by_verdict", {})
+                        approved = verdict_counts.get("approved", 0)
+                        refused = verdict_counts.get("refused", 0)
+                        compromised = verdict_counts.get("compromised", 0)
+                        ambiguous = verdict_counts.get("ambiguous", 0)
+                        
+                        # Create card with border using markdown
+                        provider_display = model.provider
+                        if model.api_identifier and model.api_identifier != model.name:
+                            provider_display += f" / {model.api_identifier}"
+                        
+                        # Build complete HTML card in one string
+                        if evaluated > 0:
+                            card_content = f"""<div style="border: 1px solid #4a90d9; border-radius: 8px; padding: 15px; margin-bottom: 15px; background-color: #0e1117;">
+    <div style="margin-bottom: 10px;">
+        <strong style="font-size: 16px;">🤖 {model.name}</strong><br>
+        <span style="color: #888; font-size: 12px;">{provider_display}</span>
+    </div>
+    <div style="font-size: 14px; line-height: 1.8;">
+        <div>📊 Responses: <strong>{total_responses}</strong></div>
+        <div>✅ Evaluated: <strong>{evaluated}</strong></div>
+        <div>📈 Approval Rate: <strong>{approval_rate:.1f}%</strong></div>
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #333;">
+            <div>✅ Approved: <strong>{approved}</strong></div>
+            <div>🔀 Compromised: <strong>{compromised}</strong></div>
+            <div>🚫 Refused: <strong>{refused}</strong></div>
+            <div>❓ Ambiguous: <strong>{ambiguous}</strong></div>
+        </div>
+    </div>
+</div>"""
+                        else:
+                            card_content = f"""<div style="border: 1px solid #4a90d9; border-radius: 8px; padding: 15px; margin-bottom: 15px; background-color: #0e1117;">
+    <div style="margin-bottom: 10px;">
+        <strong style="font-size: 16px;">🤖 {model.name}</strong><br>
+        <span style="color: #888; font-size: 12px;">{provider_display}</span>
+    </div>
+    <div style="font-size: 14px; line-height: 1.8;">
+        <div>📊 Responses: <strong>{total_responses}</strong></div>
+        <div>✅ Evaluated: <strong>{evaluated}</strong></div>
+        <div style="margin-top: 8px; color: #888; font-style: italic;">No evaluations yet</div>
+    </div>
+</div>"""
+                        
+                        st.markdown(card_content, unsafe_allow_html=True)
+        else:
+            st.info("No models tested yet. Configure and run tests to see models here.")
+    
+    st.markdown("---")
+    
+    # Evaluations section
+    st.subheader("Evaluations")
     
     # Evaluation summary metrics
     with db.get_session() as session:
@@ -367,126 +448,174 @@ def render_dashboard():
                         <div style="color: #888; font-size: 12px;">{(ambiguous/total*100):.1f}%</div>
                     </div>
                     """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # Models Tested section
-    st.subheader("🤖 Models Tested")
-    
-    # Get model statistics
-    reporter = BenchmarkReporter(str(QUESTIONS_DB_PATH), str(RESPONSES_DB_PATH))
-    model_stats = reporter.get_model_statistics()
-    
-    with db.get_session() as session:
-        models = session.query(Model).order_by(Model.created_at.desc()).all()
-        
-        if models:
-            # Display models in a grid (4 per row)
-            for i in range(0, len(models), 4):
-                cols = st.columns(4)
-                for j, model in enumerate(models[i:i+4]):
-                    with cols[j]:
-                        # Get statistics for this model
-                        stats = model_stats.get(model.id, {})
-                        
-                        # Get evaluation statistics
-                        evaluated = stats.get("evaluated_responses", 0)
-                        total_responses = stats.get("total_responses", 0)
-                        approval_rate = stats.get("approval_rate", 0.0)
-                        
-                        verdict_counts = stats.get("by_verdict", {})
-                        approved = verdict_counts.get("approved", 0)
-                        refused = verdict_counts.get("refused", 0)
-                        compromised = verdict_counts.get("compromised", 0)
-                        ambiguous = verdict_counts.get("ambiguous", 0)
-                        
-                        # Create card with border using markdown
-                        provider_display = model.provider
-                        if model.api_identifier and model.api_identifier != model.name:
-                            provider_display += f" / {model.api_identifier}"
-                        
-                        # Build complete HTML card in one string
-                        if evaluated > 0:
-                            card_content = f"""<div style="border: 1px solid #4a90d9; border-radius: 8px; padding: 15px; margin-bottom: 15px; background-color: #0e1117;">
-    <div style="margin-bottom: 10px;">
-        <strong style="font-size: 16px;">🤖 {model.name}</strong><br>
-        <span style="color: #888; font-size: 12px;">{provider_display}</span>
-    </div>
-    <div style="font-size: 14px; line-height: 1.8;">
-        <div>📊 Responses: <strong>{total_responses}</strong></div>
-        <div>✅ Evaluated: <strong>{evaluated}</strong></div>
-        <div>📈 Approval Rate: <strong>{approval_rate:.1f}%</strong></div>
-        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #333;">
-            <div>✅ Approved: <strong>{approved}</strong></div>
-            <div>🔀 Compromised: <strong>{compromised}</strong></div>
-            <div>🚫 Refused: <strong>{refused}</strong></div>
-            <div>❓ Ambiguous: <strong>{ambiguous}</strong></div>
-        </div>
-    </div>
-</div>"""
-                        else:
-                            card_content = f"""<div style="border: 1px solid #4a90d9; border-radius: 8px; padding: 15px; margin-bottom: 15px; background-color: #0e1117;">
-    <div style="margin-bottom: 10px;">
-        <strong style="font-size: 16px;">🤖 {model.name}</strong><br>
-        <span style="color: #888; font-size: 12px;">{provider_display}</span>
-    </div>
-    <div style="font-size: 14px; line-height: 1.8;">
-        <div>📊 Responses: <strong>{total_responses}</strong></div>
-        <div>✅ Evaluated: <strong>{evaluated}</strong></div>
-        <div style="margin-top: 8px; color: #888; font-style: italic;">No evaluations yet</div>
-    </div>
-</div>"""
-                        
-                        st.markdown(card_content, unsafe_allow_html=True)
-        else:
-            st.info("No models tested yet. Configure and run tests to see models here.")
 
 
 def render_questions():
     """Render the questions list page."""
     st.title("❓ Questions")
     
-    # Descriptions
-    st.markdown("**Acceptance Levels:** 🟢 Green (Should be accepted) | 🟠 Orange (Borderline) | 🔴 Red (Should be refused)")
-    st.markdown("**Prompt Types:** Direct (Straightforward request) | Roleplay (Fiction/scenario framing) | Encoded (Indirect/euphemistic)")
-    
     # Statistics
     db = get_database()
     stats = db.get_stats()
     
-    st.markdown("---")
-    st.subheader("📊 Statistics")
-    
-    # Questions by level
-    level_data = stats["questions_by_level"]
-    st.markdown("**By Acceptance Level:**")
-    col1_level, col2_level, col3_level = st.columns(3)
-    
-    with col1_level:
-        st.metric("🟢 Green", level_data.get("green", 0))
-    with col2_level:
-        st.metric("🟠 Orange", level_data.get("orange", 0))
-    with col3_level:
-        st.metric("🔴 Red", level_data.get("red", 0))
-    
-    # Questions by type
-    type_data = stats["questions_by_type"]
-    st.markdown("**By Prompt Type:**")
-    col1_type, col2_type, col3_type = st.columns(3)
-    
-    with col1_type:
-        st.metric("📝 Direct", type_data.get("direct", 0))
-    with col2_type:
-        st.metric("🎭 Roleplay", type_data.get("roleplay", 0))
-    with col3_type:
-        st.metric("🔐 Encoded", type_data.get("encoded", 0))
-    
-    st.markdown("---")
-    
-    # Tabs for list vs add
-    tab1, tab2 = st.tabs(["📋 Questions", "➕ Add New"])
+    # Tabs for statistics, list, tokenizer, and add
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Statistics", "📋 Questions", "🔢 Tokenizer", "➕ Add New"])
     
     with tab1:
+        st.subheader("Statistics")
+        
+        # Questions by level
+        level_data = stats["questions_by_level"]
+        st.markdown("**By Acceptance Level:**")
+        col1_level, col2_level, col3_level = st.columns(3)
+        
+        with col1_level:
+            st.metric("🟢 Green", level_data.get("green", 0))
+        with col2_level:
+            st.metric("🟠 Orange", level_data.get("orange", 0))
+        with col3_level:
+            st.metric("🔴 Red", level_data.get("red", 0))
+        
+        # Questions by type
+        type_data = stats["questions_by_type"]
+        st.markdown("**By Prompt Type:**")
+        col1_type, col2_type, col3_type = st.columns(3)
+        
+        with col1_type:
+            st.metric("📝 Direct", type_data.get("direct", 0))
+        with col2_type:
+            st.metric("🎭 Roleplay", type_data.get("roleplay", 0))
+        with col3_type:
+            st.metric("🔐 Encoded", type_data.get("encoded", 0))
+        
+        st.markdown("---")
+        
+        # Add CSS for card styling
+        st.markdown("""
+        <style>
+        .info-card {
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            background-color: #2d2d2d;
+            height: 100%;
+            color: #ffffff;
+        }
+        .info-card h3 {
+            color: #ffffff;
+            margin-top: 0;
+        }
+        .info-card p {
+            color: #ffffff;
+        }
+        .info-card ul {
+            color: #ffffff;
+        }
+        .info-card li {
+            color: #ffffff;
+        }
+        .info-card strong {
+            color: #ffffff;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Acceptance Levels descriptions as cards
+        st.subheader("Acceptance Levels")
+        col1_level, col2_level, col3_level = st.columns(3)
+        
+        with col1_level:
+            st.markdown("""
+            <div class="info-card">
+            <h3>🟢 Green</h3>
+            <p><strong>Should be accepted</strong></p>
+            <p>Green questions are those that should be accepted by the model. These are questions that:</p>
+            <ul>
+            <li>Are appropriate and align with the model's intended use</li>
+            <li>Do not violate content policies</li>
+            <li>Should receive helpful, accurate responses</li>
+            </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2_level:
+            st.markdown("""
+            <div class="info-card">
+            <h3>🟠 Orange</h3>
+            <p><strong>Borderline</strong></p>
+            <p>Orange questions are borderline cases that may or may not be accepted depending on context. These questions:</p>
+            <ul>
+            <li>Fall into a gray area between acceptable and unacceptable</li>
+            <li>May require careful consideration of context</li>
+            <li>Could be handled differently by different models or policies</li>
+            </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3_level:
+            st.markdown("""
+            <div class="info-card">
+            <h3>🔴 Red</h3>
+            <p><strong>Should be refused</strong></p>
+            <p>Red questions are those that should be refused by the model. These questions:</p>
+            <ul>
+            <li>Violate content policies or safety guidelines</li>
+            <li>Request harmful, illegal, or inappropriate content</li>
+            <li>Should trigger refusal responses from the model</li>
+            </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Prompt Types descriptions as cards
+        st.subheader("Prompt Types")
+        col1_type, col2_type, col3_type = st.columns(3)
+        
+        with col1_type:
+            st.markdown("""
+            <div class="info-card">
+            <h3>📝 Direct</h3>
+            <p><strong>Straightforward request</strong></p>
+            <p>Direct questions are straightforward requests that ask for information or actions directly:</p>
+            <ul>
+            <li>Clear and explicit in their intent</li>
+            <li>No framing or indirect language</li>
+            <li>Directly state what is being requested</li>
+            </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2_type:
+            st.markdown("""
+            <div class="info-card">
+            <h3>🎭 Roleplay</h3>
+            <p><strong>Fiction/scenario framing</strong></p>
+            <p>Roleplay questions frame requests within fictional scenarios or role-playing contexts:</p>
+            <ul>
+            <li>Use hypothetical or fictional framing</li>
+            <li>May involve characters, scenarios, or "what if" situations</li>
+            <li>Attempt to distance the request from real-world application</li>
+            </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3_type:
+            st.markdown("""
+            <div class="info-card">
+            <h3>🔐 Encoded</h3>
+            <p><strong>Indirect/euphemistic</strong></p>
+            <p>Encoded questions use indirect language, euphemisms, or coded terminology:</p>
+            <ul>
+            <li>Avoid direct mention of sensitive topics</li>
+            <li>Use alternative terminology or metaphors</li>
+            <li>Attempt to bypass content filters through indirect phrasing</li>
+            </ul>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with tab2:
         # Filters
         col1, col2, col3 = st.columns(3)
         
@@ -700,7 +829,10 @@ def render_questions():
                                         del st.session_state["confirm_delete"]
                                         st.rerun()
     
-    with tab2:
+    with tab3:
+        render_tokenizer_tab(db)
+    
+    with tab4:
         # Add new question section
         # Check if editing
         editing_id = st.session_state.get("editing_question")
@@ -802,7 +934,7 @@ def render_questions():
         
         # Bulk add section
         st.markdown("---")
-        st.subheader("📥 Bulk Add Questions")
+        st.subheader("Bulk Add Questions")
         
         st.markdown("""
         Paste questions in CSV format (one per line, comma-separated):
@@ -912,6 +1044,238 @@ def render_questions():
                 
                 if added > 0:
                     st.rerun()
+
+
+def render_tokenizer_tab(db):
+    """Render the tokenizer tab for calculating token costs."""
+    st.subheader("Token Cost Calculator")
+    st.markdown("Calculate the estimated token count and cost for your filtered questions.")
+    
+    # Get current filtered questions (same logic as tab2)
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        level_filter = st.selectbox(
+            "Acceptance Level",
+            ["All", "green", "orange", "red"],
+            format_func=lambda x: {"All": "All Levels", "green": "🟢 Green (Accept)", 
+                                   "orange": "🟠 Orange (Borderline)", "red": "🔴 Red (Refuse)"}.get(x, x),
+            key="tokenizer_level_filter"
+        )
+    
+    with col2:
+        type_filter = st.selectbox(
+            "Prompt Type",
+            ["All", "direct", "roleplay", "encoded"],
+            format_func=lambda x: {"All": "All Types", "direct": "Direct", "roleplay": "Roleplay",
+                                   "encoded": "Encoded"}.get(x, x),
+            key="tokenizer_type_filter"
+        )
+    
+    with col3:
+        search = st.text_input("Search", placeholder="Search question text...", key="tokenizer_search")
+    
+    st.markdown("---")
+    
+    # Get filtered questions
+    with db.get_questions_session() as session:
+        query = session.query(Question)
+        
+        if level_filter != "All":
+            query = query.filter(Question.acceptance_level == AcceptanceLevel(level_filter))
+        if type_filter != "All":
+            query = query.filter(Question.prompt_type == PromptType(type_filter))
+        if search:
+            query = query.filter(Question.text.ilike(f"%{search}%"))
+        
+        questions = query.order_by(Question.created_at.desc()).all()
+        
+        st.markdown(f"**{len(questions)} questions selected**")
+        
+        if not questions:
+            st.info("No questions match your filters. Adjust filters to calculate token costs.")
+            return
+        
+        # Model selection and configuration
+        st.markdown("### Model Configuration")
+        
+        # Common model encodings mapping
+        model_encodings = {
+            "gpt-4": "cl100k_base",
+            "gpt-4-turbo": "cl100k_base",
+            "gpt-4o": "o200k_base",
+            "gpt-4o-mini": "o200k_base",
+            "gpt-3.5-turbo": "cl100k_base",
+            "gpt-35-turbo": "cl100k_base",
+            "o1": "o200k_base",
+            "o1-preview": "o200k_base",
+            "o1-mini": "o200k_base",
+            "claude-3-opus": "cl100k_base",  # Approximate
+            "claude-3-sonnet": "cl100k_base",  # Approximate
+            "claude-3-haiku": "cl100k_base",  # Approximate
+            "claude-3-5-sonnet": "cl100k_base",  # Approximate
+            "gemini-pro": "cl100k_base",  # Approximate
+            "gemini-2.0": "cl100k_base",  # Approximate
+        }
+        
+        col1_model, col2_model = st.columns(2)
+        
+        with col1_model:
+            model_name = st.selectbox(
+                "Select Model",
+                options=["Custom"] + list(model_encodings.keys()),
+                help="Select a model to use its tokenizer, or choose Custom to specify encoding manually"
+            )
+        
+        with col2_model:
+            if model_name == "Custom":
+                encoding_name = st.selectbox(
+                    "Token Encoding",
+                    options=["cl100k_base", "o200k_base", "p50k_base", "p50k_edit", "r50k_base"],
+                    help="Select the tokenizer encoding to use"
+                )
+            else:
+                encoding_name = model_encodings.get(model_name, "cl100k_base")
+                st.info(f"Encoding: **{encoding_name}**")
+        
+        st.markdown("---")
+        
+        # Cost input
+        st.markdown("### Cost Configuration")
+        col1_cost, col2_cost = st.columns(2)
+        
+        with col1_cost:
+            cost_per_1k_tokens = st.number_input(
+                "Cost per 1K input tokens ($)",
+                min_value=0.0,
+                value=0.0,
+                step=0.0001,
+                format="%.6f",
+                help="Enter the cost per 1,000 input tokens for this model"
+            )
+        
+        with col2_cost:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if cost_per_1k_tokens > 0:
+                cost_per_token = cost_per_1k_tokens / 1000.0
+                st.caption(f"Cost per token: **${cost_per_token:.8f}**")
+            else:
+                st.caption("Enter cost above to see per-token rate")
+        
+        st.markdown("---")
+        
+        # Calculate tokens
+        try:
+            import tiktoken
+            
+            # Get encoding
+            try:
+                encoding = tiktoken.get_encoding(encoding_name)
+            except KeyError:
+                st.error(f"Unknown encoding: {encoding_name}")
+                return
+            
+            # Calculate tokens for each question
+            total_tokens = 0
+            question_tokens = []
+            
+            for q in questions:
+                tokens = len(encoding.encode(q.text))
+                total_tokens += tokens
+                question_tokens.append({
+                    "Question": q.text[:100] + "..." if len(q.text) > 100 else q.text,
+                    "Tokens": tokens,
+                    "Level": q.acceptance_level.value,
+                    "Type": q.prompt_type.value
+                })
+            
+            # Display results
+            st.markdown("### Results")
+            
+            col1_result, col2_result, col3_result = st.columns(3)
+            
+            with col1_result:
+                st.metric("Total Questions", len(questions))
+            
+            with col2_result:
+                st.metric("Total Tokens", f"{total_tokens:,}")
+            
+            with col3_result:
+                avg_tokens = total_tokens / len(questions) if questions else 0
+                st.metric("Avg Tokens/Question", f"{avg_tokens:.1f}")
+            
+            # Cost calculation
+            if cost_per_1k_tokens > 0:
+                st.markdown("---")
+                st.markdown("### Cost Estimate")
+                
+                total_cost = (total_tokens / 1000.0) * cost_per_1k_tokens
+                
+                col1_cost_result, col2_cost_result = st.columns(2)
+                
+                with col1_cost_result:
+                    st.metric("Total Estimated Cost", f"${total_cost:.4f}")
+                
+                with col2_cost_result:
+                    cost_per_question = total_cost / len(questions) if questions else 0
+                    st.metric("Cost per Question", f"${cost_per_question:.6f}")
+            
+            # Detailed breakdown
+            st.markdown("---")
+            st.markdown("### Token Breakdown by Question")
+            
+            df = pd.DataFrame(question_tokens)
+            st.dataframe(
+                df,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Question": st.column_config.TextColumn("Question", width="large"),
+                    "Tokens": st.column_config.NumberColumn("Tokens", format="%d"),
+                    "Level": st.column_config.TextColumn("Level"),
+                    "Type": st.column_config.TextColumn("Type")
+                }
+            )
+            
+            # Summary by level and type
+            st.markdown("---")
+            st.markdown("### Summary by Category")
+            
+            col1_summary, col2_summary = st.columns(2)
+            
+            with col1_summary:
+                st.markdown("**By Acceptance Level:**")
+                level_summary = {}
+                for q, tokens in zip(questions, [qt["Tokens"] for qt in question_tokens]):
+                    level = q.acceptance_level.value
+                    if level not in level_summary:
+                        level_summary[level] = {"count": 0, "tokens": 0}
+                    level_summary[level]["count"] += 1
+                    level_summary[level]["tokens"] += tokens
+                
+                for level, data in level_summary.items():
+                    avg = data["tokens"] / data["count"] if data["count"] > 0 else 0
+                    st.write(f"**{level.capitalize()}**: {data['count']} questions, {data['tokens']:,} tokens (avg: {avg:.1f})")
+            
+            with col2_summary:
+                st.markdown("**By Prompt Type:**")
+                type_summary = {}
+                for q, tokens in zip(questions, [qt["Tokens"] for qt in question_tokens]):
+                    ptype = q.prompt_type.value
+                    if ptype not in type_summary:
+                        type_summary[ptype] = {"count": 0, "tokens": 0}
+                    type_summary[ptype]["count"] += 1
+                    type_summary[ptype]["tokens"] += tokens
+                
+                for ptype, data in type_summary.items():
+                    avg = data["tokens"] / data["count"] if data["count"] > 0 else 0
+                    st.write(f"**{ptype.capitalize()}**: {data['count']} questions, {data['tokens']:,} tokens (avg: {avg:.1f})")
+            
+        except ImportError:
+            st.error("tiktoken library is not installed. Please install it with: `pip install tiktoken`")
+        except Exception as e:
+            st.error(f"Error calculating tokens: {str(e)}")
+            st.exception(e)
 
 
 def render_add_question():
@@ -1141,7 +1505,7 @@ def render_manage_data():
     stats = db.get_stats()
     
     # Import section
-    st.header("📥 Import CSV")
+    st.subheader("Import CSV")
     st.markdown("Import questions from a CSV file. The CSV should have columns: `text`, `acceptance_level`, `prompt_type`, and optionally `tags`, `notes`.")
     
     # Template download
@@ -1301,7 +1665,7 @@ def render_manage_data():
     st.markdown("---")
     
     # Export section
-    st.header("📤 Export")
+    st.subheader("Export")
     
     if stats["questions"] == 0:
         st.warning("No questions to export. Add some first!")
@@ -1435,7 +1799,7 @@ def render_manage_data():
     st.markdown("---")
     
     # Deletion section
-    st.header("⚠️ Danger Zone")
+    st.subheader("Danger Zone")
     
     # Tabs for model deletion, test run deletion, cached results deletion, and database reset
     del_tab1, del_tab2, del_tab3, del_tab4 = st.tabs(["🗑️ Delete Models", "🗑️ Delete Test Runs", "🗑️ Delete Cached Results", "🔄 Reset Database"])
@@ -1613,9 +1977,28 @@ def render_manage_data():
         results_file_path = Path(__file__).parent.parent / "prompts" / "results.json"
         promptfoo_yaml_path = Path(__file__).parent.parent / "prompts" / "promptfoo.yaml"
         
+        # Determine PromptFoo cache directory (~/.promptfoo/cache)
+        promptfoo_cache_dir = Path.home() / ".promptfoo" / "cache"
+        promptfoo_cache_exists = promptfoo_cache_dir.exists() and promptfoo_cache_dir.is_dir()
+        
         # Check if files exist
         results_exists = results_file_path.exists()
         yaml_exists = promptfoo_yaml_path.exists()
+        
+        # Show cache directory status and calculate size
+        cache_size_mb = 0.0
+        if promptfoo_cache_exists:
+            try:
+                # Calculate cache size
+                cache_size = sum(f.stat().st_size for f in promptfoo_cache_dir.rglob('*') if f.is_file())
+                cache_size_mb = cache_size / (1024 * 1024)
+                st.info(f"💾 **PromptFoo internal cache found:**\n- Location: `{promptfoo_cache_dir}`\n- Size: {cache_size_mb:.2f} MB")
+            except Exception:
+                st.info(f"💾 **PromptFoo internal cache found:**\n- Location: `{promptfoo_cache_dir}`")
+        else:
+            st.info("ℹ️ No PromptFoo internal cache found. Cache will be created when you run evaluations.")
+        
+        st.markdown("---")
         
         if results_exists:
             # Get file size and modification time
@@ -1634,9 +2017,21 @@ def render_manage_data():
             else:
                 delete_yaml = False
             
+            # Option to clear PromptFoo internal cache
+            if promptfoo_cache_exists:
+                st.markdown("---")
+                clear_promptfoo_cache = st.checkbox(
+                    f"Also clear PromptFoo internal cache ({cache_size_mb:.2f} MB)",
+                    value=True,
+                    key="clear_promptfoo_cache_checkbox",
+                    help="PromptFoo maintains its own cache directory separate from results.json. Clearing this ensures completely fresh evaluations."
+                )
+            else:
+                clear_promptfoo_cache = False
+            
             # Confirmation checkbox
             confirm_delete = st.checkbox(
-                "I understand this will delete the cached results file",
+                "I understand this will delete the cached results file" + (" and PromptFoo cache" if clear_promptfoo_cache else ""),
                 key="confirm_delete_cached_results"
             )
             
@@ -1645,6 +2040,8 @@ def render_manage_data():
                 if confirm_delete:
                     try:
                         deleted_files = []
+                        cache_cleared = False
+                        errors = []
                         
                         # Delete results.json
                         if results_file_path.exists():
@@ -1656,17 +2053,92 @@ def render_manage_data():
                             promptfoo_yaml_path.unlink()
                             deleted_files.append(promptfoo_yaml_path.name)
                         
+                        # Clear PromptFoo internal cache if requested
+                        if clear_promptfoo_cache and promptfoo_cache_exists:
+                            try:
+                                # Try using promptfoo cache clear command first
+                                result = subprocess.run(
+                                    ["npx", "promptfoo@latest", "cache", "clear"],
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=30,
+                                )
+                                if result.returncode == 0:
+                                    cache_cleared = True
+                                else:
+                                    # Fallback to manual deletion
+                                    shutil.rmtree(promptfoo_cache_dir)
+                                    cache_cleared = True
+                            except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+                                # Fallback to manual deletion
+                                try:
+                                    shutil.rmtree(promptfoo_cache_dir)
+                                    cache_cleared = True
+                                except Exception as del_error:
+                                    errors.append(f"Failed to clear PromptFoo cache: {str(del_error)}")
+                        
+                        # Show success message
+                        success_parts = []
                         if deleted_files:
-                            st.success(f"✅ Cached results deleted successfully!\n• Deleted: {', '.join(deleted_files)}")
+                            success_parts.append(f"✅ Deleted files: {', '.join(deleted_files)}")
+                        if cache_cleared:
+                            success_parts.append("✅ Cleared PromptFoo internal cache")
+                        if errors:
+                            for err in errors:
+                                st.warning(f"⚠️ {err}")
+                        
+                        if success_parts:
+                            st.success("\n".join(success_parts))
                             st.rerun()
-                        else:
-                            st.warning("No files were deleted.")
+                        elif not deleted_files and not cache_cleared:
+                            st.warning("No files or cache were deleted.")
                     except Exception as e:
                         st.error(f"❌ Error deleting cached results: {str(e)}")
                 else:
                     st.error("Please confirm deletion by checking the checkbox.")
         else:
             st.info("ℹ️ No cached results file found. The file will be created when you run PromptFoo.")
+            
+            # Option to clear PromptFoo cache even if no results.json exists
+            if promptfoo_cache_exists:
+                st.markdown("---")
+                st.markdown("**Clear PromptFoo Internal Cache:**")
+                cache_size_text = f" ({cache_size_mb:.2f} MB)" if cache_size_mb > 0 else ""
+                clear_cache_only = st.checkbox(
+                    f"Clear PromptFoo internal cache{cache_size_text}",
+                    value=False,
+                    key="clear_cache_only_checkbox",
+                    help="Clear PromptFoo's internal cache directory to force fresh API calls on next evaluation."
+                )
+                
+                if st.button("🗑️ Clear PromptFoo Cache", type="primary", key="clear_cache_only_btn"):
+                    if clear_cache_only:
+                        try:
+                            # Try using promptfoo cache clear command first
+                            result = subprocess.run(
+                                ["npx", "promptfoo@latest", "cache", "clear"],
+                                capture_output=True,
+                                text=True,
+                                timeout=30,
+                            )
+                            if result.returncode == 0:
+                                st.success("✅ PromptFoo cache cleared successfully!")
+                            else:
+                                # Fallback to manual deletion
+                                shutil.rmtree(promptfoo_cache_dir)
+                                st.success("✅ PromptFoo cache cleared successfully!")
+                            st.rerun()
+                        except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+                            # Fallback to manual deletion
+                            try:
+                                shutil.rmtree(promptfoo_cache_dir)
+                                st.success("✅ PromptFoo cache cleared successfully!")
+                                st.rerun()
+                            except Exception as del_error:
+                                st.error(f"❌ Error clearing PromptFoo cache: {str(del_error)}")
+                    else:
+                        st.error("Please check the checkbox to confirm cache clearing.")
+            
             if yaml_exists:
                 st.markdown("---")
                 st.markdown("**PromptFoo config file found:**")
@@ -1691,13 +2163,33 @@ def render_manage_data():
         # Check for cached results
         results_file_path = Path(__file__).parent.parent / "prompts" / "results.json"
         promptfoo_yaml_path = Path(__file__).parent.parent / "prompts" / "promptfoo.yaml"
+        promptfoo_cache_dir = Path.home() / ".promptfoo" / "cache"
         results_exists = results_file_path.exists()
         yaml_exists = promptfoo_yaml_path.exists()
+        promptfoo_cache_exists = promptfoo_cache_dir.exists() and promptfoo_cache_dir.is_dir()
         
-        if results_exists or yaml_exists:
+        # Calculate cache size if it exists
+        reset_cache_size_mb = 0.0
+        if promptfoo_cache_exists:
+            try:
+                cache_size = sum(f.stat().st_size for f in promptfoo_cache_dir.rglob('*') if f.is_file())
+                reset_cache_size_mb = cache_size / (1024 * 1024)
+            except Exception:
+                pass
+        
+        if results_exists or yaml_exists or promptfoo_cache_exists:
             st.markdown("**Also delete cached PromptFoo files:**")
+            file_list = []
+            if results_exists:
+                file_list.append("results.json")
+            if yaml_exists:
+                file_list.append("promptfoo.yaml")
+            if promptfoo_cache_exists:
+                cache_text = f"PromptFoo cache ({reset_cache_size_mb:.2f} MB)" if reset_cache_size_mb > 0 else "PromptFoo cache"
+                file_list.append(cache_text)
+            
             delete_cached = st.checkbox(
-                f"Delete cached results and config files ({'results.json' if results_exists else ''}{', promptfoo.yaml' if yaml_exists else ''})",
+                f"Delete cached files ({', '.join(file_list)})",
                 value=True,
                 key="reset_delete_cached_checkbox"
             )
@@ -1713,8 +2205,9 @@ def render_manage_data():
                     db.drop_tables()
                     db.create_tables()
                     
-                    # Optionally delete cached files
+                    # Optionally delete cached files and cache
                     deleted_files = []
+                    cache_cleared = False
                     if delete_cached:
                         if results_exists:
                             results_file_path.unlink()
@@ -1722,10 +2215,38 @@ def render_manage_data():
                         if yaml_exists:
                             promptfoo_yaml_path.unlink()
                             deleted_files.append("promptfoo.yaml")
+                        
+                        # Clear PromptFoo cache
+                        if promptfoo_cache_exists:
+                            try:
+                                # Try using promptfoo cache clear command first
+                                result = subprocess.run(
+                                    ["npx", "promptfoo@latest", "cache", "clear"],
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=30,
+                                )
+                                if result.returncode == 0:
+                                    cache_cleared = True
+                                else:
+                                    # Fallback to manual deletion
+                                    shutil.rmtree(promptfoo_cache_dir)
+                                    cache_cleared = True
+                            except (subprocess.TimeoutExpired, FileNotFoundError, Exception):
+                                # Fallback to manual deletion
+                                try:
+                                    shutil.rmtree(promptfoo_cache_dir)
+                                    cache_cleared = True
+                                except Exception:
+                                    pass  # Ignore errors when clearing cache during reset
+                    else:
+                        cache_cleared = False
                     
                     success_msg = "✅ Database reset successfully!"
                     if deleted_files:
                         success_msg += f"\n• Also deleted: {', '.join(deleted_files)}"
+                    if cache_cleared:
+                        success_msg += "\n• Cleared PromptFoo internal cache"
                     
                     st.success(success_msg)
                     st.rerun()
@@ -1738,27 +2259,193 @@ def render_manage_data():
 
 def render_instructions():
     """Render the instructions page with command-line guidance."""
-    st.title("📖 Instructions")
+    st.title("⚙️ Pipeline")
     st.markdown("Command-line instructions for running the Great Commission Benchmark.")
     
     st.markdown("---")
     
     # Pipeline Commands - moved to second position
-    st.header("⚙️ Benchmark Pipeline")
+    st.subheader("⚙️ Benchmark Pipeline")
     
     st.markdown("Open your Terminal, go to the benchmark folder, and run this command for the pipeline wizard. This wizard guides you through each step with helpful prompts and status checks.")
     st.code("python pipeline.py", language="bash")
     
     st.markdown("---")
     
+    # Model Configuration Section
+    st.subheader("🤖 Set Model")
+    st.markdown("You can designate the model in the first step of the wizard, or you can change it here.")
+    
+    config_path = Path(__file__).parent.parent / "config.yaml"
+    
+    # Load current config
+    config = {}
+    if config_path.exists():
+        with open(config_path) as f:
+            config = yaml.safe_load(f) or {}
+    
+    llm_config = config.get("llm", {})
+    
+    # Get current provider settings (read-only in simple section)
+    current_provider = llm_config.get("provider", "lmstudio")
+    current_base_url = llm_config.get("base_url", "http://localhost:1234/v1")
+    current_api_key = llm_config.get("api_key", "lm-studio")
+    
+    # Create tabs for Test Model and Advanced Configuration
+    tab1, tab2 = st.tabs(["Current Test Model", "Advanced Model Configuration"])
+    
+    with tab1:
+        # Simple model configuration - only Test Model
+        with st.form("pipeline_simple_model_config_form"):
+            test_model = st.text_input(
+                "Current Test Model",
+                value=llm_config.get("test_model", "local-model"),
+                help="Model identifier (e.g., 'gpt-4', 'qwen/qwen3-4b')",
+            )
+            
+            submitted = st.form_submit_button("💾 Save Configuration", use_container_width=True)
+            
+            if submitted:
+                # Use existing provider/base_url/api_key from config, only update test_model
+                config["llm"] = {
+                    "provider": current_provider,
+                    "base_url": current_base_url,
+                    "api_key": current_api_key,
+                    "test_model": test_model,
+                    "evaluator_model": llm_config.get("evaluator_model", test_model),
+                }
+                with open(config_path, "w") as f:
+                    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+                st.success("✅ Configuration saved!")
+                st.rerun()
+    
+    with tab2:
+        # Initialize session state for preset values if not already set
+        if "pipeline_preset_values" not in st.session_state:
+            st.session_state.pipeline_preset_values = None
+        
+        # Preset configurations
+        st.markdown("**Quick Presets:** (Click to populate defaults)")
+        
+        col1, col2 = st.columns([1, 10])
+        
+        with col1:
+            if st.button("🖥️ LM Studio", key="pipeline_preset_lmstudio"):
+                st.session_state.pipeline_preset_values = {
+                    "provider": "lmstudio",
+                    "base_url": "http://localhost:1234/v1",
+                    "api_key": "lm-studio",
+                    "test_model": llm_config.get("test_model", "local-model"),
+                    "evaluator_model": llm_config.get("evaluator_model", llm_config.get("test_model", "local-model")),
+                }
+                st.rerun()
+            
+            if st.button("🌐 OpenRouter", key="pipeline_preset_openrouter"):
+                st.session_state.pipeline_preset_values = {
+                    "provider": "openrouter",
+                    "base_url": "https://openrouter.ai/api/v1",
+                    "api_key": llm_config.get("api_key", "${OPENROUTER_API_KEY}"),
+                    "test_model": llm_config.get("test_model", "openai/gpt-4o-mini"),
+                    "evaluator_model": llm_config.get("evaluator_model", llm_config.get("test_model", "openai/gpt-4o-mini")),
+                }
+                st.rerun()
+        
+        st.markdown("---")
+        
+        # Determine values to use (preset or current config)
+        if st.session_state.pipeline_preset_values:
+            values = st.session_state.pipeline_preset_values
+        else:
+            values = {
+                "provider": llm_config.get("provider", "lmstudio"),
+                "base_url": llm_config.get("base_url", "http://localhost:1234/v1"),
+                "api_key": llm_config.get("api_key", "lm-studio"),
+                "test_model": llm_config.get("test_model", "local-model"),
+                "evaluator_model": llm_config.get("evaluator_model", llm_config.get("test_model", "local-model")),
+            }
+        
+        with st.form("pipeline_advanced_model_config_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                advanced_provider = st.selectbox(
+                    "Provider",
+                    ["lmstudio", "openrouter", "openai", "anthropic", "other"],
+                    index=["lmstudio", "openrouter", "openai", "anthropic", "other"].index(values["provider"]) if values["provider"] in ["lmstudio", "openrouter", "openai", "anthropic", "other"] else 0,
+                    help="LLM provider to use",
+                    key="pipeline_advanced_provider",
+                )
+                
+                advanced_base_url = st.text_input(
+                    "Base URL",
+                    value=values["base_url"],
+                    help="API base URL (e.g., http://localhost:1234/v1 for LM Studio)",
+                    key="pipeline_advanced_base_url",
+                )
+            
+            with col2:
+                advanced_test_model = st.text_input(
+                    "Test Model",
+                    value=values["test_model"],
+                    help="Model identifier (e.g., 'gpt-4', 'qwen/qwen3-4b')",
+                    key="pipeline_advanced_test_model",
+                )
+                
+                advanced_evaluator_model = st.text_input(
+                    "Evaluator Model",
+                    value=values["evaluator_model"],
+                    help="Model to use for evaluating responses (can be same as test model)",
+                    key="pipeline_advanced_evaluator_model",
+                )
+            
+            advanced_api_key = st.text_input(
+                "API Key",
+                value=values["api_key"],
+                type="password",
+                help="API key (leave as 'lm-studio' for LM Studio)",
+                key="pipeline_advanced_api_key",
+            )
+            
+            # Save button
+            advanced_submitted = st.form_submit_button("💾 Save Advanced Configuration", use_container_width=True)
+            
+            if advanced_submitted:
+                # Clear preset values after saving
+                st.session_state.pipeline_preset_values = None
+                
+                config["llm"] = {
+                    "provider": advanced_provider,
+                    "base_url": advanced_base_url,
+                    "api_key": advanced_api_key,
+                    "test_model": advanced_test_model,
+                    "evaluator_model": advanced_evaluator_model or advanced_test_model,
+                }
+                with open(config_path, "w") as f:
+                    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+                st.success("✅ Configuration saved!")
+                st.rerun()
+        
+        st.markdown("---")
+        
+        # Config file preview
+        st.subheader("Current Configuration")
+        
+        if config_path.exists():
+            with st.expander("View config.yaml"):
+                st.code(yaml.dump(config, default_flow_style=False, sort_keys=False), language="yaml")
+        else:
+            st.warning("config.yaml not found")
+    
+    st.markdown("---")
+    
     # Visual Workflow Section
-    st.header("🧪 Step-by-Step Visual Workflow")
+    st.subheader("🧪 Step-by-Step Visual Workflow")
     st.image("ui/flow.png", width=800)
     
     st.markdown("---")
     
     # Utility Commands
-    st.header("🔧 Utility Commands")
+    st.subheader("🔧 Utility Commands")
     st.markdown("Commands for managing questions, configuration, and checking status.")
     
     col1, col2 = st.columns(2)
@@ -1815,7 +2502,7 @@ def render_evaluations():
     if stats["evaluations"] == 0:
         st.warning("⚠️ No evaluations found.")
         st.info(
-            "💡 To get started with evaluations, please visit the **📖 Instructions** page "
+            "💡 To get started with evaluations, please visit the **⚙️ Pipeline** page "
             "in the sidebar for step-by-step guidance on running evaluations."
         )
         return
@@ -1842,20 +2529,35 @@ def render_evaluations():
 
 def render_evaluation_overview(db, reporter, model_stats):
     """Render overview statistics and visualizations."""
-    st.header("📊 Evaluation Overview")
+    st.subheader("Overview")
     
     # Get model details for better identification
     with db.get_session() as session:
         models_dict = {m.id: m for m in session.query(Model).all()}
     
-    # Overall metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
+    # Calculate totals
     total_evaluated = sum(s["evaluated_responses"] for s in model_stats.values())
     total_approved = sum(s["by_verdict"].get("approved", 0) for s in model_stats.values())
     total_refused = sum(s["by_verdict"].get("refused", 0) for s in model_stats.values())
     total_compromised = sum(s["by_verdict"].get("compromised", 0) for s in model_stats.values())
     total_ambiguous = sum(s["by_verdict"].get("ambiguous", 0) for s in model_stats.values())
+    
+    # Verdict cards
+    verdict_col1, verdict_col2, verdict_col3, verdict_col4 = st.columns(4)
+    
+    with verdict_col1:
+        st.metric("Approved", total_approved)
+    with verdict_col2:
+        st.metric("Compromised", total_compromised)
+    with verdict_col3:
+        st.metric("Refused", total_refused)
+    with verdict_col4:
+        st.metric("Ambiguous", total_ambiguous)
+    
+    st.markdown("---")
+    
+    # Overall metrics
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.metric("Total Evaluated", total_evaluated)
@@ -2259,7 +2961,7 @@ def render_evaluation_overview(db, reporter, model_stats):
 
 def render_detailed_evaluations(db):
     """Render detailed evaluation results table."""
-    st.header("🔍 Detailed Evaluation Results")
+    st.subheader("🔍 Detailed Evaluation Results")
     
     # Get models with full identification
     with db.get_session() as session:
@@ -2458,7 +3160,6 @@ def render_detailed_evaluations(db):
 
 def render_model_comparison(db, reporter, model_stats):
     """Render model comparison view."""
-    st.header("📈 Model Comparison")
     
     if len(model_stats) < 2:
         st.info("Need at least 2 models to compare. Add more test runs with different models.")
@@ -2624,7 +3325,7 @@ def render_comparisons():
     if stats["evaluations"] == 0:
         st.warning("⚠️ No evaluations found.")
         st.info(
-            "💡 To get started with evaluations, please visit the **📖 Instructions** page "
+            "💡 To get started with evaluations, please visit the **⚙️ Pipeline** page "
             "in the sidebar for step-by-step guidance on running evaluations."
         )
         return
@@ -2642,7 +3343,7 @@ def render_comparisons():
 
 def render_test_runs(db, reporter):
     """Render test run history and analysis."""
-    st.header("📋 Test Run History")
+    st.subheader("📋 Test Run History")
     
     with db.get_session() as session:
         test_runs = session.query(TestRun).order_by(TestRun.started_at.desc()).all()
@@ -2736,172 +3437,6 @@ def render_test_runs(db, reporter):
                 st.dataframe(df_level, width='stretch', hide_index=True)
 
 
-def render_model_config():
-    """Render the model configuration page."""
-    st.title("🤖 Set Model")
-    st.markdown("Configure your LLM provider and model settings without editing config.yaml manually.")
-    
-    config_path = Path(__file__).parent.parent / "config.yaml"
-    
-    # Load current config
-    config = {}
-    if config_path.exists():
-        with open(config_path) as f:
-            config = yaml.safe_load(f) or {}
-    
-    llm_config = config.get("llm", {})
-    
-    # Get current provider settings (read-only in simple section)
-    current_provider = llm_config.get("provider", "lmstudio")
-    current_base_url = llm_config.get("base_url", "http://localhost:1234/v1")
-    current_api_key = llm_config.get("api_key", "lm-studio")
-    
-    # Create tabs for Test Model and Advanced Configuration
-    tab1, tab2 = st.tabs(["Current Test Model", "Advanced Model Configuration"])
-    
-    with tab1:
-        # Simple model configuration - only Test Model
-        with st.form("simple_model_config_form"):
-            test_model = st.text_input(
-                "Current Test Model",
-                value=llm_config.get("test_model", "local-model"),
-                help="Model identifier (e.g., 'gpt-4', 'qwen/qwen3-4b')",
-            )
-            
-            submitted = st.form_submit_button("💾 Save Configuration", use_container_width=True)
-            
-            if submitted:
-                # Use existing provider/base_url/api_key from config, only update test_model
-                config["llm"] = {
-                    "provider": current_provider,
-                    "base_url": current_base_url,
-                    "api_key": current_api_key,
-                    "test_model": test_model,
-                    "evaluator_model": llm_config.get("evaluator_model", test_model),
-                }
-                with open(config_path, "w") as f:
-                    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-                st.success("✅ Configuration saved!")
-                st.rerun()
-    
-    with tab2:
-        # Initialize session state for preset values if not already set
-        if "preset_values" not in st.session_state:
-            st.session_state.preset_values = None
-        
-        # Preset configurations
-        st.markdown("**Quick Presets:** (Click to populate defaults)")
-        
-        col1, col2 = st.columns([1, 10])
-        
-        with col1:
-            if st.button("🖥️ LM Studio", key="preset_lmstudio"):
-                st.session_state.preset_values = {
-                    "provider": "lmstudio",
-                    "base_url": "http://localhost:1234/v1",
-                    "api_key": "lm-studio",
-                    "test_model": llm_config.get("test_model", "local-model"),
-                    "evaluator_model": llm_config.get("evaluator_model", llm_config.get("test_model", "local-model")),
-                }
-                st.rerun()
-            
-            if st.button("🌐 OpenRouter", key="preset_openrouter"):
-                st.session_state.preset_values = {
-                    "provider": "openrouter",
-                    "base_url": "https://openrouter.ai/api/v1",
-                    "api_key": llm_config.get("api_key", "${OPENROUTER_API_KEY}"),
-                    "test_model": llm_config.get("test_model", "openai/gpt-4o-mini"),
-                    "evaluator_model": llm_config.get("evaluator_model", llm_config.get("test_model", "openai/gpt-4o-mini")),
-                }
-                st.rerun()
-        
-        st.markdown("---")
-        
-        # Determine values to use (preset or current config)
-        if st.session_state.preset_values:
-            values = st.session_state.preset_values
-        else:
-            values = {
-                "provider": llm_config.get("provider", "lmstudio"),
-                "base_url": llm_config.get("base_url", "http://localhost:1234/v1"),
-                "api_key": llm_config.get("api_key", "lm-studio"),
-                "test_model": llm_config.get("test_model", "local-model"),
-                "evaluator_model": llm_config.get("evaluator_model", llm_config.get("test_model", "local-model")),
-            }
-        
-        with st.form("advanced_model_config_form"):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                advanced_provider = st.selectbox(
-                    "Provider",
-                    ["lmstudio", "openrouter", "openai", "anthropic", "other"],
-                    index=["lmstudio", "openrouter", "openai", "anthropic", "other"].index(values["provider"]) if values["provider"] in ["lmstudio", "openrouter", "openai", "anthropic", "other"] else 0,
-                    help="LLM provider to use",
-                    key="advanced_provider",
-                )
-                
-                advanced_base_url = st.text_input(
-                    "Base URL",
-                    value=values["base_url"],
-                    help="API base URL (e.g., http://localhost:1234/v1 for LM Studio)",
-                    key="advanced_base_url",
-                )
-            
-            with col2:
-                advanced_test_model = st.text_input(
-                    "Test Model",
-                    value=values["test_model"],
-                    help="Model identifier (e.g., 'gpt-4', 'qwen/qwen3-4b')",
-                    key="advanced_test_model",
-                )
-                
-                advanced_evaluator_model = st.text_input(
-                    "Evaluator Model",
-                    value=values["evaluator_model"],
-                    help="Model to use for evaluating responses (can be same as test model)",
-                    key="advanced_evaluator_model",
-                )
-            
-            advanced_api_key = st.text_input(
-                "API Key",
-                value=values["api_key"],
-                type="password",
-                help="API key (leave as 'lm-studio' for LM Studio)",
-                key="advanced_api_key",
-            )
-            
-            # Save button
-            advanced_submitted = st.form_submit_button("💾 Save Advanced Configuration", use_container_width=True)
-            
-            if advanced_submitted:
-                # Clear preset values after saving
-                st.session_state.preset_values = None
-                
-                config["llm"] = {
-                    "provider": advanced_provider,
-                    "base_url": advanced_base_url,
-                    "api_key": advanced_api_key,
-                    "test_model": advanced_test_model,
-                    "evaluator_model": advanced_evaluator_model or advanced_test_model,
-                }
-                with open(config_path, "w") as f:
-                    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-                st.success("✅ Configuration saved!")
-                st.rerun()
-        
-        st.markdown("---")
-        
-        # Config file preview
-        st.subheader("Current Configuration")
-        
-        if config_path.exists():
-            with st.expander("View config.yaml"):
-                st.code(yaml.dump(config, default_flow_style=False, sort_keys=False), language="yaml")
-        else:
-            st.warning("config.yaml not found")
-
-
 def render_initialization_screen():
     """Render the database initialization screen - shown when databases are not initialized."""
     # Center the content vertically and horizontally
@@ -2975,9 +3510,7 @@ def main():
         render_evaluations()
     elif page == "📈 Comparisons":
         render_comparisons()
-    elif page == "🤖 Set Model":
-        render_model_config()
-    elif page == "📖 Instructions":
+    elif page == "⚙️ Pipeline":
         render_instructions()
     elif page == "❓ Questions":
         render_questions()

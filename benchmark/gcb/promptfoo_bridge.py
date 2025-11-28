@@ -149,9 +149,11 @@ class PromptFooBridge:
             }
             
             # Add max_tokens from evaluation config
+            # Use a very high default (100000) to avoid truncating long responses
+            # This allows thinking models and verbose responses to complete fully
             eval_config = self.config.get("evaluation", {})
-            if eval_config.get("max_tokens"):
-                provider_config["maxTokens"] = eval_config["max_tokens"]
+            max_tokens = eval_config.get("max_tokens", 100000)  # Default to 100k tokens
+            provider_config["maxTokens"] = max_tokens
             
             # Add timeout if configured
             if promptfoo_config_settings.get("timeout_ms"):
@@ -239,6 +241,10 @@ class PromptFooBridge:
         results_file: str = "results.json",
         model_name: str = "local-model",
         test_run_name: Optional[str] = None,
+        provider_override: Optional[str] = None,
+        api_identifier_override: Optional[str] = None,
+        base_url_override: Optional[str] = None,
+        api_key_override: Optional[str] = None,
     ) -> tuple[int, List[str]]:
         """Import PromptFoo results into the database.
         
@@ -246,6 +252,10 @@ class PromptFooBridge:
             results_file: Path to PromptFoo results JSON
             model_name: Name of the model tested
             test_run_name: Optional name for the test run
+            provider_override: Override provider from config (used when model settings were overridden)
+            api_identifier_override: Override API identifier/model identifier (used when model settings were overridden)
+            base_url_override: Override base URL from config (used when model settings were overridden)
+            api_key_override: Override API key from config (used when model settings were overridden, stored as metadata only)
             
         Returns:
             Tuple of (responses_imported, errors)
@@ -263,9 +273,11 @@ class PromptFooBridge:
         
         with self.db.get_session() as session:
             # Create or get model - use combination of name, provider, and api_identifier to distinguish
+            # Use overrides if provided, otherwise fall back to config
             llm_config = self.get_llm_config()
-            provider = self.config.get("llm", {}).get("provider", "lmstudio")
-            api_identifier = llm_config.get("test_model", model_name)
+            provider = provider_override if provider_override else self.config.get("llm", {}).get("provider", "lmstudio")
+            # api_identifier should be the actual model identifier used (override or config), not the display name
+            api_identifier = api_identifier_override if api_identifier_override else llm_config.get("test_model", model_name)
             
             # Try to find existing model by name, provider, and api_identifier
             model = session.query(Model).filter(
@@ -290,14 +302,24 @@ class PromptFooBridge:
                 status=TestRunStatus.COMPLETED,
                 completed_at=datetime.utcnow(),
             )
-            test_run.set_config({
+            # Build test run config with all model information and overrides
+            test_run_config = {
                 "source": "promptfoo",
                 "results_file": str(results_path),
                 "model_name": model.name,
                 "model_provider": model.provider,
                 "model_api_identifier": model.api_identifier,
                 "model_id": model.id,
-            })
+            }
+            
+            # Store override information if provided (for tracking what was actually used)
+            if base_url_override:
+                test_run_config["base_url_override"] = base_url_override
+            if api_key_override:
+                # Store that API key was overridden, but don't store the actual key for security
+                test_run_config["api_key_override"] = True
+            
+            test_run.set_config(test_run_config)
             session.add(test_run)
             session.flush()
             

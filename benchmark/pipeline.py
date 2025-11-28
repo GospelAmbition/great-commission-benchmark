@@ -65,6 +65,13 @@ class PipelineWizard:
         self.output_dir = Path(output_dir)
         self.results_dir = Path(results_dir)
         self.db = None
+        # Store all overrides from step_prepare for use in later steps
+        self.override_model_name = None
+        self.override_provider = None
+        self.override_base_url = None
+        self.override_api_key = None
+        # Flag to use all defaults for subsequent prompts
+        self.use_all_defaults = False
         
     def show_banner(self):
         """Display welcome banner."""
@@ -277,12 +284,27 @@ class PipelineWizard:
                 override_api_key = Prompt.ask("API Key", password=True)
             else:
                 override_api_key = None
+            
+            # Store all overrides for use in later steps
+            self.override_model_name = override_model
+            self.override_provider = override_provider
+            self.override_base_url = override_base_url
+            self.override_api_key = override_api_key
+        else:
+            # Clear all overrides if user chooses not to override
+            self.override_model_name = None
+            self.override_provider = None
+            self.override_base_url = None
+            self.override_api_key = None
         
-        # Ask for filters
+        # Ask if user wants to run with all defaults
+        self.use_all_defaults = Confirm.ask("\nRun with all defaults?", default=False)
+        
+        # Ask for filters (skip if using all defaults)
         level_filter = None
         type_filter = None
         
-        if Confirm.ask("\nDo you want to filter questions?", default=False):
+        if not self.use_all_defaults and Confirm.ask("\nDo you want to filter questions?", default=False):
             level_choice = Prompt.ask(
                 "Acceptance level (green/orange/red)",
                 choices=["green", "orange", "red", ""],
@@ -367,7 +389,7 @@ class PipelineWizard:
         console.print(f"   Config file: {promptfoo_file}")
         console.print("\n[yellow]This may take a while depending on the number of questions...[/yellow]\n")
         
-        if not Confirm.ask("Continue with evaluation?", default=True):
+        if not self.use_all_defaults and not Confirm.ask("Continue with evaluation?", default=True):
             return False
         
         try:
@@ -410,19 +432,37 @@ class PipelineWizard:
             str(self.config_path)
         )
         
-        # Get model name
+        # Get model name - use override if available, otherwise use config
         llm_config = bridge.get_llm_config()
-        default_model = llm_config.get("test_model", "local-model")
+        if self.override_model_name:
+            default_model = self.override_model_name
+            console.print(f"\n[cyan]Using model from step 1 override: {default_model}[/cyan]")
+            if self.override_provider:
+                console.print(f"[cyan]Using provider from step 1 override: {self.override_provider}[/cyan]")
+        else:
+            default_model = llm_config.get("test_model", "local-model")
+            console.print(f"\n[cyan]Current model from config: {default_model}[/cyan]")
         
-        console.print(f"\n[cyan]Current model from config: {default_model}[/cyan]")
-        model_name = Prompt.ask(
-            "Model name for this test run",
-            default=default_model
-        )
+        if self.use_all_defaults:
+            model_name = default_model
+            console.print(f"[cyan]Using default model: {model_name}[/cyan]")
+        else:
+            model_name = Prompt.ask(
+                "Model name for this test run",
+                default=default_model
+            )
         
         try:
             console.print("\n[cyan]Importing results...[/cyan]")
-            imported, errors = bridge.import_results("results.json", model_name)
+            # Pass overrides to import_results so they're used in metadata
+            imported, errors = bridge.import_results(
+                "results.json", 
+                model_name,
+                provider_override=self.override_provider,
+                api_identifier_override=self.override_model_name if self.override_model_name else None,
+                base_url_override=self.override_base_url,
+                api_key_override=self.override_api_key,
+            )
             
             console.print(f"\n[green]✓ Imported {imported} responses[/green]")
             
@@ -463,13 +503,17 @@ class PipelineWizard:
         
         if evaluated_count > 0:
             console.print(f"\n[cyan]Found {evaluated_count} already evaluated responses out of {total_responses}[/cyan]")
-            force = Confirm.ask("Re-evaluate existing responses?", default=False)
+            if self.use_all_defaults:
+                force = False  # Default: don't re-evaluate
+                console.print("[cyan]Using default: Skip already evaluated responses[/cyan]")
+            else:
+                force = Confirm.ask("Re-evaluate existing responses?", default=False)
         else:
             force = False
         
         console.print("\n[yellow]This may take a while depending on the number of responses...[/yellow]")
         
-        if not Confirm.ask("Continue with evaluation?", default=True):
+        if not self.use_all_defaults and not Confirm.ask("Continue with evaluation?", default=True):
             return False
         
         try:
@@ -512,11 +556,15 @@ class PipelineWizard:
             console.print("   Run step 4 first to evaluate responses.")
             return False
         
-        format_choice = Prompt.ask(
-            "\nReport format",
-            choices=["markdown", "json", "detailed"],
-            default="markdown"
-        )
+        if self.use_all_defaults:
+            format_choice = "markdown"  # Default format
+            console.print(f"\n[cyan]Using default report format: {format_choice}[/cyan]")
+        else:
+            format_choice = Prompt.ask(
+                "\nReport format",
+                choices=["markdown", "json", "detailed"],
+                default="markdown"
+            )
         
         try:
             console.print(f"\n[cyan]Generating {format_choice} report...[/cyan]")

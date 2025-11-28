@@ -16,4 +16,6 @@ promptfoo:
   retry_delay_ms: 1000
 evaluation:
   temperature: 0.1
-  max_tokens: 10000
+  # Set to a very high value (100000) to capture full responses from thinking models
+  # and verbose responses. This prevents truncation at the token limit.
+  max_tokens: 100000
