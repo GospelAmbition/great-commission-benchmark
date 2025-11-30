@@ -1048,8 +1048,7 @@ def render_questions():
 
 def render_tokenizer_tab(db):
     """Render the tokenizer tab for calculating token costs."""
-    st.subheader("Token Cost Calculator")
-    st.markdown("Calculate the estimated token count and cost for your filtered questions.")
+    st.subheader("Select Questions")
     
     # Get current filtered questions (same logic as tab2)
     col1, col2, col3 = st.columns(3)
@@ -1096,8 +1095,11 @@ def render_tokenizer_tab(db):
             st.info("No questions match your filters. Adjust filters to calculate token costs.")
             return
         
-        # Model selection and configuration
-        st.markdown("### Model Configuration")
+        # Initialize session state for model configuration if not exists
+        if "tokenizer_model_name" not in st.session_state:
+            st.session_state.tokenizer_model_name = "Custom"
+        if "tokenizer_encoding_name" not in st.session_state:
+            st.session_state.tokenizer_encoding_name = "cl100k_base"
         
         # Common model encodings mapping
         model_encodings = {
@@ -1118,49 +1120,46 @@ def render_tokenizer_tab(db):
             "gemini-2.0": "cl100k_base",  # Approximate
         }
         
-        col1_model, col2_model = st.columns(2)
-        
-        with col1_model:
-            model_name = st.selectbox(
-                "Select Model",
-                options=["Custom"] + list(model_encodings.keys()),
-                help="Select a model to use its tokenizer, or choose Custom to specify encoding manually"
-            )
-        
-        with col2_model:
-            if model_name == "Custom":
-                encoding_name = st.selectbox(
-                    "Token Encoding",
-                    options=["cl100k_base", "o200k_base", "p50k_base", "p50k_edit", "r50k_base"],
-                    help="Select the tokenizer encoding to use"
-                )
-            else:
-                encoding_name = model_encodings.get(model_name, "cl100k_base")
-                st.info(f"Encoding: **{encoding_name}**")
-        
-        st.markdown("---")
+        # Get encoding name from session state or calculate from model
+        model_name = st.session_state.tokenizer_model_name
+        if model_name == "Custom":
+            encoding_name = st.session_state.tokenizer_encoding_name
+        else:
+            encoding_name = model_encodings.get(model_name, "cl100k_base")
         
         # Cost input
-        st.markdown("### Cost Configuration")
-        col1_cost, col2_cost = st.columns(2)
+        st.markdown("### Configure Cost")
+        col1_cost, col2_cost, col3_cost = st.columns(3)
         
         with col1_cost:
-            cost_per_1k_tokens = st.number_input(
-                "Cost per 1K input tokens ($)",
+            cost_per_1m_input_tokens = st.number_input(
+                "Cost per 1M input tokens ($)",
                 min_value=0.0,
                 value=0.0,
                 step=0.0001,
                 format="%.6f",
-                help="Enter the cost per 1,000 input tokens for this model"
+                help="Enter the cost per 1,000,000 input tokens for this model"
             )
         
         with col2_cost:
-            st.markdown("<br>", unsafe_allow_html=True)
-            if cost_per_1k_tokens > 0:
-                cost_per_token = cost_per_1k_tokens / 1000.0
-                st.caption(f"Cost per token: **${cost_per_token:.8f}**")
-            else:
-                st.caption("Enter cost above to see per-token rate")
+            cost_per_1m_output_tokens = st.number_input(
+                "Cost per 1M output tokens ($)",
+                min_value=0.0,
+                value=0.0,
+                step=0.0001,
+                format="%.6f",
+                help="Enter the cost per 1,000,000 output tokens for this model"
+            )
+        
+        with col3_cost:
+            expected_output_tokens = st.number_input(
+                "Expected output tokens per question",
+                min_value=0,
+                value=4000,
+                step=100,
+                format="%d",
+                help="Average expected output tokens per question (default: 4,000)"
+            )
         
         st.markdown("---")
         
@@ -1176,21 +1175,27 @@ def render_tokenizer_tab(db):
                 return
             
             # Calculate tokens for each question
+            # Overhead for API request formatting (JSON structure, role labels, etc.)
+            REQUEST_OVERHEAD_TOKENS = 20
+            
             total_tokens = 0
             question_tokens = []
             
             for q in questions:
-                tokens = len(encoding.encode(q.text))
-                total_tokens += tokens
+                question_text_tokens = len(encoding.encode(q.text))
+                # Add overhead for API request formatting
+                total_question_tokens = question_text_tokens + REQUEST_OVERHEAD_TOKENS
+                total_tokens += total_question_tokens
                 question_tokens.append({
                     "Question": q.text[:100] + "..." if len(q.text) > 100 else q.text,
-                    "Tokens": tokens,
+                    "Tokens": total_question_tokens,
                     "Level": q.acceptance_level.value,
                     "Type": q.prompt_type.value
                 })
             
             # Display results
             st.markdown("### Results")
+            st.caption(f"*Token counts include {REQUEST_OVERHEAD_TOKENS} tokens overhead per request for API formatting*")
             
             col1_result, col2_result, col3_result = st.columns(3)
             
@@ -1205,20 +1210,33 @@ def render_tokenizer_tab(db):
                 st.metric("Avg Tokens/Question", f"{avg_tokens:.1f}")
             
             # Cost calculation
-            if cost_per_1k_tokens > 0:
+            if cost_per_1m_input_tokens > 0 or cost_per_1m_output_tokens > 0:
                 st.markdown("---")
                 st.markdown("### Cost Estimate")
                 
-                total_cost = (total_tokens / 1000.0) * cost_per_1k_tokens
+                # Calculate input token cost
+                input_cost = (total_tokens / 1000000.0) * cost_per_1m_input_tokens if cost_per_1m_input_tokens > 0 else 0
                 
-                col1_cost_result, col2_cost_result = st.columns(2)
+                # Calculate output token cost (using expected average)
+                total_output_tokens = len(questions) * expected_output_tokens
+                output_cost = (total_output_tokens / 1000000.0) * cost_per_1m_output_tokens if cost_per_1m_output_tokens > 0 else 0
+                
+                total_cost = input_cost + output_cost
+                
+                col1_cost_result, col2_cost_result, col3_cost_result = st.columns(3)
                 
                 with col1_cost_result:
                     st.metric("Total Estimated Cost", f"${total_cost:.4f}")
+                    if cost_per_1m_input_tokens > 0 and cost_per_1m_output_tokens > 0:
+                        st.caption(f"Input: ${input_cost:.4f} | Output: ${output_cost:.4f}")
                 
                 with col2_cost_result:
                     cost_per_question = total_cost / len(questions) if questions else 0
                     st.metric("Cost per Question", f"${cost_per_question:.6f}")
+                
+                with col3_cost_result:
+                    st.metric("Total Output Tokens (est.)", f"{total_output_tokens:,}")
+                    st.caption(f"Avg: {expected_output_tokens:,} per question")
             
             # Detailed breakdown
             st.markdown("---")
@@ -1276,6 +1294,33 @@ def render_tokenizer_tab(db):
         except Exception as e:
             st.error(f"Error calculating tokens: {str(e)}")
             st.exception(e)
+        
+        # Model selection and configuration (moved to bottom)
+        st.markdown("---")
+        st.markdown("### Model Configuration")
+        
+        col1_model, col2_model = st.columns(2)
+        
+        with col1_model:
+            model_name = st.selectbox(
+                "Select Model",
+                options=["Custom"] + list(model_encodings.keys()),
+                help="Select a model to use its tokenizer, or choose Custom to specify encoding manually",
+                key="tokenizer_model_name"
+            )
+        
+        with col2_model:
+            if model_name == "Custom":
+                encoding_name = st.selectbox(
+                    "Token Encoding",
+                    options=["cl100k_base", "o200k_base", "p50k_base", "p50k_edit", "r50k_base"],
+                    help="Select the tokenizer encoding to use",
+                    key="tokenizer_encoding_name"
+                )
+            else:
+                encoding_name = model_encodings.get(model_name, "cl100k_base")
+                st.session_state.tokenizer_encoding_name = encoding_name
+                st.info(f"Encoding: **{encoding_name}**")
 
 
 def render_add_question():

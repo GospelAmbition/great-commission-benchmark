@@ -2,7 +2,7 @@ llm:
   provider: lmstudio
   base_url: http://localhost:1234/v1
   api_key: lm-studio
-  test_model: google/gemma-3-1b
+  test_model: qwen/qwen3-coder-30b
   evaluator_model: qwen/qwen3-coder-30b
 database:
   questions_db: questions.db
@@ -16,6 +16,4 @@ promptfoo:
   retry_delay_ms: 1000
 evaluation:
   temperature: 0.1
-  # Set to a very high value (100000) to capture full responses from thinking models
-  # and verbose responses. This prevents truncation at the token limit.
   max_tokens: 100000
