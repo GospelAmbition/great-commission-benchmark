@@ -172,9 +172,30 @@ python -m gcb verify
 
 ## Benchmark Pipeline
 
-### Interactive Wizard (Recommended)
+### Web-Based Launcher (Easiest - Recommended for Non-Engineers)
 
-The easiest way to run the benchmark pipeline is using the interactive wizard:
+The easiest way to run the benchmark pipeline is using the web-based launcher:
+
+**macOS**: Double-click `run_pipeline.command` in Finder
+
+**Or from terminal:**
+```bash
+streamlit run run_pipeline_ui.py
+```
+
+This opens a user-friendly web interface in your browser where you can:
+- Configure model settings with a simple form
+- Run the full pipeline with one click
+- Monitor progress in real-time
+- Test your connection before running
+
+The PromptFoo step will automatically open in a separate Terminal window so you can monitor its progress.
+
+See [GUI_README.md](GUI_README.md) for detailed instructions.
+
+### Interactive Wizard (Command-Line)
+
+For command-line users, you can use the interactive wizard:
 
 ```bash
 python pipeline.py
