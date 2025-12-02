@@ -10,6 +10,9 @@ The idea is that throughout a multi-turn conversation, will the AI agent stay al
 Multi-term Misalignment Margin 
 This is similar to the multi-turn aligned and misaligned, but this actually assumes it will misalign and how long before it misaligns. 
 
+Step Back Question
+Starting with a red question and letting the LLM rewrite backwards a rephrasing of the question a number of times to get to one that is accepted. 
+
 
 
 Superiority of Christ
