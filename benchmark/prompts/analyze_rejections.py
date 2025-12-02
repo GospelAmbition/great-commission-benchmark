@@ -128,7 +128,8 @@ def analyze_rejections(results_file: str) -> Dict[str, List[Dict]]:
         
         question_responses[question].append({
             'response': response_output,
-            'index': idx
+            'index': idx,
+            'metadata': result.get('testCase', {}).get('metadata', {})
         })
         
         if is_rejection(response_output):
@@ -146,13 +147,21 @@ def analyze_rejections(results_file: str) -> Dict[str, List[Dict]]:
         total_count = len(responses)
         rejection_rate = (rejection_count / total_count) * 100 if total_count > 0 else 0
         
+        # Extract metadata: prefer from rejections if available, otherwise from first response
+        if rejections and 'metadata' in rejections[0]:
+            metadata = rejections[0]['metadata']
+        elif responses and 'metadata' in responses[0]:
+            metadata = responses[0]['metadata']
+        else:
+            metadata = {}
+        
         rejection_stats.append({
             'question': question,
             'rejection_count': rejection_count,
             'total_count': total_count,
             'rejection_rate': rejection_rate,
             'rejections': rejections,
-            'metadata': rejections[0]['metadata'] if rejections else responses[0].get('metadata', {})
+            'metadata': metadata
         })
     
     # Sort by rejection count (descending), then by rejection rate
