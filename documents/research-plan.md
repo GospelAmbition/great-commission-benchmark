@@ -26,7 +26,7 @@ pipeline-template
 - - modelname2-promptfoo.yaml
 - - modelname2-results.json
 - output
-- - experiment.db (questions, responses, evaluations )
+- - benchmark.db (questions, responses, evaluations )
 - - analysis.md
 - - evaluation2.md
 - setup.py (build folders, db, )

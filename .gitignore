@@ -89,3 +89,5 @@ lmstudio-*
 # Benchmark databases
 questions.db
 responses.db
+# archive/*
+archive/*.zip
