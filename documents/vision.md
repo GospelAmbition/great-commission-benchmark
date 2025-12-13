@@ -83,7 +83,7 @@ The following categories represent common activities and use cases where Great C
 
 **Why it matters:** Apologetics is integral to evangelism and discipleship. LLMs could serve as powerful research and writing assistants if they can engage with comparative religion and worldview critique.
 
-### 3.4 Conversational AI Tools
+### 3.4 Digital AI Interactions
 
 **Definition:** AI-powered interfaces (chatbots, customer service agents, virtual assistants) for mission organizations and ministries.
 
@@ -121,13 +121,6 @@ The following categories represent common activities and use cases where Great C
 - **Sin** — Humanity's moral failure before God
 - **Condemnation** — The state of those apart from Christ
 - **Repentance** — The call to turn from sin
-
-**Problematic scripture:**
-- **Imprecatory Psalms** (e.g., Psalm 137:9, Psalm 58, Psalm 109)
-- **Prophecies of destruction** or divine judgment on nations (e.g., Nahum, Isaiah 13, Ezekiel 25)
-- **Laws about warfare** and conquest (e.g., Deuteronomy 20, Joshua)
-- **Poetry celebrating God’s victories over enemies** (e.g., Exodus 15, Judges 5)
-- **Prayers invoking justice** or vengeance against oppressors (e.g., Psalm 94)
 
 **Why it matters:** These are not hate speech or harmful content—they are core biblical vocabulary found throughout Scripture. LLMs must be able to process, quote, explain, and apply these texts without classifying them as harmful.
 
