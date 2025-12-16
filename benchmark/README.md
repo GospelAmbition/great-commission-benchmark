@@ -37,7 +37,7 @@ This folder contains the specification and design documents for the Great Commis
 
 | Document | Purpose |
 |----------|---------|
-| [decision-testing-methodology.md](./decision-testing-methodology.md) | How benchmark tests are designed and executed |
+| [core-testing-methodology.md](./core-testing-methodology.md) | How benchmark tests are designed and executed |
 
 ### Core Systems & Policies
 
@@ -45,19 +45,19 @@ Fundamental systems and policies that define how the benchmark operates:
 
 | Document | Status | Description |
 |----------|--------|-------------|
-| [decision-publication-model.md](./decision-publication-model.md) | ✓ Draft | Progressive trust model for publishing results |
-| [decision-versioning.md](./decision-versioning.md) | ✓ Draft | Benchmark version management |
-| [decision-question-security.md](./decision-question-security.md) | ✓ Draft | Question distribution and contamination prevention |
-| [decision-pricing-model.md](./decision-pricing-model.md) | ✓ Draft | Cost structure and sustainability |
-| [decision-moderation-process.md](./decision-moderation-process.md) | ✓ Draft | Moderator selection and review workflows |
-| [decision-testing-methodology.md](./decision-testing-methodology.md) | ✓ Draft | How benchmark tests are designed and executed |
+| [core-publication-model.md](./core-publication-model.md) | ✓ Draft | Progressive trust model for publishing results |
+| [process-versioning.md](./process-versioning.md) | ✓ Draft | Benchmark version management |
+| [process-question-security.md](./process-question-security.md) | ✓ Draft | Question distribution and contamination prevention |
+| [process-pricing-model.md](./process-pricing-model.md) | ✓ Draft | Cost structure and sustainability |
+| [process-moderation-process.md](./process-moderation-process.md) | ✓ Draft | Moderator selection and review workflows |
+| [core-testing-methodology.md](./core-testing-methodology.md) | ✓ Draft | How benchmark tests are designed and executed |
 
 ### Operations & Success
 
 | Document | Purpose |
 |----------|---------|
-| [decision-success-metrics.md](./decision-success-metrics.md) | KPIs and tracking for measuring success |
-| [decision-legal-requirements.md](./decision-legal-requirements.md) | Terms of Service, accessibility, and compliance requirements |
+| [process-success-metrics.md](./process-success-metrics.md) | KPIs and tracking for measuring success |
+| [process-legal-requirements.md](./process-legal-requirements.md) | Terms of Service, accessibility, and compliance requirements |
 
 ---
 
@@ -95,15 +95,15 @@ vision.md (Primary Vision)
     │       │
     │       ├──→ core-technical-architecture.md (Technical Decisions)
     │       ├──→ core-build-requirements.md (Requirements)
-    │       └──→ decision-testing-methodology.md (How Tests Work)
+    │       └──→ core-testing-methodology.md (How Tests Work)
     │
-    ├──→ decision-publication-model.md (How Results Are Published)
-    ├──→ decision-versioning.md (Question Set Management)
-    ├──→ decision-question-security.md (Question Protection)
-    ├──→ decision-pricing-model.md (Financial Model)
-    ├──→ decision-moderation-process.md (Review Workflows)
-    ├──→ decision-success-metrics.md (Measuring Success)
-    └──→ decision-legal-requirements.md (Compliance)
+    ├──→ core-publication-model.md (How Results Are Published)
+    ├──→ process-versioning.md (Question Set Management)
+    ├──→ process-question-security.md (Question Protection)
+    ├──→ process-pricing-model.md (Financial Model)
+    ├──→ process-moderation-process.md (Review Workflows)
+    ├──→ process-success-metrics.md (Measuring Success)
+    └──→ process-legal-requirements.md (Compliance)
 ```
 
 ---
@@ -113,7 +113,7 @@ vision.md (Primary Vision)
 When adding new documents:
 - **Anchor to [vision.md](./vision.md)** — Ensure alignment with the core vision
 - Use `core-` prefix for strategic/architectural decisions
-- Use `decision-` prefix for fundamental policies/systems
+- Use `process-` prefix for fundamental policies/systems
 - Use `feature-` prefix for specific user-facing functionality
 - Update this README with the new document
 - Link from related documents to maintain traceability

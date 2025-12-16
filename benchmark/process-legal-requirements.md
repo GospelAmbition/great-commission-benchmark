@@ -37,7 +37,7 @@ Legal documents are **planned but not yet drafted**. These must be completed bef
 
 3. **Payment Terms**
    - Pricing transparency
-   - Refund policy (see [decision-pricing-model.md](./decision-pricing-model.md))
+   - Refund policy (see [process-pricing-model.md](./process-pricing-model.md))
    - No guarantee of specific results
 
 4. **Intellectual Property**
@@ -278,6 +278,6 @@ Before launch:
 ## Related Documents
 
 - [Deployment Vision](./core-deployment-vision.md) — Overall deployment strategy
-- [Pricing Model](./decision-pricing-model.md) — Payment and refund policies
-- [Question Security](./decision-question-security.md) — Tester agreement details
+- [Pricing Model](./process-pricing-model.md) — Payment and refund policies
+- [Question Security](./process-question-security.md) — Tester agreement details
 
