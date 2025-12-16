@@ -23,13 +23,15 @@ The deployment vision transforms the benchmark from a local testing tool into a 
 
 Before deployment, the benchmark must:
 
-- [ ] Cover all use case categories (§3.1-3.6 from vision document)
+- [ ] Cover all use case categories (§3.1-3.6 from [vision.md](./vision.md))
 - [ ] Test theological minimums and worldview adherence
 - [ ] Produce reliable, reproducible results
 - [ ] Generate meaningful differentiation between models
 - [ ] Validate scoring methodology with human review
 
-**Success Criteria:** The benchmark produces results we're confident publishing and defending publicly.
+**Success Criteria:** Documented in [core-publication-model.md](./core-publication-model.md) — results must pass automated validation (≥80% inter-rater reliability, ≥95% reproducibility, meaningful differentiation) to publish immediately. Human review adds credibility progressively but doesn't block publication.
+
+**Human Review:** Performed by **moderators**—users with a special role granting elevated permissions. See [moderation-process.md](./moderation-process.md) for moderator selection, credentials, and workflows.
 
 ---
 
@@ -37,40 +39,29 @@ Before deployment, the benchmark must:
 
 **Goal:** Convert the benchmark into something volunteers can run independently.
 
-Two packaging approaches:
+**Decision:** Both environments will be built, serving different purposes.
 
-#### Option A: Local Python Script
+#### Local Development Environment (During Benchmark Development)
 
-A self-contained Python package that registered testers run locally:
+Used during benchmark methodology and question development:
 
-```
-# Example usage
-pip install great-commission-benchmark
-gcb login                                    # Authenticate to receive questions
-gcb run --model-url https://api.openrouter.ai/v1 --model gpt-4o
-gcb export --format json > results.json
-```
+- For editing and refining question sets
+- Any tooling that enables efficient editing workflows
+- Supports benchmark content development
 
-**Advantages:**
-- No hosting costs for the project
-- Volunteers can test private/local models
-- Full control over API keys and costs
-- Results submitted via templated export
-
-**Requirements:**
-- Authentication required to download question sets (see Question Security section)
-- Clear documentation and setup instructions
-- Standardized output format for result submission
-- Validation checksums to ensure test integrity
-
-#### Option B: Hosted Platform (Recommended)
+#### Hosted Platform (Ultimate Destination)
 
 A Railway-deployed application where registered testers:
 
-1. Sign in via Auth0 (must be approved tester — see Question Security section)
+1. Sign in via Auth0 (must be approved tester — see [question-security.md](./question-security.md))
 2. Select an LLM to test (OpenRouter, custom endpoint, or API key)
 3. Pay for the OpenRouter/API costs to run the test
 4. Results are automatically submitted to the benchmark
+
+**Tech Stack:**
+- Railway hosting
+- FastAPI backend (Python)
+- React + Tailwind + Next.js frontend
 
 **Advantages:**
 - Lower barrier to entry for non-technical users
@@ -80,9 +71,11 @@ A Railway-deployed application where registered testers:
 - Questions never leave the server (stronger security)
 
 **Revenue Model:**
-- Users pay actual API costs + small platform fee
+- Users pay actual API costs + processing fee
 - Sponsors can fund tests of specific models
 - Self-regulating and self-funding ecosystem
+
+See [pricing-model.md](./pricing-model.md) for detailed financial model.
 
 ---
 
@@ -107,8 +100,8 @@ A Railway-deployed application where registered testers:
 **Result Ingestion:**
 - Automated pipeline from test execution to leaderboard
 - Statistics mapped directly from pipeline output to display
-- Moderation queue for submitted results before publication
-- Verification step to ensure result integrity
+- **Instant publication** after automated validation passes
+- Asynchronous human moderation review after publication
 
 #### Community Features
 
@@ -123,61 +116,38 @@ A Railway-deployed application where registered testers:
 
 ## Technical Architecture
 
-### Recommended Stack
+See [technical-architecture.md](./technical-architecture.md) for complete infrastructure decisions.
+
+### Summary
 
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
 | **API Backend** | Python + FastAPI | Matches existing pipeline code; handles benchmark execution, heavy processing |
-| **Frontend** | Nuxt (Vue.js) | SSR/SSG for SEO; file-based routing; can handle light API routes |
-| **Hosting** | Railway | Simple deployment, good Python/Node support, cost-effective |
-| **Authentication** | Auth0 | Industry-standard, handles OAuth/social login, free tier available |
+| **Frontend** | React + Next.js + Tailwind | SSR/SSG for SEO; modern DX |
+| **Hosting** | Railway | Familiar stack, cost bundling with other projects |
+| **Authentication** | Auth0 | Industry-standard, handles OAuth/social login |
 | **Database** | PostgreSQL | Already in use for pipeline; robust and well-supported |
 | **LLM Access** | OpenRouter | Single API for multiple models; pay-per-use pricing |
-
-### Why Nuxt?
-
-Nuxt extends Vue.js with features valuable for this project:
-
-- **Server-Side Rendering (SSR):** Leaderboard pages are SEO-friendly and shareable
-- **Static Generation (SSG):** Leaderboard snapshots can be pre-rendered for fast loading
-- **File-Based Routing:** Simpler organization for category pages, model pages, etc.
-- **API Routes:** Light backend tasks (auth callbacks, simple queries) without hitting FastAPI
-- **Full-Stack Option:** Could potentially handle more of the stack as the project matures
-
-### Backend Responsibilities Split
-
-| Nuxt (Node.js) | FastAPI (Python) |
-|----------------|------------------|
-| Page rendering & routing | Benchmark execution |
-| Auth0 integration | LLM API calls |
-| Light data queries | Heavy computation |
-| Static asset serving | Result processing |
-| Newsletter signup | Database writes |
-| Simple CRUD | Moderation workflows |
 
 ### Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     Public Website (Nuxt)                       │
-│                    SSR / SSG / Vue.js SPA                       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐│
-│  │Leaderboard│  │Model     │  │Category  │  │Community        ││
-│  │Dashboard │  │Comparison│  │Deep-Dive │  │(Newsletter, etc)││
-│  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘│
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │            Nuxt Server Routes (light API tasks)             ││
-│  │    Auth callbacks · Simple queries · Newsletter signup      ││
-│  └─────────────────────────────────────────────────────────────┘│
+│                     Public Website (Next.js)                     │
+│                    SSR / SSG / React SPA                         │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐ │
+│  │Leaderboard│  │Model     │  │Category  │  │Community        │ │
+│  │Dashboard │  │Comparison│  │Deep-Dive │  │(Newsletter, etc)│ │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                 FastAPI Backend (Heavy Lifting)                 │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐│
-│  │Results   │  │Benchmark │  │Result    │  │Moderation        ││
-│  │API       │  │Executor  │  │Processing│  │Workflows         ││
-│  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘│
+│                 FastAPI Backend (Heavy Lifting)                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐ │
+│  │Results   │  │Benchmark │  │Result    │  │Moderation        │ │
+│  │API       │  │Executor  │  │Processing│  │Workflows         │ │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
                               │
               ┌───────────────┼───────────────┐
@@ -192,24 +162,46 @@ Nuxt extends Vue.js with features valuable for this project:
 
 ## Result Submission & Verification
 
+### Failure Handling & Refunds
+
+- **On failure:** Users can attempt to rerun the benchmark. The system includes automatic retry mechanisms for transient failures (API errors, timeouts, rate limiting).
+- **Refunds:** Available if the user is in a failed or non-completed state and requests one. Users can report issues and receive a refund.
+- **No refund after success:** Once the benchmark completes successfully, the purchase is finalized and refunds are not available.
+
 ### Automated Submissions (Hosted Platform)
 
 1. User initiates test run via web interface
 2. Backend executes benchmark against selected model
 3. Results stored with execution metadata (timestamps, model version, etc.)
-4. Results enter moderation queue
-5. Moderator reviews for anomalies or manipulation
-6. Approved results published to leaderboard
+4. Automated validation checks run (see [core-publication-model.md](./core-publication-model.md))
+5. **Results publish immediately** if automated checks pass
+6. Moderators review asynchronously after publication
+7. **Email notification sent to user** confirming successful completion
 
-### Manual Submissions (Local Script)
+### User Notifications
 
-1. User runs local benchmark script
-2. Script generates standardized JSON output with integrity hash
-3. User submits results via web form or API
-4. System validates hash and format
-5. Results enter moderation queue
-6. Moderator verifies plausibility (e.g., results consistent with known model behavior)
-7. Approved results published to leaderboard
+**Email Notifications:**
+
+Upon successful completion and publication of test results, users receive an automated email notification that includes:
+
+- **Confirmation:** Test completed successfully and results have been published to the leaderboard
+- **Results Summary:** High-level overview of the model's performance (overall score, key metrics)
+- **Leaderboard Link:** Direct link to view the published results on the website
+- **Thank You Message:** Appreciation for contributing to the Great Commission Benchmark project
+- **Next Steps:** Optional suggestions for:
+  - Testing additional models
+  - Sharing results with their organization
+  - Sponsoring tests of other models
+
+**Notification Timing:**
+- Email sent immediately after results are approved and published to the leaderboard
+- Users can also check test status in their account dashboard
+- For tests requiring additional moderation, users receive an initial confirmation when the test completes, and a second notification when any issues are resolved
+
+**Email Preferences:**
+- Users can manage notification preferences in their account settings
+- Options to receive notifications for: test completion, publication, moderation status updates
+- Opt-out available while maintaining access to dashboard status updates
 
 ### Verification Considerations
 
@@ -240,47 +232,46 @@ Multi-turn decay metrics     →    Alignment stability scores
 
 ## Milestone Roadmap
 
+**Note:** No fixed target dates. Work proceeds immediately/as soon as possible. Phases complete when ready rather than targeting calendar dates.
+
 ### Phase A: Foundation (Stage 1)
 - [ ] Finalize benchmark question sets
 - [ ] Complete testing on 3-5 initial models
 - [ ] Validate results are publication-ready
 - [ ] Document scoring methodology publicly
 
-### Phase B: Local Package (Stage 2a)
-- [ ] Refactor pipeline for standalone execution
-- [ ] Create pip-installable package
-- [ ] Write user documentation
-- [ ] Define result submission format
-
-### Phase C: Hosted Platform (Stage 2b)
+### Phase B: Hosted Platform (Stage 2)
 - [ ] Set up Railway infrastructure
 - [ ] Implement FastAPI backend
 - [ ] Integrate Auth0 authentication
 - [ ] Build test execution queue
-- [ ] Implement OpenRouter billing integration
+- [ ] Implement payment integration (Stripe)
 
-### Phase D: Public Website (Stage 3)
-- [ ] Design and build Vue.js frontend
+### Phase C: Public Website (Stage 3)
+- [ ] Design and build React/Next.js frontend
 - [ ] Implement leaderboard views
 - [ ] Build category/model exploration UI
 - [ ] Create moderation dashboard
 - [ ] Launch newsletter system
 - [ ] Implement community contribution features
 
+### Phase D: Legal & Compliance
+- [ ] Draft Terms of Service
+- [ ] Draft liability disclaimers
+- [ ] Implement WCAG Level A accessibility
+- [ ] Plan multilingual support
+
+**Estimated Timeline:**
+- **Development time:** ~1 week build time
+- **Hosting cost:** Sub $20/month
+
 ---
 
 ## Question Security & Tester Registration
 
-### The Contamination Problem
+See [question-security.md](./question-security.md) for complete details.
 
-If benchmark questions are publicly accessible, LLM providers could:
-- Discover the questions through web scraping
-- Fine-tune models specifically to perform well on these exact questions
-- Game the benchmark without genuinely improving Great Commission support
-
-This would undermine the benchmark's validity and usefulness.
-
-### Solution: Controlled Distribution
+### Summary
 
 Benchmark questions are **not open source** and are distributed only to registered, verified testers.
 
@@ -296,25 +287,11 @@ Benchmark questions are **not open source** and are distributed only to register
 - Specific test prompts and expected responses
 - Evaluation rubrics with detailed scoring criteria
 
-### Tester Registration Process
+### Key Decisions
 
-1. **Application:** User registers interest on the website
-2. **Information Collection:** We collect contact and identity information
-3. **Agreement:** Tester agrees to terms:
-   - Not to publish questions publicly (web, social media, forums)
-   - Not to share questions with LLM providers
-   - Not to use questions for model training
-   - To report any suspected leaks
-4. **Verification:** Manual review of application (prevent bot/spam registrations)
-5. **Approval:** Tester granted access to question sets
-6. **Distribution:** Questions delivered via authenticated download or secure API
-
-### Enforcement Considerations
-
-- **Watermarking:** Subtle variations in question sets per tester to trace leaks
-- **Rotation:** Periodically refresh question sets to limit contamination impact
-- **Monitoring:** Watch for questions appearing in training data or online
-- **Revocation:** Ability to revoke access for terms violations
+- **No question variations:** The benchmark uses an exact, fixed set of questions for each version. Reproducibility takes priority over leak tracing.
+- **Version invalidation on leak:** If questions leak publicly, we release a new version with a new set of questions. The leaked version is simply superseded.
+- **Question set versioning:** Version numbered (V1, V2, V3) and refreshed periodically—likely yearly or as needed.
 
 ---
 
@@ -338,68 +315,53 @@ The benchmark will launch with top-tier models available through **OpenRouter**,
 - Consistent interface simplifies testing pipeline
 - Community can sponsor tests of any available model
 
-As the benchmark matures, direct API access or local model testing may be added for models not on OpenRouter.
+**Fallback Strategy:** Architecture supports direct API integrations if OpenRouter has issues. Built following the **OpenAI API format** (the de facto standard).
 
 ---
 
 ## Pricing Model
 
-A transparent, sustainable pricing approach:
+See [pricing-model.md](./pricing-model.md) for complete details.
+
+### Summary
+
+- **Payment processor:** Stripe
+- **Financial steward:** A stewarding ministry (TBD—candidates include Visual Story Network, Digital Disciple Makers Network, Gospel Ambition)
+- **Pricing approach:** Fixed price shown upfront (not settled after execution)
+- **Cost estimation:** Bridge token calculation + 10% buffer for retries/failures
+- **Goal:** Not-for-profit but cost-neutral
 
 ### Cost Breakdown (shown to user)
 
 | Line Item | Description |
 |-----------|-------------|
-| **API Costs** | Actual OpenRouter charges (shown transparently) |
-| **Processing Fee** | Fixed fee to support the team and infrastructure |
+| **API Costs** | Actual OpenRouter/LLM API charges (token costs for model inference) |
+| **Processing Fee** | Server compute + platform operations |
 | **Tip (optional)** | Opportunity to sponsor the project further |
 
-### Example Checkout
+### Sponsorship for Those Who Can't Pay
 
-```
-─────────────────────────────────────────
-  Test: Claude 3.5 Sonnet (Full Benchmark)
-─────────────────────────────────────────
-  API Cost (OpenRouter)         $12.40
-  Processing Fee                 $2.50
-  ─────────────────────────────────────
-  Subtotal                      $14.90
-  
-  💡 Help with server & hosting costs (optional)
-     ○ $5   ○ $10   ○ $20   ○ $100
-  ─────────────────────────────────────
-  Total                         $14.90
-─────────────────────────────────────────
-```
+Users who cannot afford testing can submit a **sponsorship request form** explaining:
+- Which model they want tested
+- Why there's a good need for it to be tested
 
-### Why This Model
-
-- **Transparency:** Users see exactly what they're paying for
-- **Sustainability:** Processing fee covers hosting, development, moderation
-- **Community Support:** Optional contributions help with server and hosting costs
-- **Low Barrier:** No subscriptions; pay only when you test
-- **Sponsorship:** Larger contributions ($100+) can fund tests of specific models for the community
+The steering committee or community sponsors can fund tests on their behalf.
 
 ---
 
 ## Moderation Team
 
-A **designated volunteer team** will moderate all submissions before they're published to the leaderboard.
+See [moderation-process.md](./moderation-process.md) for complete details.
 
-### Moderation Responsibilities
+### Summary
 
-- Review submitted test results for anomalies or manipulation
-- Verify result integrity (spot-check responses, validate checksums)
-- Approve or reject submissions based on quality standards
-- Monitor for benchmark contamination (questions appearing in training data)
-- Handle tester agreement violations
+A **designated volunteer team** moderates all submissions asynchronously after publication.
 
-### Team Structure
-
-- **Volunteer-based:** Community members committed to maintaining benchmark quality
-- **Designated roles:** Clear assignment of moderation duties
-- **Training:** Guidelines and processes for consistent moderation decisions
-- **Escalation path:** Process for handling edge cases or disputes
+**Key Points:**
+- **Low-traffic project:** ~600 total submissions anticipated overall, ~2 submissions per month
+- **Publication timing:** Instant after automated validation; human review is async
+- **Disagreement resolution:** Escalates to committee with a chair who makes final decisions
+- **Moderator selection:** By founding committee based on background, expertise, and mission interest
 
 ---
 
@@ -410,8 +372,6 @@ A **designated volunteer team** will moderate all submissions before they're pub
 **Commercial Models:**
 - Manual retests triggered every couple of months as models are updated
 - Also available as a **paid option** for users who want updated evaluations
-- Users can select "Retest Model" from the website's testing interface
-- Same pricing structure: API costs + processing fee + optional contribution
 
 **Open-Source Models:**
 - Retests triggered when significant updates are released
@@ -429,47 +389,31 @@ Retesting is integrated into the website's **"Pay and Test"** feature set:
 4. Results update the leaderboard with new timestamp
 5. Historical comparison available (see how model changed over time)
 
-### Why Retests Matter
-
-- Models are frequently updated (GPT-4 → GPT-4 Turbo → GPT-4o)
-- Guardrails and capabilities change over time
-- Users need current information to make decisions
-- Historical tracking shows model evolution
-
 ---
 
 ## Data Retention Policy
 
 ### Indefinite Retention
 
-We will **retain all response data and collection data indefinitely** for the following reasons:
+We will **retain all response data and collection data indefinitely**.
 
-**No Privacy Concerns:**
-- No personally identifiable information (PII) is collected in the testing process
-- Responses are from LLMs, not human users
-- Test metadata (model, timestamp, verdicts) contains no sensitive data
+**Why It's Low Cost:**
+- Maximum scope: ~600 tests/models for the leaderboard
+- Even 3x growth would remain minor storage
+- All text data in Postgres—no heavy media or binary storage
+- Storage costs are negligible given the data profile
 
 **Benefits of Long-Term Retention:**
 
 1. **Historical Log:** Complete record of how models performed over time
-   - Track model evolution and improvements
-   - Identify when guardrails changed
-   - Document benchmark methodology changes
-
 2. **Verification & Defense:** Others can evaluate and defend benchmark results
-   - Researchers can audit our methodology
-   - Model providers can review their evaluations
-   - Community can verify claims about model performance
+3. **Retesting Capability:** Historical data enables comparing new vs. past results
+4. **Research Value:** Long-term dataset supports academic research
 
-3. **Retesting Capability:** Historical data enables:
-   - Comparing new results against past results
-   - Identifying anomalies or inconsistencies
-   - Re-evaluating past results with updated criteria
+### Backup Strategy
 
-4. **Research Value:** Long-term dataset supports:
-   - Academic research on LLM behavior
-   - Analysis of guardrail changes over time
-   - Understanding model drift and updates
+- **Primary:** Backup service through Railway (automated, regular)
+- **Secondary:** Occasional offline backup to external storage (Google Cloud Bucket or TBD)
 
 ### Data Access
 
@@ -484,69 +428,42 @@ We will **retain all response data and collection data indefinitely** for the fo
 
 ### Version-Based Testing
 
-The benchmark will use **versioning** to manage question set updates and improvements over time.
+The benchmark uses **versioning** to manage question set updates.
 
-**Version 1:**
-- Initial question set and methodology
-- First published leaderboard
-- Foundation for all future versions
+**How It Works:**
+- Each question set receives a version number (V1, V2, V3)
+- All results are tagged with the question set version used
+- Leaderboard displays which version each result was tested against
+- Results from different versions are kept distinct
 
-**Version 2+ (Future):**
-- Created by a team of volunteers and leaders
-- Re-examination and refinement of the question set
-- New results and separate leaderboard
-- May include new questions, updated evaluation criteria, or methodology improvements
+### Website Display
 
-### Why Versioning Matters
+- **Default view:** Users see current version results first
+- **Older versions:** Accessible but deprioritized in the UI—not hidden, just not prominent
+- **Version comparison:** Side-by-side comparison available
 
-- **Preserves Comparability:** Version 1 results remain valid and comparable
-- **Enables Evolution:** Question sets can improve without invalidating past work
-- **Clear Communication:** Users know which version they're viewing
-- **Historical Context:** Shows how the benchmark methodology has evolved
+### Re-evaluation of Past Results
 
-### Website Requirements
-
-The platform must support versioning from the start:
-
-- **Version Selection:** Users can view leaderboards by version
-- **Version Comparison:** Side-by-side comparison of results across versions
-- **Clear Labeling:** All results and leaderboards clearly marked with version number
-- **Version Documentation:** Each version has documentation explaining:
-  - What changed from previous version
-  - Why changes were made
-  - How to interpret results
+Re-running stored results against different evaluators is a theoretical future possibility but **not a core functional expectation**. The focus remains on running and publishing new benchmark results.
 
 ### Version Creation Process
 
-1. **Volunteer Team Formation:** Leaders and volunteers assemble to review current version
-2. **Question Set Re-examination:** Team evaluates existing questions for:
-   - Relevance and accuracy
-   - Coverage gaps
-   - Evaluation criteria effectiveness
-3. **Proposed Changes:** Team proposes new questions, modifications, or methodology updates
-4. **Review & Approval:** Changes reviewed and approved by broader community/leadership
-5. **Version Publication:** New version released with:
-   - Updated question set
-   - New leaderboard (previous version remains accessible)
-   - Documentation of changes
+Question set discussions happen on a **separate external platform** (e.g., Discord):
 
-### Technical Implementation
-
-The database and pipeline must be designed with versioning in mind:
-
-- **Question Versioning:** Questions linked to version numbers
-- **Result Versioning:** All test results tagged with benchmark version
-- **Leaderboard Versioning:** Separate leaderboards per version
-- **Migration Path:** Ability to re-run old tests on new versions for comparison
+1. **Access control:** Only approved insiders with access to the question sets
+2. **Discussion scope:** Debating verdicts, refining questions, proposing changes
+3. **Pre-lock governance:** All discussion happens *before* a version is locked
+4. **Version finalization:** Once consensus is reached, the version becomes immutable
 
 ---
 
-## Remaining Considerations
+## Capacity & Scaling
 
-The deployment vision is largely complete. Future refinements may include:
-- Specific versioning cadence (annual? as-needed?)
-- Process for volunteer team selection
-- Community input mechanisms for version proposals
+**Expectation:** Low traffic (~2 submissions/month). High demand is not anticipated.
+
+- **Railway:** Can handle spikes if they occur
+- **OpenRouter:** No issues supplying simultaneous API calls
+- **Queue system:** Exact simultaneous test capacity TBD based on final infrastructure decisions
 
 ---
 
@@ -560,7 +477,29 @@ A successful deployment means:
 - **Model developers** have clear feedback on how to better serve this user segment
 - **The broader conversation** about religious freedom in AI advances with evidence
 
-The Great Commission Benchmark becomes the authoritative resource for understanding LLM support for Great Commission activities—publicly accessible, community-driven, and continuously updated.
+### Quantitative KPIs
+
+See [success-metrics.md](./success-metrics.md) for detailed tracking plan.
+
+- **Models tested:** Total unique models on the leaderboard
+- **Monthly visitors:** Unique monthly visitors to the website
+- **Organizations aware:** Christian organizations referencing the benchmark
+- **Benchmark runs:** Total completed runs
+- **Community engagement:** Sponsorship requests, voluntary donations
+
+---
+
+## Related Documents
+
+- [vision.md](./vision.md) — Benchmark vision: what it tests and why
+- [core-publication-model.md](./core-publication-model.md) — Publication criteria and trust model
+- [testing-methodology.md](./testing-methodology.md) — How tests are executed
+- [moderation-process.md](./moderation-process.md) — Moderator selection and workflows
+- [pricing-model.md](./pricing-model.md) — Financial model and sustainability
+- [question-security.md](./question-security.md) — Question protection and versioning
+- [technical-architecture.md](./technical-architecture.md) — Infrastructure decisions
+- [legal-requirements.md](./legal-requirements.md) — ToS, accessibility, i18n
+- [success-metrics.md](./success-metrics.md) — KPIs and tracking
 
 ---
 
