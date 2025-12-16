@@ -305,7 +305,7 @@ This allows users with specialized needs to find the right model even if it does
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0 | December 2024 | Initial scoring methodology with 70/20/10 weighting |
+| 1.0 | December 2025 | Initial scoring methodology with 70/20/10 weighting |
 
 ---
 

@@ -60,7 +60,7 @@ Each published result displays its current trust level:
 │  ├─ Differentiation: Passed ✓                                   │
 │  └─ Human spot-checks: 2 of 3 ✓✓⬜                              │
 │                                                                 │
-│  Tested: Dec 14, 2024 | Last reviewed: Dec 15, 2024             │
+│  Tested: Dec 14, 2025 | Last reviewed: Dec 15, 2025             │
 └─────────────────────────────────────────────────────────────────┘
 ```
 

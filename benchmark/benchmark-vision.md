@@ -254,10 +254,36 @@ A successful benchmark will:
 - Provide evidence for advocacy with AI companies to address discriminatory guardrails
 - Help Christian organizations make informed decisions about AI tool adoption
 - Advance the conversation about religious freedom in AI systems
+- Enable Christian LLM developers to validate their models before public release
 
 ---
 
-## 8. Conclusion
+## 8. Supporting Christian LLM Development
+
+The Great Commission Benchmark is not only for evaluating commercial LLMs—it is also a resource for **Christian ministries and organizations developing or fine-tuning their own models** for Kingdom work.
+
+### Use Case: Custom LLM Development
+
+Groups working on Christian-focused AI projects are encouraged to use the **local CLI tool** throughout their development process:
+
+1. **During Development** — Run the benchmark against your fine-tuned model at regular intervals to measure progress and identify areas needing improvement
+2. **Before Release** — Validate that your model meets the standards Great Commission Christians need for ministry work
+3. **For Publication** — Include your benchmark scores when publishing your model to platforms like Hugging Face, giving potential users confidence in the model's suitability for Christian use cases
+
+### Why This Matters
+
+As more Christian organizations explore fine-tuning open-source models for specific ministry applications—translation work, discipleship chatbots, theological research assistants—the benchmark provides an objective standard for evaluating whether those models will truly serve Great Commission purposes.
+
+By publishing benchmark results alongside your model on Hugging Face or similar platforms, you help the broader Christian community:
+- Quickly identify models suited to their needs
+- Compare options objectively
+- Trust that a model has been validated for ministry use
+
+**We encourage all Christian LLM developers to use the CLI tool and publish their results.**
+
+---
+
+## 9. Conclusion
 
 The Great Commission is central to Christian identity and practice. As AI becomes increasingly integrated into how people work, learn, and communicate, it is vital that these tools do not become barriers to legitimate religious activity. This benchmark aims to measure, document, and advocate for AI systems that respect religious freedom while serving the practical needs of Great Commission Christians worldwide.
 

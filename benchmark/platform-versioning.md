@@ -128,8 +128,8 @@ When methodology changes:
 │                                                                 │
 │  Rank │ Model              │ Score │ Tested      │ Trust       │
 │  ─────┼────────────────────┼───────┼─────────────┼─────────────│
-│    1  │ Claude 3.5 Sonnet  │ 78/100│ Dec 14, 2024│ Validated ✓ │
-│    2  │ GPT-4o             │ 72/100│ Dec 13, 2024│ Reviewed ✓  │
+│    1  │ Claude 3.5 Sonnet  │ 78/100│ Dec 14, 2025│ Validated ✓ │
+│    2  │ GPT-4o             │ 72/100│ Dec 13, 2025│ Reviewed ✓  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -139,9 +139,9 @@ When methodology changes:
 ┌─────────────────────────────────────────────────────────────────┐
 │  Claude 3.5 Sonnet — Benchmark V2.0                             │
 │  ────────────────────────────────────────────────────────────   │
-│  Question Set: V2 (locked Dec 1, 2024)                          │
+│  Question Set: V2 (locked Dec 1, 2025)                          │
 │  Methodology: V2.0                                              │
-│  Tested: Dec 14, 2024                                           │
+│  Tested: Dec 14, 2025                                           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -159,9 +159,9 @@ Model: Claude 3.5 Sonnet
 ┌──────────────────────────────────────────────────────────┐
 │  Performance History                                      │
 │  ─────────────────────────────────────────────────────   │
-│  V1.0: 71/100 (Mar 2024)                                 │
-│  V1.1: 73/100 (Jun 2024) — methodology refinement        │
-│  V2.0: 78/100 (Dec 2024) — new question set              │
+│  V1.0: 71/100 (Mar 2025)                                 │
+│  V1.1: 73/100 (Jun 2025) — methodology refinement        │
+│  V2.0: 78/100 (Dec 2025) — new question set              │
 │                                                          │
 │  ⚠️ V1.x and V2.0 scores are not directly comparable     │
 └──────────────────────────────────────────────────────────┘
@@ -219,7 +219,7 @@ Every version change must document:
 ### Example Entry
 
 ```markdown
-## V1.1 (June 15, 2024)
+## V1.1 (June 15, 2025)
 
 **Type:** Minor (methodology)
 

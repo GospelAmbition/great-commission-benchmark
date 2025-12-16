@@ -289,6 +289,27 @@ CREATE TABLE newsletter_subscribers (
     unsubscribed_at TIMESTAMP
 );
 
+-- Community Submissions (CLI-generated results)
+CREATE TABLE community_submissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id),
+    model_name VARCHAR(255) NOT NULL,         -- User-provided model name
+    model_url VARCHAR(500),                   -- Link to model (e.g., Hugging Face)
+    organization VARCHAR(255),                -- Submitting organization
+    cli_version VARCHAR(50) NOT NULL,         -- CLI version used
+    question_set_version VARCHAR(10) NOT NULL,
+    results_package JSONB NOT NULL,           -- Full results from CLI
+    overall_score INTEGER,
+    tier1_score INTEGER,
+    tier2_score INTEGER,
+    tier3_score INTEGER,
+    status VARCHAR(50) DEFAULT 'pending',     -- 'pending', 'reviewing', 'approved', 'rejected'
+    reviewer_id UUID REFERENCES users(id),
+    reviewer_notes TEXT,
+    submitted_at TIMESTAMP DEFAULT NOW(),
+    reviewed_at TIMESTAMP
+);
+
 -- User Notification Preferences
 CREATE TABLE notification_preferences (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -315,6 +336,8 @@ CREATE INDEX idx_questions_category ON questions(category);
 CREATE INDEX idx_questions_tier ON questions(tier);
 CREATE INDEX idx_moderation_logs_test_run ON moderation_logs(test_run_id);
 CREATE INDEX idx_moderation_logs_moderator ON moderation_logs(moderator_id);
+CREATE INDEX idx_community_submissions_user ON community_submissions(user_id);
+CREATE INDEX idx_community_submissions_status ON community_submissions(status);
 ```
 
 ---
@@ -355,6 +378,10 @@ GET  /api/tests/:id/status               # Check test status
 POST /api/sponsorship/request            # Submit sponsorship request
 GET  /api/sponsorship/available          # List available requests to fund
 POST /api/sponsorship/:id/fund           # Fund a sponsorship request
+
+POST /api/community/submit               # Submit CLI-generated benchmark results
+GET  /api/community/submissions          # User's submitted results history
+GET  /api/community/submissions/:id      # Specific submission status
 ```
 
 ### 5.3 Moderator Endpoints
@@ -366,6 +393,9 @@ POST /api/moderation/queue/:id/claim     # Claim a review
 POST /api/moderation/queue/:id/submit    # Submit review
 GET  /api/moderation/activity            # View own activity log
 GET  /api/moderation/stats               # Moderation statistics
+
+GET  /api/moderation/community           # Community submission review queue
+POST /api/moderation/community/:id/review # Review community submission
 ```
 
 ### 5.4 Admin Endpoints
@@ -456,9 +486,9 @@ POST /api/webhooks/auth0                 # Auth0 event webhooks
 │                                                                              │
 │  Rank │ Model              │ Score │ Task │ Doct │ World │ Tested      │Trust│
 │  ─────┼────────────────────┼───────┼──────┼──────┼───────┼─────────────┼─────│
-│    1  │ Claude 3.5 Sonnet  │ 81/100│  82  │  75  │  77   │ Dec 14, 2024│ ✓✓✓ │
-│    2  │ GPT-4o             │ 76/100│  78  │  70  │  72   │ Dec 13, 2024│ ✓✓  │
-│    3  │ Gemini 1.5 Pro     │ 71/100│  72  │  68  │  65   │ Dec 12, 2024│ ✓   │
+│    1  │ Claude 3.5 Sonnet  │ 81/100│  82  │  75  │  77   │ Dec 14, 2025│ ✓✓✓ │
+│    2  │ GPT-4o             │ 76/100│  78  │  70  │  72   │ Dec 13, 2025│ ✓✓  │
+│    3  │ Gemini 1.5 Pro     │ 71/100│  72  │  68  │  65   │ Dec 12, 2025│ ✓   │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 Score calculation: (Task × 0.70) + (Doctrine × 0.20) + (Worldview × 0.10)
@@ -485,6 +515,39 @@ Example: Claude = (82 × 0.70) + (75 × 0.20) + (77 × 0.10) = 57.4 + 15.0 + 7.7
 - Scoring framework
 - FAQ
 - About the benchmark
+
+#### 7.1.5 Developer Resources Page
+
+A dedicated public page supporting Christian organizations developing or fine-tuning their own LLMs.
+
+**Page Content:**
+
+| Section | Description |
+|---------|-------------|
+| **Overview** | Explanation of how the CLI tool serves LLM developers working on Kingdom projects |
+| **CLI Download** | Direct download links for the CLI tool (macOS, Linux, Windows) |
+| **Getting Started** | Quick-start guide for running the benchmark locally |
+| **Usage Documentation** | Detailed instructions for testing custom/fine-tuned models |
+| **Submitting Results** | How to submit benchmark scores for publication on the leaderboard |
+| **Best Practices** | Guidance on testing during development, before release, and for publication |
+
+**Key Messaging:**
+
+> "Are you developing or fine-tuning an LLM for Christian ministry work? Use our CLI tool to test your model against the Great Commission Benchmark and ensure it will truly serve the needs of Great Commission Christians."
+
+**Call to Action:**
+- Download the CLI
+- Test your model locally
+- Submit your results to the benchmark
+- Publish your model on Hugging Face with your GCB score
+
+**Submission Flow:**
+1. User downloads CLI and runs benchmark locally
+2. CLI generates a results package (scores + metadata)
+3. User creates account on platform (if not existing)
+4. User uploads results package via authenticated submission form
+5. Results enter moderation queue for validation
+6. Upon approval, model appears on leaderboard with "Community Submitted" badge
 
 ### 7.2 User Features
 
@@ -1140,7 +1203,7 @@ leaderboard review
       },
       "score": 81,
       "trust_tier": "validated",
-      "tested_at": "2024-12-14T10:30:00Z",
+      "tested_at": "2025-12-14T10:30:00Z",
       "breakdown": {
         "task_capability": {
           "score": 82,
@@ -1189,8 +1252,8 @@ leaderboard review
       "tier3": { "total": 15, "completed": 8 }
     }
   },
-  "started_at": "2024-12-14T10:30:00Z",
-  "estimated_completion": "2024-12-14T10:45:00Z"
+  "started_at": "2025-12-14T10:30:00Z",
+  "estimated_completion": "2025-12-14T10:45:00Z"
 }
 ```
 
