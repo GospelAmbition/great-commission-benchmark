@@ -6,10 +6,10 @@ You have **complete specification documents** ready to guide a fresh build:
 
 | Document | Purpose | Status |
 |----------|---------|--------|
-| `vision.md` | What the benchmark tests and why | ✅ Complete |
-| `core-deployment-vision.md` | Product architecture and deployment | ✅ Complete |
-| `core-testing-methodology.md` | How tests are executed and scored | ✅ Complete |
-| `core-technical-architecture.md` | Stack decisions and infrastructure | ✅ Complete |
+| `benchmark-vision.md` | What the benchmark tests and why | ✅ Complete |
+| `platform-deployment-vision.md` | Product architecture and deployment | ✅ Complete |
+| `platform-testing-methodology.md` | How tests are executed and scored | ✅ Complete |
+| `platform-technical-architecture.md` | Stack decisions and infrastructure | ✅ Complete |
 | `process-publication-model.md` | Trust tiers and publication criteria | ✅ Complete |
 | `process-moderation-process.md` | Moderator selection and workflows | ✅ Complete |
 | `process-pricing-model.md` | Payment structure and sustainability | ✅ Complete |
@@ -64,7 +64,7 @@ The vision document defines **three testing tiers** with specific categories:
 
 ### 2. Platform (Backend + Frontend)
 
-From `core-technical-architecture.md` and `core-deployment-vision.md`:
+From `platform-technical-architecture.md` and `platform-deployment-vision.md`:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -176,8 +176,8 @@ From `README.md`, these feature specifications should be written:
 
 | Document | Purpose | Priority |
 |----------|---------|----------|
-| `core-versioning.md` | Benchmark version management | Medium |
-| `core-data-retention.md` | What we store and why | Medium |
+| `platform-versioning.md` | Benchmark version management | Medium |
+| `platform-data-retention.md` | What we store and why | Medium |
 | `feature-leaderboard.md` | Leaderboard display, filtering, comparison | High |
 | `feature-reviewer-dashboard.md` | Moderator tools and interface | High |
 | `feature-user-notifications.md` | Email and in-app notifications | Medium |

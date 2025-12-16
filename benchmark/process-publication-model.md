@@ -265,7 +265,7 @@ This supports:
 
 ## Related Documents
 
-- [Deployment Vision](./core-deployment-vision.md) — Overall deployment strategy
-- [Testing Methodology](./core-testing-methodology.md) — How tests are executed
+- [Deployment Vision](./platform-deployment-vision.md) — Overall deployment strategy
+- [Testing Methodology](./platform-testing-methodology.md) — How tests are executed
 - [Moderation Process](./decision-moderation-process.md) — Moderator selection and workflows
 - [Question Security](./decision-question-security.md) — Question protection and versioning

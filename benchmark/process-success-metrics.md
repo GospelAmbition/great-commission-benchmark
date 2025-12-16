@@ -271,7 +271,7 @@ For committee/moderators:
 
 ## Related Documents
 
-- [Deployment Vision](./core-deployment-vision.md) — Overall deployment strategy
+- [Deployment Vision](./platform-deployment-vision.md) — Overall deployment strategy
 - [Core Publication Model](./process-publication-model.md) — Quality metrics
 - [Pricing Model](./process-pricing-model.md) — Financial sustainability
 

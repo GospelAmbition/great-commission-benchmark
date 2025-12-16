@@ -290,5 +290,5 @@ CREATE TABLE test_runs (
 
 - [Question Security](./process-question-security.md) — Question protection and versioning
 - [Core Publication Model](./process-publication-model.md) — How results are published
-- [Deployment Vision](./core-deployment-vision.md) — Overall deployment strategy
+- [Deployment Vision](./platform-deployment-vision.md) — Overall deployment strategy
 

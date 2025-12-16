@@ -89,7 +89,7 @@ The ToS should prominently include:
 
 ### Data Retention
 
-- **Test data:** Indefinite (see [core-deployment-vision.md](./core-deployment-vision.md))
+- **Test data:** Indefinite (see [platform-deployment-vision.md](./platform-deployment-vision.md))
 - **User accounts:** Until deletion requested
 - **Payment records:** As required by law
 
@@ -277,7 +277,7 @@ Before launch:
 
 ## Related Documents
 
-- [Deployment Vision](./core-deployment-vision.md) — Overall deployment strategy
+- [Deployment Vision](./platform-deployment-vision.md) — Overall deployment strategy
 - [Pricing Model](./process-pricing-model.md) — Payment and refund policies
 - [Question Security](./process-question-security.md) — Tester agreement details
 

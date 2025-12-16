@@ -23,7 +23,7 @@ The deployment vision transforms the benchmark from a local testing tool into a 
 
 Before deployment, the benchmark must:
 
-- [ ] Cover all use case categories (§3.1-3.6 from [vision.md](./vision.md))
+- [ ] Cover all use case categories (§3.1-3.6 from [benchmark-vision.md](./benchmark-vision.md))
 - [ ] Test theological minimums and worldview adherence
 - [ ] Produce reliable, reproducible results
 - [ ] Generate meaningful differentiation between models
@@ -116,7 +116,7 @@ See [process-pricing-model.md](./process-pricing-model.md) for detailed financia
 
 ## Technical Architecture
 
-See [core-technical-architecture.md](./core-technical-architecture.md) for complete infrastructure decisions.
+See [platform-technical-architecture.md](./platform-technical-architecture.md) for complete infrastructure decisions.
 
 ### Summary
 
@@ -491,13 +491,13 @@ See [process-success-metrics.md](./process-success-metrics.md) for detailed trac
 
 ## Related Documents
 
-- [vision.md](./vision.md) — Benchmark vision: what it tests and why
+- [benchmark-vision.md](./benchmark-vision.md) — Benchmark vision: what it tests and why
 - [process-publication-model.md](./process-publication-model.md) — Publication criteria and trust model
-- [core-testing-methodology.md](./core-testing-methodology.md) — How tests are executed
+- [platform-testing-methodology.md](./platform-testing-methodology.md) — How tests are executed
 - [process-moderation-process.md](./process-moderation-process.md) — Moderator selection and workflows
 - [process-pricing-model.md](./process-pricing-model.md) — Financial model and sustainability
 - [process-question-security.md](./process-question-security.md) — Question protection and versioning
-- [core-technical-architecture.md](./core-technical-architecture.md) — Infrastructure decisions
+- [platform-technical-architecture.md](./platform-technical-architecture.md) — Infrastructure decisions
 - [process-legal-requirements.md](./process-legal-requirements.md) — ToS, accessibility, i18n
 - [process-success-metrics.md](./process-success-metrics.md) — KPIs and tracking
 

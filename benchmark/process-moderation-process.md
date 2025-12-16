@@ -237,6 +237,6 @@ The committee chair:
 ## Related Documents
 
 - [Core Publication Model](./process-publication-model.md) — Publication criteria and trust tiers
-- [Deployment Vision](./core-deployment-vision.md) — Overall deployment strategy
+- [Deployment Vision](./platform-deployment-vision.md) — Overall deployment strategy
 - [Question Security](./decision-question-security.md) — Question protection and access control
 
