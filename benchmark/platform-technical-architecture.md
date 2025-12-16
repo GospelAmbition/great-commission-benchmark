@@ -15,6 +15,7 @@ This document defines the infrastructure decisions for the Great Commission Benc
 | **Database** | PostgreSQL | Already in use for pipeline; robust and reliable |
 | **LLM Access** | OpenRouter | Single API for 100+ models; pay-per-use |
 | **Payments** | Stripe | Industry standard; handles cards and compliance |
+| **Analytics** | Umami (self-hosted, off-site) | Privacy-respecting analytics; shared instance on separate server |
 
 ---
 
@@ -289,7 +290,7 @@ Given low expected traffic:
 | Environment | Purpose | Hosting |
 |-------------|---------|---------|
 | **Local** | Development | Developer machine |
-| **Staging** | Testing | Railway (separate project) |
+| **Staging** | Testing (optional, TBD) | Railway (separate project) — may be added later |
 | **Production** | Live | Railway |
 
 ### Deployment
@@ -302,22 +303,7 @@ Given low expected traffic:
 
 ## Cost Estimates
 
-### Monthly Infrastructure
-
-| Service | Estimated Cost |
-|---------|----------------|
-| Railway (hobby plan) | ~$5-20 |
-| Database | Included |
-| Auth0 | Free tier |
-| Domain | ~$1 (amortized) |
-| **Total** | **< $20/month** |
-
-### Per-Test Variable
-
-| Component | Cost |
-|-----------|------|
-| OpenRouter API | $5-50 (model dependent) |
-| Compute time | ~$0.10-0.50 |
+For detailed cost analysis including infrastructure costs, model pricing, project contribution estimates, and traffic projections, see [Infrastructure Costs](./process-infrastructure-costs.md).
 
 ---
 

@@ -147,10 +147,10 @@ Round to the nearest integer for leaderboard display.
 
 | Tier | Questions | Passing | Raw Score | × Weight | Contribution |
 |------|-----------|---------|-----------|----------|--------------|
-| Tier 1 (Task) | 105 | 86 | 81.9% | × 0.70 | 57.3 |
-| Tier 2 (Doctrine) | 30 | 23 | 76.7% | × 0.20 | 15.3 |
-| Tier 3 (Worldview) | 15 | 12 | 80.0% | × 0.10 | 8.0 |
-| **Total** | 150 | 121 | — | — | **80.6 → 81** |
+| Tier 1 (Task) | 210 | 172 | 82.0% | × 0.70 | 57.4 |
+| Tier 2 (Doctrine) | 60 | 46 | 76.7% | × 0.20 | 15.3 |
+| Tier 3 (Worldview) | 30 | 24 | 80.0% | × 0.10 | 8.0 |
+| **Total** | 300 | 242 | — | — | **80.7 → 81** |
 
 ---
 
@@ -158,32 +158,32 @@ Round to the nearest integer for leaderboard display.
 
 ### Target Distribution
 
-For a 150-question benchmark:
+For a 300-question benchmark:
 
 | Tier | Target % | Questions | Categories |
 |------|----------|-----------|------------|
-| Tier 1 | 70% | 105 | 6 use case categories |
-| Tier 2 | 20% | 30 | 6 doctrinal areas |
-| Tier 3 | 10% | 15 | 7 worldview affirmations |
+| Tier 1 | 70% | 210 | 6 use case categories |
+| Tier 2 | 20% | 60 | 6 doctrinal areas |
+| Tier 3 | 10% | 30 | 6 worldview affirmations |
 
-### Tier 1 Distribution (105 questions across 6 categories)
+### Tier 1 Distribution (210 questions across 6 categories)
 
 | Category | Min | Target | Max |
 |----------|-----|--------|-----|
-| 3.1 Missiological Research | 14 | 17-18 | 20 |
-| 3.2 Evangelistic Material Creation | 14 | 17-18 | 20 |
-| 3.3 Apologetic Purposes | 14 | 17-18 | 20 |
-| 3.4 Conversational AI Tools | 14 | 17-18 | 20 |
-| 3.5 Intercessory Prayer Purposes | 14 | 17-18 | 20 |
-| 3.6 Scripture Processing | 14 | 17-18 | 20 |
+| 3.1 Missiological Research | 30 | 35 | 40 |
+| 3.2 Evangelistic Material Creation | 30 | 35 | 40 |
+| 3.3 Apologetic Purposes | 30 | 35 | 40 |
+| 3.4 Conversational AI Tools | 30 | 35 | 40 |
+| 3.5 Intercessory Prayer Purposes | 30 | 35 | 40 |
+| 3.6 Scripture Processing | 30 | 35 | 40 |
 
-### Tier 2 Distribution (30 questions across 6 doctrines)
+### Tier 2 Distribution (60 questions across 6 doctrines)
 
-Each of the 6 theological minimums should have ~5 questions.
+Each of the 6 theological minimums should have ~10 questions.
 
-### Tier 3 Distribution (15 questions across 7 affirmations)
+### Tier 3 Distribution (30 questions across 6 affirmations)
 
-Each of the 7 worldview affirmations should have ~2 questions.
+Each of the 6 worldview affirmations should have ~5 questions.
 
 ---
 
@@ -231,15 +231,15 @@ Individual model pages show full breakdown:
 │  ───────────────────────────────────────────────────────────────────────────│
 │  Tier 1: Task Capability (70% weight)                                        │
 │    Score: 82/100                         Contribution: 57.4 pts              │
-│    Questions: 105 | Pass: 86 | Partial: 12 | Fail: 7                         │
+│    Questions: 210 | Pass: 172 | Partial: 24 | Fail: 14                       │
 │                                                                              │
 │  Tier 2: Doctrinal Fidelity (20% weight)                                     │
 │    Score: 76/100                         Contribution: 15.2 pts              │
-│    Questions: 30 | Pass: 23 | Partial: 4 | Fail: 3                           │
+│    Questions: 60 | Pass: 46 | Partial: 8 | Fail: 6                           │
 │                                                                              │
 │  Tier 3: Worldview Confession (10% weight)                                   │
 │    Score: 80/100                         Contribution: 8.0 pts               │
-│    Questions: 15 | Pass: 12 | Partial: 2 | Fail: 1                           │
+│    Questions: 30 | Pass: 24 | Partial: 4 | Fail: 2                           │
 │                                                                              │
 │  CATEGORY PERFORMANCE (Tier 1 Detail)                                        │
 │  ───────────────────────────────────────────────────────────────────────────│

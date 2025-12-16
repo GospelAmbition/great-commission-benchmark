@@ -21,18 +21,20 @@ This document defines the financial model for the Great Commission Benchmark, in
 
 ### Cost Estimation Method
 
-1. **Bridge token calculation** — Estimate API costs based on expected token usage
-2. **Add 10% buffer** — Cover potential retries or failed runs
-3. **Add processing fee** — Cover infrastructure and operations
-4. **Display total** — User sees final price upfront
+1. **Input token cost** — Calculate based on question token count × model input cost per token
+2. **Output token cost** — Estimate average output token count × model output cost per token, plus 10% margin for variability
+3. **Benchmark hosting contribution** — Fixed $20 contribution to cover benchmark hosting and infrastructure
+4. **Optional round-up** — User can optionally round up to support the initiative
+5. **Display total** — User sees final price upfront
 
 ### Cost Components
 
 | Component | Description | Variability |
 |-----------|-------------|-------------|
-| **API Costs** | OpenRouter/LLM token charges | Variable by model |
-| **Processing Fee** | Server compute + platform operations | Fixed per test |
-| **Tip (optional)** | Voluntary contribution | User's choice |
+| **Input Token Costs** | Question token count × model input cost per token | Variable by model and question length |
+| **Output Token Costs** | Estimated output tokens × model output cost per token + 10% margin | Variable by model |
+| **Benchmark Hosting** | Fixed contribution for infrastructure and operations | Fixed $20 per test |
+| **Round-up (optional)** | Optional contribution to support the initiative | User's choice |
 
 ---
 
@@ -44,15 +46,18 @@ This document defines the financial model for the Great Commission Benchmark, in
 ─────────────────────────────────────────
   Test: Claude 3.5 Sonnet (Full Benchmark)
 ─────────────────────────────────────────
-  API Cost (OpenRouter)         $12.40
-  Processing Fee                 $2.50
+  Input Tokens (12,500 × $0.003)  $37.50
+  Output Tokens (est. 8,000)      $24.00
   ─────────────────────────────────────
-  Subtotal                      $14.90
+  API Cost Subtotal               $61.50
+  Benchmark Hosting Contribution  $20.00
+  ─────────────────────────────────────
+  Subtotal                        $81.50
   
-  💡 Help with server & hosting costs (optional)
-     ○ $5   ○ $10   ○ $20   ○ $100
+  💡 Round up to support the initiative (optional)
+     ○ Round to $85   ○ Round to $90   ○ Round to $100
   ─────────────────────────────────────
-  Total                         $14.90
+  Total                           $81.50
 ─────────────────────────────────────────
 ```
 
@@ -62,38 +67,41 @@ This document defines the financial model for the Great Commission Benchmark, in
 ─────────────────────────────────────────
   Test: Claude 3.5 Sonnet (Full Benchmark)
 ─────────────────────────────────────────
-  API Cost (OpenRouter)         $12.40
-  CPU Processing Cost             $1.20
-  Administration Cost             $1.30
+  Input Tokens (12,500 × $0.003)  $37.50
+  Output Tokens (est. 8,000)      $24.00
+  Output Margin (10%)              $2.40
   ─────────────────────────────────────
-  Subtotal                      $14.90
+  API Cost Subtotal               $63.90
+  Benchmark Hosting Contribution  $20.00
+  ─────────────────────────────────────
+  Subtotal                        $83.90
   
-  💡 Help with server & hosting costs (optional)
-     ○ $5   ○ $10   ○ $20   ○ $100
+  💡 Round up to support the initiative (optional)
+     ○ Round to $85   ○ Round to $90   ○ Round to $100
   ─────────────────────────────────────
-  Total                         $14.90
+  Total                           $83.90
 ─────────────────────────────────────────
 ```
 
 ---
 
-## Processing Fee Breakdown
+## Benchmark Hosting Contribution
 
-The processing fee (initially estimated ~$2.50, subject to cost study) covers:
+The $20 benchmark hosting contribution covers:
 
 | Category | Includes |
 |----------|----------|
-| **CPU Processing** | Server compute for benchmark execution, evaluation logic, result generation |
-| **Administration** | Moderation review, result processing, database storage, infrastructure maintenance |
-| **Buffer** | ~10% margin for retries and unexpected costs |
+| **Infrastructure** | Server compute, database storage, hosting platform costs |
+| **Operations** | Moderation review, result processing, system maintenance |
+| **Platform Services** | Payment processing fees, authentication, email services |
 
-### Fee Determination
+### Contribution Determination
 
-The initial $2.50 figure was a **draft placeholder**. Final pricing requires:
+The fixed $20 contribution is based on:
 
-1. **Cost study** — Actual API usage, infrastructure costs, Stripe fees
-2. **Processing effort** — Time and resources for operations
-3. **Sustainability check** — Ensure costs are covered with reasonable margin
+1. **Infrastructure costs** — Estimated monthly hosting and platform service costs
+2. **Operational overhead** — Time and resources for moderation and processing
+3. **Sustainability** — Ensures benchmark platform remains cost-neutral
 
 ---
 
@@ -141,7 +149,7 @@ If actual API costs exceed estimates:
 
 ### Mitigation Strategies
 
-1. **10% buffer** built into estimates
+1. **10% margin** built into output token estimates
 2. **Token limits** on model responses if needed
 3. **Price adjustment** for consistently underpriced models
 4. **Monitoring** to catch cost patterns early
@@ -174,7 +182,7 @@ The steering committee or community sponsors can fund tests on their behalf.
 ### Community Sponsorship
 
 Users can voluntarily contribute:
-- **Tips** at checkout (helps server & hosting)
+- **Round-up contributions** at checkout (supports the initiative)
 - **Direct sponsorship** of specific tests/models
 - **General fund** donations for accessibility
 
@@ -214,8 +222,8 @@ Before refunds, the system attempts automatic retry:
 
 | Source | Description |
 |--------|-------------|
-| **Test fees** | Processing fee per benchmark run |
-| **Tips** | Optional contributions at checkout |
+| **Test fees** | Benchmark hosting contribution per benchmark run |
+| **Round-up contributions** | Optional contributions at checkout |
 | **Sponsorships** | Funding tests for others |
 | **Donations** | General fund contributions |
 
@@ -223,16 +231,16 @@ Before refunds, the system attempts automatic retry:
 
 | Cost Category | Covered By |
 |---------------|------------|
-| **API costs** | Pass-through to user |
-| **Infrastructure** | Processing fees + sponsoring project |
+| **API costs** | Pass-through to user (input + output tokens) |
+| **Infrastructure** | Benchmark hosting contribution + sponsoring project |
 | **Moderation** | Volunteer (no direct cost) |
 | **Development** | Initial grant/volunteer time |
 
 ### Break-Even Goal
 
 The pricing model aims to **break even**, not profit:
-- Processing fees cover operational costs
-- Tips and donations provide buffer
+- Benchmark hosting contribution covers operational costs
+- Round-up contributions and donations provide buffer
 - Sponsoring project backstops shortfalls
 
 ---
@@ -253,8 +261,8 @@ The pricing model aims to **break even**, not profit:
 
 | Component | Range |
 |-----------|-------|
-| API costs | $5-50 depending on model |
-| Processing | ~$1-2 per test |
+| API costs (input + output tokens) | $5-50 depending on model and question length |
+| Benchmark hosting contribution | $20 per test (fixed) |
 
 ---
 
@@ -262,7 +270,7 @@ The pricing model aims to **break even**, not profit:
 
 ### Price Adjustments
 
-Processing fee may be adjusted based on:
+Benchmark hosting contribution may be adjusted based on:
 - Actual cost data after launch
 - Volume changes
 - Infrastructure cost changes

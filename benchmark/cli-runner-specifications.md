@@ -10,7 +10,7 @@ A lightweight Python CLI for **community members** who want to:
 2. View their results locally
 3. Export or upload results to the GCB platform
 
-This tool is intentionally simple and focused. It does not include question generation, curation, or version building features—those are in the separate [GCB Version Builder CLI](benchmark-cli-version-builder.md).
+This tool is intentionally simple and focused. It does not include question generation, curation, or version building features—those are in the separate [GCB Version Builder CLI](cli-builder-specifications.md).
 
 ---
 
@@ -26,8 +26,14 @@ gcb-runner config
 # Run the benchmark against a model
 gcb-runner test --model gpt-4o --backend openrouter
 
-# View results
+# View results in terminal
 gcb-runner results
+
+# Open visual dashboard in browser
+gcb-runner view
+
+# Generate static HTML report
+gcb-runner report
 
 # Export for platform submission
 gcb-runner export --output results.json
@@ -62,6 +68,8 @@ flowchart LR
     
     subgraph output [Output]
         Local[Local Results DB]
+        Viewer[Web Viewer]
+        Report[HTML Report]
         Export[JSON Export]
         Upload[Platform Upload]
     end
@@ -78,6 +86,8 @@ flowchart LR
     Ollama --> Judge
     Direct --> Judge
     Judge --> Local
+    Local --> Viewer
+    Local --> Report
     Local --> Export
     Local --> Upload
 ```
@@ -111,7 +121,13 @@ gcb-runner/
 │   │       └── ...
 │   ├── questions.py        # Question set loader (uses versions/)
 │   ├── results.py          # Results storage and display
-│   └── export.py           # Export and upload
+│   ├── export.py           # Export and upload
+│   └── viewer/             # Results viewer (zero new deps)
+│       ├── __init__.py
+│       ├── server.py       # HTTP server using Python stdlib
+│       ├── dashboard.py    # Embedded HTML/JS dashboard
+│       ├── report.py       # Static HTML report generator
+│       └── api.py          # API endpoint handlers
 ├── data/                   # Local data directory (user data only)
 │   └── results.db          # SQLite results database
 ├── pyproject.toml
@@ -167,7 +183,7 @@ Benchmark Version: V3.0 (Current)
 CLI Version: 1.3.0
 
 Loading questions from embedded bundle...
-  ✓ 150 questions loaded (Tier 1: 105, Tier 2: 30, Tier 3: 15)
+  ✓ 300 questions loaded (Tier 1: 210, Tier 2: 60, Tier 3: 30)
   ✓ Scoring weights: 70% Task / 20% Doctrine / 10% Worldview
   ✓ Bundle checksum verified
 
@@ -175,9 +191,9 @@ Testing: gpt-4o via OpenRouter
 Judge: gpt-4o
 
 Running benchmark...
-  Tier 1 - Use Cases (70%)   ━━━━━━━━━━━━━━━━━━━━ 105/105
-  Tier 2 - Theology (20%)    ━━━━━━━━━━━━━━━━━━━━ 30/30
-  Tier 3 - Worldview (10%)   ━━━━━━━━━━━━━━━━━━━━ 15/15
+  Tier 1 - Use Cases (70%)   ━━━━━━━━━━━━━━━━━━━━ 210/210
+  Tier 2 - Theology (20%)    ━━━━━━━━━━━━━━━━━━━━ 60/60
+  Tier 3 - Worldview (10%)   ━━━━━━━━━━━━━━━━━━━━ 30/30
 
 ═══════════════════════════════════════════════════════════════
 
@@ -190,11 +206,11 @@ Completed: 2025-01-15 14:32:01
 ┌─────────────────────────┬──────────┬──────────┬─────────┬────────┐
 │ Tier                    │ Pass     │ Partial  │ Fail    │ Weight │
 ├─────────────────────────┼──────────┼──────────┼─────────┼────────┤
-│ Tier 1: Use Cases       │ 79 (75%) │ 18 (17%) │ 8 (8%)  │  70%   │
-│ Tier 2: Theology        │ 25 (83%) │ 3 (10%)  │ 2 (7%)  │  20%   │
-│ Tier 3: Worldview       │ 13 (87%) │ 1 (7%)   │ 1 (6%)  │  10%   │
+│ Tier 1: Use Cases       │ 158 (75%) │ 36 (17%) │ 16 (8%)  │  70%   │
+│ Tier 2: Theology        │ 50 (83%) │ 6 (10%)  │ 4 (7%)  │  20%   │
+│ Tier 3: Worldview       │ 26 (87%) │ 2 (7%)   │ 2 (6%)  │  10%   │
 ├─────────────────────────┼──────────┼──────────┼─────────┼────────┤
-│ OVERALL (weighted)      │ 117 (78%)│ 22 (15%) │ 11 (7%) │  100%  │
+│ OVERALL (weighted)      │ 234 (78%)│ 44 (15%) │ 22 (7%) │  100%  │
 └─────────────────────────┴──────────┴──────────┴─────────┴────────┘
 
 Scoring breakdown:
@@ -300,7 +316,7 @@ File ready for upload at https://gcb.example.com/submit
     "completed_at": "2025-01-15T14:32:01Z"
   },
   "summary": {
-    "total_questions": 150,
+    "total_questions": 300,
     "score": 78.0,
     "scoring_weights": {
       "tier1": 0.70,
@@ -308,9 +324,9 @@ File ready for upload at https://gcb.example.com/submit
       "tier3": 0.10
     },
     "tier_scores": {
-      "tier1": { "raw": 75.0, "weighted": 52.5, "questions": 105 },
-      "tier2": { "raw": 83.0, "weighted": 16.6, "questions": 30 },
-      "tier3": { "raw": 87.0, "weighted": 8.7, "questions": 15 }
+      "tier1": { "raw": 75.0, "weighted": 52.5, "questions": 210 },
+      "tier2": { "raw": 83.0, "weighted": 16.6, "questions": 60 },
+      "tier3": { "raw": 87.0, "weighted": 8.7, "questions": 30 }
     },
     "verdict_counts": {
       "pass": 117,
@@ -362,6 +378,476 @@ Uploading test run #3...
   ✓ Uploaded successfully
 
 View your results at: https://gcb.example.com/results/abc123
+```
+
+---
+
+### `gcb-runner view`
+
+Launch a local web dashboard to explore results visually:
+
+```
+$ gcb-runner view
+
+╔═══════════════════════════════════════════════════════════════╗
+║              Great Commission Benchmark - Results Viewer       ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Starting local server...
+  ✓ Server running at http://localhost:8642
+
+Opening browser...
+  ✓ Dashboard ready
+
+Press Ctrl+C to stop the server.
+```
+
+**Options:**
+
+```
+gcb-runner view [OPTIONS]
+
+Options:
+  --run INTEGER       Open directly to a specific test run
+  --port INTEGER      Server port (default: 8642)
+  --no-browser        Don't open browser automatically
+```
+
+**Examples:**
+
+```bash
+# Open dashboard (auto-opens browser)
+gcb-runner view
+
+# Jump directly to a specific run
+gcb-runner view --run 3
+
+# Use custom port
+gcb-runner view --port 9000
+```
+
+---
+
+### `gcb-runner report`
+
+Generate a static HTML report (no server required):
+
+```
+$ gcb-runner report --run 3
+
+Generating report for test run #3...
+  ✓ Report saved to gcb-report-gpt4o-2025-01-15.html
+
+Opening in browser...
+```
+
+**Options:**
+
+```
+gcb-runner report [OPTIONS]
+
+Options:
+  --run INTEGER       Test run ID (default: latest)
+  --output TEXT       Output filename (default: auto-generated)
+  --no-browser        Don't open browser automatically
+  --compare INTEGER   Compare with another run (side-by-side)
+```
+
+**Examples:**
+
+```bash
+# Generate report for latest run
+gcb-runner report
+
+# Generate and specify output file
+gcb-runner report --run 3 --output my-results.html
+
+# Compare two models
+gcb-runner report --run 3 --compare 2
+```
+
+---
+
+## Results Viewer
+
+The Results Viewer is a zero-dependency local web dashboard built on Python's standard library. It provides visual exploration of benchmark results without requiring any additional pip installs.
+
+### Why Zero Dependencies?
+
+The GCB Runner is designed for community members who may not be Python developers. Adding web framework dependencies would:
+
+- Increase install size and time
+- Risk dependency conflicts
+- Complicate troubleshooting
+
+Instead, we use Python's built-in `http.server` with a custom request handler, serving a single-page app with embedded JavaScript.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     RESULTS VIEWER ARCHITECTURE                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────────┐   │
+│  │   Browser    │◄──►│ HTTP Server  │◄──►│  SQLite DB       │   │
+│  │  (HTML/JS)   │    │  (stdlib)    │    │  (results.db)    │   │
+│  └──────────────┘    └──────────────┘    └──────────────────┘   │
+│         │                   │                                    │
+│         │              Python stdlib                             │
+│         │            http.server module                          │
+│         │                   │                                    │
+│         ▼                   ▼                                    │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                    Single Page App                       │    │
+│  │  • Chart.js (CDN) for visualizations                    │    │
+│  │  • Vanilla JS for interactivity                         │    │
+│  │  • Embedded CSS (no build step)                         │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Dashboard Features
+
+The web dashboard provides:
+
+**1. Run Overview**
+- Score summary with tier breakdown
+- Pass/Partial/Fail distribution chart
+- Test metadata (model, date, benchmark version)
+
+**2. Response Browser**
+- Paginated list of all questions and responses
+- Filter by verdict (Pass/Partial/Fail)
+- Filter by tier
+- Search within responses
+- Expand to see full response text and judge reasoning
+
+**3. Run Comparison** (when comparing two runs)
+- Side-by-side score comparison
+- Highlight questions where verdicts differ
+- Identify which model performed better per category
+
+**4. Failure Analysis**
+- Group failed questions by category
+- Show common failure patterns
+- Display judge reasoning for each failure
+
+### Implementation
+
+```python
+# gcb_runner/viewer/server.py
+
+import json
+import sqlite3
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+from pathlib import Path
+from urllib.parse import urlparse, parse_qs
+
+class ViewerHandler(SimpleHTTPRequestHandler):
+    """Custom handler that serves the dashboard and API endpoints."""
+    
+    def __init__(self, *args, db_path: Path, **kwargs):
+        self.db_path = db_path
+        super().__init__(*args, **kwargs)
+    
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        
+        # API endpoints
+        if parsed.path.startswith("/api/"):
+            self._handle_api(parsed)
+        # Dashboard (serve embedded HTML)
+        elif parsed.path == "/" or parsed.path == "/index.html":
+            self._serve_dashboard()
+        else:
+            super().do_GET()
+    
+    def _handle_api(self, parsed):
+        """Handle API requests by querying SQLite."""
+        path = parsed.path
+        params = parse_qs(parsed.query)
+        
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        
+        if path == "/api/runs":
+            data = self._get_runs(conn)
+        elif path.startswith("/api/runs/"):
+            run_id = int(path.split("/")[-1])
+            data = self._get_run_detail(conn, run_id)
+        elif path == "/api/responses":
+            run_id = int(params.get("run_id", [0])[0])
+            data = self._get_responses(conn, run_id, params)
+        else:
+            self._send_error(404, "Not found")
+            return
+        
+        conn.close()
+        self._send_json(data)
+    
+    def _serve_dashboard(self):
+        """Serve the embedded single-page dashboard."""
+        html = get_dashboard_html()  # Returns embedded HTML string
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        self.wfile.write(html.encode())
+    
+    def _send_json(self, data):
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode())
+
+
+def start_viewer(db_path: Path, port: int = 8642, open_browser: bool = True):
+    """Start the results viewer server."""
+    handler = lambda *args, **kwargs: ViewerHandler(
+        *args, db_path=db_path, **kwargs
+    )
+    
+    server = HTTPServer(("localhost", port), handler)
+    
+    if open_browser:
+        import webbrowser
+        webbrowser.open(f"http://localhost:{port}")
+    
+    print(f"Results viewer running at http://localhost:{port}")
+    print("Press Ctrl+C to stop.")
+    
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nServer stopped.")
+```
+
+### Dashboard HTML/JS
+
+The dashboard is a single HTML file with embedded CSS and JavaScript, stored as a Python string in the viewer module. This approach:
+
+- Requires no static file serving complexity
+- Works offline (Chart.js loaded from CDN with fallback)
+- Can be easily templated with Jinja2-style substitution
+
+```python
+# gcb_runner/viewer/dashboard.py
+
+def get_dashboard_html() -> str:
+    """Return the complete dashboard HTML."""
+    return '''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCB Results Viewer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Embedded styles */
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+        }
+        body { font-family: system-ui, sans-serif; background: var(--bg); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        .card { background: white; border-radius: 8px; padding: 1.5rem; 
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
+        .score-big { font-size: 4rem; font-weight: bold; color: var(--primary); }
+        .verdict-pass { color: var(--success); }
+        .verdict-partial { color: var(--warning); }
+        .verdict-fail { color: var(--danger); }
+        /* ... more styles ... */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏆 Great Commission Benchmark</h1>
+            <p>Results Viewer</p>
+        </header>
+        
+        <div id="app">
+            <!-- Dashboard content rendered by JS -->
+        </div>
+    </div>
+    
+    <script>
+        // Vanilla JS dashboard application
+        const App = {
+            state: { runs: [], currentRun: null, responses: [] },
+            
+            async init() {
+                await this.loadRuns();
+                this.render();
+            },
+            
+            async loadRuns() {
+                const res = await fetch('/api/runs');
+                this.state.runs = await res.json();
+            },
+            
+            async loadRunDetail(runId) {
+                const res = await fetch(`/api/runs/${runId}`);
+                this.state.currentRun = await res.json();
+                this.render();
+            },
+            
+            render() {
+                const app = document.getElementById('app');
+                if (this.state.currentRun) {
+                    app.innerHTML = this.renderRunDetail();
+                    this.renderCharts();
+                } else {
+                    app.innerHTML = this.renderRunList();
+                }
+            },
+            
+            renderRunList() {
+                return `
+                    <div class="card">
+                        <h2>Test Runs</h2>
+                        <table>
+                            <thead>
+                                <tr><th>ID</th><th>Model</th><th>Version</th><th>Score</th><th>Date</th></tr>
+                            </thead>
+                            <tbody>
+                                ${this.state.runs.map(r => `
+                                    <tr onclick="App.loadRunDetail(${r.id})">
+                                        <td>${r.id}</td>
+                                        <td>${r.model}</td>
+                                        <td>${r.benchmark_version}</td>
+                                        <td><strong>${r.score}</strong></td>
+                                        <td>${r.completed_at}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            },
+            
+            renderRunDetail() {
+                const run = this.state.currentRun;
+                return `
+                    <button onclick="App.state.currentRun=null; App.render()">← Back</button>
+                    <div class="card">
+                        <h2>${run.model}</h2>
+                        <div class="score-big">${run.score}</div>
+                        <p>Benchmark ${run.benchmark_version} • ${run.completed_at}</p>
+                    </div>
+                    <div class="card">
+                        <h3>Score Breakdown</h3>
+                        <canvas id="tierChart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3>Verdict Distribution</h3>
+                        <canvas id="verdictChart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3>Responses</h3>
+                        <div id="responses"></div>
+                    </div>
+                `;
+            },
+            
+            renderCharts() {
+                // Tier breakdown bar chart
+                new Chart(document.getElementById('tierChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Tier 1 (70%)', 'Tier 2 (20%)', 'Tier 3 (10%)'],
+                        datasets: [{
+                            label: 'Score %',
+                            data: [
+                                this.state.currentRun.tier1_score,
+                                this.state.currentRun.tier2_score,
+                                this.state.currentRun.tier3_score
+                            ],
+                            backgroundColor: ['#3b82f6', '#8b5cf6', '#ec4899']
+                        }]
+                    }
+                });
+                
+                // Verdict distribution pie chart
+                new Chart(document.getElementById('verdictChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Pass', 'Partial', 'Fail'],
+                        datasets: [{
+                            data: [
+                                this.state.currentRun.pass_count,
+                                this.state.currentRun.partial_count,
+                                this.state.currentRun.fail_count
+                            ],
+                            backgroundColor: ['#16a34a', '#d97706', '#dc2626']
+                        }]
+                    }
+                });
+            }
+        };
+        
+        App.init();
+    </script>
+</body>
+</html>'''
+```
+
+### Static Report Generation
+
+For sharing or offline viewing, `gcb-runner report` generates a self-contained HTML file:
+
+```python
+# gcb_runner/viewer/report.py
+
+def generate_report(db_path: Path, run_id: int, output: Path) -> Path:
+    """Generate a static HTML report for a test run."""
+    conn = sqlite3.connect(db_path)
+    
+    # Fetch all data
+    run = get_run_detail(conn, run_id)
+    responses = get_all_responses(conn, run_id)
+    
+    # Embed data as JSON in the HTML
+    html = get_report_template().replace(
+        "{{RUN_DATA}}", json.dumps(run)
+    ).replace(
+        "{{RESPONSES_DATA}}", json.dumps(responses)
+    )
+    
+    output.write_text(html)
+    return output
+```
+
+The static report includes all data embedded as JSON, making it fully self-contained and shareable.
+
+### Project Structure Update
+
+```
+gcb-runner/
+├── gcb_runner/
+│   ├── __init__.py
+│   ├── cli.py
+│   ├── runner.py
+│   ├── judge.py
+│   ├── backends/
+│   ├── questions.py
+│   ├── results.py
+│   ├── export.py
+│   └── viewer/                 # NEW: Results viewer
+│       ├── __init__.py
+│       ├── server.py           # HTTP server using stdlib
+│       ├── dashboard.py        # Embedded HTML/JS dashboard
+│       ├── report.py           # Static report generator
+│       └── api.py              # API endpoint handlers
+├── data/
+│   ├── questions/
+│   └── results.db
+├── pyproject.toml
+└── README.md
 ```
 
 ---
@@ -645,6 +1131,14 @@ Configuration stored in `~/.gcb-runner/config.json`:
 - Resume interrupted runs
 - Progress persistence
 - Better error handling
+
+### Phase 5: Results Viewer
+
+- HTTP server using Python stdlib
+- Embedded HTML/JS dashboard
+- Static HTML report generator
+- Run comparison view
+- Failure analysis view
 - **`gcb-runner versions` command**
 - Documentation
 
@@ -696,8 +1190,8 @@ $ gcb-runner test --model gpt-4o
 ╚═══════════════════════════════════════════════════════════════╝
 
 ? Select benchmark version:
-  ❯ V3.0 (Current - recommended)      150 questions
-    V2.0 (Archived)                    150 questions
+  ❯ V3.0 (Current - recommended)      300 questions
+    V2.0 (Archived)                    300 questions
     V1.0 (Archived)                    120 questions
 
 Using benchmark V3.0...
@@ -728,15 +1222,15 @@ $ gcb-runner versions
 ┌─────────┬────────────┬────────────┬────────────────────────────┐
 │ Version │ Status     │ Questions  │ Released                   │
 ├─────────┼────────────┼────────────┼────────────────────────────┤
-│ V3.0    │ ⭐ Current │ 150        │ December 2025              │
-│ V2.0    │ Archived   │ 150        │ June 2025                  │
+│ V3.0    │ ⭐ Current │ 300        │ December 2025              │
+│ V2.0    │ Archived   │ 300        │ June 2025                  │
 │ V1.0    │ Archived   │ 120        │ January 2025               │
 └─────────┴────────────┴────────────┴────────────────────────────┘
 
 Question distribution follows 70/20/10 weighting:
-  • Tier 1 (Task Capability): 70% - e.g., 105 questions in V3.0
-  • Tier 2 (Doctrinal Fidelity): 20% - e.g., 30 questions in V3.0
-  • Tier 3 (Worldview Confession): 10% - e.g., 15 questions in V3.0
+  • Tier 1 (Task Capability): 70% - e.g., 210 questions in V3.0
+  • Tier 2 (Doctrinal Fidelity): 20% - e.g., 60 questions in V3.0
+  • Tier 3 (Worldview Confession): 10% - e.g., 30 questions in V3.0
 
 Use --benchmark-version to select a specific version.
 ```
@@ -767,8 +1261,8 @@ from typing import Any
 # Metadata (visible)
 VERSION = "3.0"
 RELEASE_DATE = "2025-12-01"
-QUESTION_COUNT = 150
-TIER_DISTRIBUTION = {"tier1": 105, "tier2": 30, "tier3": 15}
+QUESTION_COUNT = 300
+TIER_DISTRIBUTION = {"tier1": 210, "tier2": 60, "tier3": 30}
 CHECKSUM = "sha256:abc123def456..."
 
 # Question data (compressed + encoded)

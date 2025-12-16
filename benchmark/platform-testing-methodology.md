@@ -205,10 +205,10 @@ Where each Tier_Score = (Passing_Verdicts / Total_Questions) × 100
 
 | Tier | Questions | Passing | Score | × Weight | Contribution |
 |------|-----------|---------|-------|----------|--------------|
-| Tier 1 (Task) | 105 | 86 | 82% | × 0.70 | 57.4 |
-| Tier 2 (Doctrine) | 30 | 22 | 73% | × 0.20 | 14.6 |
-| Tier 3 (Worldview) | 15 | 11 | 73% | × 0.10 | 7.3 |
-| **Total** | 150 | 119 | — | — | **79.3** |
+| Tier 1 (Task) | 210 | 172 | 82% | × 0.70 | 57.4 |
+| Tier 2 (Doctrine) | 60 | 44 | 73% | × 0.20 | 14.6 |
+| Tier 3 (Worldview) | 30 | 22 | 73% | × 0.10 | 7.3 |
+| **Total** | 300 | 238 | — | — | **79.3** |
 
 **Deliverable:** Published benchmark results; guidance document for Christian organizations.
 
@@ -229,7 +229,7 @@ Where each Tier_Score = (Passing_Verdicts / Total_Questions) × 100
 Given the existing infrastructure:
 
 1. **Curate 50-100 "gold standard" questions** across tiers with expected verdicts
-   - Target distribution: ~35 Tier 1, ~10 Tier 2, ~5 Tier 3 (matching 70/20/10)
+   - Target distribution: ~70 Tier 1, ~20 Tier 2, ~10 Tier 3 (matching 70/20/10)
 2. **Calibrate the judge prompt** using the existing `EvaluationRun` system
 3. **Run Phase 1 end-to-end on 2 models** to validate the measurement framework
 4. **Then scale** to full question sets and more models

@@ -137,8 +137,8 @@ The Great Commission Benchmark platform is a public-facing website that:
 | **Database** | PostgreSQL | Robust and reliable; already in use |
 | **LLM Access** | OpenRouter | Single API for 100+ models; pay-per-use |
 | **Payments** | Stripe | Industry standard; handles cards and compliance |
-| **Email** | TBD (SendGrid/Resend) | User notifications |
-| **Analytics** | Plausible/Fathom | Privacy-respecting analytics |
+| **Email** | SendGrid | User notifications |
+| **Analytics** | Umami (self-hosted, off-site) | Privacy-respecting analytics; shared instance on separate server |
 
 ### 3.2 OpenRouter Integration
 
@@ -153,7 +153,30 @@ The Great Commission Benchmark platform is a public-facing website that:
 - Portable to other providers if needed
 - Supports direct API integrations as fallback
 
-### 3.3 Migration Path
+### 3.3 Umami Analytics Integration
+
+**Configuration:**
+- Umami instance hosted on separate server (shared across multiple projects)
+- Privacy-respecting analytics (no cookies, GDPR compliant)
+- Lightweight tracking script (~2KB)
+- No cookie consent banners required
+
+**Setup Requirements:**
+1. Add website to Umami dashboard on external server
+2. Obtain website ID from Umami dashboard
+3. Configure environment variables (see Appendix C)
+4. Add Umami script component to Next.js app
+
+**Environment Variables:**
+- `NEXT_PUBLIC_UMAMI_SCRIPT_URL` — Full URL to Umami tracking script (e.g., `https://analytics.example.com/script.js`)
+- `NEXT_PUBLIC_UMAMI_WEBSITE_ID` — Website ID from Umami dashboard
+
+**Implementation:**
+- Add `<UmamiAnalytics />` component to Next.js root layout
+- Component conditionally renders based on environment variables
+- Works with SSR/SSG without issues
+
+### 3.4 Migration Path
 
 If Railway becomes unsuitable:
 - Standard containerized deployment
@@ -294,7 +317,8 @@ CREATE TABLE community_submissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id),
     model_name VARCHAR(255) NOT NULL,         -- User-provided model name
-    model_url VARCHAR(500),                   -- Link to model (e.g., Hugging Face)
+    model_url VARCHAR(500),                   -- Optional: Link to publicly hosted model (e.g., Hugging Face)
+                                                -- Enables open-source validation: others can download and verify results
     organization VARCHAR(255),                -- Submitting organization
     cli_version VARCHAR(50) NOT NULL,         -- CLI version used
     question_set_version VARCHAR(10) NOT NULL,
@@ -488,12 +512,20 @@ POST /api/webhooks/auth0                 # Auth0 event webhooks
 │  ─────┼────────────────────┼───────┼──────┼──────┼───────┼─────────────┼─────│
 │    1  │ Claude 3.5 Sonnet  │ 81/100│  82  │  75  │  77   │ Dec 14, 2025│ ✓✓✓ │
 │    2  │ GPT-4o             │ 76/100│  78  │  70  │  72   │ Dec 13, 2025│ ✓✓  │
-│    3  │ Gemini 1.5 Pro     │ 71/100│  72  │  68  │  65   │ Dec 12, 2025│ ✓   │
+│    3  │ My Christian LLM*  │ 74/100│  75  │  72  │  70   │ Dec 12, 2025│ ✓   │
+│       │ 🔗 huggingface.co/...│      │      │      │       │             │     │
+│    4  │ Gemini 1.5 Pro     │ 71/100│  72  │  68  │  65   │ Dec 12, 2025│ ✓   │
 └─────────────────────────────────────────────────────────────────────────────┘
 
+* Community Submitted — Model available for download and independent verification
 Score calculation: (Task × 0.70) + (Doctrine × 0.20) + (Worldview × 0.10)
 Example: Claude = (82 × 0.70) + (75 × 0.20) + (77 × 0.10) = 57.4 + 15.0 + 7.7 = 80.1 ≈ 81
 ```
+
+**Community Submission Display:**
+- Models submitted via CLI show a "Community Submitted" badge
+- When a Hugging Face link is provided, it appears as a clickable link below the model name
+- The link enables open-source validation: visitors can download the model and independently verify results
 
 #### 7.1.2 Model Comparison
 
@@ -546,6 +578,9 @@ A dedicated public page supporting Christian organizations developing or fine-tu
 2. CLI generates a results package (scores + metadata)
 3. User creates account on platform (if not existing)
 4. User uploads results package via authenticated submission form
+   - **Optional: Hugging Face Model Link** — Users can provide a link to their publicly hosted model on Hugging Face
+   - This enables open-source validation: community members can download the model and independently verify the submitted results
+   - The link is displayed on the leaderboard entry for transparency
 5. Results enter moderation queue for validation
 6. Upon approval, model appears on leaderboard with "Community Submitted" badge
 
@@ -561,7 +596,7 @@ A dedicated public page supporting Christian organizations developing or fine-tu
 
 2. Review Price
    ├── API costs (model-dependent)
-   ├── Processing fee (~$2.50)
+   ├── Processing fee
    ├── Optional tip
    └── Total displayed upfront
 
@@ -589,7 +624,26 @@ A dedicated public page supporting Christian organizations developing or fine-tu
 - Notification preferences
 - Account settings
 
-#### 7.2.3 Sponsorship Request Form
+#### 7.2.3 Community Submission Form
+
+**Purpose:** Allow users to submit CLI-generated benchmark results for their own fine-tuned or custom LLMs.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| Model name | Yes | User-provided name for the model being tested |
+| **Hugging Face Model Link** | No | Optional link to publicly hosted model on Hugging Face. When provided, enables open-source validation: community members can download the model and independently verify the submitted results. The link is displayed on the leaderboard entry for transparency. |
+| Organization | No | Submitting organization or ministry name |
+| Results package | Yes | JSON file containing complete benchmark results from CLI |
+| CLI version | Auto-detected | Version of CLI tool used (extracted from results package) |
+| Question set version | Auto-detected | Benchmark version (extracted from results package) |
+
+**Open-Source Validation Benefits:**
+- Community members can download the model and run their own tests
+- Independent verification increases trust in submitted results
+- Promotes transparency and reproducibility
+- Encourages open-source model development
+
+#### 7.2.4 Sponsorship Request Form
 
 | Field | Description |
 |-------|-------------|
@@ -697,7 +751,7 @@ See [benchmark-scoring.md](./benchmark-scoring.md) for detailed scoring methodol
 ```
 1. Load question set (current active version)
    - Question distribution: 70% Tier 1, 20% Tier 2, 10% Tier 3
-   - Example: 150 questions = 105 Tier 1 + 30 Tier 2 + 15 Tier 3
+   - Example: 300 questions = 210 Tier 1 + 60 Tier 2 + 30 Tier 3
 2. For each question:
    a. Send prompt to model via OpenRouter
    b. Capture response and metadata
@@ -734,7 +788,7 @@ See [benchmark-scoring.md](./benchmark-scoring.md) for detailed scoring methodol
 | Component | Description | Variability |
 |-----------|-------------|-------------|
 | **API Costs** | OpenRouter/LLM token charges | Variable by model |
-| **Processing Fee** | Server compute + operations | ~$2.50 fixed |
+| **Processing Fee** | Server compute + operations | Fixed per test |
 | **Tip (optional)** | Voluntary contribution | User's choice |
 
 ### 9.2 Price Display
@@ -744,9 +798,9 @@ See [benchmark-scoring.md](./benchmark-scoring.md) for detailed scoring methodol
   Test: Claude 3.5 Sonnet (Full Benchmark)
 ─────────────────────────────────────────
   API Cost (OpenRouter)         $12.40
-  Processing Fee                 $2.50
+  Processing Fee                 [TBD]
   ─────────────────────────────────────
-  Subtotal                      $14.90
+  Subtotal                      [TBD]
   
   💡 Help with server & hosting (optional)
      ○ $5   ○ $10   ○ $20   ○ $100
@@ -1091,12 +1145,14 @@ review    testing     reference
 | C.2 | Public pages — Landing, leaderboard, model comparison, categories |
 | C.3 | Auth integration — Login, registration, protected routes |
 | C.4 | User flows — Test execution, dashboard, settings |
+| C.5 | Analytics integration — Umami component setup and configuration |
 
 **Deliverables:**
 - Public leaderboard visible
 - Users can register and login
 - Test execution flow works
 - User dashboard functional
+- Umami analytics tracking active
 
 ### Phase D: Payments & Moderation
 
@@ -1243,17 +1299,63 @@ leaderboard review
   "test_run_id": "550e8400-e29b-41d4-a716-446655440000",
   "status": "running",
   "progress": {
-    "total_questions": 150,
-    "completed": 87,
+    "total_questions": 300,
+    "completed": 174,
     "percentage": 58,
     "by_tier": {
-      "tier1": { "total": 105, "completed": 62 },
-      "tier2": { "total": 30, "completed": 17 },
-      "tier3": { "total": 15, "completed": 8 }
+      "tier1": { "total": 210, "completed": 124 },
+      "tier2": { "total": 60, "completed": 34 },
+      "tier3": { "total": 30, "completed": 16 }
     }
   },
   "started_at": "2025-12-14T10:30:00Z",
   "estimated_completion": "2025-12-14T10:45:00Z"
+}
+```
+
+### Community Submission Request
+
+**Endpoint:** `POST /api/community/submit`
+
+**Request Body:**
+
+```json
+{
+  "model_name": "My Fine-Tuned Christian LLM",
+  "model_url": "https://huggingface.co/username/my-christian-llm",
+  "organization": "Example Ministry",
+  "cli_version": "1.2.0",
+  "question_set_version": "V2.0",
+  "results_package": {
+    "overall_score": 85,
+    "tier1_score": 88,
+    "tier2_score": 82,
+    "tier3_score": 80,
+    "responses": [...],
+    "metadata": {...}
+  }
+}
+```
+
+**Field Descriptions:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `model_name` | Yes | User-provided name for the model |
+| `model_url` | No | Link to publicly hosted model (typically Hugging Face). Enables open-source validation by allowing others to download and independently verify results |
+| `organization` | No | Submitting organization or ministry name |
+| `cli_version` | Yes | Version of CLI tool used to generate results |
+| `question_set_version` | Yes | Benchmark version (e.g., "V2.0") |
+| `results_package` | Yes | Complete JSON results package from CLI |
+
+**Response:**
+
+```json
+{
+  "submission_id": "660e8400-e29b-41d4-a716-446655440001",
+  "status": "pending",
+  "message": "Submission received and queued for review",
+  "submitted_at": "2025-12-14T10:30:00Z"
 }
 ```
 
@@ -1283,11 +1385,100 @@ OPENROUTER_API_KEY=sk-or-xxx
 SENDGRID_API_KEY=SG.xxx
 EMAIL_FROM=noreply@gcb.example.com
 
+# Analytics (Umami - self-hosted, off-site)
+NEXT_PUBLIC_UMAMI_SCRIPT_URL=https://analytics.example.com/script.js
+NEXT_PUBLIC_UMAMI_WEBSITE_ID=your-website-id-from-umami
+
 # Application
 NEXT_PUBLIC_API_URL=https://api.gcb.example.com
 FASTAPI_SECRET_KEY=xxx
 ENVIRONMENT=production
 ```
+
+---
+
+## Appendix D: Umami Analytics Integration
+
+### Component Implementation
+
+Create `components/UmamiAnalytics.tsx`:
+
+```tsx
+'use client'
+
+import Script from 'next/script'
+
+export default function UmamiAnalytics() {
+  const scriptUrl = process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL
+  const websiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID
+
+  // Only render if both environment variables are set
+  if (!scriptUrl || !websiteId) {
+    return null
+  }
+
+  return (
+    <Script
+      async
+      defer
+      data-website-id={websiteId}
+      src={scriptUrl}
+      strategy="afterInteractive"
+    />
+  )
+}
+```
+
+### Integration in Next.js App
+
+Add to your root layout (`app/layout.tsx` or `pages/_app.tsx`):
+
+```tsx
+import UmamiAnalytics from '@/components/UmamiAnalytics'
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <UmamiAnalytics />
+      </body>
+    </html>
+  )
+}
+```
+
+### Setup Steps
+
+1. **In Umami Dashboard (external server):**
+   - Log into your Umami instance
+   - Navigate to Settings → Websites
+   - Click "Add Website"
+   - Enter website domain (e.g., `gcb.example.com`)
+   - Copy the generated Website ID
+
+2. **In Railway/Environment:**
+   - Add `NEXT_PUBLIC_UMAMI_SCRIPT_URL` with full script URL
+   - Add `NEXT_PUBLIC_UMAMI_WEBSITE_ID` with website ID from step 1
+
+3. **In Next.js App:**
+   - Create the `UmamiAnalytics` component (see above)
+   - Import and add to root layout
+   - Deploy
+
+### Verification
+
+After deployment:
+- Visit your website
+- Check Umami dashboard for real-time visitor
+- Verify page views are being tracked
+
+### Notes
+
+- Component uses `'use client'` directive for Next.js 13+ App Router
+- Script loads with `strategy="afterInteractive"` to avoid blocking page load
+- Component gracefully handles missing environment variables (returns null)
+- No cookie consent required (Umami is privacy-respecting)
 
 ---
 

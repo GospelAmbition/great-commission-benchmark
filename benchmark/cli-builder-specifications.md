@@ -49,7 +49,7 @@ A self-contained Python CLI for **building official benchmark versions**. Versio
 5. **Build** versioned question sets from locked + approved content
 6. **Publish** locked versions for community use
 
-> **Note:** Community members who want to run benchmarks against models should use the separate [GCB Runner CLI](benchmark-cli-testing.md).
+> **Note:** Community members who want to run benchmarks against models should use the separate [GCB Runner CLI](cli-runner-specifications.md).
 
 ---
 
@@ -114,7 +114,8 @@ gcb-builder/
 │   │   ├── generate.py         # Question generation commands
 │   │   ├── curate.py           # Curation commands
 │   │   ├── judge.py            # Judge prompt development
-│   │   └── version.py          # Version building commands
+│   │   ├── version.py          # Version building commands
+│   │   └── explore.py          # Datasette database explorer
 │   ├── core/                   # Shared business logic
 │   │   ├── __init__.py
 │   │   ├── models.py           # SQLAlchemy models
@@ -152,7 +153,8 @@ gcb-builder/
 │   ├── tier2_doctrine.md
 │   └── tier3_worldview.md
 ├── data/                       # Local data directory
-│   └── gcb_builder.db          # SQLite database
+│   ├── gcb_builder.db          # SQLite database
+│   └── datasette-metadata.json # Datasette configuration
 ├── tests/
 ├── pyproject.toml
 └── README.md
@@ -487,6 +489,7 @@ Question Bank: 215 total | 98 locked 🔒 | 147 approved | 68 in review
     Develop Judge Prompts  - Test and refine judge accuracy
     Build Version          - Assemble questions into a version
     Publish Version        - Lock and export for release
+    Explore Database       - Launch Datasette for SQL exploration
     Settings               - Configure LLM backends and API keys
 ```
 
@@ -646,15 +649,15 @@ Question Summary:
 ┌─────────────────────────────────────┬────────┬────────┬───────┬────────┐
 │ Category                            │ Locked │ Total  │ Added │ Target │
 ├─────────────────────────────────────┼────────┼────────┼───────┼────────┤
-│ TIER 1 - Use Cases (70% = 105 Qs)   │        │        │       │        │
-│ 3.1 Missiological Research          │ 12     │ 18     │ 12    │ 17     │
-│ 3.2 Evangelistic Material Creation  │ 14     │ 20     │ 14    │ 18     │
-│ 3.3 Apologetic Purposes             │ 12     │ 16     │ 12    │ 18     │
-│ 3.4 Conversational AI Tools         │ 10     │ 14     │ 10    │ 17     │
-│ 3.5 Intercessory Prayer Purposes    │ 10     │ 12     │ 10    │ 17     │
-│ 3.6 Scripture Processing            │ 14     │ 20     │ 14    │ 18     │
-│ TIER 2 - Theological (20% = 30 Qs)  │ 18     │ 24     │ 18    │ 30     │
-│ TIER 3 - Worldview (10% = 15 Qs)    │ 8      │ 12     │ 8     │ 15     │
+│ TIER 1 - Use Cases (70% = 210 Qs)   │        │        │       │        │
+│ 3.1 Missiological Research          │ 12     │ 18     │ 12    │ 35     │
+│ 3.2 Evangelistic Material Creation  │ 14     │ 20     │ 14    │ 35     │
+│ 3.3 Apologetic Purposes             │ 12     │ 16     │ 12    │ 35     │
+│ 3.4 Conversational AI Tools         │ 10     │ 14     │ 10    │ 35     │
+│ 3.5 Intercessory Prayer Purposes    │ 10     │ 12     │ 10    │ 35     │
+│ 3.6 Scripture Processing            │ 14     │ 20     │ 14    │ 35     │
+│ TIER 2 - Theological (20% = 60 Qs)  │ 18     │ 24     │ 18    │ 60     │
+│ TIER 3 - Worldview (10% = 30 Qs)    │ 8      │ 12     │ 8     │ 30     │
 └─────────────────────────────────────┴────────┴────────┴───────┴────────┘
 
 Capability vs Willingness Balance:
@@ -667,7 +670,7 @@ Capability vs Willingness Balance:
 └─────────────────────────┴───────┴────────┘
 
 Version v1.0.0 now contains 98 locked questions.
-Target distribution: 105 Tier 1 (70%) / 30 Tier 2 (20%) / 15 Tier 3 (10%)
+Target distribution: 210 Tier 1 (70%) / 60 Tier 2 (20%) / 30 Tier 3 (10%)
 
 ? Add additional approved (unlocked) questions? [y/N] y
 
@@ -676,8 +679,8 @@ Target distribution: 105 Tier 1 (70%) / 30 Tier 2 (20%) / 15 Tier 3 (10%)
     Select by category
     Select individually
 
-Added 52 more questions to meet tier distribution targets.
-Version v1.0.0 now contains 150 questions (105 T1 + 30 T2 + 15 T3).
+Added 202 more questions to meet tier distribution targets.
+Version v1.0.0 now contains 300 questions (210 T1 + 60 T2 + 30 T3).
 
 ? Validate version before publishing? [Y/n]
 
@@ -685,9 +688,9 @@ Validating v1.0.0...
   ✓ All 19 categories represented
   ✓ Minimum questions per category met (8+)
   ✓ Tier distribution matches target (70/20/10):
-      Tier 1: 105 questions (70.0%) ✓
-      Tier 2: 30 questions (20.0%) ✓
-      Tier 3: 15 questions (10.0%) ✓
+      Tier 1: 210 questions (70.0%) ✓
+      Tier 2: 60 questions (20.0%) ✓
+      Tier 3: 30 questions (10.0%) ✓
   ✓ Capability vs Willingness balance:
       Capability-only: 22 (15%) ✓
       Willingness-only: 28 (19%) ✓
@@ -744,7 +747,7 @@ $ gcb-builder compile-bundle --version 1.0 --output ../gcb-runner/gcb_runner/ver
 Source: gcb-v1.0.json (locked 2025-01-15)
 
 Compiling...
-  ✓ Loaded 150 questions
+  ✓ Loaded 300 questions
   ✓ Compressed: 48KB → 14KB (71% reduction)
   ✓ Encoded to base64
   ✓ Generated checksum: sha256:7f3b2c1a...
@@ -760,6 +763,216 @@ Bundle ready! Next steps:
   2. Set CURRENT_VERSION = "1.0" (if this is the new default)
   3. Bump gcb-runner version and publish to PyPI
 ```
+
+**Explore Database Flow:**
+
+```
+$ gcb-builder explore
+
+╔═══════════════════════════════════════════════════════════════╗
+║              GCB Version Builder - Database Explorer           ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Starting Datasette server...
+  ✓ Database: data/gcb_builder.db
+  ✓ Server running at http://localhost:8001
+
+Opening browser...
+  ✓ Datasette ready
+
+Press Ctrl+C to stop the server.
+```
+
+Or run directly:
+
+```bash
+# Launch explorer
+gcb-builder explore
+
+# Use custom port
+gcb-builder explore --port 9000
+
+# Don't open browser automatically
+gcb-builder explore --no-browser
+```
+
+---
+
+## Database Explorer (Datasette)
+
+The Version Builder includes [Datasette](https://datasette.io/) for powerful visual exploration of the question bank. This is invaluable during curation:
+
+### Why Datasette?
+
+Version building involves complex queries that are cumbersome in a CLI:
+
+- "Show me all Tier 2 questions about the Trinity that are still in draft status"
+- "How many locked questions do we have per category?"
+- "Which questions have expected refusal type IDEOLOGICAL but haven't been tested?"
+- "Find questions where the difficulty is 'hard' but tests_capability is false"
+
+Datasette provides:
+
+| Feature | Benefit for Version Building |
+|---------|------------------------------|
+| **SQL queries** | Run arbitrary queries against the question bank |
+| **Faceted browsing** | Filter by tier, category, status, locked, etc. |
+| **Export options** | Export query results to CSV, JSON |
+| **Saved queries** | Store and reuse complex curation queries |
+| **Visual exploration** | See patterns in the data at a glance |
+
+### What Datasette Shows
+
+When you launch `gcb-builder explore`, Datasette opens with full access to:
+
+**Tables:**
+- `questions` — All questions with full metadata
+- `versions` — Published and draft versions
+- `version_questions` — Which questions are in which versions
+- `judge_test_cases` — Test cases for judge validation
+- `judge_test_results` — Results from judge testing
+
+**Pre-built Views:**
+- `questions_summary` — Question counts by tier/category/status
+- `locked_questions` — All locked questions (protected content)
+- `curation_queue` — Questions awaiting review
+- `version_coverage` — Category coverage per version
+
+### Example Queries
+
+**Category coverage for current version draft:**
+
+```sql
+SELECT 
+    q.tier,
+    q.category_id,
+    COUNT(*) as question_count,
+    SUM(CASE WHEN q.locked THEN 1 ELSE 0 END) as locked_count
+FROM questions q
+JOIN version_questions vq ON q.id = vq.question_id
+JOIN versions v ON vq.version_id = v.id
+WHERE v.status = 'draft'
+GROUP BY q.tier, q.category_id
+ORDER BY q.tier, q.category_id;
+```
+
+**Questions testing willingness but not capability:**
+
+```sql
+SELECT id, content, category_id, expected_verdict
+FROM questions
+WHERE tests_willingness = 1 
+  AND tests_capability = 0
+  AND status = 'approved'
+ORDER BY category_id;
+```
+
+**Locked questions with IDEOLOGICAL expected refusal:**
+
+```sql
+SELECT id, content, category_id, curator_notes
+FROM questions
+WHERE locked = 1
+  AND expected_verdict = 'REFUSED'
+  AND expected_refusal_type = 'IDEOLOGICAL';
+```
+
+### Implementation
+
+```python
+# gcb_builder/cli/explore.py
+
+import subprocess
+import webbrowser
+from pathlib import Path
+
+def launch_datasette(
+    db_path: Path,
+    port: int = 8001,
+    open_browser: bool = True
+):
+    """Launch Datasette to explore the question bank."""
+    
+    # Start Datasette server
+    cmd = [
+        "datasette",
+        str(db_path),
+        "--port", str(port),
+        "--metadata", str(get_metadata_path()),  # Custom config
+    ]
+    
+    process = subprocess.Popen(cmd)
+    
+    if open_browser:
+        import time
+        time.sleep(1)  # Wait for server to start
+        webbrowser.open(f"http://localhost:{port}")
+    
+    print(f"Datasette running at http://localhost:{port}")
+    print("Press Ctrl+C to stop.")
+    
+    try:
+        process.wait()
+    except KeyboardInterrupt:
+        process.terminate()
+        print("\nDatasette stopped.")
+```
+
+### Datasette Metadata Configuration
+
+A `datasette-metadata.json` file customizes the Datasette experience:
+
+```json
+{
+  "title": "GCB Version Builder - Question Bank",
+  "description": "Explore and curate Great Commission Benchmark questions",
+  "databases": {
+    "gcb_builder": {
+      "tables": {
+        "questions": {
+          "label_column": "content",
+          "description": "All benchmark questions with metadata",
+          "facets": ["tier", "category_id", "status", "locked", "difficulty"]
+        },
+        "versions": {
+          "description": "Published and draft benchmark versions"
+        }
+      },
+      "queries": {
+        "category_coverage": {
+          "sql": "SELECT tier, category_id, COUNT(*) as count, SUM(locked) as locked FROM questions GROUP BY tier, category_id",
+          "title": "Category Coverage",
+          "description": "Question counts by tier and category"
+        },
+        "curation_queue": {
+          "sql": "SELECT * FROM questions WHERE status = 'review' ORDER BY created_at DESC",
+          "title": "Curation Queue",
+          "description": "Questions awaiting review"
+        },
+        "locked_questions": {
+          "sql": "SELECT * FROM questions WHERE locked = 1 ORDER BY locked_at DESC",
+          "title": "Locked Questions",
+          "description": "Protected questions that won't be deleted"
+        }
+      }
+    }
+  }
+}
+```
+
+### Datasette vs CLI Curation
+
+| Task | CLI (`gcb-builder curate`) | Datasette (`gcb-builder explore`) |
+|------|----------------------------|-----------------------------------|
+| **Review single question** | ✓ Best choice | Possible but clunky |
+| **Edit question content** | ✓ Best choice | Read-only |
+| **Approve/lock questions** | ✓ Best choice | Read-only |
+| **Complex filtering** | Limited | ✓ Best choice |
+| **Ad-hoc SQL queries** | Not available | ✓ Best choice |
+| **Export subsets** | Limited | ✓ Best choice |
+| **Visualize patterns** | Not available | ✓ Best choice |
+
+**Workflow:** Use Datasette to *find* questions (complex queries, filtering), then use the CLI to *act* on them (approve, lock, edit).
 
 ---
 
@@ -1076,14 +1289,14 @@ def export_version(version: BenchmarkVersion, path: str) -> None:
 
 ### Bundle Compilation for CLI Distribution
 
-After exporting a locked version to JSON, compile it into a Python bundle for embedding in the [GCB Runner CLI](benchmark-cli-testing.md):
+After exporting a locked version to JSON, compile it into a Python bundle for embedding in the [GCB Runner CLI](cli-runner-specifications.md):
 
 ```
 $ gcb-builder compile-bundle --version 3.0 --output ../gcb-runner/gcb_runner/versions/v3_0/
 
 Compiling benchmark V3.0 for CLI distribution...
 
-  ✓ Loaded gcb-v3.0.json (150 questions)
+  ✓ Loaded gcb-v3.0.json (300 questions)
   ✓ Compressed: 45KB → 12KB
   ✓ Generated checksum: sha256:abc123...
   ✓ Created v3_0/bundle.py
@@ -1112,8 +1325,8 @@ We use compiled bundles because:
 
 VERSION = "3.0"
 RELEASE_DATE = "2025-12-01"
-QUESTION_COUNT = 150
-TIER_DISTRIBUTION = {"tier1": 105, "tier2": 30, "tier3": 15}
+QUESTION_COUNT = 300
+TIER_DISTRIBUTION = {"tier1": 210, "tier2": 60, "tier3": 30}
 CHECKSUM = "sha256:abc123..."
 
 # Compressed + base64 encoded question data
@@ -1125,7 +1338,7 @@ def _decode_bundle() -> dict:
     ...
 ```
 
-See [GCB Runner CLI - Benchmark Version System](benchmark-cli-testing.md#benchmark-version-system) for full implementation details.
+See [GCB Runner CLI - Benchmark Version System](cli-runner-specifications.md#benchmark-version-system) for full implementation details.
 
 ---
 
@@ -1157,6 +1370,7 @@ dependencies = [
     "httpx>=0.24",          # HTTP client for LLM APIs
     "pydantic>=2.0",
     "python-dotenv>=1.0",
+    "datasette>=0.64",      # Database explorer for curation
 ]
 
 [project.scripts]
