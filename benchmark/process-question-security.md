@@ -69,9 +69,11 @@ The concept of "subtle variations per tester to trace leaks" has been **removed*
 
 ### Version Numbering
 
-Each question set receives a version number:
-- V1, V2, V3, etc.
+Each question set uses semantic versioning:
+- **Semantic versions**: 1.0, 1.1, 1.2, 2.0, etc. (tracks question set evolution)
+- **Marketing versions**: Version 1, Version 2, etc. (for public communication)
 - Refreshed periodically (likely yearly or as needed)
+- Major version changes (1.x → 2.0) trigger new marketing version (Version 1 → Version 2)
 
 ### Version Lifecycle
 
@@ -90,10 +92,10 @@ Each question set receives a version number:
 
 ### Results Tagging
 
-All benchmark results are tagged with the question set version used:
-- Results from V1 are labeled V1
-- Results from V2 are labeled V2
-- No mixing of versions in comparisons
+All benchmark results are tagged with both semantic and marketing versions:
+- Results from 1.0, 1.1, 1.2 are labeled as "Version 1" (with semantic version details)
+- Results from 2.0, 2.1, 2.2 are labeled as "Version 2" (with semantic version details)
+- No mixing of major versions in comparisons (1.x vs 2.x are not directly comparable)
 
 ---
 
@@ -101,9 +103,10 @@ All benchmark results are tagged with the question set version used:
 
 ### Default View
 
-Users see **current version results first** (e.g., V2):
-- Default filter shows latest version
+Users see **current version results first** (e.g., Version 2):
+- Default filter shows latest marketing version
 - Prominent display of current leaderboard
+- Semantic version details available (e.g., "Version 2 (2.0)")
 
 ### Older Versions
 

@@ -222,7 +222,7 @@ Individual model pages show full breakdown:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Claude 3.5 Sonnet — Benchmark V2.0                                          │
+│  Claude 3.5 Sonnet — Benchmark Version 2 (2.0)                              │
 │  ═══════════════════════════════════════════════════════════════════════════│
 │                                                                              │
 │  GCB SCORE: 81                                                               │
@@ -312,8 +312,8 @@ This allows users with specialized needs to find the right model even if it does
 ## Related Documents
 
 - [benchmark-vision.md](./benchmark-vision.md) — What the benchmark tests and why
+- [benchmark-categories.md](./benchmark-categories.md) — Canonical category and verdict definitions
 - [platform-testing-methodology.md](./platform-testing-methodology.md) — How tests are designed and executed
-- [platform-tech-specification.md](./platform-tech-specification.md) — Technical implementation details
 - [process-publication-model.md](./process-publication-model.md) — How results are published and validated
 
 ---

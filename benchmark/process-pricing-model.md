@@ -97,6 +97,8 @@ The $20 benchmark hosting contribution covers:
 
 ### Contribution Determination
 
+**Starting Cost:** $20 is confirmed as the beginning cost for the benchmark hosting contribution. This amount may be adjusted later based on operational needs, but $20 is the starting cost.
+
 The fixed $20 contribution is based on:
 
 1. **Infrastructure costs** — Estimated monthly hosting and platform service costs

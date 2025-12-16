@@ -91,3 +91,6 @@ questions.db
 responses.db
 # archive/*
 archive/*.zip
+
+# Private governance documents
+documents/Founding-Committee.md

@@ -179,7 +179,7 @@ $ gcb-runner test --model gpt-4o --backend openrouter
 ║              Great Commission Benchmark - Runner               ║
 ╚═══════════════════════════════════════════════════════════════╝
 
-Benchmark Version: V3.0 (Current)
+Benchmark Version: Version 2 (2.0) (Current)
 CLI Version: 1.3.0
 
 Loading questions from embedded bundle...
@@ -264,13 +264,13 @@ Recent Test Runs:
 ┌────┬────────────────────┬─────────┬─────────────────────┬───────┬────────┐
 │ ID │ Model              │ Version │ Date                │ Score │ Status │
 ├────┼────────────────────┼─────────┼─────────────────────┼───────┼────────┤
-│ 3  │ gpt-4o             │ V3.0    │ 2025-01-15 14:32    │ 82.0  │ ✓ Done │
-│ 2  │ claude-3.5-sonnet  │ V3.0    │ 2025-01-14 09:15    │ 78.5  │ ✓ Done │
-│ 1  │ llama3.2:70b       │ V2.0    │ 2025-01-13 16:45    │ 65.0  │ ✓ Done │
+│ 3  │ gpt-4o             │ 2.0     │ 2025-01-15 14:32    │ 82.0  │ ✓ Done │
+│ 2  │ claude-3.5-sonnet  │ 2.0     │ 2025-01-14 09:15    │ 78.5  │ ✓ Done │
+│ 1  │ llama3.2:70b       │ 1.2     │ 2025-01-13 16:45    │ 65.0  │ ✓ Done │
 └────┴────────────────────┴─────────┴─────────────────────┴───────┴────────┘
 
-⚠️  Note: Test #1 used an older benchmark version (V2.0).
-    Scores from different versions are not directly comparable.
+⚠️  Note: Test #1 used an older benchmark version (1.2, Version 1).
+    Scores from different major versions (1.x vs 2.x) are not directly comparable.
 
 ? View details for run: 3
 
@@ -311,7 +311,7 @@ File ready for upload at https://gcb.example.com/submit
     "id": "local-3",
     "model": "gpt-4o",
     "backend": "openrouter",
-    "benchmark_version": "3.0",
+    "benchmark_version": "2.0",
     "judge_model": "gpt-4o",
     "completed_at": "2025-01-15T14:32:01Z"
   },
@@ -345,7 +345,7 @@ File ready for upload at https://gcb.example.com/submit
   ],
   "metadata": {
     "cli_version": "1.3.0",
-    "benchmark_version": "3.0",
+    "benchmark_version": "2.0",
     "benchmark_checksum": "sha256:abc123...",
     "timestamp": "2025-01-15T14:35:00Z"
   }
@@ -1168,13 +1168,16 @@ gcb-runner/
 │   ├── versions/                    # Embedded benchmark versions
 │   │   ├── __init__.py              # Version registry
 │   │   ├── loader.py                # Secure loading logic
-│   │   ├── v1_0/                    # Benchmark V1.0
+│   │   ├── v1_0/                    # Benchmark 1.0 (Version 1)
 │   │   │   ├── __init__.py
 │   │   │   └── bundle.py            # Compiled question bundle
-│   │   ├── v2_0/                    # Benchmark V2.0
+│   │   ├── v1_1/                    # Benchmark 1.1 (Version 1)
 │   │   │   ├── __init__.py
 │   │   │   └── bundle.py
-│   │   └── v3_0/                    # Benchmark V3.0 (latest)
+│   │   ├── v1_2/                    # Benchmark 1.2 (Version 1)
+│   │   │   ├── __init__.py
+│   │   │   └── bundle.py
+│   │   └── v2_0/                    # Benchmark 2.0 (Version 2, latest)
 │   │       ├── __init__.py
 │   │       └── bundle.py
 │   └── ...
@@ -1190,11 +1193,12 @@ $ gcb-runner test --model gpt-4o
 ╚═══════════════════════════════════════════════════════════════╝
 
 ? Select benchmark version:
-  ❯ V3.0 (Current - recommended)      300 questions
-    V2.0 (Archived)                    300 questions
-    V1.0 (Archived)                    120 questions
+  ❯ 2.0 - Version 2 (Current - recommended)      300 questions
+    1.2 - Version 1 (Archived)                    300 questions
+    1.1 - Version 1 (Archived)                    280 questions
+    1.0 - Version 1 (Archived)                    120 questions
 
-Using benchmark V3.0...
+Using benchmark 2.0 (Version 2)...
 ```
 
 Or specify directly:
@@ -1219,18 +1223,19 @@ $ gcb-runner versions
 ║           Available Benchmark Versions                         ║
 ╚═══════════════════════════════════════════════════════════════╝
 
-┌─────────┬────────────┬────────────┬────────────────────────────┐
-│ Version │ Status     │ Questions  │ Released                   │
-├─────────┼────────────┼────────────┼────────────────────────────┤
-│ V3.0    │ ⭐ Current │ 300        │ December 2025              │
-│ V2.0    │ Archived   │ 300        │ June 2025                  │
-│ V1.0    │ Archived   │ 120        │ January 2025               │
-└─────────┴────────────┴────────────┴────────────────────────────┘
+┌─────────┬──────────────┬────────────┬────────────────────────────┐
+│ Version │ Status       │ Questions  │ Released                   │
+├─────────┼──────────────┼────────────┼────────────────────────────┤
+│ 2.0     │ ⭐ Current   │ 300        │ December 2025 (Version 2)  │
+│ 1.2     │ Archived     │ 300        │ September 2025 (Version 1) │
+│ 1.1     │ Archived     │ 280        │ June 2025 (Version 1)     │
+│ 1.0     │ Archived     │ 120        │ January 2025 (Version 1)  │
+└─────────┴──────────────┴────────────┴────────────────────────────┘
 
 Question distribution follows 70/20/10 weighting:
-  • Tier 1 (Task Capability): 70% - e.g., 210 questions in V3.0
-  • Tier 2 (Doctrinal Fidelity): 20% - e.g., 60 questions in V3.0
-  • Tier 3 (Worldview Confession): 10% - e.g., 30 questions in V3.0
+  • Tier 1 (Task Capability): 70% - e.g., 210 questions in 2.0
+  • Tier 2 (Doctrinal Fidelity): 20% - e.g., 60 questions in 2.0
+  • Tier 3 (Worldview Confession): 10% - e.g., 30 questions in 2.0
 
 Use --benchmark-version to select a specific version.
 ```
@@ -1338,11 +1343,12 @@ class VersionLoader:
     
     AVAILABLE_VERSIONS = {
         "1.0": "gcb_runner.versions.v1_0",
+        "1.1": "gcb_runner.versions.v1_1",
+        "1.2": "gcb_runner.versions.v1_2",
         "2.0": "gcb_runner.versions.v2_0",
-        "3.0": "gcb_runner.versions.v3_0",
     }
     
-    CURRENT_VERSION = "3.0"
+    CURRENT_VERSION = "2.0"
     
     @classmethod
     def list_versions(cls) -> list[dict]:
@@ -1521,15 +1527,17 @@ def _decode_bundle() -> dict[str, Any]:
 | Concept | Example | What It Means |
 |---------|---------|---------------|
 | **CLI Version** | `gcb-runner 1.3.0` | The software release |
-| **Benchmark Version** | `V3.0` | The question set being tested |
+| **Benchmark Semantic Version** | `2.0` | The question set version (tracks evolution) |
+| **Benchmark Marketing Version** | `Version 2` | The marketing milestone name |
 
 A single CLI release may include multiple benchmark versions:
 
 ```
 gcb-runner 1.3.0
-├── Benchmark V1.0 (archived)
-├── Benchmark V2.0 (archived)
-└── Benchmark V3.0 (current)
+├── Benchmark 1.0 - Version 1 (archived)
+├── Benchmark 1.1 - Version 1 (archived)
+├── Benchmark 1.2 - Version 1 (archived)
+└── Benchmark 2.0 - Version 2 (current)
 ```
 
 ### Backward Compatibility
@@ -1547,7 +1555,7 @@ gcb-runner 1.3.0
     "id": "local-3",
     "model": "gpt-4o",
     "backend": "openrouter",
-    "benchmark_version": "3.0",        // ← Benchmark version
+    "benchmark_version": "2.0",        // ← Benchmark version
     "cli_version": "1.3.0",            // ← CLI version
     "judge_model": "gpt-4o",
     "completed_at": "2025-01-15T14:32:01Z"

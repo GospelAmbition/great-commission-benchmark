@@ -20,23 +20,41 @@ The Great Commission Benchmark uses a **strict versioning system** to ensure:
 
 | Component | Versioning | Example |
 |-----------|------------|---------|
-| **Question Sets** | Major versions | V1, V2, V3 |
-| **Scoring Methodology** | Minor versions | V1.0, V1.1, V1.2 |
+| **Question Sets** | Semantic versioning | 1.0, 1.1, 1.2, 2.0 |
+| **Marketing Milestones** | Milestone names | Version 1, Version 2 |
+| **Scoring Methodology** | Tied to question set | Changes with question set version |
 | **Judge Prompts** | Tied to methodology | Changes with scoring |
 | **Platform Code** | Semantic versioning | 1.0.0, 1.1.0, 2.0.0 |
 
 ### Version Format
 
+The benchmark uses **two complementary versioning systems**:
+
+1. **Semantic Versioning (Question Set Evolution)**: `1.0`, `1.1`, `1.2`, `2.0`
+   - Tracks incremental changes to the question set
+   - Used internally for tracking evolution and technical references
+   - Format: `{major}.{minor}`
+   - Examples:
+     - `1.0` — Initial question set release
+     - `1.1` — Minor question set updates (additions, refinements)
+     - `1.2` — More question set updates
+     - `2.0` — Major question set overhaul (new questions)
+
+2. **Milestone Versioning (Marketing)**: `Version 1`, `Version 2`
+   - Used for marketing, public communication, and milestone identification
+   - Maps to major semantic versions (1.x → Version 1, 2.x → Version 2)
+   - Examples:
+     - `Version 1` — Maps to question set versions 1.0, 1.1, 1.2, etc.
+     - `Version 2` — Maps to question set versions 2.0, 2.1, 2.2, etc.
+
+### Version Mapping
+
 ```
-Benchmark V{major}.{minor}
-
-Major: Question set version (1, 2, 3...)
-Minor: Methodology refinements (0, 1, 2...)
-
-Examples:
-- V1.0 — Initial release
-- V1.1 — Scoring refinement, same questions
-- V2.0 — New question set
+Semantic Version → Marketing Version
+─────────────────────────────────────
+1.0, 1.1, 1.2  → Version 1
+2.0, 2.1, 2.2  → Version 2
+3.0, 3.1, 3.2  → Version 3
 ```
 
 ---
@@ -69,36 +87,43 @@ Examples:
 4. **Lock executed** — Questions become immutable
 5. **Activation** — New version becomes default for testing
 
-### What Triggers a New Major Version
+### What Triggers Version Changes
 
-| Trigger | Example |
-|---------|---------|
-| **Question leak** | Questions appear in training data |
-| **Methodology overhaul** | Fundamental scoring changes |
-| **Category changes** | New use cases or doctrines added |
-| **Annual refresh** | Proactive contamination prevention |
-| **Community request** | Significant concerns about question quality |
+| Change Type | Version Bump | Marketing Version | Example |
+|-------------|--------------|------------------|---------|
+| **Question leak** | Major (1.x → 2.0) | Changes (Version 1 → Version 2) | Questions appear in training data |
+| **Major category changes** | Major (1.x → 2.0) | Changes (Version 1 → Version 2) | New use cases or doctrines added |
+| **Annual refresh** | Major (1.x → 2.0) | Changes (Version 1 → Version 2) | Proactive contamination prevention |
+| **Question additions** | Minor (1.0 → 1.1) | Stays same (Version 1) | Adding 10-20 new questions |
+| **Question refinements** | Minor (1.0 → 1.1) | Stays same (Version 1) | Improving existing questions |
+| **Methodology refinements** | Patch (1.1 → 1.1.1) | Stays same (Version 1) | Judge prompt improvements |
+| **Bug fixes** | Patch (1.1 → 1.1.1) | Stays same (Version 1) | Correcting evaluation errors |
 
 ---
 
 ## Methodology Versioning
 
-### Minor Version Changes
+### Version Changes
 
-Minor versions (V1.0 → V1.1) indicate refinements that don't affect question content:
+Question set versions use semantic versioning:
+- **Major version changes** (1.0 → 2.0): New question set, results NOT directly comparable
+- **Minor version changes** (1.0 → 1.1): Question set updates, results comparable with noted changes
+- **Patch version changes** (1.1 → 1.1.1): Bug fixes, methodology refinements, fully comparable
 
-| Change Type | Impact |
-|-------------|--------|
-| Judge prompt wording | Improved clarity, same intent |
-| Scoring thresholds | Adjusted cutoffs for verdicts |
-| Calibration set updates | More accurate baseline |
-| Bug fixes | Correcting evaluation errors |
+| Change Type | Version Bump | Impact |
+|-------------|--------------|--------|
+| New question set | Major (1.0 → 2.0) | Results NOT directly comparable |
+| Question additions/refinements | Minor (1.0 → 1.1) | Results comparable with noted changes |
+| Judge prompt wording | Patch (1.1 → 1.1.1) | Fully comparable |
+| Scoring thresholds | Patch (1.1 → 1.1.1) | Fully comparable |
+| Calibration set updates | Patch (1.1 → 1.1.1) | Fully comparable |
+| Bug fixes | Patch (1.1 → 1.1.1) | Fully comparable |
 
 ### Compatibility Rules
 
-- **Same major version** — Results are comparable
-- **Different minor versions** — Results are comparable with noted methodology
-- **Different major versions** — Results are NOT directly comparable
+- **Same major version** (1.x) — Results are comparable
+- **Different minor versions** (1.0 vs 1.1) — Results are comparable with noted question set changes
+- **Different major versions** (1.x vs 2.x) — Results are NOT directly comparable
 
 ### Deprecation Policy
 
@@ -119,11 +144,14 @@ When methodology changes:
 ┌─────────────────────────────────────────────────────────────────┐
 │  🏆 Great Commission Benchmark Leaderboard                      │
 │                                                                 │
-│  Version: V2.0 ▼                                                │
+│  Version: Version 2 (1.2) ▼                                    │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │ ● V2.0 (Current)                                         │   │
-│  │ ○ V1.1 (Archived - 47 results)                          │   │
-│  │ ○ V1.0 (Archived - 23 results)                          │   │
+│  │ ● Version 2 (1.2) - Current                             │   │
+│  │ ○ Version 2 (1.1) - Archived (47 results)              │   │
+│  │ ○ Version 2 (1.0) - Archived (23 results)              │   │
+│  │ ○ Version 1 (1.2) - Archived (156 results)              │   │
+│  │ ○ Version 1 (1.1) - Archived (89 results)               │   │
+│  │ ○ Version 1 (1.0) - Archived (45 results)               │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                                                                 │
 │  Rank │ Model              │ Score │ Tested      │ Trust       │
@@ -137,10 +165,10 @@ When methodology changes:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Claude 3.5 Sonnet — Benchmark V2.0                             │
+│  Claude 3.5 Sonnet — Benchmark Version 2                        │
 │  ────────────────────────────────────────────────────────────   │
-│  Question Set: V2 (locked Dec 1, 2025)                          │
-│  Methodology: V2.0                                              │
+│  Question Set: 1.2 (locked Dec 1, 2025)                        │
+│  Marketing: Version 2                                           │
 │  Tested: Dec 14, 2025                                           │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -159,11 +187,13 @@ Model: Claude 3.5 Sonnet
 ┌──────────────────────────────────────────────────────────┐
 │  Performance History                                      │
 │  ─────────────────────────────────────────────────────   │
-│  V1.0: 71/100 (Mar 2025)                                 │
-│  V1.1: 73/100 (Jun 2025) — methodology refinement        │
-│  V2.0: 78/100 (Dec 2025) — new question set              │
+│  Version 1 (1.0): 71/100 (Mar 2025)                      │
+│  Version 1 (1.1): 73/100 (Jun 2025) — question updates   │
+│  Version 1 (1.2): 74/100 (Sep 2025) — question updates   │
+│  Version 2 (2.0): 78/100 (Dec 2025) — new question set   │
 │                                                          │
-│  ⚠️ V1.x and V2.0 scores are not directly comparable     │
+│  ⚠️ Version 1 (1.x) and Version 2 (2.x) scores are not  │
+│     directly comparable                                   │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -171,7 +201,7 @@ Model: Claude 3.5 Sonnet
 
 When comparing across major versions:
 
-> ⚠️ **Different question sets** — V1 and V2 use different questions. Score changes may reflect question difficulty differences, not model improvements.
+> ⚠️ **Different question sets** — Version 1 and Version 2 use different questions. Score changes may reflect question difficulty differences, not model improvements.
 
 ---
 
@@ -219,21 +249,24 @@ Every version change must document:
 ### Example Entry
 
 ```markdown
-## V1.1 (June 15, 2025)
+## 1.1 (June 15, 2025) - Version 1
 
-**Type:** Minor (methodology)
+**Type:** Minor (question set updates)
 
-**Summary:** Refined judge prompt for Scripture Processing category
+**Summary:** Added 15 new questions and refined judge prompt for Scripture Processing category
 
 **Details:**
-- Clarified distinction between COMPROMISED and REFUSED verdicts
+- Added 5 new questions to category 3.2 (Scripture Processing)
+- Added 10 new questions to category 3.4 (AI Counseling)
+- Clarified distinction between COMPROMISED and REFUSED verdicts in judge prompt
 - Added explicit handling for passages in different Bible translations
 - Updated calibration set with 10 additional edge cases
 
 **Impact:**
-- Existing V1.0 results remain valid
-- New tests will use refined scoring
+- Existing 1.0 results remain valid and comparable
+- New tests will use updated question set (1.1)
 - Score differences expected to be <2% for most models
+- Marketing version remains "Version 1" (no milestone change)
 ```
 
 ---
@@ -246,18 +279,18 @@ Every version change must document:
 -- Question set versioning
 CREATE TABLE question_sets (
     id UUID PRIMARY KEY,
-    version VARCHAR(10) NOT NULL,  -- 'V1', 'V2', etc.
-    status VARCHAR(20) NOT NULL,   -- 'draft', 'active', 'archived'
+    semantic_version VARCHAR(10) NOT NULL,  -- '1.0', '1.1', '1.2', '2.0', etc.
+    marketing_version VARCHAR(20) NOT NULL, -- 'Version 1', 'Version 2', etc.
+    status VARCHAR(20) NOT NULL,            -- 'draft', 'active', 'archived'
     created_at TIMESTAMP NOT NULL,
     locked_at TIMESTAMP,
     archived_at TIMESTAMP,
     notes TEXT
 );
 
--- Methodology versioning
+-- Methodology versioning (tied to question set)
 CREATE TABLE methodology_versions (
     id UUID PRIMARY KEY,
-    version VARCHAR(10) NOT NULL,  -- 'V1.0', 'V1.1', etc.
     question_set_id UUID REFERENCES question_sets(id),
     judge_prompt TEXT NOT NULL,
     scoring_config JSONB NOT NULL,
@@ -281,7 +314,8 @@ CREATE TABLE test_runs (
 |----------|---------|
 | `GET /api/versions` | List all versions with status |
 | `GET /api/versions/current` | Get current active version |
-| `GET /api/results?version=V2` | Filter results by version |
+| `GET /api/results?version=1.2` | Filter results by semantic version |
+| `GET /api/results?marketing_version=Version+2` | Filter results by marketing version |
 | `GET /api/model/{id}/history` | Model performance across versions |
 
 ---

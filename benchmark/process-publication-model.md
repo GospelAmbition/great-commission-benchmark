@@ -51,7 +51,8 @@ Each published result displays its current trust level:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Claude 3.5 Sonnet — Benchmark v1.0                             │
+│  Claude 3.5 Sonnet — Benchmark Version 1                        │
+│  Question Set: 1.0                                               │
 │  Overall Score: 78/100                                          │
 │                                                                 │
 │  Validation Status: Reviewed ✓✓                                 │
@@ -114,7 +115,7 @@ Moderators review published results on their own schedule:
 3. **Confirm or flag** — Mark as verified or raise concerns
 4. **Trust tier updates** — Result's validation status reflects new review
 
-See [decision-moderation-process.md](./decision-moderation-process.md) for complete moderator workflows.
+See [process-moderation-process.md](./process-moderation-process.md) for complete moderator workflows.
 
 ### 5. Progressive Trust Accumulation
 
@@ -202,7 +203,7 @@ Moderators are users with a special role granting elevated permissions:
   - Special interest in the benchmark's mission
   - Community involvement and standing
 
-See [decision-moderation-process.md](./decision-moderation-process.md) for selection criteria.
+See [process-moderation-process.md](./process-moderation-process.md) for selection criteria.
 
 ### Review Process
 
@@ -267,5 +268,5 @@ This supports:
 
 - [Deployment Vision](./platform-deployment-vision.md) — Overall deployment strategy
 - [Testing Methodology](./platform-testing-methodology.md) — How tests are executed
-- [Moderation Process](./decision-moderation-process.md) — Moderator selection and workflows
-- [Question Security](./decision-question-security.md) — Question protection and versioning
+- [Moderation Process](./process-moderation-process.md) — Moderator selection and workflows
+- [Question Security](./process-question-security.md) — Question protection and versioning

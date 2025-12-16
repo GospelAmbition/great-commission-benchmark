@@ -61,7 +61,7 @@ A Railway-deployed application where registered testers:
 **Tech Stack:**
 - Railway hosting
 - FastAPI backend (Python)
-- React + Tailwind + Next.js frontend
+- React + Tailwind CSS + Next.js frontend + shadcn/ui component library
 
 **Advantages:**
 - Lower barrier to entry for non-technical users
@@ -123,7 +123,8 @@ See [platform-technical-architecture.md](./platform-technical-architecture.md) f
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
 | **API Backend** | Python + FastAPI | Matches existing pipeline code; handles benchmark execution, heavy processing |
-| **Frontend** | React + Next.js + Tailwind | SSR/SSG for SEO; modern DX |
+| **Frontend** | React + Next.js + Tailwind CSS | SSR/SSG for SEO; modern DX |
+| **UI Components** | shadcn/ui | Copy-paste components built on Radix UI + Tailwind; excellent accessibility; full customization |
 | **Hosting** | Railway | Familiar stack, cost bundling with other projects |
 | **Authentication** | Auth0 | Industry-standard, handles OAuth/social login |
 | **Database** | PostgreSQL | Already in use for pipeline; robust and well-supported |
@@ -248,7 +249,7 @@ Multi-turn decay metrics     →    Alignment stability scores
 - [ ] Implement payment integration (Stripe)
 
 ### Phase C: Public Website (Stage 3)
-- [ ] Design and build React/Next.js frontend
+- [ ] Design and build React/Next.js frontend with Tailwind CSS + shadcn/ui
 - [ ] Implement leaderboard views
 - [ ] Build category/model exploration UI
 - [ ] Create moderation dashboard
@@ -291,7 +292,7 @@ Benchmark questions are **not open source** and are distributed only to register
 
 - **No question variations:** The benchmark uses an exact, fixed set of questions for each version. Reproducibility takes priority over leak tracing.
 - **Version invalidation on leak:** If questions leak publicly, we release a new version with a new set of questions. The leaked version is simply superseded.
-- **Question set versioning:** Version numbered (V1, V2, V3) and refreshed periodically—likely yearly or as needed.
+- **Question set versioning:** Uses semantic versioning (1.0, 1.1, 1.2, 2.0) for tracking evolution, with marketing milestones (Version 1, Version 2) for public communication. Refreshed periodically—likely yearly or as needed.
 
 ---
 
@@ -431,10 +432,11 @@ We will **retain all response data and collection data indefinitely**.
 The benchmark uses **versioning** to manage question set updates.
 
 **How It Works:**
-- Each question set receives a version number (V1, V2, V3)
-- All results are tagged with the question set version used
+- Each question set uses semantic versioning (1.0, 1.1, 1.2, 2.0) for tracking evolution
+- Marketing versions (Version 1, Version 2) are used for public communication
+- All results are tagged with both semantic and marketing versions
 - Leaderboard displays which version each result was tested against
-- Results from different versions are kept distinct
+- Results from different major versions (1.x vs 2.x) are kept distinct
 
 ### Website Display
 

@@ -19,11 +19,13 @@ This folder contains the specification and design documents for the Great Commis
 
 ## Document Structure
 
-### Primary Vision Document
+### Primary Documents
 
 | Document | Purpose |
 |----------|---------|
 | [benchmark-vision.md](./benchmark-vision.md) | **The foundational vision** — defines what we're building, why it matters, who it serves, and what we test |
+| [benchmark-categories.md](./benchmark-categories.md) | **Canonical category reference** — single source of truth for all testing categories, doctrines, and classifications |
+| [benchmark-scoring.md](./benchmark-scoring.md) | **Scoring methodology** — the 70/20/10 weighting rationale and score calculation |
 
 ### Implementation & Deployment Strategy
 
@@ -92,12 +94,16 @@ When making decisions:
 ```
 benchmark-vision.md (Primary Vision)
     │
+    ├──→ benchmark-categories.md (Canonical Category Definitions)
+    │       └── Single source of truth for categories, doctrines, verdicts
+    │
+    ├──→ benchmark-scoring.md (Scoring 70/20/10)
+    │
     ├──→ platform-deployment-vision.md (Implementation Strategy)
     │       │
     │       ├──→ platform-technical-architecture.md (Technical Decisions)
     │       ├──→ platform-build-requirements.md (Requirements)
-    │       ├──→ platform-testing-methodology.md (How Tests Work)
-    │       └──→ benchmark-scoring.md (Scoring 70/20/10)
+    │       └──→ platform-testing-methodology.md (How Tests Work)
     │
     ├──→ process-publication-model.md (How Results Are Published)
     ├──→ platform-versioning.md (Question Set Management)

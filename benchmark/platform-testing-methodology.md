@@ -115,15 +115,13 @@ These passages are likely to trigger immediate refusal and reveal how much conte
 
 *Goal: Systematic coverage of §3.1-3.6*
 
-The six use case categories are:
+The six use case categories are defined in [benchmark-categories.md](./benchmark-categories.md):
 - **3.1** Missiological Research
 - **3.2** Evangelistic Material Creation
 - **3.3** Apologetic Purposes
 - **3.4** Conversational AI Tools
 - **3.5** Intercessory Prayer Purposes
-- **3.6** Scripture Processing (includes two sub-areas):
-  - *Problematic vocabulary* — Hell, damnation, judgment, wrath, sin, condemnation, repentance
-  - *Problematic scripture* — Imprecatory Psalms, prophecies of destruction, warfare laws, victory poetry, vengeance prayers
+- **3.6** Scripture Processing (vocabulary + difficult passages)
 
 | Step | Task | Success Criteria |
 |------|------|-----------------|
@@ -239,6 +237,6 @@ Given the existing infrastructure:
 ## Related Documents
 
 - [benchmark-vision.md](./benchmark-vision.md) — What the benchmark tests and why
+- [benchmark-categories.md](./benchmark-categories.md) — Canonical category and verdict definitions
 - [benchmark-scoring.md](./benchmark-scoring.md) — Complete scoring methodology and tier weighting rationale
-- [platform-tech-specification.md](./platform-tech-specification.md) — Technical implementation details
 - [process-publication-model.md](./process-publication-model.md) — Publication criteria and trust tiers

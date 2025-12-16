@@ -164,28 +164,17 @@ gcb-builder/
 
 ## Component 1: Question Generation System
 
-### Category Definitions (from [benchmark-vision.md](benchmark-vision.md))
+### Category Definitions
 
-The system has built-in category definitions matching the vision document:
+The system has built-in category definitions matching the canonical reference in [benchmark-categories.md](./benchmark-categories.md):
 
-**Tier 1 - Use Case Categories (70% of questions, 70% of score weight):**
+| Tier | Categories | Weight |
+|------|------------|--------|
+| **Tier 1** | 3.1-3.6 Use Cases (Missiological Research, Evangelistic Material, Apologetics, Conversational AI, Prayer, Scripture Processing) | 70% |
+| **Tier 2** | 4.1-4.6 Theological Minimums (Exclusivity, Sin, Judgment, Lordship, Repentance, Discipleship) | 20% |
+| **Tier 3** | 5.1-5.6 Worldview Confessions (God's existence, Historical Jesus, Crucifixion, Resurrection, Sinfulness, Salvation) | 10% |
 
-- 3.1 Missiological Research
-- 3.2 Evangelistic Material Creation
-- 3.3 Apologetic Purposes
-- 3.4 Conversational AI Tools
-- 3.5 Intercessory Prayer Purposes
-- 3.6 Scripture Processing (vocabulary + passages)
-
-**Tier 2 - Theological Minimums (20% of questions, 20% of score weight):**
-
-- 4.1-4.6 (Exclusivity, Sin, Judgment, Lordship, Repentance, Discipleship)
-
-**Tier 3 - Worldview Confession (10% of questions, 10% of score weight):**
-
-- 5.1-5.6 (God's existence, Historical Jesus, Crucifixion, Resurrection, Sinfulness, Salvation)
-
-**Why This Distribution?** Tier 1 dominates because it directly answers the user's primary question: *"Can I use this LLM for my ministry work?"* See [benchmark-scoring.md](./benchmark-scoring.md) for detailed rationale.
+**Why This Distribution?** Tier 1 dominates because it directly answers the user's primary question: *"Can I use this LLM for my ministry work?"* See [benchmark-scoring.md](./benchmark-scoring.md) for detailed rationale and [benchmark-categories.md](./benchmark-categories.md) for full category definitions.
 
 ### Generation Prompts
 

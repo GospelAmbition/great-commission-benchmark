@@ -24,40 +24,19 @@ You have **complete specification documents** ready to guide a fresh build:
 
 ### 1. Question Sets (Based on Vision §3-5)
 
-The vision document defines **three testing tiers** with specific categories and weighted scoring (70/20/10):
+The benchmark tests **three tiers** with weighted scoring (70/20/10). Full definitions are in [benchmark-categories.md](./benchmark-categories.md):
 
-#### Tier 1: Use Case Categories (§3.1-3.6) — 70% of Score Weight
+| Tier | Focus | Categories | Weight |
+|------|-------|------------|--------|
+| **Tier 1** | Task Capability | 3.1-3.6 Use Cases | 70% |
+| **Tier 2** | Doctrinal Fidelity | 4.1-4.6 Theological Minimums | 20% |
+| **Tier 3** | Worldview Confession | 5.1-5.6 Core Affirmations | 10% |
 
-| Category | Definition | Question Focus |
-|----------|------------|----------------|
-| **3.1 Missiological Research** | Research into spiritual conditions of people/places | Analyze religious demographics, cultural barriers, unreached people groups, spiritual landscape |
-| **3.2 Evangelistic Material Creation** | Content to persuade non-Christians | Gospel presentations, evangelistic tracts, outreach materials, testimonies |
-| **3.3 Apologetic Purposes** | Reasoned arguments for Christian faith | Arguments for Christianity, responding to objections, comparative religion, worldview critique |
-| **3.4 Conversational AI Tools** | AI interfaces for ministries | Customer service agents, spiritual Q&A chatbots, discipleship tools with Christian worldview |
-| **3.5 Intercessory Prayer Purposes** | Content identifying spiritual needs | Prayer guides for unreached groups, spiritual state of nations, prayer calendars |
-| **3.6 Scripture Processing** | Working with "problematic" biblical texts | Hell, judgment, wrath, sin vocabulary + imprecatory Psalms, conquest narratives, judgment prophecies |
-
-#### Tier 2: Theological Minimums (§4.1-4.6) — 20% of Score Weight
-
-| Doctrine | Core Claim |
-|----------|------------|
-| **4.1 Exclusivity of Jesus** | Jesus is the one way to God |
-| **4.2 Universality of Sin** | All have fallen short |
-| **4.3 Reality of Judgment** | Coming judgment for all |
-| **4.4 Lordship of Jesus** | Jesus as Lord demanding obedience |
-| **4.5 Call to Repentance** | Turn from current path and believe |
-| **4.6 Burden to Make Disciples** | Evangelism/discipleship is obligatory |
-
-#### Tier 3: Worldview Confession (§5.1-5.6) — 10% of Score Weight
-
-| Affirmation | Test |
-|-------------|------|
-| **5.1** | Can affirm God exists as a real, personal being |
-| **5.2** | Can affirm Jesus was a real historical person |
-| **5.3** | Can affirm the crucifixion as historical |
-| **5.4** | Can affirm bodily resurrection |
-| **5.5** | Can affirm universal sinfulness/condemnation |
-| **5.6** | Can affirm salvation through faith in Jesus alone |
+See [benchmark-categories.md](./benchmark-categories.md) for:
+- Full definitions of each use case category (3.1-3.6)
+- Theological minimums and their implications (4.1-4.6)
+- Worldview affirmation tests (5.1-5.6)
+- Response classification framework (verdicts)
 
 ---
 
@@ -101,30 +80,66 @@ BACKEND (FastAPI + Python)
     ├── Trust tier progression
     └── Escalation handling
 
-FRONTEND (Next.js + React + Tailwind)
+FRONTEND (Next.js + React + Tailwind CSS + shadcn/ui)
+├── Component Library Setup
+│   ├── shadcn/ui initialization
+│   ├── Radix UI primitives (included with shadcn/ui)
+│   ├── Tailwind CSS configuration
+│   └── Component customization
+│
 ├── Public Pages
 │   ├── Leaderboard (overall, by category, by tier)
+│   │   ├── Table component (shadcn/ui Table)
+│   │   ├── Badge components (trust tiers, scores)
+│   │   ├── Chart.js visualizations (bar charts, heatmaps)
+│   │   └── Filtering UI (Select, Dropdown Menu)
 │   ├── Model comparison view
+│   │   ├── Card components for model details
+│   │   ├── Tabs for different views
+│   │   └── Progress indicators
 │   ├── Category deep-dive pages
 │   ├── Methodology documentation
 │   └── About/FAQ
 │
 ├── User Pages (authenticated)
 │   ├── Test execution flow (select → pay → run → results)
+│   │   ├── Form components (Input, Select, Checkbox)
+│   │   ├── Button components
+│   │   ├── Dialog/Sheet for modals
+│   │   └── Progress indicators
 │   ├── User dashboard (test history, status)
+│   │   ├── Table for test history
+│   │   ├── Card components for test summaries
+│   │   └── Badge components for status
 │   ├── Account settings
+│   │   └── Form components
 │   └── Sponsorship request form
+│       └── Form components with validation
 │
 ├── Moderator Pages
 │   ├── Review queue
+│   │   ├── Table for queue items
+│   │   ├── Dialog for review interface
+│   │   └── Radio Group for verdict selection
 │   ├── Spot-check interface
+│   │   ├── Card components for verdicts
+│   │   ├── Form components for review
+│   │   └── Alert components for feedback
 │   ├── Activity log
+│   │   └── Table component
 │   └── Escalation tools
+│       └── Dialog/Sheet components
 │
 └── Admin Pages
     ├── User management
+    │   ├── Table component
+    │   ├── Dropdown Menu for actions
+    │   └── Dialog for user details
     ├── System metrics
+    │   ├── Card components for metrics
+    │   └── Progress indicators
     └── Question set management
+        └── Form and table components
 
 DATABASE (PostgreSQL)
 ├── Users (id, auth0_id, email, role)

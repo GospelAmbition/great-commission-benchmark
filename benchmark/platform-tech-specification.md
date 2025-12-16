@@ -130,7 +130,8 @@ The Great Commission Benchmark platform is a public-facing website that:
 
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
-| **Frontend** | React + Next.js + Tailwind | SSR/SSG for SEO; modern DX; popular ecosystem |
+| **Frontend** | React + Next.js + Tailwind CSS | SSR/SSG for SEO; modern DX; popular ecosystem |
+| **UI Components** | shadcn/ui | Copy-paste components built on Radix UI + Tailwind; excellent accessibility; full customization; no runtime overhead |
 | **API Backend** | Python + FastAPI | Matches existing pipeline code; handles benchmark execution |
 | **Hosting** | Railway | Familiar stack, cost bundling with other projects |
 | **Authentication** | Auth0 | Industry-standard OAuth, free tier available |
@@ -140,7 +141,32 @@ The Great Commission Benchmark platform is a public-facing website that:
 | **Email** | SendGrid | User notifications |
 | **Analytics** | Umami (self-hosted, off-site) | Privacy-respecting analytics; shared instance on separate server |
 
-### 3.2 OpenRouter Integration
+### 3.2 Frontend Component Library (shadcn/ui)
+
+**Why shadcn/ui:**
+- **Perfect Tailwind integration** — Built specifically for Tailwind CSS workflows
+- **Excellent accessibility** — Built on Radix UI primitives (WCAG Level A compatible)
+- **Full customization** — Components live in your codebase, fully customizable
+- **No runtime overhead** — Copy-paste components, no external dependencies at runtime
+- **Ideal for project needs** — Perfect for leaderboards, forms, dashboards, moderation interfaces
+- **Growing ecosystem** — Active community and expanding component library
+
+**Component Categories:**
+- **Layout:** Card, Separator, Sheet, Dialog, Drawer
+- **Forms:** Input, Select, Checkbox, Radio Group, Form (with react-hook-form)
+- **Data Display:** Table, Badge, Avatar, Progress, Skeleton
+- **Navigation:** Tabs, Dropdown Menu, Navigation Menu, Breadcrumb
+- **Feedback:** Alert, Toast, Dialog, Popover, Tooltip
+- **Overlay:** Sheet, Dialog, Popover, Tooltip, Hover Card
+
+**Implementation:**
+- Components are installed via CLI and copied into your project
+- Full TypeScript support
+- Fully customizable with Tailwind CSS
+- Built on accessible Radix UI primitives
+- Zero runtime bundle size impact
+
+### 3.3 OpenRouter Integration
 
 **Why OpenRouter:**
 - Single API for 100+ models
@@ -216,7 +242,8 @@ CREATE TABLE models (
 -- Question Sets (versioned)
 CREATE TABLE question_sets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    version VARCHAR(10) NOT NULL,           -- 'V1', 'V2', etc.
+    semantic_version VARCHAR(10) NOT NULL,  -- '1.0', '1.1', '1.2', '2.0', etc.
+    marketing_version VARCHAR(20) NOT NULL, -- 'Version 1', 'Version 2', etc.
     status VARCHAR(20) NOT NULL,            -- 'draft', 'active', 'archived'
     created_at TIMESTAMP DEFAULT NOW(),
     locked_at TIMESTAMP,
@@ -224,10 +251,9 @@ CREATE TABLE question_sets (
     notes TEXT
 );
 
--- Methodology Versions
+-- Methodology Versions (tied to question set)
 CREATE TABLE methodology_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    version VARCHAR(10) NOT NULL,           -- 'V1.0', 'V1.1', etc.
     question_set_id UUID REFERENCES question_sets(id),
     judge_prompt TEXT NOT NULL,
     scoring_config JSONB NOT NULL,
@@ -380,6 +406,7 @@ GET  /api/categories                     # List use case categories
 GET  /api/categories/:slug               # Category deep-dive
 GET  /api/versions                       # List all benchmark versions
 GET  /api/versions/current               # Get current active version
+GET  /api/cli/versions                   # CLI version check endpoint (for gcb-runner)
 GET  /api/compare                        # Compare multiple models (query params)
 POST /api/newsletter/subscribe           # Newsletter signup
 ```
@@ -505,7 +532,7 @@ POST /api/webhooks/auth0                 # Auth0 event webhooks
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  🏆 Great Commission Benchmark Leaderboard                                   │
 │                                                                              │
-│  Version: V2.0 ▼                           Scoring: 70% Task / 20% Doctrine │
+│  Version: Version 2 (2.0) ▼                Scoring: 70% Task / 20% Doctrine │
 │                                                      / 10% Worldview        │
 │                                                                              │
 │  Rank │ Model              │ Score │ Task │ Doct │ World │ Tested      │Trust│
@@ -720,31 +747,26 @@ See [benchmark-scoring.md](./benchmark-scoring.md) for detailed scoring methodol
 
 ### 8.2 Use Case Categories
 
-| Category | Definition |
-|----------|------------|
-| **3.1 Missiological Research** | Research into spiritual conditions of people/places |
-| **3.2 Evangelistic Material Creation** | Content to persuade non-Christians |
-| **3.3 Apologetic Purposes** | Reasoned arguments for Christian faith |
-| **3.4 Conversational AI Tools** | AI interfaces for ministries |
-| **3.5 Intercessory Prayer Purposes** | Content identifying spiritual needs |
-| **3.6 Scripture Processing** | Working with "problematic" biblical texts |
+See [benchmark-categories.md](./benchmark-categories.md) for full definitions of all categories:
+
+| Category | Brief Description |
+|----------|-------------------|
+| **3.1** | Missiological Research |
+| **3.2** | Evangelistic Material Creation |
+| **3.3** | Apologetic Purposes |
+| **3.4** | Conversational AI Tools |
+| **3.5** | Intercessory Prayer Purposes |
+| **3.6** | Scripture Processing |
 
 ### 8.3 Response Classification
 
-**For Task Requests:**
-- `ACCEPTED` — Completes the task as requested
-- `COMPROMISED` — Completes but dilutes/qualifies key claims
-- `REFUSED` — Declines to complete
+See [benchmark-categories.md](./benchmark-categories.md) for the complete response classification framework.
 
-**For Doctrinal Content:**
-- `LOYAL` — Maintains theological accuracy
-- `COMPROMISED` — Includes unhelpful caveats, relativizes claims
-- `DISLOYAL` — Contradicts or undermines the doctrine
-
-**For Worldview Questions:**
-- `AFFIRMED` — States the claim as true
-- `HEDGED` — Presents as "Christians believe..." without affirmation
-- `DENIED` — Contradicts or refuses
+| Tier | Pass | Partial | Fail |
+|------|------|---------|------|
+| **Tier 1** (Tasks) | ACCEPTED | COMPROMISED | REFUSED |
+| **Tier 2** (Doctrine) | LOYAL | COMPROMISED | DISLOYAL |
+| **Tier 3** (Worldview) | AFFIRMED | HEDGED | DENIED |
 
 ### 8.4 Execution Pipeline
 
@@ -897,13 +919,15 @@ Second also flags "Concerns"?
 ```
 Benchmark V{major}.{minor}
 
-Major: Question set version (1, 2, 3...)
-Minor: Methodology refinements (0, 1, 2...)
+Semantic versioning: {major}.{minor}
+- Major version (1.0 → 2.0): New question set, triggers new marketing version
+- Minor version (1.0 → 1.1): Question set updates, same marketing version
 
 Examples:
-- V1.0 — Initial release
-- V1.1 — Scoring refinement, same questions
-- V2.0 — New question set
+- 1.0 — Initial release (Version 1)
+- 1.1 — Question set updates (Version 1)
+- 1.2 — More question set updates (Version 1)
+- 2.0 — New question set (Version 2)
 ```
 
 ### 11.2 Question Set Lifecycle
@@ -917,18 +941,20 @@ review    testing     reference
 
 ### 11.3 Version Triggers
 
-| Trigger | Action |
-|---------|--------|
-| Question leak | Release new major version |
-| Methodology overhaul | Release new major version |
-| Annual refresh | Release new major version |
-| Scoring refinement | Release new minor version |
+| Trigger | Version Bump | Marketing Version |
+|---------|--------------|-------------------|
+| Question leak | Major (1.x → 2.0) | Changes (Version 1 → Version 2) |
+| Major category changes | Major (1.x → 2.0) | Changes (Version 1 → Version 2) |
+| Annual refresh | Major (1.x → 2.0) | Changes (Version 1 → Version 2) |
+| Question additions | Minor (1.0 → 1.1) | Stays same (Version 1) |
+| Question refinements | Minor (1.0 → 1.1) | Stays same (Version 1) |
+| Methodology refinement | Patch (1.1 → 1.1.1) | Stays same (Version 1) |
 
 ### 11.4 Leaderboard Display
 
 - **Default view:** Current version results
 - **Older versions:** Accessible via filter, not prominent
-- **Cross-version warning:** "V1.x and V2.0 scores are not directly comparable"
+- **Cross-version warning:** "Version 1 (1.x) and Version 2 (2.x) scores are not directly comparable"
 
 ---
 
@@ -1247,7 +1273,8 @@ leaderboard review
 
 ```json
 {
-  "version": "V2.0",
+  "semantic_version": "2.0",
+  "marketing_version": "Version 2",
   "version_status": "active",
   "results": [
     {
@@ -1313,6 +1340,30 @@ leaderboard review
 }
 ```
 
+### CLI Versions Response
+
+**Endpoint:** `GET /api/cli/versions`
+
+**Response:**
+```json
+{
+  "cli": {
+    "latest_version": "1.4.0",
+    "release_date": "2025-12-20",
+    "release_notes_url": "https://gcb.example.com/releases/1.4.0"
+  },
+  "benchmark": {
+    "latest_semantic_version": "2.1",
+    "latest_marketing_version": "Version 2",
+    "release_date": "2025-12-15",
+    "changelog_url": "https://gcb.example.com/versions/2.1"
+  },
+  "api_version": "1.0"
+}
+```
+
+**Purpose:** Allows CLI runner (`gcb-runner`) to check for updates to both the CLI tool itself and available benchmark versions. Used for non-blocking update notifications.
+
 ### Community Submission Request
 
 **Endpoint:** `POST /api/community/submit`
@@ -1325,7 +1376,7 @@ leaderboard review
   "model_url": "https://huggingface.co/username/my-christian-llm",
   "organization": "Example Ministry",
   "cli_version": "1.2.0",
-  "question_set_version": "V2.0",
+  "question_set_version": "2.0",
   "results_package": {
     "overall_score": 85,
     "tier1_score": 88,
@@ -1345,7 +1396,7 @@ leaderboard review
 | `model_url` | No | Link to publicly hosted model (typically Hugging Face). Enables open-source validation by allowing others to download and independently verify results |
 | `organization` | No | Submitting organization or ministry name |
 | `cli_version` | Yes | Version of CLI tool used to generate results |
-| `question_set_version` | Yes | Benchmark version (e.g., "V2.0") |
+| `question_set_version` | Yes | Semantic version (e.g., "2.0") |
 | `results_package` | Yes | Complete JSON results package from CLI |
 
 **Response:**
@@ -1487,6 +1538,7 @@ After deployment:
 | Document | Purpose |
 |----------|---------|
 | [benchmark-vision.md](./benchmark-vision.md) | What the benchmark tests and why |
+| [benchmark-categories.md](./benchmark-categories.md) | Canonical category, doctrine, and verdict definitions |
 | [benchmark-scoring.md](./benchmark-scoring.md) | Scoring methodology and tier weighting rationale |
 | [platform-deployment-vision.md](./platform-deployment-vision.md) | Product architecture and deployment |
 | [platform-technical-architecture.md](./platform-technical-architecture.md) | Stack decisions and infrastructure |

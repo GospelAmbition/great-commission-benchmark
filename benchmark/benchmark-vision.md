@@ -46,6 +46,8 @@ The following categories represent common activities and use cases where Great C
 
 > **Note:** Tier 1 use cases receive 70% of the overall benchmark score weight, reflecting their primacy. See [benchmark-scoring.md](./benchmark-scoring.md) for the complete scoring methodology.
 
+> **Canonical Reference:** For a consolidated view of all categories, doctrines, and verdict classifications, see [benchmark-categories.md](./benchmark-categories.md).
+
 ### 3.1 Missiological Research
 
 **Definition:** Research into the spiritual conditions of people and places to understand their openness or resistance to the gospel.
