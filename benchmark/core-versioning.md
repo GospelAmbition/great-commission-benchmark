@@ -288,7 +288,7 @@ CREATE TABLE test_runs (
 
 ## Related Documents
 
-- [Question Security](./question-security.md) — Question protection and versioning
+- [Question Security](./core-question-security.md) — Question protection and versioning
 - [Core Publication Model](./core-publication-model.md) — How results are published
-- [Deployment Vision](./deployment-vision.md) — Overall deployment strategy
+- [Deployment Vision](./decision-deployment-vision.md) — Overall deployment strategy
 

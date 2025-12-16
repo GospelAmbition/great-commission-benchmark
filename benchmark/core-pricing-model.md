@@ -279,7 +279,7 @@ If demand increases, consider:
 
 ## Related Documents
 
-- [Deployment Vision](./deployment-vision.md) — Overall deployment strategy
-- [Technical Architecture](./technical-architecture.md) — Infrastructure decisions
-- [Success Metrics](./success-metrics.md) — KPIs including financial sustainability
+- [Deployment Vision](./decision-deployment-vision.md) — Overall deployment strategy
+- [Technical Architecture](./decision-technical-architecture.md) — Infrastructure decisions
+- [Success Metrics](./core-success-metrics.md) — KPIs including financial sustainability
 

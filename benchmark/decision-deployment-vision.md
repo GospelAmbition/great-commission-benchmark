@@ -31,7 +31,7 @@ Before deployment, the benchmark must:
 
 **Success Criteria:** Documented in [core-publication-model.md](./core-publication-model.md) — results must pass automated validation (≥80% inter-rater reliability, ≥95% reproducibility, meaningful differentiation) to publish immediately. Human review adds credibility progressively but doesn't block publication.
 
-**Human Review:** Performed by **moderators**—users with a special role granting elevated permissions. See [moderation-process.md](./moderation-process.md) for moderator selection, credentials, and workflows.
+**Human Review:** Performed by **moderators**—users with a special role granting elevated permissions. See [core-moderation-process.md](./core-moderation-process.md) for moderator selection, credentials, and workflows.
 
 ---
 
@@ -53,7 +53,7 @@ Used during benchmark methodology and question development:
 
 A Railway-deployed application where registered testers:
 
-1. Sign in via Auth0 (must be approved tester — see [question-security.md](./question-security.md))
+1. Sign in via Auth0 (must be approved tester — see [core-question-security.md](./core-question-security.md))
 2. Select an LLM to test (OpenRouter, custom endpoint, or API key)
 3. Pay for the OpenRouter/API costs to run the test
 4. Results are automatically submitted to the benchmark
@@ -75,7 +75,7 @@ A Railway-deployed application where registered testers:
 - Sponsors can fund tests of specific models
 - Self-regulating and self-funding ecosystem
 
-See [pricing-model.md](./pricing-model.md) for detailed financial model.
+See [core-pricing-model.md](./core-pricing-model.md) for detailed financial model.
 
 ---
 
@@ -116,7 +116,7 @@ See [pricing-model.md](./pricing-model.md) for detailed financial model.
 
 ## Technical Architecture
 
-See [technical-architecture.md](./technical-architecture.md) for complete infrastructure decisions.
+See [decision-technical-architecture.md](./decision-technical-architecture.md) for complete infrastructure decisions.
 
 ### Summary
 
@@ -269,7 +269,7 @@ Multi-turn decay metrics     →    Alignment stability scores
 
 ## Question Security & Tester Registration
 
-See [question-security.md](./question-security.md) for complete details.
+See [core-question-security.md](./core-question-security.md) for complete details.
 
 ### Summary
 
@@ -321,7 +321,7 @@ The benchmark will launch with top-tier models available through **OpenRouter**,
 
 ## Pricing Model
 
-See [pricing-model.md](./pricing-model.md) for complete details.
+See [core-pricing-model.md](./core-pricing-model.md) for complete details.
 
 ### Summary
 
@@ -351,7 +351,7 @@ The steering committee or community sponsors can fund tests on their behalf.
 
 ## Moderation Team
 
-See [moderation-process.md](./moderation-process.md) for complete details.
+See [core-moderation-process.md](./core-moderation-process.md) for complete details.
 
 ### Summary
 
@@ -479,7 +479,7 @@ A successful deployment means:
 
 ### Quantitative KPIs
 
-See [success-metrics.md](./success-metrics.md) for detailed tracking plan.
+See [core-success-metrics.md](./core-success-metrics.md) for detailed tracking plan.
 
 - **Models tested:** Total unique models on the leaderboard
 - **Monthly visitors:** Unique monthly visitors to the website
@@ -493,13 +493,13 @@ See [success-metrics.md](./success-metrics.md) for detailed tracking plan.
 
 - [vision.md](./vision.md) — Benchmark vision: what it tests and why
 - [core-publication-model.md](./core-publication-model.md) — Publication criteria and trust model
-- [testing-methodology.md](./testing-methodology.md) — How tests are executed
-- [moderation-process.md](./moderation-process.md) — Moderator selection and workflows
-- [pricing-model.md](./pricing-model.md) — Financial model and sustainability
-- [question-security.md](./question-security.md) — Question protection and versioning
-- [technical-architecture.md](./technical-architecture.md) — Infrastructure decisions
-- [legal-requirements.md](./legal-requirements.md) — ToS, accessibility, i18n
-- [success-metrics.md](./success-metrics.md) — KPIs and tracking
+- [core-testing-methodology.md](./core-testing-methodology.md) — How tests are executed
+- [core-moderation-process.md](./core-moderation-process.md) — Moderator selection and workflows
+- [core-pricing-model.md](./core-pricing-model.md) — Financial model and sustainability
+- [core-question-security.md](./core-question-security.md) — Question protection and versioning
+- [decision-technical-architecture.md](./decision-technical-architecture.md) — Infrastructure decisions
+- [core-legal-requirements.md](./core-legal-requirements.md) — ToS, accessibility, i18n
+- [core-success-metrics.md](./core-success-metrics.md) — KPIs and tracking
 
 ---
 

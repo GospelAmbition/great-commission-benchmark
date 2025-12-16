@@ -7,15 +7,15 @@ You have **complete specification documents** ready to guide a fresh build:
 | Document | Purpose | Status |
 |----------|---------|--------|
 | `vision.md` | What the benchmark tests and why | ✅ Complete |
-| `deployment-vision.md` | Product architecture and deployment | ✅ Complete |
-| `testing-methodology.md` | How tests are executed and scored | ✅ Complete |
-| `technical-architecture.md` | Stack decisions and infrastructure | ✅ Complete |
+| `decision-deployment-vision.md` | Product architecture and deployment | ✅ Complete |
+| `core-testing-methodology.md` | How tests are executed and scored | ✅ Complete |
+| `decision-technical-architecture.md` | Stack decisions and infrastructure | ✅ Complete |
 | `core-publication-model.md` | Trust tiers and publication criteria | ✅ Complete |
-| `moderation-process.md` | Moderator selection and workflows | ✅ Complete |
-| `pricing-model.md` | Payment structure and sustainability | ✅ Complete |
-| `question-security.md` | Version management and leak handling | ✅ Complete |
-| `success-metrics.md` | KPIs and tracking plan | ✅ Complete |
-| `legal-requirements.md` | ToS, Privacy, Accessibility needs | ✅ Requirements defined |
+| `core-moderation-process.md` | Moderator selection and workflows | ✅ Complete |
+| `core-pricing-model.md` | Payment structure and sustainability | ✅ Complete |
+| `core-question-security.md` | Version management and leak handling | ✅ Complete |
+| `core-success-metrics.md` | KPIs and tracking plan | ✅ Complete |
+| `core-legal-requirements.md` | ToS, Privacy, Accessibility needs | ✅ Requirements defined |
 | `deployment-vision-checklist.md` | All 31 design questions answered | ✅ Complete |
 
 ---
@@ -64,7 +64,7 @@ The vision document defines **three testing tiers** with specific categories:
 
 ### 2. Platform (Backend + Frontend)
 
-From `technical-architecture.md` and `deployment-vision.md`:
+From `decision-technical-architecture.md` and `decision-deployment-vision.md`:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -188,7 +188,7 @@ From `README.md`, these feature specifications should be written:
 
 ## 🔴 Legal Requirements (Pre-Launch)
 
-From `legal-requirements.md`:
+From `core-legal-requirements.md`:
 
 | Document | Status |
 |----------|--------|
