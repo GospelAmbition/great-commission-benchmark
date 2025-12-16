@@ -37,7 +37,7 @@ Legal documents are **planned but not yet drafted**. These must be completed bef
 
 3. **Payment Terms**
    - Pricing transparency
-   - Refund policy (see [core-pricing-model.md](./core-pricing-model.md))
+   - Refund policy (see [decision-pricing-model.md](./decision-pricing-model.md))
    - No guarantee of specific results
 
 4. **Intellectual Property**
@@ -89,7 +89,7 @@ The ToS should prominently include:
 
 ### Data Retention
 
-- **Test data:** Indefinite (see [decision-deployment-vision.md](./decision-deployment-vision.md))
+- **Test data:** Indefinite (see [core-deployment-vision.md](./core-deployment-vision.md))
 - **User accounts:** Until deletion requested
 - **Payment records:** As required by law
 
@@ -277,7 +277,7 @@ Before launch:
 
 ## Related Documents
 
-- [Deployment Vision](./decision-deployment-vision.md) — Overall deployment strategy
-- [Pricing Model](./core-pricing-model.md) — Payment and refund policies
-- [Question Security](./core-question-security.md) — Tester agreement details
+- [Deployment Vision](./core-deployment-vision.md) — Overall deployment strategy
+- [Pricing Model](./decision-pricing-model.md) — Payment and refund policies
+- [Question Security](./decision-question-security.md) — Tester agreement details
 

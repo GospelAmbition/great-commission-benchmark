@@ -114,7 +114,7 @@ Moderators review published results on their own schedule:
 3. **Confirm or flag** — Mark as verified or raise concerns
 4. **Trust tier updates** — Result's validation status reflects new review
 
-See [core-moderation-process.md](./core-moderation-process.md) for complete moderator workflows.
+See [decision-moderation-process.md](./decision-moderation-process.md) for complete moderator workflows.
 
 ### 5. Progressive Trust Accumulation
 
@@ -202,7 +202,7 @@ Moderators are users with a special role granting elevated permissions:
   - Special interest in the benchmark's mission
   - Community involvement and standing
 
-See [core-moderation-process.md](./core-moderation-process.md) for selection criteria.
+See [decision-moderation-process.md](./decision-moderation-process.md) for selection criteria.
 
 ### Review Process
 
@@ -265,7 +265,7 @@ This supports:
 
 ## Related Documents
 
-- [Deployment Vision](./decision-deployment-vision.md) — Overall deployment strategy
-- [Testing Methodology](./core-testing-methodology.md) — How tests are executed
-- [Moderation Process](./core-moderation-process.md) — Moderator selection and workflows
-- [Question Security](./core-question-security.md) — Question protection and versioning
+- [Deployment Vision](./core-deployment-vision.md) — Overall deployment strategy
+- [Testing Methodology](./decision-testing-methodology.md) — How tests are executed
+- [Moderation Process](./decision-moderation-process.md) — Moderator selection and workflows
+- [Question Security](./decision-question-security.md) — Question protection and versioning

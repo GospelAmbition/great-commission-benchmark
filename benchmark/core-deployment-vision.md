@@ -29,9 +29,9 @@ Before deployment, the benchmark must:
 - [ ] Generate meaningful differentiation between models
 - [ ] Validate scoring methodology with human review
 
-**Success Criteria:** Documented in [core-publication-model.md](./core-publication-model.md) — results must pass automated validation (≥80% inter-rater reliability, ≥95% reproducibility, meaningful differentiation) to publish immediately. Human review adds credibility progressively but doesn't block publication.
+**Success Criteria:** Documented in [decision-publication-model.md](./decision-publication-model.md) — results must pass automated validation (≥80% inter-rater reliability, ≥95% reproducibility, meaningful differentiation) to publish immediately. Human review adds credibility progressively but doesn't block publication.
 
-**Human Review:** Performed by **moderators**—users with a special role granting elevated permissions. See [core-moderation-process.md](./core-moderation-process.md) for moderator selection, credentials, and workflows.
+**Human Review:** Performed by **moderators**—users with a special role granting elevated permissions. See [decision-moderation-process.md](./decision-moderation-process.md) for moderator selection, credentials, and workflows.
 
 ---
 
@@ -53,7 +53,7 @@ Used during benchmark methodology and question development:
 
 A Railway-deployed application where registered testers:
 
-1. Sign in via Auth0 (must be approved tester — see [core-question-security.md](./core-question-security.md))
+1. Sign in via Auth0 (must be approved tester — see [decision-question-security.md](./decision-question-security.md))
 2. Select an LLM to test (OpenRouter, custom endpoint, or API key)
 3. Pay for the OpenRouter/API costs to run the test
 4. Results are automatically submitted to the benchmark
@@ -75,7 +75,7 @@ A Railway-deployed application where registered testers:
 - Sponsors can fund tests of specific models
 - Self-regulating and self-funding ecosystem
 
-See [core-pricing-model.md](./core-pricing-model.md) for detailed financial model.
+See [decision-pricing-model.md](./decision-pricing-model.md) for detailed financial model.
 
 ---
 
@@ -116,7 +116,7 @@ See [core-pricing-model.md](./core-pricing-model.md) for detailed financial mode
 
 ## Technical Architecture
 
-See [decision-technical-architecture.md](./decision-technical-architecture.md) for complete infrastructure decisions.
+See [core-technical-architecture.md](./core-technical-architecture.md) for complete infrastructure decisions.
 
 ### Summary
 
@@ -173,7 +173,7 @@ See [decision-technical-architecture.md](./decision-technical-architecture.md) f
 1. User initiates test run via web interface
 2. Backend executes benchmark against selected model
 3. Results stored with execution metadata (timestamps, model version, etc.)
-4. Automated validation checks run (see [core-publication-model.md](./core-publication-model.md))
+4. Automated validation checks run (see [decision-publication-model.md](./decision-publication-model.md))
 5. **Results publish immediately** if automated checks pass
 6. Moderators review asynchronously after publication
 7. **Email notification sent to user** confirming successful completion
@@ -269,7 +269,7 @@ Multi-turn decay metrics     →    Alignment stability scores
 
 ## Question Security & Tester Registration
 
-See [core-question-security.md](./core-question-security.md) for complete details.
+See [decision-question-security.md](./decision-question-security.md) for complete details.
 
 ### Summary
 
@@ -321,7 +321,7 @@ The benchmark will launch with top-tier models available through **OpenRouter**,
 
 ## Pricing Model
 
-See [core-pricing-model.md](./core-pricing-model.md) for complete details.
+See [decision-pricing-model.md](./decision-pricing-model.md) for complete details.
 
 ### Summary
 
@@ -351,7 +351,7 @@ The steering committee or community sponsors can fund tests on their behalf.
 
 ## Moderation Team
 
-See [core-moderation-process.md](./core-moderation-process.md) for complete details.
+See [decision-moderation-process.md](./decision-moderation-process.md) for complete details.
 
 ### Summary
 
@@ -479,7 +479,7 @@ A successful deployment means:
 
 ### Quantitative KPIs
 
-See [core-success-metrics.md](./core-success-metrics.md) for detailed tracking plan.
+See [decision-success-metrics.md](./decision-success-metrics.md) for detailed tracking plan.
 
 - **Models tested:** Total unique models on the leaderboard
 - **Monthly visitors:** Unique monthly visitors to the website
@@ -492,14 +492,14 @@ See [core-success-metrics.md](./core-success-metrics.md) for detailed tracking p
 ## Related Documents
 
 - [vision.md](./vision.md) — Benchmark vision: what it tests and why
-- [core-publication-model.md](./core-publication-model.md) — Publication criteria and trust model
-- [core-testing-methodology.md](./core-testing-methodology.md) — How tests are executed
-- [core-moderation-process.md](./core-moderation-process.md) — Moderator selection and workflows
-- [core-pricing-model.md](./core-pricing-model.md) — Financial model and sustainability
-- [core-question-security.md](./core-question-security.md) — Question protection and versioning
-- [decision-technical-architecture.md](./decision-technical-architecture.md) — Infrastructure decisions
-- [core-legal-requirements.md](./core-legal-requirements.md) — ToS, accessibility, i18n
-- [core-success-metrics.md](./core-success-metrics.md) — KPIs and tracking
+- [decision-publication-model.md](./decision-publication-model.md) — Publication criteria and trust model
+- [decision-testing-methodology.md](./decision-testing-methodology.md) — How tests are executed
+- [decision-moderation-process.md](./decision-moderation-process.md) — Moderator selection and workflows
+- [decision-pricing-model.md](./decision-pricing-model.md) — Financial model and sustainability
+- [decision-question-security.md](./decision-question-security.md) — Question protection and versioning
+- [core-technical-architecture.md](./core-technical-architecture.md) — Infrastructure decisions
+- [decision-legal-requirements.md](./decision-legal-requirements.md) — ToS, accessibility, i18n
+- [decision-success-metrics.md](./decision-success-metrics.md) — KPIs and tracking
 
 ---
 

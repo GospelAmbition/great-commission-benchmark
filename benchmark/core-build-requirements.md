@@ -7,15 +7,15 @@ You have **complete specification documents** ready to guide a fresh build:
 | Document | Purpose | Status |
 |----------|---------|--------|
 | `vision.md` | What the benchmark tests and why | ✅ Complete |
-| `decision-deployment-vision.md` | Product architecture and deployment | ✅ Complete |
-| `core-testing-methodology.md` | How tests are executed and scored | ✅ Complete |
-| `decision-technical-architecture.md` | Stack decisions and infrastructure | ✅ Complete |
-| `core-publication-model.md` | Trust tiers and publication criteria | ✅ Complete |
-| `core-moderation-process.md` | Moderator selection and workflows | ✅ Complete |
-| `core-pricing-model.md` | Payment structure and sustainability | ✅ Complete |
-| `core-question-security.md` | Version management and leak handling | ✅ Complete |
-| `core-success-metrics.md` | KPIs and tracking plan | ✅ Complete |
-| `core-legal-requirements.md` | ToS, Privacy, Accessibility needs | ✅ Requirements defined |
+| `core-deployment-vision.md` | Product architecture and deployment | ✅ Complete |
+| `decision-testing-methodology.md` | How tests are executed and scored | ✅ Complete |
+| `core-technical-architecture.md` | Stack decisions and infrastructure | ✅ Complete |
+| `decision-publication-model.md` | Trust tiers and publication criteria | ✅ Complete |
+| `decision-moderation-process.md` | Moderator selection and workflows | ✅ Complete |
+| `decision-pricing-model.md` | Payment structure and sustainability | ✅ Complete |
+| `decision-question-security.md` | Version management and leak handling | ✅ Complete |
+| `decision-success-metrics.md` | KPIs and tracking plan | ✅ Complete |
+| `decision-legal-requirements.md` | ToS, Privacy, Accessibility needs | ✅ Requirements defined |
 | `deployment-vision-checklist.md` | All 31 design questions answered | ✅ Complete |
 
 ---
@@ -64,7 +64,7 @@ The vision document defines **three testing tiers** with specific categories:
 
 ### 2. Platform (Backend + Frontend)
 
-From `decision-technical-architecture.md` and `decision-deployment-vision.md`:
+From `core-technical-architecture.md` and `core-deployment-vision.md`:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -176,7 +176,7 @@ From `README.md`, these feature specifications should be written:
 
 | Document | Purpose | Priority |
 |----------|---------|----------|
-| `core-versioning.md` | Benchmark version management | Medium |
+| `decision-versioning.md` | Benchmark version management | Medium |
 | `core-data-retention.md` | What we store and why | Medium |
 | `feature-leaderboard.md` | Leaderboard display, filtering, comparison | High |
 | `feature-reviewer-dashboard.md` | Moderator tools and interface | High |
@@ -188,7 +188,7 @@ From `README.md`, these feature specifications should be written:
 
 ## 🔴 Legal Requirements (Pre-Launch)
 
-From `core-legal-requirements.md`:
+From `decision-legal-requirements.md`:
 
 | Document | Status |
 |----------|--------|

@@ -260,7 +260,7 @@ Questions are delivered via:
 
 ## Related Documents
 
-- [Deployment Vision](./decision-deployment-vision.md) — Overall deployment strategy
-- [Core Publication Model](./core-publication-model.md) — Publication criteria
-- [Moderation Process](./core-moderation-process.md) — Moderator workflows
+- [Deployment Vision](./core-deployment-vision.md) — Overall deployment strategy
+- [Core Publication Model](./decision-publication-model.md) — Publication criteria
+- [Moderation Process](./decision-moderation-process.md) — Moderator workflows
 

@@ -323,7 +323,7 @@ Given low expected traffic:
 
 ## Related Documents
 
-- [Deployment Vision](./decision-deployment-vision.md) — Overall deployment strategy
-- [Pricing Model](./core-pricing-model.md) — Financial model
-- [Question Security](./core-question-security.md) — Question protection
+- [Deployment Vision](./core-deployment-vision.md) — Overall deployment strategy
+- [Pricing Model](./decision-pricing-model.md) — Financial model
+- [Question Security](./decision-question-security.md) — Question protection
 
