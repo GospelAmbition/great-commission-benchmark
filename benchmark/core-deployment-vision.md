@@ -29,7 +29,7 @@ Before deployment, the benchmark must:
 - [ ] Generate meaningful differentiation between models
 - [ ] Validate scoring methodology with human review
 
-**Success Criteria:** Documented in [core-publication-model.md](./core-publication-model.md) — results must pass automated validation (≥80% inter-rater reliability, ≥95% reproducibility, meaningful differentiation) to publish immediately. Human review adds credibility progressively but doesn't block publication.
+**Success Criteria:** Documented in [process-publication-model.md](./process-publication-model.md) — results must pass automated validation (≥80% inter-rater reliability, ≥95% reproducibility, meaningful differentiation) to publish immediately. Human review adds credibility progressively but doesn't block publication.
 
 **Human Review:** Performed by **moderators**—users with a special role granting elevated permissions. See [process-moderation-process.md](./process-moderation-process.md) for moderator selection, credentials, and workflows.
 
@@ -173,7 +173,7 @@ See [core-technical-architecture.md](./core-technical-architecture.md) for compl
 1. User initiates test run via web interface
 2. Backend executes benchmark against selected model
 3. Results stored with execution metadata (timestamps, model version, etc.)
-4. Automated validation checks run (see [core-publication-model.md](./core-publication-model.md))
+4. Automated validation checks run (see [process-publication-model.md](./process-publication-model.md))
 5. **Results publish immediately** if automated checks pass
 6. Moderators review asynchronously after publication
 7. **Email notification sent to user** confirming successful completion
@@ -492,7 +492,7 @@ See [process-success-metrics.md](./process-success-metrics.md) for detailed trac
 ## Related Documents
 
 - [vision.md](./vision.md) — Benchmark vision: what it tests and why
-- [core-publication-model.md](./core-publication-model.md) — Publication criteria and trust model
+- [process-publication-model.md](./process-publication-model.md) — Publication criteria and trust model
 - [core-testing-methodology.md](./core-testing-methodology.md) — How tests are executed
 - [process-moderation-process.md](./process-moderation-process.md) — Moderator selection and workflows
 - [process-pricing-model.md](./process-pricing-model.md) — Financial model and sustainability

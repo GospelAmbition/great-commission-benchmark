@@ -45,8 +45,8 @@ Fundamental systems and policies that define how the benchmark operates:
 
 | Document | Status | Description |
 |----------|--------|-------------|
-| [core-publication-model.md](./core-publication-model.md) | ✓ Draft | Progressive trust model for publishing results |
-| [process-versioning.md](./process-versioning.md) | ✓ Draft | Benchmark version management |
+| [process-publication-model.md](./process-publication-model.md) | ✓ Draft | Progressive trust model for publishing results |
+| [core-versioning.md](./core-versioning.md) | ✓ Draft | Benchmark version management |
 | [process-question-security.md](./process-question-security.md) | ✓ Draft | Question distribution and contamination prevention |
 | [process-pricing-model.md](./process-pricing-model.md) | ✓ Draft | Cost structure and sustainability |
 | [process-moderation-process.md](./process-moderation-process.md) | ✓ Draft | Moderator selection and review workflows |
@@ -97,8 +97,8 @@ vision.md (Primary Vision)
     │       ├──→ core-build-requirements.md (Requirements)
     │       └──→ core-testing-methodology.md (How Tests Work)
     │
-    ├──→ core-publication-model.md (How Results Are Published)
-    ├──→ process-versioning.md (Question Set Management)
+    ├──→ process-publication-model.md (How Results Are Published)
+    ├──→ core-versioning.md (Question Set Management)
     ├──→ process-question-security.md (Question Protection)
     ├──→ process-pricing-model.md (Financial Model)
     ├──→ process-moderation-process.md (Review Workflows)

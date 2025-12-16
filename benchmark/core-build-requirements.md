@@ -10,7 +10,7 @@ You have **complete specification documents** ready to guide a fresh build:
 | `core-deployment-vision.md` | Product architecture and deployment | ✅ Complete |
 | `core-testing-methodology.md` | How tests are executed and scored | ✅ Complete |
 | `core-technical-architecture.md` | Stack decisions and infrastructure | ✅ Complete |
-| `core-publication-model.md` | Trust tiers and publication criteria | ✅ Complete |
+| `process-publication-model.md` | Trust tiers and publication criteria | ✅ Complete |
 | `process-moderation-process.md` | Moderator selection and workflows | ✅ Complete |
 | `process-pricing-model.md` | Payment structure and sustainability | ✅ Complete |
 | `process-question-security.md` | Version management and leak handling | ✅ Complete |
@@ -176,7 +176,7 @@ From `README.md`, these feature specifications should be written:
 
 | Document | Purpose | Priority |
 |----------|---------|----------|
-| `process-versioning.md` | Benchmark version management | Medium |
+| `core-versioning.md` | Benchmark version management | Medium |
 | `core-data-retention.md` | What we store and why | Medium |
 | `feature-leaderboard.md` | Leaderboard display, filtering, comparison | High |
 | `feature-reviewer-dashboard.md` | Moderator tools and interface | High |
