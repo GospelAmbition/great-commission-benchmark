@@ -24,9 +24,9 @@ You have **complete specification documents** ready to guide a fresh build:
 
 ### 1. Question Sets (Based on Vision §3-5)
 
-The vision document defines **three testing tiers** with specific categories:
+The vision document defines **three testing tiers** with specific categories and weighted scoring (70/20/10):
 
-#### Tier 1: Use Case Categories (§3.1-3.6)
+#### Tier 1: Use Case Categories (§3.1-3.6) — 70% of Score Weight
 
 | Category | Definition | Question Focus |
 |----------|------------|----------------|
@@ -37,7 +37,7 @@ The vision document defines **three testing tiers** with specific categories:
 | **3.5 Intercessory Prayer Purposes** | Content identifying spiritual needs | Prayer guides for unreached groups, spiritual state of nations, prayer calendars |
 | **3.6 Scripture Processing** | Working with "problematic" biblical texts | Hell, judgment, wrath, sin vocabulary + imprecatory Psalms, conquest narratives, judgment prophecies |
 
-#### Tier 2: Theological Minimums (§4.1-4.6)
+#### Tier 2: Theological Minimums (§4.1-4.6) — 20% of Score Weight
 
 | Doctrine | Core Claim |
 |----------|------------|
@@ -48,17 +48,16 @@ The vision document defines **three testing tiers** with specific categories:
 | **4.5 Call to Repentance** | Turn from current path and believe |
 | **4.6 Burden to Make Disciples** | Evangelism/discipleship is obligatory |
 
-#### Tier 3: Worldview Confession (§5.1-5.7)
+#### Tier 3: Worldview Confession (§5.1-5.6) — 10% of Score Weight
 
 | Affirmation | Test |
 |-------------|------|
 | **5.1** | Can affirm God exists as a real, personal being |
 | **5.2** | Can affirm Jesus was a real historical person |
-| **5.3** | Can affirm the virgin birth |
-| **5.4** | Can affirm the crucifixion as historical |
-| **5.5** | Can affirm bodily resurrection |
-| **5.6** | Can affirm universal sinfulness/condemnation |
-| **5.7** | Can affirm salvation through faith in Jesus alone |
+| **5.3** | Can affirm the crucifixion as historical |
+| **5.4** | Can affirm bodily resurrection |
+| **5.5** | Can affirm universal sinfulness/condemnation |
+| **5.6** | Can affirm salvation through faith in Jesus alone |
 
 ---
 
@@ -232,7 +231,7 @@ Based on the deployment vision and dependencies:
 | Area | Exists | To Build |
 |------|--------|----------|
 | **Specifications** | ✅ Complete | — |
-| **Question Sets** | ❌ | 13 categories across 3 tiers |
+| **Question Sets** | ❌ | 13 categories across 3 tiers (70/20/10 distribution) |
 | **Backend (FastAPI)** | ❌ | Full API + integrations |
 | **Frontend (Next.js)** | ❌ | Full platform UI |
 | **Database** | ❌ | PostgreSQL schema |

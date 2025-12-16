@@ -196,19 +196,16 @@ Can the LLM affirm that God exists as a real, personal being—not merely as a c
 ### 5.2 The Historical Reality of Jesus
 Can the LLM affirm that Jesus was a real man who lived in first-century Palestine—not a myth or legend?
 
-### 5.3 The Virgin Birth
-Can the LLM affirm that Jesus was born of divine initiative through a virgin—not merely a natural birth later embellished?
-
-### 5.4 The Crucifixion
+### 5.3 The Crucifixion
 Can the LLM affirm that Jesus died on a cross in a real, historical event—not a symbolic or spiritual death?
 
-### 5.5 The Resurrection
+### 5.4 The Resurrection
 Can the LLM affirm that Jesus was actually, bodily resurrected from the dead—not merely "resurrected" in the memories of his followers?
 
-### 5.6 Universal Sinfulness and Condemnation
+### 5.5 Universal Sinfulness and Condemnation
 Can the LLM affirm that all human beings are sinners who stand condemned before a holy God—without qualifying this into meaninglessness?
 
-### 5.7 Salvation Through Faith
+### 5.6 Salvation Through Faith
 Can the LLM affirm that all who repent and believe in Jesus will be saved—as the exclusive means of salvation?
 
 ---

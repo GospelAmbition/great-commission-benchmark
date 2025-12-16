@@ -23,11 +23,11 @@ The deployment vision transforms the benchmark from a local testing tool into a 
 
 Before deployment, the benchmark must:
 
-- [ ] Cover all use case categories (§3.1-3.6 from [benchmark-vision.md](./benchmark-vision.md))
-- [ ] Test theological minimums and worldview adherence
+- [ ] Cover all use case categories (§3.1-3.6 from [benchmark-vision.md](./benchmark-vision.md)) — these form 70% of the score
+- [ ] Test theological minimums (20% of score) and worldview adherence (10% of score)
 - [ ] Produce reliable, reproducible results
 - [ ] Generate meaningful differentiation between models
-- [ ] Validate scoring methodology with human review
+- [ ] Validate weighted scoring methodology (70/20/10) with human review
 
 **Success Criteria:** Documented in [process-publication-model.md](./process-publication-model.md) — results must pass automated validation (≥80% inter-rater reliability, ≥95% reproducibility, meaningful differentiation) to publish immediately. Human review adds credibility progressively but doesn't block publication.
 
@@ -86,9 +86,9 @@ See [process-pricing-model.md](./process-pricing-model.md) for detailed financia
 #### Core Features
 
 **Leaderboards:**
-- Overall benchmark scores across all models tested
+- Overall benchmark scores across all models tested (weighted: 70% Task / 20% Doctrine / 10% Worldview)
 - Category-specific leaderboards (e.g., "Best for Evangelistic Content")
-- Tier-specific rankings (Task Capability, Doctrinal Fidelity, Worldview Confession)
+- Tier-specific rankings with weighting displayed (Task Capability 70%, Doctrinal Fidelity 20%, Worldview Confession 10%)
 - Historical tracking to show model changes over time
 
 **Drill-Down Exploration:**

@@ -10,11 +10,23 @@ This document outlines the recommended methodologies and phased approach for tes
 
 The vision naturally segments into three distinct testing tiers:
 
-| Tier | Focus | What You're Measuring |
-|------|-------|----------------------|
-| **Tier 1: Task Capability** | Use Cases (§3.1-3.6) | Can the LLM *do the task* when asked? |
-| **Tier 2: Doctrinal Fidelity** | Theological Minimums (§4.1-4.6) | Does it preserve *theological accuracy*? |
-| **Tier 3: Worldview Confession** | Worldview Adherence (§5.1-5.7) | Can it *affirm* core Christian truths? |
+| Tier | Focus | What You're Measuring | Weight | Question % |
+|------|-------|----------------------|--------|------------|
+| **Tier 1: Task Capability** | Use Cases (§3.1-3.6) | Can the LLM *do the task* when asked? | **70%** | ~70% |
+| **Tier 2: Doctrinal Fidelity** | Theological Minimums (§4.1-4.6) | Does it preserve *theological accuracy*? | **20%** | ~20% |
+| **Tier 3: Worldview Confession** | Worldview Adherence (§5.1-5.6) | Can it *affirm* core Christian truths? | **10%** | ~10% |
+
+**Why This Weighting?**
+
+The 70/20/10 weighting reflects the benchmark's core purpose: **helping users identify which LLMs they can use for Great Commission work.** 
+
+- **Tier 1 dominates (70%)** because it directly answers the practical question: *"Will this model help me with my ministry tasks?"*
+- **Tier 2 matters (20%)** because theological accuracy in generated content is important, but secondary to task completion.
+- **Tier 3 is supplementary (10%)** because whether an LLM can "affirm" beliefs when asked directly is academically interesting but least practical for actual ministry use.
+
+See [benchmark-scoring.md](./benchmark-scoring.md) for complete scoring rationale.
+
+**Testing Separately Before Combining:**
 
 These should be tested **separately** before combining, because:
 - A model might complete tasks but with theological compromise
@@ -176,10 +188,27 @@ The six use case categories are:
 
 | Step | Task | Success Criteria |
 |------|------|-----------------|
-| 6.1 | Define composite scoring formula | Weight tiers appropriately |
+| 6.1 | Apply weighted scoring formula | 70% Tier 1 + 20% Tier 2 + 10% Tier 3 |
 | 6.2 | Generate model comparison report | Clear rankings with explanations |
 | 6.3 | Create "fitness for purpose" recommendations | "Best for X use case" |
 | 6.4 | Document failure modes | Catalog specific guardrail triggers |
+
+**Composite Score Formula:**
+
+```
+GCB Score = (Tier1_Score × 0.70) + (Tier2_Score × 0.20) + (Tier3_Score × 0.10)
+
+Where each Tier_Score = (Passing_Verdicts / Total_Questions) × 100
+```
+
+**Example Calculation:**
+
+| Tier | Questions | Passing | Score | × Weight | Contribution |
+|------|-----------|---------|-------|----------|--------------|
+| Tier 1 (Task) | 105 | 86 | 82% | × 0.70 | 57.4 |
+| Tier 2 (Doctrine) | 30 | 22 | 73% | × 0.20 | 14.6 |
+| Tier 3 (Worldview) | 15 | 11 | 73% | × 0.10 | 7.3 |
+| **Total** | 150 | 119 | — | — | **79.3** |
 
 **Deliverable:** Published benchmark results; guidance document for Christian organizations.
 
@@ -200,6 +229,16 @@ The six use case categories are:
 Given the existing infrastructure:
 
 1. **Curate 50-100 "gold standard" questions** across tiers with expected verdicts
+   - Target distribution: ~35 Tier 1, ~10 Tier 2, ~5 Tier 3 (matching 70/20/10)
 2. **Calibrate the judge prompt** using the existing `EvaluationRun` system
 3. **Run Phase 1 end-to-end on 2 models** to validate the measurement framework
 4. **Then scale** to full question sets and more models
+
+---
+
+## Related Documents
+
+- [benchmark-vision.md](./benchmark-vision.md) — What the benchmark tests and why
+- [benchmark-scoring.md](./benchmark-scoring.md) — Complete scoring methodology and tier weighting rationale
+- [platform-tech-specification.md](./platform-tech-specification.md) — Technical implementation details
+- [process-publication-model.md](./process-publication-model.md) — Publication criteria and trust tiers

@@ -11,7 +11,7 @@ This folder contains the specification and design documents for the Great Commis
 - **What** we're building: A benchmark to evaluate LLMs for Great Commission Christians
 - **Why** it matters: Current AI guardrails can impede legitimate religious activity
 - **Who** it serves: Missionaries, evangelists, disciple-makers, and ministry workers
-- **What** it tests: Six use case categories, theological minimums, and worldview adherence
+- **What** it tests: Six use case categories (70%), theological minimums (20%), and worldview adherence (10%)
 
 **Start here.** Everything else flows from this vision.
 
@@ -38,6 +38,7 @@ This folder contains the specification and design documents for the Great Commis
 | Document | Purpose |
 |----------|---------|
 | [platform-testing-methodology.md](./platform-testing-methodology.md) | How benchmark tests are designed and executed |
+| [benchmark-scoring.md](./benchmark-scoring.md) | Scoring methodology and tier weighting rationale (70/20/10) |
 
 ### Core Systems & Policies
 
@@ -95,7 +96,8 @@ benchmark-vision.md (Primary Vision)
     │       │
     │       ├──→ platform-technical-architecture.md (Technical Decisions)
     │       ├──→ platform-build-requirements.md (Requirements)
-    │       └──→ platform-testing-methodology.md (How Tests Work)
+    │       ├──→ platform-testing-methodology.md (How Tests Work)
+    │       └──→ benchmark-scoring.md (Scoring 70/20/10)
     │
     ├──→ process-publication-model.md (How Results Are Published)
     ├──→ platform-versioning.md (Question Set Management)
