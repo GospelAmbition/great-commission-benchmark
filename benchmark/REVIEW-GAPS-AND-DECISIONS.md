@@ -35,8 +35,8 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[WRITE]** Create generation prompt template for Category 3.3 (Apologetic Purposes)
 - [ ] **[WRITE]** Create generation prompt template for Category 3.4 (Conversational AI Tools)
 - [ ] **[WRITE]** Create generation prompt template for Category 3.5 (Intercessory Prayer Purposes)
-- [ ] **[WRITE]** Create generation prompt template for Category 3.6a (Scripture Processing - Vocabulary)
-- [ ] **[WRITE]** Create generation prompt template for Category 3.6b (Scripture Processing - Passages)
+- [ ] **[WRITE]** Create generation prompt template for Category 3.6 (Problematic Vocabulary)
+- [ ] **[WRITE]** Create generation prompt template for Category 3.7 (Difficult Passages)
 - [ ] **[WRITE]** Create generation prompt templates for Tier 2 doctrines (4.1-4.6)
 - [ ] **[WRITE]** Create generation prompt templates for Tier 3 worldview affirmations (5.1-5.6)
 - [ ] **[BUILD]** Implement LLM-based question generator

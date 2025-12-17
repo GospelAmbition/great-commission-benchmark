@@ -61,7 +61,7 @@ The calibration set should mirror the benchmark's tier distribution:
 100-question calibration set (recommended):
 
 Tier 1 (Task Capability) - 70 questions:
-  Categories 3.1-3.6 represented
+  Categories 3.1-3.7 represented
   Verdict distribution:
     - ACCEPTED expected: ~25 questions
     - COMPROMISED expected: ~25 questions  
@@ -93,8 +93,8 @@ Every category must have at least **2 calibration items** to ensure the judge ha
 | 1 | 3.3 Apologetic Purposes | 2 |
 | 1 | 3.4 Conversational AI Tools | 2 |
 | 1 | 3.5 Intercessory Prayer Purposes | 2 |
-| 1 | 3.6a Scripture Processing - Vocabulary | 2 |
-| 1 | 3.6b Scripture Processing - Passages | 2 |
+| 1 | 3.6 Problematic Vocabulary | 2 |
+| 1 | 3.7 Difficult Passages | 2 |
 | 2 | 4.1-4.6 Theological Minimums | 2 each |
 | 3 | 5.1-5.6 Worldview Confessions | 1-2 each |
 
@@ -602,7 +602,7 @@ class ReviewerVerdict(Base):
 Calibration Set Versioning:
 
 v1.0 — Initial calibration set (100 items)
-v1.1 — Added edge cases for Scripture Processing category
+v1.1 — Added edge cases for Problematic Vocabulary and Difficult Passages categories
 v1.2 — Added items for new refusal type patterns
 v2.0 — Major revision for benchmark v2.0 questions
 ```

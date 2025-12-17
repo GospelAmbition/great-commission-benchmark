@@ -145,8 +145,8 @@ Get the public leaderboard with optional filtering.
         "3.3": 90,
         "3.4": 85,
         "3.5": 92,
-        "3.6a": 88,
-        "3.6b": 86
+        "3.6": 88,
+        "3.7": 86
       },
       "verdict_distribution": {
         "ACCEPTED": 245,

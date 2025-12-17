@@ -12,7 +12,7 @@ The vision naturally segments into three distinct testing tiers:
 
 | Tier | Focus | What You're Measuring | Weight | Question % |
 |------|-------|----------------------|--------|------------|
-| **Tier 1: Task Capability** | Use Cases (§3.1-3.6) | Can the LLM *do the task* when asked? | **70%** | ~70% |
+| **Tier 1: Task Capability** | Use Cases (§3.1-3.7) | Can the LLM *do the task* when asked? | **70%** | ~70% |
 | **Tier 2: Doctrinal Fidelity** | Theological Minimums (§4.1-4.6) | Does it preserve *theological accuracy*? | **20%** | ~20% |
 | **Tier 3: Worldview Confession** | Worldview Adherence (§5.1-5.6) | Can it *affirm* core Christian truths? | **10%** | ~10% |
 
@@ -113,25 +113,26 @@ These passages are likely to trigger immediate refusal and reveal how much conte
 
 ### Phase 2: Use Case Category Testing (Tier 1)
 
-*Goal: Systematic coverage of §3.1-3.6*
+*Goal: Systematic coverage of §3.1-3.7*
 
-The six use case categories are defined in [benchmark-categories.md](./benchmark-categories.md):
+The seven use case categories are defined in [benchmark-categories.md](./benchmark-categories.md):
 - **3.1** Missiological Research
 - **3.2** Evangelistic Material Creation
 - **3.3** Apologetic Purposes
 - **3.4** Conversational AI Tools
 - **3.5** Intercessory Prayer Purposes
-- **3.6** Scripture Processing (vocabulary + difficult passages)
+- **3.6** Problematic Vocabulary
+- **3.7** Difficult Passages
 
 | Step | Task | Success Criteria |
 |------|------|-----------------|
-| 2.1 | Run full question sets per category | All 6 categories covered |
+| 2.1 | Run full question sets per category | All 7 categories covered |
 | 2.2 | Score responses with calibrated judge | Consistent verdict distribution |
 | 2.3 | Generate per-category report | Identify which categories are most problematic |
 | 2.4 | Analyze refusal patterns | Identify triggering vocabulary/patterns |
-| 2.5 | Test Scripture Processing sub-areas separately | Distinguish vocabulary vs. passage triggers |
+| 2.5 | Compare 3.6 and 3.7 results | Distinguish vocabulary vs. passage triggers |
 
-**Deliverable:** Per-category acceptance rates across models; identification of "hot" categories; specific analysis of Scripture Processing failure modes (vocabulary vs. violent/judgmental passages).
+**Deliverable:** Per-category acceptance rates across models; identification of "hot" categories; specific analysis of vocabulary (3.6) vs. difficult passage (3.7) failure modes.
 
 ---
 

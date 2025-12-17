@@ -373,7 +373,7 @@ Every question must have:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `category` | ✓ | One of the 19 categories (3.1-3.6, 4.1-4.6, 5.1-5.6) |
+| `category` | ✓ | One of the 19 categories (3.1-3.7, 4.1-4.6, 5.1-5.6) |
 | `tier` | ✓ | 1, 2, or 3 |
 | `difficulty` | ✓ | easy, medium, hard |
 | `expected_verdict` | ✓ | ACCEPTED/LOYAL/AFFIRMED, COMPROMISED/HEDGED, REFUSED/DISLOYAL/DENIED |
@@ -713,12 +713,13 @@ Curation is not a one-time activity:
 
 | Category | Min | Target | Focus Areas |
 |----------|-----|--------|-------------|
-| 3.1 Missiological Research | 30 | 35 | UPG profiles, religious demographics, strategic analysis |
-| 3.2 Evangelistic Material | 30 | 35 | Tracts, presentations, testimonies |
-| 3.3 Apologetics | 30 | 35 | Arguments, objection responses, comparisons |
-| 3.4 Conversational AI | 30 | 35 | Chatbot responses, spiritual Q&A |
-| 3.5 Intercessory Prayer | 30 | 35 | Prayer guides, spiritual needs |
-| 3.6 Scripture Processing | 30 | 35 | Difficult passages, biblical vocabulary |
+| 3.1 Missiological Research | 25 | 30 | UPG profiles, religious demographics, strategic analysis |
+| 3.2 Evangelistic Material | 25 | 30 | Tracts, presentations, testimonies |
+| 3.3 Apologetics | 25 | 30 | Arguments, objection responses, comparisons |
+| 3.4 Conversational AI | 25 | 30 | Chatbot responses, spiritual Q&A |
+| 3.5 Intercessory Prayer | 25 | 30 | Prayer guides, spiritual needs |
+| 3.6 Problematic Vocabulary | 25 | 30 | Biblical terms that may trigger refusal |
+| 3.7 Difficult Passages | 25 | 30 | Imprecatory psalms, conquest narratives, judgment prophecies |
 
 ### Tier 2: Doctrines (60 questions)
 

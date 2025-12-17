@@ -589,7 +589,8 @@ def validate_score(export: dict) -> list[str]:
 | `3.3` | Apologetic Purposes |
 | `3.4` | Conversational AI Tools |
 | `3.5` | Intercessory Prayer Purposes |
-| `3.6` | Scripture Processing |
+| `3.6` | Problematic Vocabulary |
+| `3.7` | Difficult Passages |
 
 ### 6.2 Tier 2: Doctrinal Fidelity (Categories 4.x)
 

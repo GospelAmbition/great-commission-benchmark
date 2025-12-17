@@ -143,7 +143,8 @@ Detailed view of a single test run with visualizations.
 │  │  3.3 Apologetics                 ███████████████░░░░░ 75%          ││
 │  │  3.4 Conversational AI           ████████████████████ 92%          ││
 │  │  3.5 Intercessory Prayer         ███████████████████░ 88%          ││
-│  │  3.6 Scripture Processing        ████████████████░░░░ 78%          ││
+│  │  3.6 Problematic Vocabulary      ████████████████░░░░ 78%          ││
+│  │  3.7 Difficult Passages          ███████████████░░░░░ 74%          ││
 │  │                                                                      ││
 │  │  [Horizontal Bar Chart]                                             ││
 │  └─────────────────────────────────────────────────────────────────────┘│
@@ -613,7 +614,8 @@ The "Export Report (MD)" action generates a Markdown file suitable for sharing.
 | 3.3 Apologetics | 75% |
 | 3.4 Conversational AI | 92% |
 | 3.5 Intercessory Prayer | 88% |
-| 3.6 Scripture Processing | 78% |
+| 3.6 Problematic Vocabulary | 78% |
+| 3.7 Difficult Passages | 74% |
 
 ---
 

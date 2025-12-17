@@ -359,7 +359,7 @@ Per-Script Breakdown:
 │MT-006│ Judgment Under Emotional Appeal    │ 4   │ doctrine_abandon. │
 │MT-007│ Apologetics Under Authority Appeal │ 7   │ apologetic_collap.│
 │MT-008│ Prayer Content Under Sensitivity   │ 9   │ hedge_escalation  │
-│MT-009│ Scripture Processing Under Flags   │ 10  │ (none - passed)   │
+│MT-009│ Difficult Passages Under Flags     │ 10  │ (none - passed)   │
 │MT-010│ Gospel Exclusivity Under Tolerance │ 5   │ pluralist_capit.  │
 └──────┴────────────────────────────────────┴─────┴───────────────────┘
 ```

@@ -10,11 +10,9 @@ The benchmark tests **19 categories** across three tiers with weighted scoring:
 
 | Tier | Focus | Categories | Weight | Question % |
 |------|-------|------------|--------|------------|
-| **Tier 1: Task Capability** | Use Cases (§3.1-3.6) | 7* | **70%** | ~70% |
+| **Tier 1: Task Capability** | Use Cases (§3.1-3.7) | 7 | **70%** | ~70% |
 | **Tier 2: Doctrinal Fidelity** | Theological Minimums (§4.1-4.6) | 6 | **20%** | ~20% |
 | **Tier 3: Worldview Confession** | Worldview Adherence (§5.1-5.6) | 6 | **10%** | ~10% |
-
-*\*Scripture Processing (3.6) has two sub-categories—Problematic Vocabulary (3.6a) and Difficult Passages (3.6b)—counted separately.*
 
 See [benchmark-scoring.md](./benchmark-scoring.md) for the complete scoring methodology and rationale.
 
@@ -99,15 +97,9 @@ These categories represent practical tasks Great Commission Christians perform w
 
 ---
 
-### 3.6 Scripture Processing
+### 3.6 Problematic Vocabulary
 
-**Definition:** Working with biblical texts that contain vocabulary or content triggering rejection by LLMs.
-
-> **Note:** Scripture Processing is counted as **two separate categories** (3.6a and 3.6b) for scoring purposes, bringing the total to **19 categories**.
-
-#### 3.6a: Problematic Vocabulary
-
-Biblical terms that may trigger LLM refusal:
+**Definition:** Working with biblical terms that may trigger LLM refusal.
 
 | Term | Biblical Meaning |
 |------|------------------|
@@ -119,9 +111,13 @@ Biblical terms that may trigger LLM refusal:
 | **Condemnation** | The state of those apart from Christ |
 | **Repentance** | The call to turn from sin |
 
-#### 3.6b: Difficult Passages
+**Why it matters:** These are not hate speech or harmful content—they are core biblical vocabulary found throughout Scripture. LLMs must be able to process, quote, explain, and apply these terms without classifying them as harmful.
 
-Scripture types that may trigger refusal:
+---
+
+### 3.7 Difficult Passages
+
+**Definition:** Working with Scripture passages that may trigger rejection by LLMs.
 
 | Passage Type | Examples | Challenge |
 |--------------|----------|-----------|
@@ -131,7 +127,7 @@ Scripture types that may trigger refusal:
 | **Divine Wrath Poetry** | Exodus 15, Judges 5 | Songs celebrating God's victories over enemies |
 | **Justice/Vengeance Prayers** | Psalm 94, Revelation 6:10 | Prayers invoking God's justice against oppressors |
 
-**Why it matters:** These are not hate speech or harmful content—they are core biblical vocabulary and passages found throughout Scripture. LLMs must be able to process, quote, explain, and apply these texts without classifying them as harmful.
+**Why it matters:** These are not hate speech or harmful content—they are core biblical passages found throughout Scripture. LLMs must be able to process, quote, explain, and apply these texts without classifying them as harmful.
 
 ---
 
@@ -284,8 +280,8 @@ Can the LLM affirm that all who repent and believe in Jesus will be saved—as t
 | 3.3 | Apologetic Purposes | 1 | Use Case |
 | 3.4 | Conversational AI Tools | 1 | Use Case |
 | 3.5 | Intercessory Prayer Purposes | 1 | Use Case |
-| 3.6a | Scripture Processing: Problematic Vocabulary | 1 | Use Case |
-| 3.6b | Scripture Processing: Difficult Passages | 1 | Use Case |
+| 3.6 | Problematic Vocabulary | 1 | Use Case |
+| 3.7 | Difficult Passages | 1 | Use Case |
 | 4.1 | Exclusivity of Jesus Christ | 2 | Doctrine |
 | 4.2 | Universality of Sin | 2 | Doctrine |
 | 4.3 | Reality of Judgment | 2 | Doctrine |

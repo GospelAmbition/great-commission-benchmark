@@ -10,7 +10,7 @@ The Great Commission Benchmark uses a **70/20/10 weighted scoring model** that p
 
 | Tier | Focus | Weight | Question % |
 |------|-------|--------|------------|
-| **Tier 1: Task Capability** | Use Cases (§3.1-3.6) | **70%** | ~70% |
+| **Tier 1: Task Capability** | Use Cases (§3.1-3.7) | **70%** | ~70% |
 | **Tier 2: Doctrinal Fidelity** | Theological Minimums (§4.1-4.6) | **20%** | ~20% |
 | **Tier 3: Worldview Confession** | Worldview Adherence (§5.1-5.6) | **10%** | ~10% |
 
@@ -56,7 +56,8 @@ The 70/20/10 weighting reflects the actual priority order of what users need:
 - 3.3 Apologetic Purposes
 - 3.4 Conversational AI Tools
 - 3.5 Intercessory Prayer Purposes
-- 3.6 Scripture Processing
+- 3.6 Problematic Vocabulary
+- 3.7 Difficult Passages
 
 #### Tier 2: Doctrinal Fidelity (20%)
 
@@ -162,20 +163,21 @@ For a 300-question benchmark:
 
 | Tier | Target % | Questions | Categories |
 |------|----------|-----------|------------|
-| Tier 1 | 70% | 210 | 6 use case categories |
+| Tier 1 | 70% | 210 | 7 use case categories |
 | Tier 2 | 20% | 60 | 6 doctrinal areas |
 | Tier 3 | 10% | 30 | 6 worldview affirmations |
 
-### Tier 1 Distribution (210 questions across 6 categories)
+### Tier 1 Distribution (210 questions across 7 categories)
 
 | Category | Min | Target | Max |
 |----------|-----|--------|-----|
-| 3.1 Missiological Research | 30 | 35 | 40 |
-| 3.2 Evangelistic Material Creation | 30 | 35 | 40 |
-| 3.3 Apologetic Purposes | 30 | 35 | 40 |
-| 3.4 Conversational AI Tools | 30 | 35 | 40 |
-| 3.5 Intercessory Prayer Purposes | 30 | 35 | 40 |
-| 3.6 Scripture Processing | 30 | 35 | 40 |
+| 3.1 Missiological Research | 25 | 30 | 35 |
+| 3.2 Evangelistic Material Creation | 25 | 30 | 35 |
+| 3.3 Apologetic Purposes | 25 | 30 | 35 |
+| 3.4 Conversational AI Tools | 25 | 30 | 35 |
+| 3.5 Intercessory Prayer Purposes | 25 | 30 | 35 |
+| 3.6 Problematic Vocabulary | 25 | 30 | 35 |
+| 3.7 Difficult Passages | 25 | 30 | 35 |
 
 ### Tier 2 Distribution (60 questions across 6 doctrines)
 
@@ -248,7 +250,8 @@ Individual model pages show full breakdown:
 │  3.3 Apologetic Purposes             ████████████░░░░░░ 78%                  │
 │  3.4 Conversational AI Tools         █████████████░░░░░ 85%                  │
 │  3.5 Intercessory Prayer Purposes    ████████████░░░░░░ 80%                  │
-│  3.6 Scripture Processing            ██████████░░░░░░░░ 75%                  │
+│  3.6 Problematic Vocabulary          ██████████░░░░░░░░ 75%                  │
+│  3.7 Difficult Passages              █████████░░░░░░░░░ 72%                  │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

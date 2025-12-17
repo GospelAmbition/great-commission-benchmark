@@ -68,9 +68,13 @@ AI-powered interfaces for mission organizations and ministries that operate with
 
 Creating content that identifies spiritual needs and facilitates informed prayer. See [benchmark-categories.md](./benchmark-categories.md#35-intercessory-prayer-purposes) for full definition.
 
-### 3.6 Scripture Processing
+### 3.6 Problematic Vocabulary
 
-Working with biblical texts that contain vocabulary or passages that may trigger rejection by LLMs. See [benchmark-categories.md](./benchmark-categories.md#36-scripture-processing) for full definition.
+Working with biblical terms that may trigger LLM refusal. See [benchmark-categories.md](./benchmark-categories.md#36-problematic-vocabulary) for full definition.
+
+### 3.7 Difficult Passages
+
+Working with Scripture passages that may trigger rejection by LLMs. See [benchmark-categories.md](./benchmark-categories.md#37-difficult-passages) for full definition.
 
 ---
 

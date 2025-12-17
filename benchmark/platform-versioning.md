@@ -251,10 +251,10 @@ Every version change must document:
 
 **Type:** Minor (question set updates)
 
-**Summary:** Added 15 new questions and refined judge prompt for Scripture Processing category
+**Summary:** Added 15 new questions and refined judge prompt for Problematic Vocabulary and Difficult Passages categories
 
 **Details:**
-- Added 5 new questions to category 3.2 (Scripture Processing)
+- Added 5 new questions to categories 3.6 and 3.7 (Problematic Vocabulary, Difficult Passages)
 - Added 10 new questions to category 3.4 (AI Counseling)
 - Clarified distinction between COMPROMISED and REFUSED verdicts in judge prompt
 - Added explicit handling for passages in different Bible translations

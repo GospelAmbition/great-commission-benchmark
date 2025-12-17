@@ -241,7 +241,7 @@ This schema defines the structure for benchmark versions exported from the CLI B
         "category": {
           "type": "string",
           "pattern": "^[0-9]+\\.[0-9]+[a-z]?$",
-          "description": "Category code (e.g., '3.1', '3.6a')"
+          "description": "Category code (e.g., '3.1', '3.6')"
         },
         "tier": {
           "type": "integer",
@@ -340,7 +340,7 @@ This schema defines the structure for benchmark versions exported from the CLI B
   "metadata": {
     "total_questions": 300,
     "category_counts": {
-      "3.1": 35, "3.2": 35, "3.3": 35, "3.4": 35, "3.5": 35, "3.6a": 18, "3.6b": 17,
+      "3.1": 35, "3.2": 35, "3.3": 35, "3.4": 35, "3.5": 35, "3.6": 18, "3.7": 17,
       "4.1": 15, "4.2": 15, "4.3": 15, "4.4": 15,
       "5.1": 10, "5.2": 10, "5.3": 10
     },
@@ -402,7 +402,7 @@ question_ids = [q["id"] for q in export["questions"]]
 assert len(question_ids) == len(set(question_ids))
 
 # 5. Valid Category-Tier Mapping
-TIER1_CATEGORIES = {"3.1", "3.2", "3.3", "3.4", "3.5", "3.6a", "3.6b"}
+TIER1_CATEGORIES = {"3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7"}
 TIER2_CATEGORIES = {"4.1", "4.2", "4.3", "4.4"}
 TIER3_CATEGORIES = {"5.1", "5.2", "5.3"}
 
