@@ -40,7 +40,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[WRITE]** Create generation prompt templates for Tier 2 doctrines (4.1-4.6)
 - [ ] **[WRITE]** Create generation prompt templates for Tier 3 worldview affirmations (5.1-5.6)
 - [ ] **[BUILD]** Implement LLM-based question generator
-- [x] **[DECISION]** Define minimum question count per category for V1: **Full expected build (210 Tier 1, 60 Tier 2, 30 Tier 3) — no subset for V1**
+- [x] **[DECISION]** Define minimum question count per category for V1: **Full expected build (210 Tier 1, 60 Tier 2, 30 Tier 3) — no subset for V1** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#minimum-question-count-for-v1))
 
 ### 1.3 LLM Backend Adapters
 
@@ -48,7 +48,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Implement LM Studio backend adapter
 - [ ] **[BUILD]** Implement Ollama backend adapter
 - [ ] **[BUILD]** Implement direct API backends (OpenAI, Anthropic)
-- [x] **[DECISION]** Determine default/recommended models for question generation: **OpenRouter: GPT 5.2, Gemini 3, Claude Opus**
+- [x] **[DECISION]** Determine default/recommended models for question generation: **OpenRouter: GPT 5.2, Gemini 3, Claude Opus** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#question-generation-model-selection))
 
 ### 1.4 Judge Prompt Development
 
@@ -57,8 +57,8 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[WRITE]** Finalize Tier 3 Worldview Judge prompt (draft exists in specs)
 - [ ] **[BUILD]** Implement judge prompt testing framework
 - [ ] **[BUILD]** Create judge test case management system
-- [ ] **[SPEC]** Define inter-rater reliability measurement methodology
-- [x] **[DECISION]** Minimum accuracy threshold for judge prompts before locking: **≥90%**
+- [x] **[SPEC]** Define inter-rater reliability measurement methodology (See [spec-inter-rater-reliability.md](./spec-inter-rater-reliability.md))
+- [x] **[DECISION]** Minimum accuracy threshold for judge prompts before locking: **≥90%** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#judge-prompt-accuracy-threshold))
 
 ### 1.5 Curation Workflow
 
@@ -66,7 +66,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Implement question locking mechanism
 - [ ] **[BUILD]** Build Datasette integration for database exploration
 - [ ] **[BUILD]** Create bulk operations (delete drafts, regenerate category)
-- [ ] **[SPEC]** Define curation guidelines for reviewers
+- [x] **[SPEC]** Define curation guidelines for reviewers (See [spec-curation-guidelines.md](./spec-curation-guidelines.md))
 
 ### 1.6 Version Building & Publishing
 
@@ -75,7 +75,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Implement version locking mechanism
 - [ ] **[BUILD]** Create JSON export for platform publication
 - [ ] **[BUILD]** Build bundle compiler for CLI distribution (compress + base64 encode)
-- [ ] **[SPEC]** Document version release workflow
+- [x] **[SPEC]** Document version release workflow
 
 ---
 
@@ -95,7 +95,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Build bundle decoding logic (base64 + zlib decompress)
 - [ ] **[BUILD]** Implement checksum verification
 - [ ] **[BUILD]** Create `gcb-runner versions` command
-- [x] **[DECISION]** How to communicate CLI updates when new benchmark versions release: **See decision below**
+- [x] **[DECISION]** How to communicate CLI updates when new benchmark versions release: **Automatic version checking enabled** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#cli-version-check-system))
 
 ### 2.3 Test Runner
 
@@ -110,7 +110,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Implement judge prompt loading from bundles
 - [ ] **[BUILD]** Build verdict parsing logic
 - [ ] **[BUILD]** Handle refusal type classification
-- [x] **[DECISION]** Default judge model: **OpenAI gpt-oss-20b** (available on both LM Studio and OpenRouter)
+- [x] **[DECISION]** Default judge model: **OpenAI gpt-oss-20b** (available on both LM Studio and OpenRouter) (See [Technical-Decisions.md](../documents/Technical-Decisions.md#judge-model-selection))
 
 ### 2.5 Results Storage & Display
 
@@ -126,7 +126,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Implement Chart.js visualizations
 - [ ] **[BUILD]** Create run comparison view
 - [ ] **[BUILD]** Build failure analysis view
-- [ ] **[SPEC]** Design dashboard wireframes/mockups
+- [x] **[SPEC]** Design dashboard wireframes/mockups (See [wireframes-cli-results-viewer.md](./wireframes-cli-results-viewer.md))
 
 ### 2.7 Static Report Generator
 
@@ -139,14 +139,14 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Implement JSON export format
 - [ ] **[BUILD]** Create platform upload functionality
 - [ ] **[BUILD]** Build account linking flow
-- [ ] **[SPEC]** Define export format schema validation
+- [x] **[SPEC]** Define export format schema validation (See [spec-export-schema-validation.md](./spec-export-schema-validation.md))
 
 ### 2.9 Local Model Support
 
 - [ ] **[BUILD]** Implement LM Studio backend
 - [ ] **[BUILD]** Implement Ollama backend
-- [ ] **[SPEC]** Document local model setup instructions
-- [x] **[DECISION]** Minimum hardware requirements for local testing: **See decision below**
+- [x] **[SPEC]** Document local model setup instructions (See [spec-local-model-setup.md](./spec-local-model-setup.md))
+- [x] **[DECISION]** Minimum hardware requirements for local testing: **16 GB RAM minimum, 32 GB recommended** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#minimum-hardware-requirements-for-local-testing))
 
 ---
 
@@ -164,7 +164,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Build Stripe payment integration
 - [ ] **[BUILD]** Implement moderation workflow endpoints
 - [ ] **[BUILD]** Create user notification system
-- [ ] **[SPEC]** Document API endpoints (OpenAPI spec)
+- [x] **[SPEC]** Document API endpoints (OpenAPI spec) (See [spec-api-endpoints.md](./spec-api-endpoints.md))
 
 ### 3.2 Frontend (Next.js)
 
@@ -180,7 +180,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Implement admin pages
 - [ ] **[BUILD]** Create methodology/documentation pages
 - [ ] **[SPEC]** Design UI wireframes/mockups
-- [x] **[DECISION]** UI design system/component library choice: **shadcn/ui** (See Technical-Decisions.md)
+- [x] **[DECISION]** UI design system/component library choice: **shadcn/ui** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#ui-design-systemcomponent-library-selection))
 
 ### 3.3 Infrastructure
 
@@ -189,7 +189,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Set up CI/CD deployment pipeline
 - [ ] **[BUILD]** Configure environment variables
 - [ ] **[BUILD]** Set up backup strategy (Railway + local machine download)
-- [x] **[DECISION]** Secondary backup location: **In the beginning, we will simply download a copy to a local machine for offline storage**
+- [x] **[DECISION]** Secondary backup location: **In the beginning, we will simply download a copy to a local machine for offline storage** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#secondary-backup-location-strategy))
 
 ### 3.4 Third-Party Integrations
 
@@ -198,8 +198,8 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Configure OpenRouter API access
 - [ ] **[BUILD]** Set up email service for notifications (SendGrid)
 - [ ] **[BUILD]** Configure Umami analytics (off-site server - URL and integration info to be provided at deployment)
-- [x] **[DECISION]** Select email service provider: **SendGrid**
-- [x] **[DECISION]** Analytics choice: **Umami** (on off-site server; URL and integration information will be provided when ready for deployment)
+- [x] **[DECISION]** Select email service provider: **SendGrid** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#email-service-provider-selection))
+- [x] **[DECISION]** Analytics choice: **Umami** (on off-site server; URL and integration information will be provided when ready for deployment) (See [Technical-Decisions.md](../documents/Technical-Decisions.md#analytics-service-selection))
 
 ### 3.5 Security
 
@@ -255,16 +255,16 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Build refund processing
 - [ ] **[BUILD]** Create sponsorship request form
 - [ ] **[BUILD]** Set up financial reporting dashboard
-- [x] **[DECISION]** Confirm $20 benchmark hosting contribution amount: **$20 will be the beginning cost for the hosting contribution. This amount may adjust later based on operational needs, but $20 is confirmed as the starting cost.**
-- [x] **[DECISION]** Define refund approval process
+- [x] **[DECISION]** Confirm $20 benchmark hosting contribution amount: **$20 will be the beginning cost for the hosting contribution. This amount may adjust later based on operational needs, but $20 is confirmed as the starting cost.** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#benchmark-hosting-contribution-amount))
+- [x] **[DECISION]** Define refund approval process (See [Technical-Decisions.md](../documents/Technical-Decisions.md#refund-approval-process))
 
 ### 4.6 Communications
 
 - [ ] **[BUILD]** Set up newsletter system
 - [ ] **[BUILD]** Create email notification templates
 - [ ] **[BUILD]** Set up external discussion platform (Discord)
-- [x] **[DECISION]** Select newsletter service: **Brevo** (Note: Implementation should be modular to allow switching services based on moderation/maintenance team's final decision)
-- [x] **[DECISION]** Discussion platform: **Discord**
+- [x] **[DECISION]** Select newsletter service: **Brevo** (Note: Implementation should be modular to allow switching services based on moderation/maintenance team's final decision) (See [Technical-Decisions.md](../documents/Technical-Decisions.md#newsletter-service-selection))
+- [x] **[DECISION]** Discussion platform: **Discord** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#discussion-platform-selection))
 - [ ] **[WRITE]** Draft launch announcement
 - [ ] **[WRITE]** Create FAQ content
 
@@ -289,20 +289,20 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[WRITE]** Create calibration set (minimum 50 questions per specs)
 - [ ] **[BUILD]** Get 3+ human reviewers to agree on verdicts for calibration set
 - [ ] **[SPEC]** Document calibration set creation process
-- [x] **[DECISION]** Who are the initial human reviewers for calibration? **Chris Wynn will be the initial reviewer for the calibration.**
+- [x] **[DECISION]** Who are the initial human reviewers for calibration? **Chris Wynn will be the initial reviewer for the calibration.** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#initial-human-reviewers-for-calibration))
 
 ### 5.3 Multi-Turn Testing (Phase 5 in methodology)
 
 - [ ] **[WRITE]** Design 5-10 multi-turn conversation scripts
 - [ ] **[SPEC]** Define misalignment markers
 - [ ] **[SPEC]** Define "turn-to-break" measurement methodology
-- [x] **[DECISION]** Multi-turn testing: **Included in V1** (essential for chatbot and AI counseling categories)
+- [x] **[DECISION]** Multi-turn testing: **Included in V1** (essential for chatbot and AI counseling categories) (See [Technical-Decisions.md](../documents/Technical-Decisions.md#multi-turn-testing-inclusion))
 
 ### 5.4 Sample Questions
 
 - [ ] **[WRITE]** Select sample questions to publish publicly (for transparency)
-- [x] **[DECISION]** How many sample questions to publish (small subset): **Do not publish exact questions. Publish similar questions (20 or under) to give a sample of the different kinds of questions.**
-- [x] **[DECISION]** Which categories to include in samples: **Mostly task questions, with one or two worldview and theological questions.**
+- [x] **[DECISION]** How many sample questions to publish (small subset): **Do not publish exact questions. Publish similar questions (20 or under) to give a sample of the different kinds of questions.** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#sample-questions-publication-strategy))
+- [x] **[DECISION]** Which categories to include in samples: **Mostly task questions, with one or two worldview and theological questions.** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#sample-questions-publication-strategy))
 
 ---
 
@@ -312,7 +312,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 
 - [ ] **[SPEC]** Document how builder exports get to platform
 - [ ] **[BUILD]** Create upload mechanism for JSON exports
-- [x] **[DECISION]** Manual upload vs. automated pipeline: **Manual upload workflow selected**
+- [x] **[DECISION]** Manual upload vs. automated pipeline: **Manual upload workflow selected** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#manual-upload-vs-automated-pipeline))
 
 **Decision Analysis:**
 
@@ -377,8 +377,8 @@ This document provides a comprehensive review of the CLI applications, platform,
 
 ### 6.3 Platform → CLI Runner
 
-- [ ] **[SPEC]** Document how CLI users know about new versions
-- [ ] **[DECISION]** Whether CLI should check for updates automatically
+- [x] **[SPEC]** Document how CLI users know about new versions
+- [x] **[DECISION]** Whether CLI should check for updates automatically: **YES — Automatic version checking enabled** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#cli-version-check-system))
 
 ### 6.4 Cross-System Consistency
 
@@ -462,10 +462,10 @@ This document provides a comprehensive review of the CLI applications, platform,
 ### 9.2 Launch Activities
 
 - [ ] **[WRITE]** Prepare launch announcement
-- [ ] **[DECISION]** Define launch communication channels
-- [ ] **[DECISION]** Identify launch partners/early adopters
+- [x] **[DECISION]** Define launch communication channels (See [Technical-Decisions.md](../documents/Technical-Decisions.md#launch-communication-channels))
+- [x] **[DECISION]** Identify launch partners/early adopters (See [Technical-Decisions.md](../documents/Technical-Decisions.md#launch-partners-and-early-adopters))
 - [ ] **[BUILD]** Set up monitoring and alerting
-- [ ] **[DECISION]** Define launch date criteria (when we're "ready")
+- [x] **[DECISION]** Define launch date criteria (when we're "ready") (See [Technical-Decisions.md](../documents/Technical-Decisions.md#launch-date-criteria))
 
 ---
 
@@ -475,7 +475,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 
 - [ ] **[SPEC]** Define monitoring checklist
 - [ ] **[SPEC]** Define incident response procedures
-- [ ] **[DECISION]** On-call/support rotation
+- [x] **[DECISION]** On-call/support rotation: **Project lead will monitor inboxes and error notifications. Sentry is identified as an error monitoring system. Alerts should be programmatically organized for failed attempts to run a module and get a refund. These alerts should notify the same inboxes monitored by the project lead.** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#on-callsupport-rotation))
 
 ### 10.2 Version 2 Planning
 
@@ -485,10 +485,10 @@ This document provides a comprehensive review of the CLI applications, platform,
 
 ### 10.3 Future Considerations
 
-- [x] **[DECISION]** Multilingual support priority and timeline: **Built and expected to quickly follow the MVP in English**
-- [x] **[DECISION]** Additional language support (Spanish, Portuguese, etc.): **Spanish, Portuguese, and Korean will be the first languages to auto-translate**
-- [x] **[DECISION]** WCAG Level AA upgrade timeline: **No expectation for Level AA upgrade. It will be next year or the year after.**
-- [x] **[DECISION]** Volume discount pricing thresholds: **No volume discounting price thresholds. Simple app and math of the pricing.**
+- [x] **[DECISION]** Multilingual support priority and timeline: **Built and expected to quickly follow the MVP in English** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#multilingual-support-priority))
+- [x] **[DECISION]** Additional language support (Spanish, Portuguese, etc.): **Spanish, Portuguese, and Korean will be the first languages to auto-translate** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#additional-language-support))
+- [x] **[DECISION]** WCAG Level AA upgrade timeline: **No expectation for Level AA upgrade. It will be next year or the year after.** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#wcag-level-aa-upgrade-timeline))
+- [x] **[DECISION]** Volume discount pricing thresholds: **No volume discounting price thresholds. Simple app and math of the pricing.** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#volume-discount-pricing-thresholds))
 
 ---
 
@@ -541,47 +541,6 @@ This document provides a comprehensive review of the CLI applications, platform,
 3. Feature enhancements
 
 ---
-
-## Judge Model Recommendation
-
-**Decision:** Default judge model is **OpenAI gpt-oss-20b**
-
-### Comparison: GPT-OSS-20B vs Qwen3 Coder 30B
-
-| Capability | GPT-OSS-20B | Qwen3 Coder 30B | Winner |
-|------------|-------------|-----------------|--------|
-| **Reasoning** | 89.8% | 78% | ✅ GPT-OSS-20B |
-| **Instruction Following** | 66% | 51.5% | ✅ GPT-OSS-20B |
-| **General Knowledge** | 99% | 32.2% | ✅ GPT-OSS-20B |
-| **Ethics Understanding** | 99% | Not specified | ✅ GPT-OSS-20B |
-| **Coding** | 92% | 89% | ✅ GPT-OSS-20B |
-| **Mathematics** | 66.7% | 89% | ✅ Qwen3 (not relevant for judging) |
-| **Efficiency** | MoE architecture (faster) | Dense model | ✅ GPT-OSS-20B |
-| **Availability** | Both LM Studio & OpenRouter | Both LM Studio & OpenRouter | ✅ Tie |
-
-### Rationale
-
-**GPT-OSS-20B is the clear choice for judging because:**
-
-1. **Superior Reasoning (89.8% vs 78%)** — Critical for evaluating whether responses meet criteria
-2. **Better Instruction Following (66% vs 51.5%)** — Essential for following judge prompts correctly
-3. **Strong General Knowledge (99% vs 32.2%)** — Needed to understand context and theological content
-4. **High Ethics Understanding (99%)** — Important for evaluating religious content appropriately
-5. **More Efficient** — MoE architecture means faster inference and lower resource usage
-6. **Consistent Availability** — Available on both LM Studio (local) and OpenRouter (cloud)
-
-**Qwen3 Coder 30B's only advantage is mathematics (89% vs 66.7%), which is not relevant for evaluating Great Commission benchmark responses.**
-
-### Implementation Notes
-
-- Model ID on OpenRouter: `openai/gpt-oss-20b`
-- Model ID on LM Studio: Same model name (verify exact identifier)
-- Cost: Very low (~$0.17 per test run based on infrastructure costs doc)
-- Hardware: Runs efficiently on 16GB+ systems (suitable for local use)
-
----
-
-## Minimum Hardware Requirements for Local Testing
 
 **Decision:** Minimum hardware requirements for local testing are defined below.
 
@@ -763,622 +722,6 @@ For a typical local testing setup:
 - **Internet:** 25+ Mbps
 - **GPU:** NVIDIA GPU with 8GB+ VRAM (optional but highly recommended)
 
-**Key Constraints:**
-1. **RAM is the primary bottleneck** — Must accommodate both test model and judge model simultaneously
-2. **Storage for models** — Largest component, plan for 40-80 GB per model
-3. **Internet for setup only** — Fully offline operation possible after initial downloads
-4. **GPU optional but beneficial** — Significantly improves inference speed and reduces RAM pressure
-
-**Permanent Documentation:** This decision is permanently recorded in [`../documents/Technical-Decisions.md`](../documents/Technical-Decisions.md) for long-term reference.
-
----
-
-## CLI Version Check System
-
-**Decision:** CLI runner will check the platform API for version updates and display non-blocking alerts when newer versions are available.
-
-### Overview
-
-The CLI runner will periodically check the platform website via a public API endpoint to determine:
-1. **Latest CLI version** — Whether a newer CLI release is available
-2. **Latest benchmark version** — Whether newer benchmark question sets are available
-
-If the local version is outdated, a non-blocking alert is displayed, but users can continue using their current version.
-
-### Platform API Endpoint
-
-**Endpoint:** `GET /api/cli/versions` (public, no authentication required)
-
-**Response Format:**
-```json
-{
-  "cli": {
-    "latest_version": "1.4.0",
-    "release_date": "2025-12-20",
-    "release_notes_url": "https://gcb.example.com/releases/1.4.0"
-  },
-  "benchmark": {
-    "latest_semantic_version": "2.1",
-    "latest_marketing_version": "Version 2",
-    "release_date": "2025-12-15",
-    "changelog_url": "https://gcb.example.com/versions/2.1"
-  },
-  "api_version": "1.0"
-}
-```
-
-**Implementation (FastAPI):**
-```python
-# FastAPI endpoint (platform backend)
-@router.get("/api/cli/versions", tags=["public"])
-async def get_cli_versions():
-    """Public endpoint for CLI version checking."""
-    return {
-        "cli": {
-            "latest_version": get_latest_cli_version(),  # From config/env
-            "release_date": get_cli_release_date(),
-            "release_notes_url": f"{settings.BASE_URL}/releases/{get_latest_cli_version()}"
-        },
-        "benchmark": {
-            "latest_semantic_version": get_current_benchmark_version(),
-            "latest_marketing_version": get_current_marketing_version(),
-            "release_date": get_benchmark_release_date(),
-            "changelog_url": f"{settings.BASE_URL}/versions/{get_current_benchmark_version()}"
-        },
-        "api_version": "1.0"
-    }
-```
-
-### CLI Version Checker Implementation
-
-**Location:** `gcb_runner/version_check.py`
-
-**Features:**
-- Checks platform API on startup and before test runs
-- Caches results locally (24-hour TTL) to avoid excessive API calls
-- Graceful degradation if API is unavailable (no blocking)
-- Non-blocking alerts using `rich` console formatting
-- Compares both CLI version and benchmark version
-
-**Implementation Structure:**
-```python
-# gcb_runner/version_check.py
-
-import json
-import time
-from pathlib import Path
-from typing import Optional
-from packaging import version
-import httpx
-from rich.console import Console
-from rich.panel import Panel
-
-class VersionChecker:
-    """Check for CLI and benchmark version updates."""
-    
-    def __init__(
-        self,
-        api_url: str = "https://gcb.example.com",
-        cache_file: Optional[Path] = None,
-        cache_ttl: int = 86400  # 24 hours
-    ):
-        self.api_url = api_url.rstrip("/")
-        self.cache_file = cache_file or Path.home() / ".gcb-runner" / "version_cache.json"
-        self.cache_ttl = cache_ttl
-        self.console = Console()
-    
-    def check_versions(
-        self,
-        current_cli_version: str,
-        current_benchmark_version: str,
-        show_alert: bool = True
-    ) -> dict:
-        """Check for version updates and optionally display alert."""
-        cached = self._load_cache()
-        
-        # Use cache if still valid
-        if cached and self._is_cache_valid(cached):
-            version_info = cached["data"]
-        else:
-            # Fetch from API
-            try:
-                version_info = self._fetch_from_api()
-                self._save_cache(version_info)
-            except Exception as e:
-                # If API fails, use cache even if expired, or skip check
-                if cached:
-                    version_info = cached["data"]
-                    if show_alert:
-                        self.console.print(
-                            "[yellow]⚠ Could not check for updates (using cached data)[/yellow]"
-                        )
-                else:
-                    # No cache and API failed - skip version check
-                    return {"cli": None, "benchmark": None, "error": str(e)}
-        
-        # Compare versions
-        cli_outdated = self._is_outdated(
-            current_cli_version,
-            version_info.get("cli", {}).get("latest_version")
-        )
-        benchmark_outdated = self._is_outdated(
-            current_benchmark_version,
-            version_info.get("benchmark", {}).get("latest_semantic_version")
-        )
-        
-        if show_alert and (cli_outdated or benchmark_outdated):
-            self._show_alert(cli_outdated, benchmark_outdated, version_info)
-        
-        return {
-            "cli": {
-                "current": current_cli_version,
-                "latest": version_info.get("cli", {}).get("latest_version"),
-                "outdated": cli_outdated
-            },
-            "benchmark": {
-                "current": current_benchmark_version,
-                "latest": version_info.get("benchmark", {}).get("latest_semantic_version"),
-                "outdated": benchmark_outdated
-            }
-        }
-    
-    def _fetch_from_api(self) -> dict:
-        """Fetch version information from platform API."""
-        url = f"{self.api_url}/api/cli/versions"
-        with httpx.Client(timeout=5.0) as client:
-            response = client.get(url)
-            response.raise_for_status()
-            return response.json()
-    
-    def _is_outdated(self, current: str, latest: Optional[str]) -> bool:
-        """Check if current version is outdated."""
-        if not latest:
-            return False
-        try:
-            return version.parse(current) < version.parse(latest)
-        except Exception:
-            # If version parsing fails, assume not outdated
-            return False
-    
-    def _show_alert(
-        self,
-        cli_outdated: bool,
-        benchmark_outdated: bool,
-        version_info: dict
-    ):
-        """Display non-blocking version update alert."""
-        messages = []
-        
-        if cli_outdated:
-            cli_latest = version_info.get("cli", {}).get("latest_version")
-            cli_url = version_info.get("cli", {}).get("release_notes_url", "")
-            messages.append(
-                f"[bold]CLI Update Available:[/bold] {cli_latest}\n"
-                f"  Run: [cyan]pip install --upgrade gcb-runner[/cyan]"
-            )
-            if cli_url:
-                messages.append(f"  Release notes: {cli_url}")
-        
-        if benchmark_outdated:
-            bench_latest = version_info.get("benchmark", {}).get("latest_semantic_version")
-            bench_marketing = version_info.get("benchmark", {}).get("latest_marketing_version")
-            bench_url = version_info.get("benchmark", {}).get("changelog_url", "")
-            messages.append(
-                f"\n[bold]New Benchmark Version:[/bold] {bench_marketing} ({bench_latest})\n"
-                f"  Update CLI to access the latest question set"
-            )
-            if bench_url:
-                messages.append(f"  Changelog: {bench_url}")
-        
-        if messages:
-            alert_text = "\n".join(messages)
-            self.console.print(
-                Panel(
-                    alert_text,
-                    title="[yellow]📦 Version Update Available[/yellow]",
-                    border_style="yellow",
-                    padding=(1, 2)
-                )
-            )
-            self.console.print(
-                "[dim]You can continue using your current version.[/dim]\n"
-            )
-    
-    def _load_cache(self) -> Optional[dict]:
-        """Load cached version information."""
-        if not self.cache_file.exists():
-            return None
-        try:
-            with open(self.cache_file) as f:
-                return json.load(f)
-        except Exception:
-            return None
-    
-    def _save_cache(self, data: dict):
-        """Save version information to cache."""
-        self.cache_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.cache_file, "w") as f:
-            json.dump({
-                "timestamp": time.time(),
-                "data": data
-            }, f)
-    
-    def _is_cache_valid(self, cached: dict) -> bool:
-        """Check if cache is still valid."""
-        timestamp = cached.get("timestamp", 0)
-        return (time.time() - timestamp) < self.cache_ttl
-```
-
-### Integration into CLI
-
-**Usage in CLI commands:**
-```python
-# gcb_runner/cli.py
-
-from gcb_runner.version_check import VersionChecker
-from gcb_runner import __version__ as CLI_VERSION
-from gcb_runner.versions.loader import VersionLoader
-
-@app.command()
-def test(...):
-    """Run benchmark test."""
-    # Check versions (non-blocking)
-    checker = VersionChecker(api_url=config.get("platform", {}).get("url"))
-    current_benchmark = VersionLoader.CURRENT_VERSION
-    checker.check_versions(CLI_VERSION, current_benchmark, show_alert=True)
-    
-    # Continue with test execution...
-```
-
-### Configuration
-
-**CLI Config (`~/.gcb-runner/config.json`):**
-```json
-{
-  "platform": {
-    "url": "https://gcb.example.com",
-    "check_updates": true
-  }
-}
-```
-
-**Environment Variable Override:**
-- `GCB_API_URL` — Override platform API URL
-- `GCB_DISABLE_VERSION_CHECK` — Disable version checking entirely
-
-### Tech Stack
-
-| Component | Technology | Rationale |
-|-----------|------------|-----------|
-| **HTTP Client** | `httpx` | Already in dependencies; async-capable |
-| **Version Comparison** | `packaging` | Standard Python library for semantic versioning |
-| **Caching** | JSON file | Simple, no external dependencies |
-| **UI** | `rich` | Already used for CLI output |
-| **API Endpoint** | FastAPI | Matches existing platform stack |
-
-### User Experience
-
-**Example Alert Display:**
-```
-╔═══════════════════════════════════════════════════════════════╗
-║              📦 Version Update Available                       ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║ CLI Update Available: 1.4.0                                  ║
-║   Run: pip install --upgrade gcb-runner                       ║
-║   Release notes: https://gcb.example.com/releases/1.4.0     ║
-║                                                               ║
-║ New Benchmark Version: Version 2 (2.1)                        ║
-║   Update CLI to access the latest question set               ║
-║   Changelog: https://gcb.example.com/versions/2.1            ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-
-You can continue using your current version.
-```
-
-**Behavior:**
-- Alert appears once per session (cached for 24 hours)
-- Non-blocking — user can dismiss or ignore
-- Works offline (uses cached data if API unavailable)
-- Configurable — can be disabled via config or environment variable
-
-### Implementation Tasks
-
-1. **[BUILD]** Create FastAPI endpoint `/api/cli/versions` in platform backend
-2. **[BUILD]** Implement `VersionChecker` class in CLI runner
-3. **[BUILD]** Integrate version check into CLI commands (test, versions, etc.)
-4. **[BUILD]** Add version check configuration to CLI config system
-5. **[BUILD]** Add `packaging` dependency to CLI runner `pyproject.toml`
-
-### Security Considerations
-
-- **Public endpoint** — No authentication required (version info is public)
-- **Rate limiting** — Platform should rate limit to prevent abuse
-- **HTTPS only** — All API calls use HTTPS
-- **Timeout** — Short timeout (5 seconds) to avoid blocking
-- **Cache validation** — Cache includes timestamp to prevent stale data
-
-### Error Handling
-
-- **API unavailable** — Use cached data if available, otherwise skip check silently
-- **Invalid response** — Log error, skip check, don't block user
-- **Network timeout** — Use cached data or skip check
-- **Version parsing errors** — Assume versions are current (fail-safe)
-
-**Permanent Documentation:** This decision is permanently recorded in [`../documents/Technical-Decisions.md`](../documents/Technical-Decisions.md) for long-term reference.
-
----
-
-## Refund Approval Process
-
-**Decision:** Refund approval process is defined below, with automatic refund eligibility for test failures and a retest mechanism with a maximum of three attempts.
-
-### Overview
-
-The refund process is triggered when a test run fails due to technical issues (purchase/processing failures, model unavailability) rather than model performance. Users are provided with both refund and retest options, with retesting limited to three attempts per purchase.
-
-### Refund Eligibility Criteria
-
-**Automatic Refund Eligibility:**
-1. **Purchase/Processing Failure** — Payment processed but test execution failed to start
-2. **Model Unavailability** — Selected model is no longer available or accessible during test execution
-3. **Technical Infrastructure Failure** — Platform/system errors that prevent test completion
-4. **Invalid Test Configuration** — Test cannot proceed due to configuration errors (system fault, not user error)
-
-**Not Eligible for Refund:**
-- Test completed successfully but model performed poorly
-- User selected wrong model or configuration
-- Test completed but user is dissatisfied with results
-- User-initiated cancellation after test has started
-
-### Refund Workflow
-
-#### 1. Failure Detection
-
-When a test run fails due to eligible reasons, the system automatically:
-- Detects the failure type and reason
-- Records the failure in the test run record
-- Determines if the failure qualifies for refund eligibility
-- Updates the test run status to `FAILED_ELIGIBLE_FOR_REFUND` or `FAILED_NOT_ELIGIBLE`
-
-#### 2. User Notification
-
-Upon eligible failure, the user receives:
-- **Email notification** with failure details
-- **In-app notification** on the user dashboard
-- **Test run status page** showing:
-  - Failure reason and details
-  - Refund button (if eligible)
-  - Retest button (if retest attempts remaining)
-
-#### 3. User Action Options
-
-**Option A: Request Refund**
-- User clicks "Request Refund" button
-- System processes automatic refund via Stripe
-- Refund is processed immediately (no manual approval needed for eligible failures)
-- User receives confirmation email
-- Test run status updated to `REFUNDED`
-
-**Option B: Retest**
-- User clicks "Retest" button
-- System checks retest attempt count (must be < 3)
-- If eligible, creates new test run with same configuration
-- User is not charged again (uses original purchase)
-- Retest attempt counter incremented
-- Test run status updated to `RETESTING`
-
-**Option C: No Action**
-- User can choose to do nothing
-- Test run remains in `FAILED_ELIGIBLE_FOR_REFUND` status
-- Refund option remains available indefinitely
-- Retest option remains available until 3 attempts reached
-
-### Retest Limitations
-
-**Maximum Retest Attempts:** 3 attempts per purchase
-
-**Retest Attempt Tracking:**
-- Each purchase has a `retest_count` field (starts at 0)
-- Incremented each time user clicks "Retest"
-- When `retest_count >= 3`, retest button is disabled
-- Retest button shows remaining attempts: "Retest (2 attempts remaining)"
-
-**Retest Behavior:**
-- Uses same model and configuration as original test
-- No additional charge to user
-- Each retest creates a new test run record (linked to original purchase)
-- If retest succeeds, original purchase is considered fulfilled
-- If all 3 retests fail, user can still request refund
-
-### User Interface Flow
-
-#### Test Run Status Page (After Failure)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ Test Run Failed                                          │
-├─────────────────────────────────────────────────────────┤
-│                                                          │
-│ ❌ Test execution failed                                 │
-│                                                          │
-│ Reason: Model unavailable (gpt-4-turbo)                 │
-│ Status: Eligible for refund                              │
-│                                                          │
-│ [Request Refund]  [Retest (2 attempts remaining)]       │
-│                                                          │
-│ Note: You can retest up to 3 times at no additional     │
-│ cost. If all retests fail, you can still request a      │
-│ refund.                                                  │
-│                                                          │
-└─────────────────────────────────────────────────────────┘
-```
-
-#### After 3 Retest Attempts
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ Test Run Failed                                          │
-├─────────────────────────────────────────────────────────┤
-│                                                          │
-│ ❌ Test execution failed                                 │
-│                                                          │
-│ Reason: Model unavailable (gpt-4-turbo)                 │
-│ Status: Eligible for refund                              │
-│ Retest attempts: 3/3 (maximum reached)                   │
-│                                                          │
-│ [Request Refund]                                         │
-│                                                          │
-│ Note: Maximum retest attempts reached. You can still     │
-│ request a refund.                                        │
-│                                                          │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Database Schema
-
-**TestRun Table Additions:**
-```sql
-ALTER TABLE test_runs ADD COLUMN failure_reason TEXT;
-ALTER TABLE test_runs ADD COLUMN refund_eligible BOOLEAN DEFAULT FALSE;
-ALTER TABLE test_runs ADD COLUMN refund_status VARCHAR(50); -- NULL, 'PENDING', 'PROCESSED', 'REFUNDED'
-ALTER TABLE test_runs ADD COLUMN retest_count INTEGER DEFAULT 0;
-ALTER TABLE test_runs ADD COLUMN original_purchase_id INTEGER REFERENCES purchases(id);
-ALTER TABLE test_runs ADD COLUMN is_retest BOOLEAN DEFAULT FALSE;
-```
-
-**Purchase Table Additions:**
-```sql
-ALTER TABLE purchases ADD COLUMN total_retest_count INTEGER DEFAULT 0;
-ALTER TABLE purchases ADD COLUMN refund_status VARCHAR(50); -- NULL, 'PENDING', 'PROCESSED', 'REFUNDED'
-```
-
-### Implementation Details
-
-#### 1. Failure Detection Logic
-
-```python
-def determine_refund_eligibility(test_run: TestRun) -> bool:
-    """Determine if test run failure qualifies for automatic refund."""
-    failure_reasons_eligible = [
-        "MODEL_UNAVAILABLE",
-        "PROCESSING_FAILURE",
-        "INFRASTRUCTURE_ERROR",
-        "CONFIGURATION_ERROR"  # System fault, not user error
-    ]
-    
-    if test_run.status == "FAILED":
-        return test_run.failure_reason in failure_reasons_eligible
-    return False
-```
-
-#### 2. Retest Attempt Check
-
-```python
-def can_retest(purchase: Purchase) -> bool:
-    """Check if user can retest (hasn't exceeded 3 attempts)."""
-    return purchase.total_retest_count < 3
-```
-
-#### 3. Refund Processing
-
-```python
-def process_refund(test_run: TestRun, purchase: Purchase):
-    """Process automatic refund via Stripe."""
-    if not test_run.refund_eligible:
-        raise ValueError("Test run not eligible for refund")
-    
-    # Process refund via Stripe API
-    refund = stripe.Refund.create(
-        payment_intent=purchase.stripe_payment_intent_id,
-        amount=purchase.amount_cents,
-        reason="requested_by_customer"
-    )
-    
-    # Update database
-    test_run.refund_status = "PROCESSED"
-    purchase.refund_status = "PROCESSED"
-    # ... save to database
-```
-
-#### 4. Retest Creation
-
-```python
-def create_retest(purchase: Purchase, original_test_run: TestRun) -> TestRun:
-    """Create a new test run as a retest attempt."""
-    if purchase.total_retest_count >= 3:
-        raise ValueError("Maximum retest attempts reached")
-    
-    # Create new test run with same configuration
-    retest = TestRun(
-        user_id=purchase.user_id,
-        model_id=original_test_run.model_id,
-        benchmark_version=original_test_run.benchmark_version,
-        is_retest=True,
-        original_purchase_id=purchase.id,
-        status="PENDING"
-    )
-    
-    # Increment retest count
-    purchase.total_retest_count += 1
-    retest.retest_count = purchase.total_retest_count
-    
-    # Save and return
-    # ... save to database
-    return retest
-```
-
-### Stripe Integration
-
-**Refund Processing:**
-- Use Stripe Refund API (`stripe.Refund.create`)
-- Refund full amount of original purchase
-- Reason: "requested_by_customer"
-- Automatic processing (no manual approval for eligible failures)
-
-**Webhook Handling:**
-- Listen for `charge.refunded` webhook event
-- Update database when refund is confirmed
-- Send confirmation email to user
-
-### User Experience Considerations
-
-1. **Clear Communication** — Failure reasons are clearly explained
-2. **Immediate Options** — Both refund and retest buttons visible immediately
-3. **Transparency** — Retest attempt counter always visible
-4. **No Surprises** — User knows exactly how many retests remain
-5. **Flexibility** — User can choose refund or retest, or wait
-6. **Automatic Processing** — No manual approval delays for eligible refunds
-
-### Edge Cases
-
-1. **Partial Test Completion** — If test runs partially (e.g., 50% complete) then fails, still eligible for refund
-2. **Model Becomes Available During Retest** — Retest proceeds normally; if successful, purchase fulfilled
-3. **Multiple Failures** — Each retest failure is tracked separately; user can refund at any point
-4. **Refund After Successful Retest** — Not allowed; successful retest fulfills purchase
-5. **Concurrent Retests** — System prevents multiple concurrent retests from same purchase
-
-### Testing Requirements
-
-1. **[BUILD]** Test refund flow for eligible failures
-2. **[BUILD]** Test retest attempt counting and blocking
-3. **[BUILD]** Test Stripe refund webhook handling
-4. **[BUILD]** Test UI display of refund/retest options
-5. **[BUILD]** Test edge cases (partial completion, concurrent retests, etc.)
-
-### Implementation Tasks
-
-1. **[BUILD]** Add database fields for refund and retest tracking
-2. **[BUILD]** Implement failure detection and eligibility determination
-3. **[BUILD]** Build refund processing endpoint (Stripe integration)
-4. **[BUILD]** Build retest creation endpoint
-5. **[BUILD]** Create UI components for refund/retest buttons
-6. **[BUILD]** Implement retest attempt counter and blocking logic
-7. **[BUILD]** Add email notifications for failures and refunds
-8. **[BUILD]** Set up Stripe webhook handler for refund confirmations
-
-**Permanent Documentation:** This decision is permanently recorded in [`../documents/Technical-Decisions.md`](../documents/Technical-Decisions.md) for long-term reference.
 
 ---
 
