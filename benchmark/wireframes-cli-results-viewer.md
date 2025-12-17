@@ -26,7 +26,7 @@ Consistent with platform leaderboard:
 | Fail/Refused | Red | `#dc2626` |
 | Tier 1 | Blue | `#3b82f6` |
 | Tier 2 | Purple | `#8b5cf6` |
-| Tier 3 | Pink | `#ec4899` |
+| Tier 3 | Orange | `#f97316` |
 | Background | Light Gray | `#f8fafc` |
 | Card Background | White | `#ffffff` |
 | Primary Action | Blue | `#2563eb` |
@@ -651,7 +651,7 @@ which evaluates AI models on their ability to support Christian ministry work.
 - **Scoring:** 70% Task / 20% Doctrine / 10% Worldview
 - **Judge Model:** gpt-4o
 
-Learn more at [gcb.example.com](https://gcb.example.com)
+Learn more at [greatcommissionbenchmark.ai](https://greatcommissionbenchmark.ai)
 
 ---
 
@@ -775,13 +775,14 @@ const chartDefaults = {
   }
 };
 
+// Human-readable color names for dashboard elements with alternate for Tier 3 (no pink)
 const colors = {
-  pass: '#16a34a',
-  partial: '#d97706', 
-  fail: '#dc2626',
-  tier1: '#3b82f6',
-  tier2: '#8b5cf6',
-  tier3: '#ec4899'
+  pass: '#16a34a',      // Green (Pass/Accepted)
+  partial: '#d97706',   // Yellow/Orange (Partial/Compromised)
+  fail: '#dc2626',      // Red (Fail/Refused)
+  tier1: '#3b82f6',     // Blue (Tier 1)
+  tier2: '#8b5cf6',     // Purple (Tier 2)
+  tier3: '#f97316'      // Orange (Tier 3), replacing pink
 };
 ```
 

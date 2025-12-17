@@ -654,9 +654,35 @@ The dashboard integrates with the notification system (see feature-user-notifica
 
 ### Failed Tests
 
-- Show error message and reason
-- Provide "Retry" or "Contact Support" options
-- Allow download of partial results if available
+**Test Status Display:**
+| Status | Display | User Actions Available |
+|--------|---------|------------------------|
+| `retrying` | "Reconnecting..." (spinner) | None needed (automatic) |
+| `awaiting_admin` | "Requires attention" (warning) | Choose: wait for admin OR request refund |
+| `admin_completing` | "Admin completing" (progress) | View progress, request refund instead |
+| `refunded` | "Refunded" (gray) | View reason, run new test |
+
+**Automatic Recovery (Transparent):**
+- If test encounters transient errors, system retries automatically
+- User may see brief "reconnecting" status, then test continues
+- No action required from user
+
+**After 3 Failed Retry Attempts:**
+- Dashboard shows test with "Requires Attention" status
+- User can click to see options:
+  - **Wait for Admin**: "An administrator will complete the remaining X questions"
+  - **Request Refund**: "Receive a full refund immediately"
+- Progress bar shows completed percentage
+
+**Admin Completion in Progress:**
+- Dashboard shows "Admin Completing - X% done"
+- Estimated completion time displayed
+- User can still request refund if they change their mind
+
+**Refunded Tests:**
+- Show as "Refunded" with gray styling
+- Reason displayed (e.g., "API errors after 3 retry attempts")
+- Option to run new test with same configuration
 
 ### Payment Issues
 

@@ -194,27 +194,59 @@ Users can voluntarily contribute:
 
 ### When Refunds Are Available
 
-| Situation | Refund Available |
-|-----------|------------------|
-| Test failed to complete | Yes |
-| Test stuck in error state | Yes |
-| User reports issue before completion | Yes |
-| Test completed successfully | No |
-| User unhappy with results | No |
+| Situation | Refund Available | Notes |
+|-----------|------------------|-------|
+| Test failed after 3 auto-retry attempts | Yes (user choice) | User can choose refund OR wait for admin completion |
+| User chooses refund over admin completion | Yes | Full refund, partial results discarded |
+| Admin unable to complete test | Yes | Full refund after admin review |
+| Test stuck in error state | Yes | After investigation |
+| User reports issue before completion | Yes | Case-by-case basis |
+| Test completed successfully | No | — |
+| User unhappy with results | No | — |
 
 ### Refund Process
 
-1. User reports issue via support form
-2. System verifies test status (failed/incomplete)
-3. Refund processed through Stripe
-4. User notified of refund
+**Automatic Refund Path (User-Initiated):**
+1. After 3 failed retry attempts, user is given choice
+2. If user selects "Request refund now"
+3. Refund processed automatically through Stripe
+4. User notified via email
+5. Partial results marked as "refunded" (not published)
 
-### Automatic Retries
+**Manual Refund Path (Admin-Initiated):**
+1. User chooses to wait for admin completion
+2. Admin investigates and attempts completion
+3. If admin cannot complete, admin initiates refund
+4. Refund processed through Stripe
+5. User notified with explanation
 
-Before refunds, the system attempts automatic retry:
-- API errors → retry with backoff
+### Automatic Recovery System
+
+The system includes a robust checkpoint and recovery mechanism that handles errors transparently:
+
+**Checkpoint System:**
+- Progress saved after each question (responses, verdicts, metadata)
+- On any error, system resumes from last checkpoint—NOT from the beginning
+- Users are not re-charged for completed work
+
+**Automatic Retry (Transparent to User):**
+- API errors → retry with exponential backoff (30s → 60s → 120s)
 - Timeouts → retry with extended timeout
 - Rate limiting → queue and retry later
+- Up to **3 retry attempts** before escalating
+
+**Admin Escalation (After 3 Failed Attempts):**
+When automatic recovery fails 3 times:
+1. System notifies administrator(s) immediately
+2. User is presented with two options:
+   - **Wait for admin completion**: An administrator manually completes the remaining portion of the test (typical resolution: 24-48 hours)
+   - **Request immediate refund**: Full refund processed, partial results discarded
+
+**Admin Completion Process:**
+- Admin reviews the failure cause
+- Admin manually runs remaining questions (possibly with different API configuration)
+- Results are merged with previously completed portion
+- User notified when complete, results enter normal moderation queue
 
 ---
 

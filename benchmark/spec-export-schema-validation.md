@@ -30,7 +30,7 @@ All systems must validate against this schema to ensure data integrity and cross
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gcb.example.com/schemas/export-v1.0.json",
+  "$id": "https://greatcommissionbenchmark.ai/schemas/export-v1.0.json",
   "title": "GCB Test Results Export",
   "description": "Schema for Great Commission Benchmark test result exports",
   "type": "object",

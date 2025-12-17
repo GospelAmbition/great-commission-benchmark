@@ -14,6 +14,20 @@ This tool is intentionally simple and focused. It does not include question gene
 
 ---
 
+## Platform Tests vs CLI Submissions
+
+| Aspect | Platform Tests | CLI Submissions |
+|--------|---------------|-----------------|
+| **Where run** | On the platform | Locally via this CLI |
+| **Publishing** | Automatic (no approval gate) | Requires moderator verification |
+| **Cost** | Model API cost + $5 platform fee | $20 platform fee |
+| **Use Case** | Individual testers, quick results | Organizations, custom/local models |
+| **Verification** | Not required (platform runs test) | Required (moderator validates results) |
+
+**Why the difference?** Platform tests are run in a controlled environment—the platform executes the test directly and can verify the results. CLI submissions come from external environments where the platform has no visibility into how the test was run, so moderator verification ensures result integrity before publication.
+
+---
+
 ## Quick Start
 
 ```bash
@@ -299,7 +313,7 @@ $ gcb-runner export --run 3 --output gpt4o-results.json
 Exporting test run #3...
   ✓ Exported to gpt4o-results.json
 
-File ready for upload at https://gcb.example.com/submit
+File ready for upload at https://greatcommissionbenchmark.ai/submit
 ```
 
 **Export Format:**
@@ -352,6 +366,8 @@ File ready for upload at https://gcb.example.com/submit
 }
 ```
 
+**Note:** When uploading via `gcb-runner upload`, you'll also need to provide model access information (API endpoint, HuggingFace link, or reproducibility details) so moderators can verify your results before publishing to the leaderboard.
+
 **Version Fields Explained:**
 
 | Field | Purpose |
@@ -364,7 +380,9 @@ File ready for upload at https://gcb.example.com/submit
 
 ### `gcb-runner upload`
 
-Upload results directly to the platform:
+Upload results to the platform for verification and publication.
+
+**Important:** CLI submissions require moderator verification before appearing on the leaderboard. This is different from platform tests which are auto-published. A $20 platform fee applies.
 
 ```
 $ gcb-runner upload --run 3
@@ -374,10 +392,35 @@ $ gcb-runner upload --run 3
 Opening browser for authentication...
   ✓ Account linked: user@example.com
 
+╔═══════════════════════════════════════════════════════════════╗
+║                CLI Submission Information                      ║
+╚═══════════════════════════════════════════════════════════════╝
+
+CLI submissions require moderator verification before publication.
+
+What happens next:
+  1. Pay $20 platform fee (covers verification work)
+  2. Provide model access info (API endpoint, or reproducibility details)
+  3. Moderator verifies results (typically 24-48 hours)
+  4. If verified, results published to leaderboard
+
+Fee: $20.00 (one-time, covers verification)
+
+? Continue with submission? [Y/n]
+
+Opening payment page...
+  ✓ Payment completed
+
 Uploading test run #3...
   ✓ Uploaded successfully
+  ⏳ Pending moderator verification
 
-View your results at: https://gcb.example.com/results/abc123
+What's next:
+  • You'll receive an email when verification is complete
+  • Provide model access info at: https://gcbenchmark.ai/submissions/abc123
+  • Typical verification time: 24-48 hours
+
+Track your submission at: https://greatcommissionbenchmark.ai/submissions/abc123
 ```
 
 ---
@@ -652,7 +695,7 @@ def get_dashboard_html() -> str:
             --danger: #dc2626;
             --bg: #f8fafc;
         }
-        body { font-family: system-ui, sans-serif; background: var(--bg); }
+        body { font-family: 'Inter', 'Segoe UI', Roboto, sans-serif; background: var(--bg); }
         .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
         .card { background: white; border-radius: 8px; padding: 1.5rem; 
                 box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
@@ -1092,7 +1135,7 @@ Configuration stored in `~/.gcb-runner/config.json`:
     "judge_model": "gpt-4o"
   },
   "platform": {
-    "url": "https://gcb.example.com",
+    "url": "https://greatcommissionbenchmark.ai",
     "token": "..."
   }
 }

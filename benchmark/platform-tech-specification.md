@@ -166,6 +166,33 @@ The Great Commission Benchmark platform is a public-facing website that:
 - Built on accessible Radix UI primitives
 - Zero runtime bundle size impact
 
+**Typography:**
+- **Primary Font:** Inter (with fallbacks: "Segoe UI", Roboto, sans-serif)
+- Load via `@next/font` for automatic optimization:
+
+```typescript
+import { Inter } from 'next/font/google'
+
+const inter = Inter({ subsets: ['latin'] })
+
+// Apply to <html> or <body> in root layout
+<html className={inter.className}>
+```
+
+- Configure in `tailwind.config.js`:
+
+```javascript
+module.exports = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['var(--font-inter)', 'Segoe UI', 'Roboto', 'sans-serif'],
+      },
+    },
+  },
+}
+```
+
 ### 3.3 OpenRouter Integration
 
 **Why OpenRouter:**
@@ -281,12 +308,18 @@ CREATE TABLE test_runs (
     model_id UUID REFERENCES models(id),
     question_set_id UUID REFERENCES question_sets(id),
     methodology_version_id UUID REFERENCES methodology_versions(id),
-    status VARCHAR(50) NOT NULL,            -- 'pending', 'running', 'completed', 'failed'
+    status VARCHAR(50) NOT NULL,            -- 'pending', 'running', 'retrying', 'awaiting_admin', 
+                                            -- 'admin_completing', 'completed', 'refunded', 'rejected'
+    retry_count INTEGER DEFAULT 0,          -- Number of automatic retry attempts (max 3)
+    last_error TEXT,                        -- Most recent error message
+    checkpoint_question_index INTEGER,      -- Last completed question index for resume
     payment_id VARCHAR(255),                -- Stripe payment ID
     payment_status VARCHAR(50),
     total_cost DECIMAL(10,2),
     trust_tier VARCHAR(50) DEFAULT 'automated',  -- 'automated', 'reviewed', 'validated'
     validation_metrics JSONB,               -- Inter-rater, reproducibility, etc.
+    admin_assigned_id UUID REFERENCES users(id),  -- Admin handling completion (if escalated)
+    admin_notes TEXT,                       -- Admin notes on manual completion
     created_at TIMESTAMP DEFAULT NOW(),
     started_at TIMESTAMP,
     completed_at TIMESTAMP
@@ -845,17 +878,51 @@ See [benchmark-categories.md](./benchmark-categories.md) for the complete respon
 - `payment_intent.payment_failed` → Notify user
 - `charge.refunded` → Update test status
 
-### 9.4 Refund Policy
+### 9.4 Test Recovery System
 
-| Situation | Refund |
-|-----------|--------|
-| Test failed to complete | Yes |
-| Test stuck in error state | Yes |
-| User reports issue before completion | Yes |
-| Test completed successfully | No |
-| User unhappy with results | No |
+The platform includes robust checkpoint and automatic recovery:
 
-### 9.5 Financial Steward
+**Checkpoint Mechanism:**
+- Progress saved after each question (response, verdict, metadata)
+- On failure, system resumes from checkpoint—never re-runs completed questions
+- Checkpoints include: question index, responses collected, partial scores
+
+**Automatic Retry (Transparent to User):**
+```
+Error occurs during test
+    ↓
+Save checkpoint (current progress)
+    ↓
+Wait with exponential backoff (30s → 60s → 120s)
+    ↓
+Resume from checkpoint (attempt 1, 2, or 3)
+    ↓
+Success? → Continue test
+    ↓
+Failure after 3 attempts? → Escalate to admin
+```
+
+**Admin Escalation Process:**
+1. After 3 failed retry attempts, system alerts administrator(s)
+2. User is presented with two choices:
+   - **Wait for admin completion**: Admin manually runs remaining questions
+   - **Request refund now**: Full refund processed immediately
+3. If user waits, admin investigates and completes test manually
+4. Completed results merge with checkpoint data
+5. Test proceeds to normal moderation queue
+
+### 9.5 Refund Policy
+
+| Situation | Refund | Notes |
+|-----------|--------|-------|
+| Test failed after 3 auto-retries | User choice | Can wait for admin OR request refund |
+| Admin unable to complete | Yes | After admin investigation |
+| Test stuck in error state | Yes | — |
+| User reports issue before completion | Yes | Case-by-case |
+| Test completed successfully | No | — |
+| User unhappy with results | No | — |
+
+### 9.6 Financial Steward
 
 Payments flow to a stewarding ministry (TBD) that:
 - Receives Stripe payments
@@ -1350,13 +1417,13 @@ leaderboard review
   "cli": {
     "latest_version": "1.4.0",
     "release_date": "2025-12-20",
-    "release_notes_url": "https://gcb.example.com/releases/1.4.0"
+    "release_notes_url": "https://greatcommissionbenchmark.ai/releases/1.4.0"
   },
   "benchmark": {
     "latest_semantic_version": "2.1",
     "latest_marketing_version": "Version 2",
     "release_date": "2025-12-15",
-    "changelog_url": "https://gcb.example.com/versions/2.1"
+    "changelog_url": "https://greatcommissionbenchmark.ai/versions/2.1"
   },
   "api_version": "1.0"
 }
@@ -1422,7 +1489,7 @@ DATABASE_URL=postgresql://user:pass@host:5432/gcb
 AUTH0_DOMAIN=your-tenant.auth0.com
 AUTH0_CLIENT_ID=xxx
 AUTH0_CLIENT_SECRET=xxx
-AUTH0_AUDIENCE=https://api.gcb.example.com
+AUTH0_AUDIENCE=https://api.greatcommissionbenchmark.ai
 
 # Stripe
 STRIPE_SECRET_KEY=sk_live_xxx
@@ -1434,14 +1501,14 @@ OPENROUTER_API_KEY=sk-or-xxx
 
 # Email
 SENDGRID_API_KEY=SG.xxx
-EMAIL_FROM=noreply@gcb.example.com
+EMAIL_FROM=noreply@greatcommissionbenchmark.ai
 
 # Analytics (Umami - self-hosted, off-site)
 NEXT_PUBLIC_UMAMI_SCRIPT_URL=https://analytics.example.com/script.js
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=your-website-id-from-umami
 
 # Application
-NEXT_PUBLIC_API_URL=https://api.gcb.example.com
+NEXT_PUBLIC_API_URL=https://api.greatcommissionbenchmark.ai
 FASTAPI_SECRET_KEY=xxx
 ENVIRONMENT=production
 ```
@@ -1505,7 +1572,7 @@ export default function RootLayout({ children }) {
    - Log into your Umami instance
    - Navigate to Settings → Websites
    - Click "Add Website"
-   - Enter website domain (e.g., `gcb.example.com`)
+   - Enter website domain (e.g., `greatcommissionbenchmark.ai`)
    - Copy the generated Website ID
 
 2. **In Railway/Environment:**

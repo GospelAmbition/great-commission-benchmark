@@ -165,8 +165,11 @@ See [platform-technical-architecture.md](./platform-technical-architecture.md) f
 
 ### Failure Handling & Refunds
 
-- **On failure:** Users can attempt to rerun the benchmark. The system includes automatic retry mechanisms for transient failures (API errors, timeouts, rate limiting).
-- **Refunds:** Available if the user is in a failed or non-completed state and requests one. Users can report issues and receive a refund.
+- **Checkpoint system:** Progress saved after each question, enabling seamless recovery without re-running completed portions.
+- **Automatic retry:** System automatically retries on transient failures (API errors, timeouts, rate limiting) with exponential backoff—up to 3 attempts. Users may see brief "reconnecting" status but test continues.
+- **Admin escalation:** After 3 failed retry attempts, administrators are notified automatically. User is presented with two options:
+  - **Wait for admin completion:** An administrator manually completes the remaining portion (typical resolution: 24-48 hours)
+  - **Request refund now:** Full refund processed immediately
 - **No refund after success:** Once the benchmark completes successfully, the purchase is finalized and refunds are not available.
 
 ### Automated Submissions (Hosted Platform)

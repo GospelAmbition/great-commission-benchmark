@@ -772,13 +772,13 @@ If the local version is outdated, a non-blocking alert is displayed, but users c
   "cli": {
     "latest_version": "1.4.0",
     "release_date": "2025-12-20",
-    "release_notes_url": "https://gcb.example.com/releases/1.4.0"
+    "release_notes_url": "https://greatcommissionbenchmark.ai/releases/1.4.0"
   },
   "benchmark": {
     "latest_semantic_version": "2.1",
     "latest_marketing_version": "Version 2",
     "release_date": "2025-12-15",
-    "changelog_url": "https://gcb.example.com/versions/2.1"
+    "changelog_url": "https://greatcommissionbenchmark.ai/versions/2.1"
   },
   "api_version": "1.0"
 }
@@ -801,7 +801,7 @@ If the local version is outdated, a non-blocking alert is displayed, but users c
 ```json
 {
   "platform": {
-    "url": "https://gcb.example.com",
+    "url": "https://greatcommissionbenchmark.ai",
     "check_updates": true
   }
 }

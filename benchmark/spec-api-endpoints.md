@@ -1761,7 +1761,7 @@ Deprecation notices will be communicated via:
 
 The full OpenAPI 3.0 specification is available at:
 - **Development:** `http://localhost:8000/openapi.json`
-- **Production:** `https://api.gcb.example.com/openapi.json`
+- **Production:** `https://api.greatcommissionbenchmark.ai/openapi.json`
 
 Interactive documentation:
 - **Swagger UI:** `/docs`

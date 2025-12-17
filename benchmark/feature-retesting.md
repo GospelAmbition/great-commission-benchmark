@@ -632,12 +632,31 @@ Compare original test with retest.
 
 ### Incomplete Retest
 
-**Scenario:** Retest fails or is cancelled
+**Scenario:** Retest encounters errors during execution
+
+**Automatic Recovery (Transparent to User):**
+- System saves checkpoint after each question
+- On error, system automatically retries from checkpoint (not from beginning)
+- Up to 3 retry attempts with exponential backoff (30s → 60s → 120s)
+- User may see brief "reconnecting" message but test continues
+
+**After 3 Failed Retry Attempts:**
+- System alerts administrator(s)
+- User is presented with two options:
+  1. **Wait for admin completion**: Admin manually completes remaining questions, then comparison is generated
+  2. **Request refund now**: Full refund processed, no comparison created
+
+**Admin Completion Path:**
+- Admin investigates failure cause
+- Admin manually runs remaining questions (possibly with different configuration)
+- Results merged with checkpoint data
+- Comparison generated once retest is complete
+- User notified via email
 
 **Handling:**
-- Don't create comparison
-- Allow retry
-- Refund payment if applicable
+- Checkpoint preserved even if user requests refund (for debugging)
+- Comparison only created when retest fully completes
+- Partial retests do not affect original test results
 
 ---
 
