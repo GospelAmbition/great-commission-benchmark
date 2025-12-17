@@ -78,13 +78,13 @@ User selects which AI model and version to benchmark.
 │  │  ├──────────────────────────────────┤  │  │                           │  │
 │  │  │ ○ Google                         │  │  │  ─────────────────────    │  │
 │  │  │   Gemini Ultra, Pro, Nano...     │  │  │                           │  │
-│  │  ├──────────────────────────────────┤  │  │  Questions: 600           │  │
-│  │  │ ○ Meta                           │  │  │  Categories: 4            │  │
+│  │  ├──────────────────────────────────┤  │  │  Questions: 300           │  │
+│  │  │ ○ Meta                           │  │  │  Tiers: 3                 │  │
 │  │  │   Llama 3 70B, 8B...             │  │  │  Est. Time: 5-10 min      │  │
 │  │  ├──────────────────────────────────┤  │  │                           │  │
 │  │  │ ○ Mistral AI                     │  │  │  ─────────────────────    │  │
 │  │  │   Mistral Large, Medium, Small..│  │  │                           │  │
-│  │  ├──────────────────────────────────┤  │  │  Cost: $5.00              │  │
+│  │  ├──────────────────────────────────┤  │  │  Cost: $20 + model API    │  │
 │  │  │ ○ Other / Custom                 │  │  │                           │  │
 │  │  │   Bring your own API key         │  │  │                           │  │
 │  │  └──────────────────────────────────┘  │  │                           │  │
@@ -120,16 +120,16 @@ User selects which AI model and version to benchmark.
 │  ──────────────────────────────────    │  │                           │
 │                                        │  │  Version:                 │
 │  ┌──────────────────────────────────┐  │  │  2024.01                  │
-│  │ ○ GPT-4 Turbo              $5.00 │  │  │                           │
+│  │ ○ GPT-4 Turbo             ~$4.80 │  │  │                           │
 │  │   Latest, most capable          │  │  │  ─────────────────────    │
 │  ├──────────────────────────────────┤  │  │                           │
-│  │ ● GPT-4                    $5.00 │  │  │  Questions: 600           │
-│  │   Original GPT-4                │  │  │  Categories: 4            │
+│  │ ● GPT-4                   ~$4.50 │  │  │  Questions: 300           │
+│  │   Original GPT-4                │  │  │  Tiers: 3                 │
 │  ├──────────────────────────────────┤  │  │  Est. Time: 5-10 min      │
-│  │ ○ GPT-4o                   $5.00 │  │  │                           │
+│  │ ○ GPT-4o                  ~$3.20 │  │  │                           │
 │  │   Optimized multimodal          │  │  │  ─────────────────────    │
 │  ├──────────────────────────────────┤  │  │                           │
-│  │ ○ GPT-3.5 Turbo            $3.00 │  │  │  Cost: $5.00              │
+│  │ ○ GPT-3.5 Turbo           ~$0.80 │  │  │  Cost: $20 + model API    │
 │  │   Fast and efficient            │  │  │                           │
 │  └──────────────────────────────────┘  │  │                           │
 │                                        │  │                           │
@@ -185,8 +185,8 @@ User selects which AI model and version to benchmark.
 │  ┌─────────────────────────────────┐│
 │  │ Test Summary                    ││
 │  │ ─────────────────────────────── ││
-│  │ Questions: 600 | Time: 5-10 min ││
-│  │ Cost: $5.00                     ││
+│  │ Questions: 300 | Time: 5-10 min ││
+│  │ Cost: $20 + model API           ││
 │  └─────────────────────────────────┘│
 │                                     │
 │  [Continue to Payment →]            │
@@ -237,9 +237,9 @@ User confirms payment and initiates the test.
 │  │  Test Configuration                    │  │  Order Summary            │  │
 │  │  ──────────────────────────────────    │  │  ─────────────────────    │  │
 │  │                                        │  │                           │  │
-│  │  ┌──────────────────────────────────┐  │  │  Model Cost        $5.00  │  │
-│  │  │                                  │  │  │  Platform Cost    $20.00  │  │
-│  │  │  Provider:  OpenAI               │  │  │  Donation Round Up $5.00  │  │
+│  │  ┌──────────────────────────────────┐  │  │  Model Cost        $4.80  │  │
+│  │  │                                  │  │  │  Platform Fee     $20.00  │  │
+│  │  │  Provider:  OpenAI               │  │  │  Donation Round Up $5.20  │  │
 │  │  │  Model:     GPT-4 Turbo          │  │  │  ─────────────────────    │  │
 │  │  │  Version:   2024.01.25           │  │  │  Total:           $30.00  │  │
 │  │  │                                  │  │  │  ─────────────────────    │  │
@@ -252,12 +252,12 @@ User confirms payment and initiates the test.
 │  │  │  Test Details                    │  │  │  ─────────────────────    │  │
 │  │  │  ────────────────────────────    │  │  │                           │  │
 │  │  │                                  │  │  │  Secure checkout via      │  │
-│  │  │  • 600 benchmark questions       │  │  │  Stripe                   │  │
-│  │  │  • 4 evaluation categories       │  │  │                           │  │
-│  │  │  • Scripture Knowledge           │  │  │                           │  │
-│  │  │  • Theological Accuracy          │  │  │                           │  │
-│  │  │  • Ethical Reasoning             │  │  │                           │  │
-│  │  │  • Apologetics                   │  │  │                           │  │
+│  │  │  • 300 benchmark questions       │  │  │  Stripe                   │  │
+│  │  │  • 3 evaluation tiers            │  │  │                           │  │
+│  │  │  • Task Capability (70%)         │  │  │                           │  │
+│  │  │  • Doctrinal Fidelity (20%)      │  │  │                           │  │
+│  │  │  • Worldview Confession (10%)    │  │  │                           │  │
+│  │  │  • 19 categories total           │  │  │                           │  │
 │  │  │  • Estimated time: 5-10 minutes  │  │  │                           │  │
 │  │  │                                  │  │  │                           │  │
 │  │  └──────────────────────────────────┘  │  │                           │  │
@@ -385,7 +385,7 @@ Test is running in the background. User can leave and return.
 │  │  │                                                               │  │    │
 │  │  │  [████████████████████████████████░░░░░░░░░░░░░░░░░░] 65%     │  │    │
 │  │  │                                                               │  │    │
-│  │  │  390 of 600 questions completed                               │  │    │
+│  │  │  195 of 300 questions completed                               │  │    │
 │  │  │                                                               │  │    │
 │  │  └───────────────────────────────────────────────────────────────┘  │    │
 │  │                                                                     │    │
@@ -417,12 +417,12 @@ Test is running in the background. User can leave and return.
 │  │  ┌───────────────────────────────────────────────────────────────┐  │    │
 │  │  │ 14:32:15  Test initiated                                     │  │    │
 │  │  │ 14:32:16  Connected to OpenAI API                            │  │    │
-│  │  │ 14:32:17  Starting Scripture Knowledge category (150 q)      │  │    │
-│  │  │ 14:33:45  Scripture Knowledge complete                       │  │    │
-│  │  │ 14:33:46  Starting Theological Accuracy category (150 q)     │  │    │
-│  │  │ 14:35:12  Theological Accuracy complete                      │  │    │
-│  │  │ 14:35:13  Starting Ethical Reasoning category (150 q)        │  │    │
-│  │  │ 14:35:14  Processing question 42 of 150...                   │  │    │
+│  │  │ 14:32:17  Starting Tier 1: Task Capability (210 q)           │  │    │
+│  │  │ 14:33:45  Tier 1 complete                                    │  │    │
+│  │  │ 14:33:46  Starting Tier 2: Doctrinal Fidelity (60 q)         │  │    │
+│  │  │ 14:35:12  Tier 2 complete                                    │  │    │
+│  │  │ 14:35:13  Starting Tier 3: Worldview Confession (30 q)       │  │    │
+│  │  │ 14:35:14  Processing question 12 of 30...                    │  │    │
 │  │  │ █                                                            │  │    │
 │  │  └───────────────────────────────────────────────────────────────┘  │    │
 │  │                                                                     │    │
@@ -455,7 +455,7 @@ Test is running in the background. User can leave and return.
 │                                     │
 │  ┌─────────────────────────────────┐│
 │  │ [██████████████░░░░░░░░] 65%    ││
-│  │ 390 of 600 questions            ││
+│  │ 195 of 300 questions            ││
 │  └─────────────────────────────────┘│
 │                                     │
 │  Started: 3 min ago                 │
@@ -489,9 +489,9 @@ Test Recovery System (Background Process):
 │  3. Resume from checkpoint (do NOT re-run completed questions)      │
 │  4. Repeat up to 3 attempts                                         │
 │                                                                     │
-│  Example: Test at 65% (390/600 questions)                           │
-│  • Error occurs at question 391                                     │
-│  • System waits, then resumes from question 391                     │
+│  Example: Test at 65% (195/300 questions)                           │
+│  • Error occurs at question 196                                     │
+│  • System waits, then resumes from question 196                     │
 │  • User sees uninterrupted progress (may notice brief pause)        │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
@@ -517,7 +517,7 @@ Test Recovery System (Background Process):
 │  │                                                               │  │
 │  │  [████████████████████████████████░░░░░░░░░░░░░░░░░░] 65%     │  │
 │  │                                                               │  │
-│  │  390 of 600 questions completed                               │  │
+│  │  195 of 300 questions completed                               │  │
 │  │                                                               │  │
 │  └───────────────────────────────────────────────────────────────┘  │
 │                                                                     │
@@ -552,7 +552,7 @@ Only after 3 failed retry attempts does the system escalate and notify the user:
 │  │  The test encountered persistent errors and could not         │  │
 │  │  complete automatically.                                      │  │
 │  │                                                               │  │
-│  │  Progress: 65% (390 of 600 questions completed)               │  │
+│  │  Progress: 65% (195 of 300 questions completed)               │  │
 │  │  Error: API rate limit exceeded after 3 retry attempts        │  │
 │  │                                                               │  │
 │  │  ✓ An administrator has been notified                         │  │
@@ -604,8 +604,8 @@ When user chooses to wait for admin completion:
 │  │                                                               │  │
 │  │  [████████████████████████████████░░░░░░░░░░░░░░░░░░] 65%     │  │
 │  │                                                               │  │
-│  │  390 of 600 questions completed                               │  │
-│  │  Awaiting admin intervention for remaining 210 questions      │  │
+│  │  195 of 300 questions completed                               │  │
+│  │  Awaiting admin intervention for remaining 105 questions      │  │
 │  │                                                               │  │
 │  └───────────────────────────────────────────────────────────────┘  │
 │                                                                     │
@@ -691,20 +691,20 @@ Test completed, showing summary with link to full results.
 │                                                                             │
 │  ┌──────────────────────────────────┐  ┌──────────────────────────────┐     │
 │  │                                  │  │                              │     │
-│  │  Category Breakdown              │  │  Published!                  │     │
+│  │  Tier Breakdown                  │  │  Published!                  │     │
 │  │  ────────────────────────────    │  │  ────────────────────────    │     │
 │  │                                  │  │                              │     │
-│  │  Scripture Knowledge             │  │  ✓ Your results are now      │     │
+│  │  Tier 1: Task Capability (70%)   │  │  ✓ Your results are now      │     │
 │  │  ████████████████████████░░ 94%  │  │    live on the leaderboard   │     │
 │  │                                  │  │                              │     │
-│  │  Theological Accuracy            │  │  Results from platform tests │     │
+│  │  Tier 2: Doctrinal (20%)         │  │  Results from platform tests │     │
 │  │  ████████████████████░░░░░░ 88%  │  │  are published automatically │     │
 │  │                                  │  │  upon completion.            │     │
-│  │  Ethical Reasoning               │  │                              │     │
+│  │  Tier 3: Worldview (10%)         │  │                              │     │
 │  │  ███████████████████████░░░ 93%  │  │  Share your results now, or  │     │
 │  │                                  │  │  run another test.           │     │
-│  │  Apologetics                     │  │                              │     │
-│  │  █████████████████░░░░░░░░░ 78%  │  │                              │     │
+│  │                                  │  │                              │     │
+│  │                                  │  │                              │     │
 │  │                                  │  │                              │     │
 │  │                                  │  │                              │     │
 │  │                                  │  │                              │     │
@@ -749,20 +749,20 @@ Test completed, showing summary with link to full results.
 │      Rank: #1 on Leaderboard        │
 │                                     │
 │  ┌─────────────────────────────────┐│
-│  │ Category Breakdown              ││
+│  │ Tier Breakdown                  ││
 │  │ ─────────────────────────────── ││
 │  │                                 ││
-│  │ Scripture          94%         ││
+│  │ Tier 1 (Task)      94%         ││
 │  │ ████████████████████░░         ││
 │  │                                 ││
-│  │ Theology           88%         ││
+│  │ Tier 2 (Doctrine)  88%         ││
 │  │ ██████████████████░░░░         ││
 │  │                                 ││
-│  │ Ethics             93%         ││
+│  │ Tier 3 (Worldview) 93%         ││
 │  │ ███████████████████░░░         ││
 │  │                                 ││
-│  │ Apologetics        78%         ││
-│  │ █████████████████░░░░░         ││
+│  │                                 ││
+│  │                                 ││
 │  └─────────────────────────────────┘│
 │                                     │
 │  [View Full Results]                │
@@ -903,9 +903,9 @@ Tests run externally via the CLI and submitted with results require moderator ve
 CLI Submission States:
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                                                                              │
-│  submitted → pending_payment → pending_verification → verified → published   │
+│  submitted → pending_payment → pending_validation → validated → published    │
 │                    │                    │                                    │
-│                    │                    └──→ rejected (verification failed)  │
+│                    │                    └──→ rejected (validation failed)    │
 │                    │                                                         │
 │                    └──────────────────────────────────────────→ refunded     │
 │                                                                              │
@@ -914,11 +914,11 @@ CLI Submission States:
 State Definitions (CLI Submissions):
 - submitted: Results uploaded via CLI
 - pending_payment: Awaiting $20 platform fee payment
-- pending_verification: Awaiting moderator verification
-- verified: Moderator verified reproducibility/validity
+- pending_validation: Awaiting moderator validation
+- validated: Moderator validated reproducibility/validity
 - published: Added to leaderboard
-- rejected: Verification failed (with reason)
-- refunded: User requested refund before verification
+- rejected: Validation failed (with reason)
+- refunded: User requested refund before validation
 ```
 
 ### Why the Difference?
@@ -926,11 +926,32 @@ State Definitions (CLI Submissions):
 | Aspect | Platform Tests | CLI Submissions |
 |--------|---------------|-----------------|
 | **Execution** | Platform runs test directly | User runs test locally |
-| **Trust Level** | High (platform controls execution) | Requires verification |
-| **Publishing** | Automatic on completion | After moderator verification |
-| **Cost** | Model API cost + platform fee ($5) | $20 platform fee (covers verification) |
-| **Verification** | Not required (post-publish review only) | Required before publishing |
+| **Trust Level** | High (platform controls execution) | Requires validation |
+| **Publishing** | Automatic on completion | After moderator validation |
+| **Cost** | $20 platform fee + model API cost | $20 platform fee (covers validation) |
+| **Validation** | Not required (post-publish review only) | Required before publishing |
+| **Trust Tier** | `automated` | `validated` |
 | **Use Case** | Individual testers | Organizations with custom/local models |
+
+### Trust Tiers
+
+Trust tiers indicate the level of human verification a published leaderboard result has received. This is separate from workflow state—trust tier is assigned when results are published and can be upgraded over time.
+
+| Trust Tier | Description | How Assigned |
+|------------|-------------|--------------|
+| `automated` | Published automatically, no human review yet | Platform tests on completion |
+| `reviewed` | Spot-checked by moderator | Moderator marks as reviewed post-publication |
+| `validated` | Fully verified by moderator | CLI submissions after passing validation; or platform tests after full moderator review |
+
+**Visual Indicators on Leaderboard:**
+- `validated` — Green badge (highest trust)
+- `reviewed` — Yellow badge (partial verification)
+- `automated` — Gray badge (no human review)
+
+**Trust Tier Progression:**
+- Platform tests start at `automated` and can be upgraded to `reviewed` or `validated` by moderators
+- CLI submissions start at `validated` (required verification before publication)
+- Any published result can be downgraded/rejected if issues are found during review
 
 ---
 

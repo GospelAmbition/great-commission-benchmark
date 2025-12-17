@@ -343,9 +343,9 @@ Admin interface for managing user accounts, roles, and permissions.
 │  │                                                                     │    │
 │  │  Date          │ Type              │ Amount   │ Model               │    │
 │  │  ──────────────┼───────────────────┼──────────┼─────────────────    │    │
-│  │  Dec 14, 2024  │ Test Purchase     │ $5.00    │ GPT-4 Turbo         │    │
-│  │  Dec 10, 2024  │ Test Purchase     │ $5.00    │ Claude 3 Opus       │    │
-│  │  Dec 5, 2024   │ Refund            │ -$5.00   │ Gemini Pro          │    │
+│  │  Dec 14, 2024  │ Test Purchase     │ $24.80   │ GPT-4 Turbo         │    │
+│  │  Dec 10, 2024  │ Test Purchase     │ $27.50   │ Claude 3 Opus       │    │
+│  │  Dec 5, 2024   │ Refund            │ -$22.10  │ Gemini Pro          │    │
 │  │                                                                     │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 │                                                                             │
@@ -468,9 +468,9 @@ Admin interface for managing user accounts, roles, and permissions.
 │                                                               │
 │   Select Purchase to Refund:                                  │
 │   ┌───────────────────────────────────────────────────────┐   │
-│   │ ○ Dec 14, 2024 - GPT-4 Turbo test ($5.00)             │   │
-│   │ ○ Dec 10, 2024 - Claude 3 Opus test ($5.00)           │   │
-│   │ ○ Dec 5, 2024 - Gemini Pro test ($5.00)               │   │
+│   │ ○ Dec 14, 2024 - GPT-4 Turbo test ($24.80)            │   │
+│   │ ○ Dec 10, 2024 - Claude 3 Opus test ($27.50)          │   │
+│   │ ○ Dec 5, 2024 - Gemini Pro test ($22.10)              │   │
 │   └───────────────────────────────────────────────────────┘   │
 │                                                               │
 │   Reason (required):                                          │
@@ -655,7 +655,7 @@ Admin interface for completing tests that failed after 3 automatic retry attempt
 │                                                               │
 │   ┌───────────────────────────────────────────────────────┐   │
 │   │                                                       │   │
-│   │  ✓ All 600 questions completed                       │   │
+│   │  ✓ All 300 questions completed                       │   │
 │   │  ✓ Results merged with checkpoint data               │   │
 │   │  ✓ Test moved to moderation queue                    │   │
 │   │  ✓ User @user45 notified via email                   │   │

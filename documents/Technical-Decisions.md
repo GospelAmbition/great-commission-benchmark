@@ -962,11 +962,11 @@ If the local version is outdated, a non-blocking alert is displayed, but users c
 
 ### Decision
 
-Refund approval process is defined below, with automatic refund eligibility for test failures and a retest mechanism with a maximum of three attempts.
+Refund approval process is defined below, with automatic system retries and admin escalation for persistent failures. Users choose between waiting for admin resolution or requesting a refund.
 
 ### Overview
 
-The refund process is triggered when a test run fails due to technical issues (purchase/processing failures, model unavailability) rather than model performance. Users are provided with both refund and retest options, with retesting limited to three attempts per purchase.
+When errors occur during test execution, the system automatically retries up to 3 times with exponential backoff. If all retry attempts fail, an administrator is alerted and the user is presented with two options: wait for the admin to manually complete the test, or request a full refund. There is no user-facing "retest" button—retries are handled automatically by the system.
 
 ### Refund Eligibility Criteria
 
@@ -992,55 +992,67 @@ When a test run fails due to eligible reasons, the system automatically:
 - Determines if the failure qualifies for refund eligibility
 - Updates the test run status to `FAILED_ELIGIBLE_FOR_REFUND` or `FAILED_NOT_ELIGIBLE`
 
-#### 2. User Notification
+#### 2. Automatic Recovery (Transparent to User)
 
-Upon eligible failure, the user receives:
-- **Email notification** with failure details
-- **In-app notification** on the user dashboard
-- **Test run status page** showing:
-  - Failure reason and details
-  - Refund button (if eligible)
-  - Retest button (if retest attempts remaining)
+When errors occur during test execution, the system automatically handles recovery without user intervention:
 
-#### 3. User Action Options
+1. **Checkpoint Progress** — Save current state (questions completed, responses received)
+2. **Exponential Backoff** — Wait with increasing delays (30s → 60s → 120s)
+3. **Resume from Checkpoint** — Continue from last saved position (do NOT re-run completed questions)
+4. **Repeat** — Up to 3 retry attempts total
 
-**Option A: Request Refund**
+During automatic recovery, users see their test progress with a brief "Reconnecting to API..." message. No action is required from the user.
+
+#### 3. Hard Failure Escalation (After 3 Retry Attempts)
+
+If all 3 automatic retry attempts fail:
+
+1. **Admin Alert** — System automatically notifies administrators of the persistent failure
+2. **User Notification** — User receives email and in-app notification
+3. **Test run status page** shows:
+   - Failure reason and details
+   - Progress saved (e.g., "65% complete - 195 of 300 questions")
+   - Confirmation that admin has been notified
+   - Two options for the user to choose
+
+#### 4. User Action Options
+
+**Option A: Wait for Admin**
+- User selects "Wait for administrator to complete the test"
+- Progress is saved; admin will manually complete remaining questions
+- Test run status updated to `AWAITING_ADMIN_COMPLETION`
+- User is emailed when results are ready
+- Typical resolution time: 24-48 hours
+- User can still request refund later while waiting
+
+**Option B: Request Refund**
 - User clicks "Request Refund" button
 - System processes automatic refund via Stripe
-- Refund is processed immediately (no manual approval needed for eligible failures)
+- Refund is processed immediately (no manual approval needed)
 - User receives confirmation email
 - Test run status updated to `REFUNDED`
+- Partial results are discarded (not published)
 
-**Option B: Retest**
-- User clicks "Retest" button
-- System checks retest attempt count (must be < 3)
-- If eligible, creates new test run with same configuration
-- User is not charged again (uses original purchase)
-- Retest attempt counter incremented
-- Test run status updated to `RETESTING`
+### Automatic Retry System
 
-**Option C: No Action**
-- User can choose to do nothing
-- Test run remains in `FAILED_ELIGIBLE_FOR_REFUND` status
-- Refund option remains available indefinitely
-- Retest option remains available until 3 attempts reached
+**Maximum Retry Attempts:** 3 attempts per test run (automatic, not user-triggered)
 
-### Retest Limitations
+**Retry Behavior:**
+- System automatically retries on transient failures (API timeouts, rate limits, connection issues)
+- Exponential backoff between attempts (30s → 60s → 120s)
+- Resumes from checkpoint (does not re-run completed questions)
+- All retries use same model and configuration
+- User sees progress continue seamlessly (may notice brief pause)
 
-**Maximum Retest Attempts:** 3 attempts per purchase
+**Retry Tracking:**
+- Each test run tracks `retry_count` (starts at 0)
+- Incremented on each automatic retry
+- When `retry_count >= 3`, system escalates to admin
 
-**Retest Attempt Tracking:**
-- Each purchase has a `retest_count` field (starts at 0)
-- Incremented each time user clicks "Retest"
-- When `retest_count >= 3`, retest button is disabled
-- Retest button shows remaining attempts: "Retest (2 attempts remaining)"
-
-**Retest Behavior:**
-- Uses same model and configuration as original test
-- No additional charge to user
-- Each retest creates a new test run record (linked to original purchase)
-- If retest succeeds, original purchase is considered fulfilled
-- If all 3 retests fail, user can still request refund
+**After 3 Failed Retries:**
+- Admin is automatically alerted via notification system
+- User is presented with "Wait for Admin" or "Request Refund" options
+- Progress is preserved for potential admin completion
 
 ### Database Schema
 
@@ -1049,14 +1061,14 @@ Upon eligible failure, the user receives:
 ALTER TABLE test_runs ADD COLUMN failure_reason TEXT;
 ALTER TABLE test_runs ADD COLUMN refund_eligible BOOLEAN DEFAULT FALSE;
 ALTER TABLE test_runs ADD COLUMN refund_status VARCHAR(50); -- NULL, 'PENDING', 'PROCESSED', 'REFUNDED'
-ALTER TABLE test_runs ADD COLUMN retest_count INTEGER DEFAULT 0;
-ALTER TABLE test_runs ADD COLUMN original_purchase_id INTEGER REFERENCES purchases(id);
-ALTER TABLE test_runs ADD COLUMN is_retest BOOLEAN DEFAULT FALSE;
+ALTER TABLE test_runs ADD COLUMN retry_count INTEGER DEFAULT 0;
+ALTER TABLE test_runs ADD COLUMN checkpoint_question_index INTEGER DEFAULT 0;
+ALTER TABLE test_runs ADD COLUMN awaiting_admin BOOLEAN DEFAULT FALSE;
+ALTER TABLE test_runs ADD COLUMN admin_notified_at TIMESTAMP;
 ```
 
 **Purchase Table Additions:**
 ```sql
-ALTER TABLE purchases ADD COLUMN total_retest_count INTEGER DEFAULT 0;
 ALTER TABLE purchases ADD COLUMN refund_status VARCHAR(50); -- NULL, 'PENDING', 'PROCESSED', 'REFUNDED'
 ```
 
@@ -1075,31 +1087,33 @@ ALTER TABLE purchases ADD COLUMN refund_status VARCHAR(50); -- NULL, 'PENDING', 
 
 ### User Experience Considerations
 
-1. **Clear Communication** — Failure reasons are clearly explained
-2. **Immediate Options** — Both refund and retest buttons visible immediately
-3. **Transparency** — Retest attempt counter always visible
-4. **No Surprises** — User knows exactly how many retests remain
-5. **Flexibility** — User can choose refund or retest, or wait
+1. **Seamless Recovery** — Users see uninterrupted progress during automatic retries
+2. **Transparent Status** — Brief "Reconnecting..." message during retries, no action required
+3. **Clear Escalation** — After 3 failures, user understands admin has been notified
+4. **Simple Choice** — Only two options: wait for admin or request refund
+5. **Flexibility** — User can change from "wait" to "refund" at any time
 6. **Automatic Processing** — No manual approval delays for eligible refunds
 
 ### Edge Cases
 
-1. **Partial Test Completion** — If test runs partially (e.g., 50% complete) then fails, still eligible for refund
-2. **Model Becomes Available During Retest** — Retest proceeds normally; if successful, purchase fulfilled
-3. **Multiple Failures** — Each retest failure is tracked separately; user can refund at any point
-4. **Refund After Successful Retest** — Not allowed; successful retest fulfills purchase
-5. **Concurrent Retests** — System prevents multiple concurrent retests from same purchase
+1. **Partial Test Completion** — If test runs partially (e.g., 65% complete) then fails after 3 retries, progress is saved for admin completion or refund is available
+2. **Model Becomes Available During Admin Wait** — Admin can complete the test using the now-available model
+3. **User Changes Mind** — User can switch from "wait for admin" to "refund" at any point before completion
+4. **Admin Completes Successfully** — Test run status updated, user notified, results published
+5. **Admin Cannot Complete** — Admin manually triggers refund and notifies user
+6. **Concurrent Failure Scenarios** — System handles one test run at a time per user to prevent race conditions
 
 ### Implementation Tasks
 
-1. **[BUILD]** Add database fields for refund and retest tracking
-2. **[BUILD]** Implement failure detection and eligibility determination
-3. **[BUILD]** Build refund processing endpoint (Stripe integration)
-4. **[BUILD]** Build retest creation endpoint
-5. **[BUILD]** Create UI components for refund/retest buttons
-6. **[BUILD]** Implement retest attempt counter and blocking logic
-7. **[BUILD]** Add email notifications for failures and refunds
+1. **[BUILD]** Add database fields for retry tracking and admin escalation
+2. **[BUILD]** Implement automatic retry system with exponential backoff
+3. **[BUILD]** Implement checkpoint system to save progress after each question
+4. **[BUILD]** Build admin notification system for escalated failures
+5. **[BUILD]** Build refund processing endpoint (Stripe integration)
+6. **[BUILD]** Create UI for "Wait for Admin" vs "Request Refund" choice
+7. **[BUILD]** Add email notifications for failures, refunds, and admin completion
 8. **[BUILD]** Set up Stripe webhook handler for refund confirmations
+9. **[BUILD]** Build admin interface for viewing and completing escalated tests
 
 ---
 

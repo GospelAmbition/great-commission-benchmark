@@ -191,7 +191,7 @@ The six use case categories are defined in [benchmark-categories.md](./benchmark
 | 6.3 | Create "fitness for purpose" recommendations | "Best for X use case" |
 | 6.4 | Document failure modes | Catalog specific guardrail triggers |
 
-**Composite Score Formula:**
+**Composite Score Formula:** See [benchmark-scoring.md](./benchmark-scoring.md) for the complete scoring methodology.
 
 ```
 GCB Score = (Tier1_Score × 0.70) + (Tier2_Score × 0.20) + (Tier3_Score × 0.10)

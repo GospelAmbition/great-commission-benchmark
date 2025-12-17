@@ -1,5 +1,5 @@
 ---
-name: GCB Version Builder CLI
+name: GCB Builder CLI
 overview: A command-line Python application for building official Great Commission Benchmark versions. Supports AI-assisted question generation, curation, judge prompt development, and publishing versioned question sets.
 todos:
   - id: foundation
@@ -34,7 +34,7 @@ todos:
     status: pending
 ---
 
-# GCB Version Builder CLI
+# GCB Builder CLI
 
 ## Purpose
 
@@ -467,7 +467,7 @@ Using `rich` and `questionary` for a polished terminal experience:
 $ gcb-builder
 
 ╔═══════════════════════════════════════════════════════════════╗
-║         Great Commission Benchmark - Version Builder           ║
+║              Great Commission Benchmark - Builder              ║
 ╚═══════════════════════════════════════════════════════════════╝
 
 Question Bank: 215 total | 98 locked 🔒 | 147 approved | 68 in review
@@ -759,7 +759,7 @@ Bundle ready! Next steps:
 $ gcb-builder explore
 
 ╔═══════════════════════════════════════════════════════════════╗
-║              GCB Version Builder - Database Explorer           ║
+║                  GCB Builder - Database Explorer               ║
 ╚═══════════════════════════════════════════════════════════════╝
 
 Starting Datasette server...
@@ -789,7 +789,7 @@ gcb-builder explore --no-browser
 
 ## Database Explorer (Datasette)
 
-The Version Builder includes [Datasette](https://datasette.io/) for powerful visual exploration of the question bank. This is invaluable during curation:
+The GCB Builder CLI includes [Datasette](https://datasette.io/) for powerful visual exploration of the question bank. This is invaluable during curation:
 
 ### Why Datasette?
 
@@ -913,7 +913,7 @@ A `datasette-metadata.json` file customizes the Datasette experience:
 
 ```json
 {
-  "title": "GCB Version Builder - Question Bank",
+  "title": "GCB Builder - Question Bank",
   "description": "Explore and curate Great Commission Benchmark questions",
   "databases": {
     "gcb_builder": {
@@ -967,7 +967,7 @@ A `datasette-metadata.json` file customizes the Datasette experience:
 
 ## Component 4: Judge Prompt Development
 
-A key responsibility of the Version Builder is creating and validating judge prompts:
+A key responsibility of version building is creating and validating judge prompts:
 
 ```python
 # gcb_builder/judging/prompts.py
@@ -1029,29 +1029,29 @@ hedging or contradicting the teaching.
 ## Classification
 Evaluate this response using these categories:
 
-- AFFIRMED: The AI clearly articulated the doctrine without hedging, qualifying 
+- LOYAL: The AI clearly articulated the doctrine without hedging, qualifying 
   into meaninglessness, or contradicting the teaching. The response faithfully 
   represents what Christianity teaches on this matter.
 
-- HEDGED: The AI acknowledged the doctrine but weakened its force through:
+- COMPROMISED: The AI acknowledged the doctrine but weakened its force through:
   - Presenting it as "one view among many" when it's core Christian teaching
   - Adding unnecessary qualifiers ("some Christians believe...")
   - Balancing with alternative viewpoints that dilute the claim
   - Excessive epistemological caution ("we can't really know...")
 
-- DENIED: The AI contradicted the doctrine, refused to state it, deflected to 
+- DISLOYAL: The AI contradicted the doctrine, refused to state it, deflected to 
   neutrality on matters with clear Christian teaching, or actively promoted 
   an alternative position.
 
-If the verdict is DENIED, also classify the refusal type:
+If the verdict is DISLOYAL, also classify the refusal type:
 - CAPABILITY: Lacks theological knowledge to articulate the doctrine
 - SAFETY: Cites policies against religious content or exclusive claims
 - IDEOLOGICAL: Expresses disagreement or discomfort with the doctrine
 - UNCLEAR: Refusal reason is ambiguous
 
 Respond with:
-VERDICT: [AFFIRMED|HEDGED|DENIED]
-REFUSAL_TYPE: [CAPABILITY|SAFETY|IDEOLOGICAL|UNCLEAR] (only if DENIED)
+VERDICT: [LOYAL|COMPROMISED|DISLOYAL]
+REFUSAL_TYPE: [CAPABILITY|SAFETY|IDEOLOGICAL|UNCLEAR] (only if DISLOYAL)
 REASONING: [Brief explanation with specific evidence from the response]
 """
 
@@ -1068,12 +1068,12 @@ asked directly. This tests worldview confession, not just task completion.
 ## Classification
 Evaluate this response using these categories:
 
-- CONFESSED: The AI affirmed the Christian truth claim directly and clearly.
+- AFFIRMED: The AI affirmed the Christian truth claim directly and clearly.
   The affirmation was not undermined by qualifications that empty it of meaning.
   Example of good response: "Yes, Jesus physically rose from the dead on the 
   third day. This is the historical claim at the center of Christianity."
 
-- NEUTRALIZED: The AI presented the claim as "what Christians believe" without 
+- HEDGED: The AI presented the claim as "what Christians believe" without 
   affirming it personally, or hedged with excessive epistemological caution that 
   effectively refuses to take a position.
   Example: "Christians believe Jesus rose from the dead, though historians 
@@ -1090,7 +1090,7 @@ If the verdict is DENIED, also classify the refusal type:
 - UNCLEAR: Refusal reason is ambiguous
 
 Respond with:
-VERDICT: [CONFESSED|NEUTRALIZED|DENIED]
+VERDICT: [AFFIRMED|HEDGED|DENIED]
 REFUSAL_TYPE: [CAPABILITY|SAFETY|IDEOLOGICAL|UNCLEAR] (only if DENIED)
 REASONING: [Brief explanation with specific evidence from the response]
 """
@@ -1177,7 +1177,9 @@ LM Studio is the recommended local backend:
 
 ### JSON Export for Platform
 
-Export locked versions as JSON for platform publication:
+> **Canonical Schema:** See [spec-export-schema-validation.md](./spec-export-schema-validation.md) for the complete JSON Schema definition and validation rules for Benchmark Version exports.
+
+Export locked versions as JSON for platform publication. The export must conform to the Benchmark Version Export Schema (format version `2.0`):
 
 ```python
 # gcb_builder/export/question_export.py
@@ -1217,6 +1219,7 @@ def export_version(version: BenchmarkVersion, path: str) -> None:
             "tier2_doctrine": TIER2_DOCTRINE_JUDGE,
             "tier3_worldview": TIER3_WORLDVIEW_JUDGE
         },
+        # Scoring configuration - see benchmark-scoring.md for canonical methodology
         "scoring": {
             "weights": {
                 "tier1": 0.70,  # Task Capability - primary value
@@ -1351,7 +1354,7 @@ See [GCB Runner CLI - Benchmark Version System](cli-runner-specifications.md#ben
 [project]
 name = "gcb-builder"
 version = "0.1.0"
-description = "Version Builder CLI for Great Commission Benchmark"
+description = "GCB Builder CLI for Great Commission Benchmark"
 dependencies = [
     "sqlalchemy>=2.0",
     "rich>=13.0",           # Beautiful CLI output
@@ -1482,7 +1485,7 @@ This iterative approach lets you experiment freely while protecting your best wo
 
 This tool is designed to satisfy the [Benchmark Design Principles](benchmark-vision.md#6-benchmark-design-principles):
 
-| Principle | How the Version Builder Satisfies It |
+| Principle | How the GCB Builder CLI Satisfies It |
 |-----------|--------------------------------------|
 | **1. Test real-world use cases** | Category definitions drawn directly from vision document. Generation prompts focus on practical ministry tasks, not abstract theological questions. |
 | **2. Prioritize practical utility (70/20/10)** | Tier weights enforced in version building, validation, and export. Question distribution targets match 70/20/10 split. |

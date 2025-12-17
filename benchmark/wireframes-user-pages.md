@@ -351,19 +351,19 @@ View of all test purchases and transactions.
 │  │  Date          │ Type              │ Description        │ Amount   │    │
 │  │  ──────────────┼───────────────────┼────────────────────┼──────────│    │
 │  │                │                   │                    │          │    │
-│  │  Dec 14, 2024  │ 🧪 Test Purchase  │ GPT-4 Turbo test   │ $5.00    │    │
+│  │  Dec 14, 2024  │ 🧪 Test Purchase  │ GPT-4 Turbo test   │ $24.80   │    │
 │  │                │                   │ Run ID: abc123     │          │    │
 │  │  ──────────────┼───────────────────┼────────────────────┼──────────│    │
 │  │                │                   │                    │          │    │
-│  │  Dec 10, 2024  │ 🧪 Test Purchase  │ Claude 3 Opus test │ $5.00    │    │
+│  │  Dec 10, 2024  │ 🧪 Test Purchase  │ Claude 3 Opus test │ $27.50   │    │
 │  │                │                   │ Run ID: def456     │          │    │
 │  │  ──────────────┼───────────────────┼────────────────────┼──────────│    │
 │  │                │                   │                    │          │    │
-│  │  Dec 5, 2024   │ 🧪 Test Purchase  │ Gemini Pro test    │ $5.00    │    │
+│  │  Dec 5, 2024   │ 🧪 Test Purchase  │ Gemini Pro test    │ $22.10   │    │
 │  │                │                   │ Run ID: ghi789     │          │    │
 │  │  ──────────────┼───────────────────┼────────────────────┼──────────│    │
 │  │                │                   │                    │          │    │
-│  │  Dec 1, 2024   │ ↩️ Refund         │ API failure refund │ -$5.00   │    │
+│  │  Dec 1, 2024   │ ↩️ Refund         │ API failure refund │ -$22.10  │    │
 │  │                │                   │ Run ID: jkl012     │          │    │
 │  │                                                                     │    │
 │  │                    [< Prev]  Page 1 of 3  [Next >]                  │    │

@@ -839,7 +839,7 @@ The community hub for the Great Commission Benchmark. This page casts a vision f
 │   │                                                                     │   │
 │   │  Requirements:                                                      │   │
 │   │  • Create an account (free)                                         │   │
-│   │  • Pay per test ($5 each)                                           │   │
+│   │  • Pay per test ($20 + model API costs)                             │   │
 │   │  • Follow our testing guidelines                                    │   │
 │   │                                                                     │   │
 │   │  Your contributions are attributed publicly on the leaderboard      │   │
@@ -1235,7 +1235,7 @@ View of a user's public testing contributions.
 | Research Landing | `/research` | `/research` |
 | Model Comparison | `/research/compare` | `/research/compare?models=gpt-4-turbo,claude-3-opus` |
 | Model Detail | `/research/models/:provider/:model/:version` | `/research/models/openai/gpt-4-turbo/2024.01` |
-| Category Results | `/research/categories/:category` | `/research/categories/scripture-knowledge` |
+| Category Results | `/research/categories/:category` | `/research/categories/evangelistic-material-creation` |
 | Contribute | `/contribute` | `/contribute` |
 | About | `/about` | `/about` |
 | Public Profile | `/users/:username` | `/users/testuser123` |

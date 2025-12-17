@@ -20,7 +20,7 @@ This tool is intentionally simple and focused. It does not include question gene
 |--------|---------------|-----------------|
 | **Where run** | On the platform | Locally via this CLI |
 | **Publishing** | Automatic (no approval gate) | Requires moderator verification |
-| **Cost** | Model API cost + $5 platform fee | $20 platform fee |
+| **Cost** | $20 platform fee + model API cost | $20 submission fee (user pays own model costs) |
 | **Use Case** | Individual testers, quick results | Organizations, custom/local models |
 | **Verification** | Not required (platform runs test) | Required (moderator validates results) |
 
@@ -317,6 +317,10 @@ File ready for upload at https://greatcommissionbenchmark.ai/submit
 ```
 
 **Export Format:**
+
+> **Canonical Schema:** See [spec-export-schema-validation.md](./spec-export-schema-validation.md) for the complete JSON Schema definition, validation rules, and semantic validation requirements.
+
+The export conforms to the Test Results Export Schema (format version `1.0`):
 
 ```json
 {
@@ -1236,10 +1240,10 @@ $ gcb-runner test --model gpt-4o
 ╚═══════════════════════════════════════════════════════════════╝
 
 ? Select benchmark version:
-  ❯ 2.0 - Version 2 (Current - recommended)      300 questions
-    1.2 - Version 1 (Archived)                    300 questions
-    1.1 - Version 1 (Archived)                    280 questions
-    1.0 - Version 1 (Archived)                    120 questions
+  ❯ Version 2 (2.0) - Current                    300 questions
+    Version 1 (1.2) - Archived                   300 questions
+    Version 1 (1.1) - Archived                   280 questions
+    Version 1 (1.0) - Archived                   120 questions
 
 Using benchmark 2.0 (Version 2)...
 ```
@@ -1266,14 +1270,14 @@ $ gcb-runner versions
 ║           Available Benchmark Versions                         ║
 ╚═══════════════════════════════════════════════════════════════╝
 
-┌─────────┬──────────────┬────────────┬────────────────────────────┐
-│ Version │ Status       │ Questions  │ Released                   │
-├─────────┼──────────────┼────────────┼────────────────────────────┤
-│ 2.0     │ ⭐ Current   │ 300        │ December 2025 (Version 2)  │
-│ 1.2     │ Archived     │ 300        │ September 2025 (Version 1) │
-│ 1.1     │ Archived     │ 280        │ June 2025 (Version 1)     │
-│ 1.0     │ Archived     │ 120        │ January 2025 (Version 1)  │
-└─────────┴──────────────┴────────────┴────────────────────────────┘
+┌─────────────────────┬──────────────┬────────────┬─────────────────┐
+│ Version             │ Status       │ Questions  │ Released        │
+├─────────────────────┼──────────────┼────────────┼─────────────────┤
+│ Version 2 (2.0)     │ ⭐ Current   │ 300        │ December 2025   │
+│ Version 1 (1.2)     │ Archived     │ 300        │ September 2025  │
+│ Version 1 (1.1)     │ Archived     │ 280        │ June 2025       │
+│ Version 1 (1.0)     │ Archived     │ 120        │ January 2025    │
+└─────────────────────┴──────────────┴────────────┴─────────────────┘
 
 Question distribution follows 70/20/10 weighting:
   • Tier 1 (Task Capability): 70% - e.g., 210 questions in 2.0

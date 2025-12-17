@@ -144,11 +144,9 @@ When methodology changes:
 ┌─────────────────────────────────────────────────────────────────┐
 │  🏆 Great Commission Benchmark Leaderboard                      │
 │                                                                 │
-│  Version: Version 2 (1.2) ▼                                    │
+│  Version: Version 2 (2.0) ▼                                    │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │ ● Version 2 (1.2) - Current                             │   │
-│  │ ○ Version 2 (1.1) - Archived (47 results)              │   │
-│  │ ○ Version 2 (1.0) - Archived (23 results)              │   │
+│  │ ● Version 2 (2.0) - Current                             │   │
 │  │ ○ Version 1 (1.2) - Archived (156 results)              │   │
 │  │ ○ Version 1 (1.1) - Archived (89 results)               │   │
 │  │ ○ Version 1 (1.0) - Archived (45 results)               │   │
@@ -187,10 +185,10 @@ Model: Claude 3.5 Sonnet
 ┌──────────────────────────────────────────────────────────┐
 │  Performance History                                      │
 │  ─────────────────────────────────────────────────────   │
-│  Version 1 (1.0): 71/100 (Mar 2025)                      │
-│  Version 1 (1.1): 73/100 (Jun 2025) — question updates   │
-│  Version 1 (1.2): 74/100 (Sep 2025) — question updates   │
-│  Version 2 (2.0): 78/100 (Dec 2025) — new question set   │
+│  Version 1 (1.0): 71/100 (Mar 2025)                       │
+│  Version 1 (1.1): 73/100 (Jun 2025) — question updates    │
+│  Version 1 (1.2): 74/100 (Sep 2025) — question updates    │
+│  Version 2 (2.0): 78/100 (Dec 2025) — new question set    │
 │                                                          │
 │  ⚠️ Version 1 (1.x) and Version 2 (2.x) scores are not  │
 │     directly comparable                                   │

@@ -305,10 +305,10 @@ Detailed view for reviewing a CLI-submitted test result. Moderators verify repro
 │  │         │              │          │  │  v2024.05  │ 91.2  │ (this)    │  │
 │  │         └──────────────┘          │  │  v2024.03  │ 89.8  │ +1.4      │  │
 │  │                                   │  │  v2024.01  │ 88.5  │ +2.7      │  │
-│  │  Scripture      94%  [+2.1]       │  │                                │  │
-│  │  Theology       89%  [+1.5]       │  │  ✓ Score progression is        │  │
-│  │  Ethics         92%  [+0.8]       │  │    consistent with model       │  │
-│  │  Apologetics    82%  [-0.2]       │  │    improvements                │  │
+│  │  Tier 1 (Task)  94%  [+2.1]       │  │                                │  │
+│  │  Tier 2 (Doc)   89%  [+1.5]       │  │  ✓ Score progression is        │  │
+│  │  Tier 3 (WV)    92%  [+0.8]       │  │    consistent with model       │  │
+│  │                                   │  │    improvements                │  │
 │  │                                   │  │                                │  │
 │  │  [+/-] vs previous version        │  │                                │  │
 │  │                                   │  │                                │  │
@@ -321,7 +321,7 @@ Detailed view for reviewing a CLI-submitted test result. Moderators verify repro
 │  │  Category: [All ▼]  Result: [All ▼]  [Random Sample] [Flagged Only] │    │
 │  │                                                                     │    │
 │  │  ┌───────────────────────────────────────────────────────────────┐  │    │
-│  │  │  Question #142 (Scripture Knowledge)                ● Correct │  │    │
+│  │  │  Question #142 (Tier 2: Exclusivity of Christ)      ● Correct │  │    │
 │  │  │  ─────────────────────────────────────────────────────────────│  │    │
 │  │  │                                                               │  │    │
 │  │  │  Q: In the Gospel of John, what did Jesus declare about      │  │    │
@@ -344,7 +344,7 @@ Detailed view for reviewing a CLI-submitted test result. Moderators verify repro
 │  │  └───────────────────────────────────────────────────────────────┘  │    │
 │  │                                                                     │    │
 │  │  ┌───────────────────────────────────────────────────────────────┐  │    │
-│  │  │  Question #287 (Ethics)                            ○ Incorrect │  │    │
+│  │  │  Question #287 (Tier 2: Lordship of Jesus)         ○ Incorrect │  │    │
 │  │  │  ─────────────────────────────────────────────────────────────│  │    │
 │  │  │                                                               │  │    │
 │  │  │  Q: From a biblical perspective, how should Christians        │  │    │
@@ -458,7 +458,7 @@ Detailed view for reviewing a CLI-submitted test result. Moderators verify repro
 │   │                                                       │   │
 │   └───────────────────────────────────────────────────────┘   │
 │                                                               │
-│   [✓] Issue refund ($5.00)                                    │
+│   [✓] Issue refund ($24.80)                                    │
 │                                                               │
 │                                  [Cancel]  [Reject Test]      │
 │                                                               │

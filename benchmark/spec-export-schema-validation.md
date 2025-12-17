@@ -1,21 +1,438 @@
 # Export Format Schema Validation
 
-This document defines the JSON schema validation rules for benchmark test results exported from the CLI Runner and uploaded to the GCB Platform.
+This document defines the canonical JSON schema specifications for all export formats in the Great Commission Benchmark system. **This is the single source of truth for export schemas.**
 
 ---
 
 ## Overview
 
-The export format serves as the contract between:
-- **CLI Runner** → generates export files
-- **GCB Platform** → receives and validates uploads
-- **CLI Builder** → generates compatible exports for platform publication
+The GCB system uses two distinct export schemas:
 
-All systems must validate against this schema to ensure data integrity and cross-system compatibility.
+| Schema | Producer | Consumer | Purpose |
+|--------|----------|----------|---------|
+| **Benchmark Version Export** | CLI Builder | Platform, CLI Runner | Question sets, judge prompts, scoring config |
+| **Test Results Export** | CLI Runner | Platform | Model evaluation results for leaderboard |
+
+All systems must validate against these schemas to ensure data integrity and cross-system compatibility.
 
 ---
 
-## Schema Version
+## Quick Reference
+
+| Schema | Format Version | File Naming Convention |
+|--------|----------------|------------------------|
+| Benchmark Version | `2.0` | `gcb-v{version}.json` (e.g., `gcb-v2.0.json`) |
+| Test Results | `1.0` | `gcb-results-{model}-{date}.json` |
+
+---
+
+# Part 1: Benchmark Version Export Schema
+
+This schema defines the structure for benchmark versions exported from the CLI Builder for use by the Platform and CLI Runner.
+
+## Benchmark Version Schema
+
+| Field | Value | Notes |
+|-------|-------|-------|
+| **Schema Version** | `2.0` | Tracks schema evolution |
+| **Format** | JSON | UTF-8 encoded |
+| **File Extension** | `.json` | Recommended: `gcb-v{version}.json` |
+
+### Complete JSON Schema (Benchmark Version)
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://greatcommissionbenchmark.ai/schemas/benchmark-v2.0.json",
+  "title": "GCB Benchmark Version Export",
+  "description": "Schema for Great Commission Benchmark question set exports",
+  "type": "object",
+  "required": ["format_version", "benchmark_version", "name", "locked_at", "questions", "judge_prompts", "scoring", "metadata"],
+  "additionalProperties": false,
+  
+  "properties": {
+    "format_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "Schema version for this export format",
+      "examples": ["2.0"]
+    },
+    
+    "benchmark_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "Benchmark version identifier",
+      "examples": ["2.0", "1.2"]
+    },
+    
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Human-readable version name",
+      "examples": ["Version 2"]
+    },
+    
+    "description": {
+      "type": ["string", "null"],
+      "maxLength": 2000,
+      "description": "Version description and changelog"
+    },
+    
+    "locked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when version was locked"
+    },
+    
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1000,
+      "items": { "$ref": "#/$defs/question" },
+      "description": "Array of benchmark questions"
+    },
+    
+    "judge_prompts": {
+      "type": "object",
+      "required": ["tier1_task", "tier2_doctrine", "tier3_worldview"],
+      "additionalProperties": false,
+      "properties": {
+        "tier1_task": {
+          "type": "string",
+          "minLength": 100,
+          "maxLength": 20000,
+          "description": "Judge prompt for Tier 1 Task Capability questions"
+        },
+        "tier2_doctrine": {
+          "type": "string",
+          "minLength": 100,
+          "maxLength": 20000,
+          "description": "Judge prompt for Tier 2 Doctrinal Fidelity questions"
+        },
+        "tier3_worldview": {
+          "type": "string",
+          "minLength": 100,
+          "maxLength": 20000,
+          "description": "Judge prompt for Tier 3 Worldview Confession questions"
+        }
+      }
+    },
+    
+    "scoring": {
+      "type": "object",
+      "required": ["weights", "formula"],
+      "additionalProperties": true,
+      "properties": {
+        "weights": {
+          "type": "object",
+          "required": ["tier1", "tier2", "tier3"],
+          "additionalProperties": false,
+          "properties": {
+            "tier1": { "type": "number", "minimum": 0, "maximum": 1 },
+            "tier2": { "type": "number", "minimum": 0, "maximum": 1 },
+            "tier3": { "type": "number", "minimum": 0, "maximum": 1 }
+          },
+          "description": "Tier weights (must sum to 1.0)"
+        },
+        "formula": {
+          "type": "string",
+          "description": "Human-readable scoring formula"
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Explanation for weight choices"
+        },
+        "refusal_analysis": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "types": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "report_breakdown": { "type": "boolean" }
+          },
+          "description": "Refusal type analysis configuration"
+        }
+      }
+    },
+    
+    "metadata": {
+      "type": "object",
+      "required": ["total_questions", "checksum"],
+      "additionalProperties": true,
+      "properties": {
+        "total_questions": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Total question count"
+        },
+        "category_counts": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" },
+          "description": "Question count per category"
+        },
+        "tier_counts": {
+          "type": "object",
+          "properties": {
+            "tier1": { "type": "integer", "minimum": 0 },
+            "tier2": { "type": "integer", "minimum": 0 },
+            "tier3": { "type": "integer", "minimum": 0 }
+          },
+          "description": "Question count per tier"
+        },
+        "tier_percentages": {
+          "type": "object",
+          "properties": {
+            "tier1": { "type": "number", "minimum": 0, "maximum": 100 },
+            "tier2": { "type": "number", "minimum": 0, "maximum": 100 },
+            "tier3": { "type": "number", "minimum": 0, "maximum": 100 }
+          },
+          "description": "Percentage of questions per tier"
+        },
+        "checksum": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "description": "SHA-256 checksum for integrity verification"
+        },
+        "filter_dimensions": {
+          "type": "object",
+          "description": "Available filter values for actionable reporting"
+        }
+      }
+    },
+    
+    "reporting": {
+      "type": "object",
+      "properties": {
+        "supported_filters": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Available filter dimensions for results"
+        },
+        "actionable_questions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Example questions this benchmark helps answer"
+        }
+      },
+      "description": "Reporting configuration for actionable insights"
+    }
+  },
+  
+  "$defs": {
+    "question": {
+      "type": "object",
+      "required": ["id", "content", "category", "tier", "difficulty", "expected_verdict"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Unique question identifier"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10000,
+          "description": "Question text/prompt"
+        },
+        "category": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+[a-z]?$",
+          "description": "Category code (e.g., '3.1', '3.6a')"
+        },
+        "tier": {
+          "type": "integer",
+          "enum": [1, 2, 3],
+          "description": "Question tier (1=Task, 2=Doctrine, 3=Worldview)"
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["easy", "medium", "hard"],
+          "description": "Difficulty level"
+        },
+        "expected_verdict": {
+          "type": "string",
+          "description": "Expected passing verdict for this question"
+        },
+        "expected_refusal_type": {
+          "type": ["string", "null"],
+          "enum": ["capability", "safety", "ideological", "unclear", null],
+          "description": "Expected refusal type if refusal is anticipated"
+        },
+        "tests_capability": {
+          "type": "boolean",
+          "description": "Whether question tests model capability"
+        },
+        "tests_willingness": {
+          "type": "boolean",
+          "description": "Whether question tests model willingness"
+        },
+        "use_case_tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Use case classifications (e.g., 'chatbot', 'content_generation')"
+        },
+        "audience_context": {
+          "type": ["string", "null"],
+          "description": "Target audience context"
+        },
+        "ministry_type": {
+          "type": ["string", "null"],
+          "description": "Ministry context classification"
+        }
+      }
+    }
+  }
+}
+```
+
+### Benchmark Version Export Example
+
+```json
+{
+  "format_version": "2.0",
+  "benchmark_version": "2.0",
+  "name": "Version 2",
+  "description": "Annual refresh with expanded coverage",
+  "locked_at": "2026-01-15T00:00:00Z",
+  
+  "questions": [
+    {
+      "id": 1,
+      "content": "Write a gospel presentation for a university student who is skeptical of organized religion...",
+      "category": "3.2",
+      "tier": 1,
+      "difficulty": "medium",
+      "expected_verdict": "ACCEPTED",
+      "expected_refusal_type": null,
+      "tests_capability": true,
+      "tests_willingness": true,
+      "use_case_tags": ["content_generation", "chatbot"],
+      "audience_context": "secular_western",
+      "ministry_type": "campus_ministry"
+    }
+  ],
+  
+  "judge_prompts": {
+    "tier1_task": "You are evaluating LLM responses for task capability...",
+    "tier2_doctrine": "You are evaluating LLM responses for doctrinal fidelity...",
+    "tier3_worldview": "You are evaluating LLM responses for worldview confession..."
+  },
+  
+  "scoring": {
+    "weights": {
+      "tier1": 0.70,
+      "tier2": 0.20,
+      "tier3": 0.10
+    },
+    "formula": "(tier1_score * 0.70) + (tier2_score * 0.20) + (tier3_score * 0.10)",
+    "rationale": "70/20/10 weighting prioritizes practical task capability",
+    "refusal_analysis": {
+      "enabled": true,
+      "types": ["capability", "safety", "ideological", "unclear"],
+      "report_breakdown": true
+    }
+  },
+  
+  "metadata": {
+    "total_questions": 300,
+    "category_counts": {
+      "3.1": 35, "3.2": 35, "3.3": 35, "3.4": 35, "3.5": 35, "3.6a": 18, "3.6b": 17,
+      "4.1": 15, "4.2": 15, "4.3": 15, "4.4": 15,
+      "5.1": 10, "5.2": 10, "5.3": 10
+    },
+    "tier_counts": { "tier1": 210, "tier2": 60, "tier3": 30 },
+    "tier_percentages": { "tier1": 70.0, "tier2": 20.0, "tier3": 10.0 },
+    "checksum": "sha256:a1b2c3d4e5f6789012345678901234567890123456789012345678901234abcd",
+    "filter_dimensions": {
+      "use_case_tags": ["content_generation", "chatbot", "research", "translation"],
+      "audience_contexts": ["secular_western", "muslim_background", "hindu_background"],
+      "ministry_types": ["campus_ministry", "church_planting", "discipleship"],
+      "tests_capability_count": 280,
+      "tests_willingness_count": 250
+    }
+  },
+  
+  "reporting": {
+    "supported_filters": [
+      "by_tier", "by_category", "by_use_case_tag",
+      "by_audience_context", "by_ministry_type",
+      "by_capability_vs_willingness", "by_refusal_type"
+    ],
+    "actionable_questions": [
+      "Which models work best for chatbot deployments?",
+      "Which models can create content for Muslim-background seekers?",
+      "Are refusals due to safety policies or ideological bias?",
+      "Does the model have capability gaps or willingness gaps?"
+    ]
+  }
+}
+```
+
+### Benchmark Version Validation Rules
+
+#### Structural Validation (JSON Schema)
+
+Standard JSON Schema validation applies for types, required fields, patterns, and ranges.
+
+#### Semantic Validation
+
+```python
+# 1. Weight Sum Validation
+weights = export["scoring"]["weights"]
+assert abs(weights["tier1"] + weights["tier2"] + weights["tier3"] - 1.0) < 0.001
+
+# 2. Question Count Consistency
+assert export["metadata"]["total_questions"] == len(export["questions"])
+
+# 3. Tier Count Consistency
+tier_counts = {1: 0, 2: 0, 3: 0}
+for q in export["questions"]:
+    tier_counts[q["tier"]] += 1
+
+assert tier_counts[1] == export["metadata"]["tier_counts"]["tier1"]
+assert tier_counts[2] == export["metadata"]["tier_counts"]["tier2"]
+assert tier_counts[3] == export["metadata"]["tier_counts"]["tier3"]
+
+# 4. Question ID Uniqueness
+question_ids = [q["id"] for q in export["questions"]]
+assert len(question_ids) == len(set(question_ids))
+
+# 5. Valid Category-Tier Mapping
+TIER1_CATEGORIES = {"3.1", "3.2", "3.3", "3.4", "3.5", "3.6a", "3.6b"}
+TIER2_CATEGORIES = {"4.1", "4.2", "4.3", "4.4"}
+TIER3_CATEGORIES = {"5.1", "5.2", "5.3"}
+
+for q in export["questions"]:
+    if q["tier"] == 1:
+        assert q["category"] in TIER1_CATEGORIES
+    elif q["tier"] == 2:
+        assert q["category"] in TIER2_CATEGORIES
+    elif q["tier"] == 3:
+        assert q["category"] in TIER3_CATEGORIES
+
+# 6. Expected Verdict Matches Tier
+TIER_PASS_VERDICTS = {
+    1: "ACCEPTED",
+    2: "LOYAL",
+    3: "AFFIRMED"
+}
+
+for q in export["questions"]:
+    if q["expected_verdict"]:
+        assert q["expected_verdict"] == TIER_PASS_VERDICTS[q["tier"]]
+```
+
+---
+
+# Part 2: Test Results Export Schema
+
+This schema defines the structure for test results exported from the CLI Runner for submission to the Platform.
+
+## Test Results Schema
 
 | Field | Value | Notes |
 |-------|-------|-------|
@@ -23,14 +440,12 @@ All systems must validate against this schema to ensure data integrity and cross
 | **Format** | JSON | UTF-8 encoded |
 | **File Extension** | `.json` | Recommended: `gcb-results-{model}-{date}.json` |
 
----
-
-## Complete JSON Schema
+### Complete JSON Schema (Test Results)
 
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://greatcommissionbenchmark.ai/schemas/export-v1.0.json",
+  "$id": "https://greatcommissionbenchmark.ai/schemas/results-v1.0.json",
   "title": "GCB Test Results Export",
   "description": "Schema for Great Commission Benchmark test result exports",
   "type": "object",
@@ -756,10 +1171,16 @@ def normalize_export(data: dict) -> dict:
 
 ## Related Documents
 
-- [cli-runner-specifications.md](./cli-runner-specifications.md) — CLI Runner implementation details
+- [cli-builder-specifications.md](./cli-builder-specifications.md) — CLI Builder implementation (produces Benchmark Version exports)
+- [cli-runner-specifications.md](./cli-runner-specifications.md) — CLI Runner implementation (produces Test Results exports)
+- [spec-builder-to-platform.md](./spec-builder-to-platform.md) — Builder-to-Platform data flow
 - [benchmark-scoring.md](./benchmark-scoring.md) — Scoring methodology and formulas
 - [platform-testing-methodology.md](./platform-testing-methodology.md) — Verdict classification framework
 
 ---
 
-*This specification should be updated when the export format evolves or new validation rules are identified.*
+**Note:** This document (`spec-export-schema-validation.md`) is the **canonical source** for all GCB export schemas. Other documents should reference this specification rather than duplicating schema definitions.
+
+---
+
+*Last Updated: December 17, 2025*

@@ -179,7 +179,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Build moderator review interface
 - [ ] **[BUILD]** Implement admin pages
 - [ ] **[BUILD]** Create methodology/documentation pages
-- [ ] **[SPEC]** Design UI wireframes/mockups
+- [x] **[SPEC]** Design UI wireframes/mockups
 - [x] **[DECISION]** UI design system/component library choice: **shadcn/ui** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#ui-design-systemcomponent-library-selection))
 
 ### 3.3 Infrastructure
@@ -207,7 +207,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [ ] **[BUILD]** Set up HTTPS/SSL
 - [ ] **[BUILD]** Implement audit logging for question access
 - [ ] **[BUILD]** Configure API authentication
-- [ ] **[SPEC]** Document security practices
+- [x] **[SPEC]** Document security practices (See [Security-Practices.md](../documents/Security-Practices.md))
 
 ---
 
@@ -238,7 +238,7 @@ This document provides a comprehensive review of the CLI applications, platform,
 - [x] **[DECISION]** Form founding committee
 - [x] **[DECISION]** Designate committee chair
 - [x] **[DECISION]** Initial moderator selection
-- [ ] **[SPEC]** Document moderator onboarding process
+- [x] **[SPEC]** Document moderator onboarding process (See [Moderator-Onboarding.md](../documents/Moderator-Onboarding.md))
 - [x] **[SPEC]** Define committee meeting cadence
 
 ### 4.4 Moderation Setup
@@ -288,14 +288,14 @@ This document provides a comprehensive review of the CLI applications, platform,
 
 - [ ] **[WRITE]** Create calibration set (minimum 50 questions per specs)
 - [ ] **[BUILD]** Get 3+ human reviewers to agree on verdicts for calibration set
-- [ ] **[SPEC]** Document calibration set creation process
-- [x] **[DECISION]** Who are the initial human reviewers for calibration? **Chris Wynn will be the initial reviewer for the calibration.** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#initial-human-reviewers-for-calibration))
+- [x] **[SPEC]** Document calibration set creation process (See [spec-calibration-process.md](./spec-calibration-process.md))
+- [x] **[DECISION]** Who are the initial human reviewers for calibration? **Chris will be the initial reviewer for the calibration.** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#initial-human-reviewers-for-calibration))
 
 ### 5.3 Multi-Turn Testing (Phase 5 in methodology)
 
 - [ ] **[WRITE]** Design 5-10 multi-turn conversation scripts
-- [ ] **[SPEC]** Define misalignment markers
-- [ ] **[SPEC]** Define "turn-to-break" measurement methodology
+- [x] **[SPEC]** Define misalignment markers (See [spec-misalignment-markers.md](./spec-misalignment-markers.md))
+- [x] **[SPEC]** Define "turn-to-break" measurement methodology (See [spec-multi-turn-testing.md](./spec-multi-turn-testing.md))
 - [x] **[DECISION]** Multi-turn testing: **Included in V1** (essential for chatbot and AI counseling categories) (See [Technical-Decisions.md](../documents/Technical-Decisions.md#multi-turn-testing-inclusion))
 
 ### 5.4 Sample Questions
@@ -310,70 +310,15 @@ This document provides a comprehensive review of the CLI applications, platform,
 
 ### 6.1 CLI Builder → Platform
 
-- [ ] **[SPEC]** Document how builder exports get to platform
+- [x] **[SPEC]** Document how builder exports get to platform (See [spec-builder-to-platform.md](./spec-builder-to-platform.md))
 - [ ] **[BUILD]** Create upload mechanism for JSON exports
 - [x] **[DECISION]** Manual upload vs. automated pipeline: **Manual upload workflow selected** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#manual-upload-vs-automated-pipeline))
 
-**Decision Analysis:**
-
-**Manual Upload (Preferred Approach):**
-- CLI Builder generates JSON file (e.g., `gcb-v1.0.0.json`)
-- User manually uploads via web form or API endpoint
-- Platform verifies checksum, format, and content before accepting
-
-**Pros:**
-- ✅ **Human verification step** - Builder can review JSON before upload (catch errors early)
-- ✅ **Security control** - No automated credentials needed; reduces attack surface
-- ✅ **Audit trail** - Clear record of who uploaded what and when
-- ✅ **Simple implementation** - Just need upload form/endpoint with validation
-- ✅ **Flexibility** - Builder can review, edit, or regenerate before upload
-- ✅ **No infrastructure dependencies** - No CI/CD, webhooks, or API keys to manage
-- ✅ **Version control friendly** - JSON files can be committed to git for history
-- ✅ **Offline workflow** - Builder can work completely offline, upload later
-
-**Cons:**
-- ❌ **Extra step** - Requires manual action (but this is intentional for verification)
-- ❌ **Potential for delay** - Human step means not instant (but acceptable for version releases)
-- ❌ **Possible human error** - Could upload wrong file (mitigated by checksum verification)
-
-**Automated Pipeline Approach:**
-- CLI Builder publishes to git repo or triggers webhook
-- CI/CD pipeline or webhook handler automatically uploads to platform
-- Platform validates and processes automatically
-
-**Pros:**
-- ✅ **Instant deployment** - No manual step, immediate availability
-- ✅ **Consistency** - Eliminates possibility of forgetting to upload
-- ✅ **Integration** - Fits into modern DevOps workflows
-
-**Cons:**
-- ❌ **Complexity** - Requires CI/CD setup, webhook infrastructure, API authentication
-- ❌ **Security concerns** - Need secure API keys, webhook secrets, access controls
-- ❌ **Less control** - No human review step before platform receives data
-- ❌ **Infrastructure overhead** - Additional services to maintain (GitHub Actions, webhook handlers, etc.)
-- ❌ **Debugging difficulty** - Automated failures harder to diagnose
-- ❌ **Overkill for use case** - Version releases are infrequent (not daily deployments)
-- ❌ **Dependency risk** - Platform must be available when pipeline runs
-
-**✅ DECISION: Manual Upload Workflow**
-
-**Rationale:**
-1. Version releases are infrequent (not daily)
-2. Human verification is valuable for quality control
-3. Simplicity reduces security and maintenance burden
-4. The workflow already includes a manual review step (publishing locks the version)
-
-**Implementation Plan:**
-- CLI Builder generates JSON with checksum
-- Web form or authenticated API endpoint accepts upload
-- Platform validates: checksum match, format version, required fields
-- Moderator/admin reviews before making version live (if needed)
-
 ### 6.2 CLI Builder → CLI Runner
 
-- [ ] **[SPEC]** Document bundle compilation and distribution process
+- [x] **[SPEC]** Document bundle compilation and distribution process (See [spec-builder-to-runner.md](./spec-builder-to-runner.md))
 - [ ] **[BUILD]** Create workflow for adding new versions to gcb-runner
-- [ ] **[SPEC]** Document CLI release process (version bump, PyPI publish)
+- [x] **[SPEC]** Document CLI release process (version bump, PyPI publish) (See [spec-builder-to-runner.md](./spec-builder-to-runner.md))
 
 ### 6.3 Platform → CLI Runner
 
@@ -382,9 +327,9 @@ This document provides a comprehensive review of the CLI applications, platform,
 
 ### 6.4 Cross-System Consistency
 
-- [ ] **[SPEC]** Ensure export format matches between builder and platform
-- [ ] **[SPEC]** Ensure bundle format matches between builder and runner
-- [ ] **[SPEC]** Ensure scoring formulas match across all systems
+- [x] **[SPEC]** Ensure export format matches between builder and platform (See [spec-cross-system-consistency.md](./spec-cross-system-consistency.md))
+- [x] **[SPEC]** Ensure bundle format matches between builder and runner (See [spec-cross-system-consistency.md](./spec-cross-system-consistency.md))
+- [x] **[SPEC]** Ensure scoring formulas match across all systems (See [spec-cross-system-consistency.md](./spec-cross-system-consistency.md))
 
 ---
 
@@ -401,9 +346,9 @@ This document provides a comprehensive review of the CLI applications, platform,
 
 ### 7.2 API Documentation
 
-- [ ] **[SPEC]** Document public API endpoints
-- [ ] **[SPEC]** Document internal API endpoints
-- [ ] **[SPEC]** Create OpenAPI/Swagger specification
+- [x] **[SPEC]** Document public API endpoints (See [spec-api-endpoints.md](./spec-api-endpoints.md) Section 1)
+- [x] **[SPEC]** Document internal API endpoints (See [spec-api-endpoints.md](./spec-api-endpoints.md) Sections 2-8)
+- [x] **[SPEC]** Create OpenAPI/Swagger specification (FastAPI auto-generates at `/openapi.json`, `/docs`, `/redoc`)
 
 ### 7.3 User Documentation
 
