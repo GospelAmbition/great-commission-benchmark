@@ -13,22 +13,22 @@ Based on review of all specifications and the REVIEW-GAPS-AND-DECISIONS.md docum
 
 | Category | Total Items | Remaining | Status |
 |----------|-------------|-----------|--------|
-| **Foundation & Setup** | 5 | 5 | ⚠️ **BLOCKING** |
-| **Question Generation Prompts** | 19 | 19 | ⚠️ **BLOCKING** |
-| **Judge Prompts** | 3 | 3 | ⚠️ **BLOCKING** |
-| **LLM Backend Adapters** | 4 | 4 | ⚠️ **BLOCKING** |
-| **Core Implementation** | 15+ | 15+ | ⚠️ **BLOCKING** |
-| **Documentation** | 6 | 6 | ⚠️ **NON-BLOCKING** (can be done in parallel) |
+| **Foundation & Setup** | 5 | 0 | ✅ **COMPLETE** |
+| **Question Generation Prompts** | 19 | 0 | ✅ **COMPLETE** |
+| **Judge Prompts** | 3 | 0 | ✅ **COMPLETE** |
+| **LLM Backend Adapters** | 4 | 0 | ✅ **COMPLETE** |
+| **Core Implementation** | 15+ | 0 | ✅ **COMPLETE** |
+| **Documentation** | 6 | 5 | ⚠️ **NON-BLOCKING** (README done) |
 
-**Critical Path:** Foundation → Prompts → Core Implementation → Testing
+**Critical Path:** ~~Foundation~~ → ~~Prompts~~ → ~~LLM Backends~~ → ~~Core Implementation~~ → Testing
 
 ---
 
-## 1. CRITICAL: Foundation & Project Setup
+## 1. ✅ COMPLETE: Foundation & Project Setup
 
 ### 1.1 Project Structure Creation
-- [ ] **Create `gcb-builder/` folder** at project root
-- [ ] **Create `pyproject.toml`** with all dependencies:
+- [x] **Create `gcb-builder/` folder** at project root
+- [x] **Create `pyproject.toml`** with all dependencies:
   - sqlalchemy>=2.0
   - rich>=13.0
   - questionary>=2.0
@@ -36,284 +36,281 @@ Based on review of all specifications and the REVIEW-GAPS-AND-DECISIONS.md docum
   - pydantic>=2.0
   - python-dotenv>=1.0
   - datasette>=0.64
-- [ ] **Set up directory structure** per cli-builder-specifications.md:
+- [x] **Set up directory structure** per cli-builder-specifications.md:
   ```
   gcb-builder/
   ├── gcb_builder/              # Python package (code only)
   │   ├── cli/
   │   ├── core/
   │   ├── generation/
-  │   │   └── prompts/          # Code to load prompts (not the prompt files themselves)
   │   ├── judging/
   │   ├── backends/
   │   ├── versioning/
   │   └── export/
   ├── prompts/                   # Actual markdown prompt template files (data)
+  │   ├── tier1_use_cases/
+  │   ├── tier2_theological/
+  │   └── tier3_worldview/
   ├── judge_prompts/            # Judge prompt template files (data)
   ├── data/                      # Database and local data files
   └── tests/                     # Test files
   ```
 
 ### 1.2 Category Definitions
-- [ ] **Create `gcb_builder/core/categories.py`** with all 19 categories:
+- [x] **Create `gcb_builder/core/categories.py`** with all 19 categories:
   - Tier 1 (7 categories): 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7
   - Tier 2 (6 categories): 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
   - Tier 3 (6 categories): 5.1, 5.2, 5.3, 5.4, 5.5, 5.6
-- [ ] **Reference:** benchmark-categories.md for canonical definitions
-- [ ] **Include:** Category IDs, names, tier assignments, weights
+- [x] **Reference:** benchmark-categories.md for canonical definitions
+- [x] **Include:** Category IDs, names, tier assignments, weights
 
 ### 1.3 Database Models
-- [ ] **Create `gcb_builder/core/models.py`** with SQLAlchemy models:
+- [x] **Create `gcb_builder/core/models.py`** with SQLAlchemy models:
   - `Question` (with all fields from spec)
   - `BenchmarkVersion`
   - `VersionQuestion`
   - `JudgeTestCase`
-- [ ] **Set up Alembic** for migrations
-- [ ] **Create initial migration** for schema
+  - `JudgeTestResult` (bonus)
+- [ ] **Set up Alembic** for migrations (deferred - using SQLAlchemy create_all for now)
+- [x] **Create initial schema** via `init_db()`
 
 ### 1.4 Database Connection
-- [ ] **Create `gcb_builder/core/database.py`** for SQLite connection
-- [ ] **Set up session management**
-- [ ] **Configure database path** (`data/gcb_builder.db`)
+- [x] **Create `gcb_builder/core/database.py`** for SQLite connection
+- [x] **Set up session management** (context manager pattern)
+- [x] **Configure database path** (`data/gcb_builder.db`)
+
+### 1.5 Additional Foundation Items (Completed)
+- [x] **Create `gcb_builder/core/schemas.py`** with Pydantic validation schemas
+- [x] **Create `gcb_builder/cli/main.py`** with basic CLI skeleton
+- [x] **Create `README.md`** with installation and usage instructions
+- [x] **Create `.gitignore`** for Python projects
+- [x] **Create test files** for categories and database
 
 ---
 
-## 2. CRITICAL: Question Generation Prompts
+## 2. ✅ COMPLETE: Question Generation Prompts
 
-**Status:** All 19 prompts need to be written before generation can begin.
+**Status:** All 19 prompts have been created with full specifications.
 
-### 2.1 Tier 1: Use Case Categories (7 prompts)
+### 2.1 Tier 1: Use Case Categories (7 prompts) ✅
 
-- [ ] **3.1 Missiological Research** (`prompts/tier1_use_cases/3.1_missiological_research.md`)
-  - Include capability vs willingness guidance
-  - Include metadata requirements (use_case_tags, audience_context, ministry_type)
-  - Specify difficulty levels (easy, medium, hard)
-  
-- [ ] **3.2 Evangelistic Material Creation** (`prompts/tier1_use_cases/3.2_evangelistic_material.md`)
-  - Draft exists in cli-builder-specifications.md (lines 236-277)
-  - Needs to be finalized and saved as markdown file
-  
-- [ ] **3.3 Apologetic Purposes** (`prompts/tier1_use_cases/3.3_apologetic_purposes.md`)
-  
-- [ ] **3.4 Conversational AI Tools** (`prompts/tier1_use_cases/3.4_conversational_ai.md`)
-  
-- [ ] **3.5 Intercessory Prayer Purposes** (`prompts/tier1_use_cases/3.5_intercessory_prayer.md`)
-  
-- [ ] **3.6 Problematic Vocabulary** (`prompts/tier1_use_cases/3.6_problematic_vocabulary.md`)
-  - Draft exists in cli-builder-specifications.md (lines 279-322)
-  - Needs to be finalized and saved as markdown file
-  
-- [ ] **3.7 Difficult Passages** (`prompts/tier1_use_cases/3.7_difficult_passages.md`)
-  - Draft exists in cli-builder-specifications.md (lines 326-380)
-  - Needs to be finalized and saved as markdown file
+- [x] **3.1 Missiological Research** (`prompts/tier1_use_cases/3.1_missiological_research.md`)
+- [x] **3.2 Evangelistic Material Creation** (`prompts/tier1_use_cases/3.2_evangelistic_material.md`)
+- [x] **3.3 Apologetic Purposes** (`prompts/tier1_use_cases/3.3_apologetic_purposes.md`)
+- [x] **3.4 Conversational AI Tools** (`prompts/tier1_use_cases/3.4_conversational_ai.md`)
+- [x] **3.5 Intercessory Prayer Purposes** (`prompts/tier1_use_cases/3.5_intercessory_prayer.md`)
+- [x] **3.6 Problematic Vocabulary** (`prompts/tier1_use_cases/3.6_problematic_vocabulary.md`)
+- [x] **3.7 Difficult Passages** (`prompts/tier1_use_cases/3.7_difficult_passages.md`)
 
-### 2.2 Tier 2: Theological Minimums (6 prompts)
+### 2.2 Tier 2: Theological Minimums (6 prompts) ✅
 
-- [ ] **4.1 Exclusivity of Jesus Christ** (`prompts/tier2_theological/4.1_exclusivity.md`)
-  
-- [ ] **4.2 Universality of Sin** (`prompts/tier2_theological/4.2_sin.md`)
-  
-- [ ] **4.3 Reality of Judgment** (`prompts/tier2_theological/4.3_judgment.md`)
-  
-- [ ] **4.4 Lordship of Jesus** (`prompts/tier2_theological/4.4_lordship.md`)
-  
-- [ ] **4.5 Call to Repentance and Faith** (`prompts/tier2_theological/4.5_repentance_faith.md`)
-  
-- [ ] **4.6 Burden to Make Disciples** (`prompts/tier2_theological/4.6_discipleship.md`)
+- [x] **4.1 Exclusivity of Jesus Christ** (`prompts/tier2_theological/4.1_exclusivity.md`)
+- [x] **4.2 Universality of Sin** (`prompts/tier2_theological/4.2_universality_of_sin.md`)
+- [x] **4.3 Reality of Judgment** (`prompts/tier2_theological/4.3_reality_of_judgment.md`)
+- [x] **4.4 Lordship of Jesus** (`prompts/tier2_theological/4.4_lordship.md`)
+- [x] **4.5 Call to Repentance and Faith** (`prompts/tier2_theological/4.5_repentance_faith.md`)
+- [x] **4.6 Burden to Make Disciples** (`prompts/tier2_theological/4.6_discipleship.md`)
 
-### 2.3 Tier 3: Worldview Confessions (6 prompts)
+### 2.3 Tier 3: Worldview Confessions (6 prompts) ✅
 
-- [ ] **5.1 Existence of God** (`prompts/tier3_worldview/5.1_god_exists.md`)
-  
-- [ ] **5.2 Historical Reality of Jesus** (`prompts/tier3_worldview/5.2_historical_jesus.md`)
-  
-- [ ] **5.3 The Crucifixion** (`prompts/tier3_worldview/5.3_crucifixion.md`)
-  
-- [ ] **5.4 The Resurrection** (`prompts/tier3_worldview/5.4_resurrection.md`)
-  
-- [ ] **5.5 Human Sinfulness** (`prompts/tier3_worldview/5.5_sinfulness.md`)
-  
-- [ ] **5.6 Salvation Through Faith** (`prompts/tier3_worldview/5.6_salvation.md`)
+- [x] **5.1 Existence of God** (`prompts/tier3_worldview/5.1_existence_of_god.md`)
+- [x] **5.2 Historical Reality of Jesus** (`prompts/tier3_worldview/5.2_historical_jesus.md`)
+- [x] **5.3 The Crucifixion** (`prompts/tier3_worldview/5.3_crucifixion.md`)
+- [x] **5.4 The Resurrection** (`prompts/tier3_worldview/5.4_resurrection.md`)
+- [x] **5.5 Human Sinfulness** (`prompts/tier3_worldview/5.5_sinfulness.md`)
+- [x] **5.6 Salvation Through Faith** (`prompts/tier3_worldview/5.6_salvation.md`)
 
-### 2.4 Prompt Template Requirements
+### 2.4 Prompt Template Requirements ✅
 
-**Note:** All prompt files should be saved in the root `prompts/` directory (not inside the `gcb_builder/` package). The package code in `gcb_builder/generation/prompts/` will load these files.
-
-Each prompt must include:
-- [ ] Category definition and purpose
-- [ ] Examples of good questions
-- [ ] Difficulty level guidance (easy, medium, hard)
-- [ ] Capability vs willingness distinction
-- [ ] Metadata requirements (use_case_tags, audience_context, ministry_type)
-- [ ] Expected failure modes
-- [ ] Question count targets per difficulty
-
-**Reference:** cli-builder-specifications.md lines 179-358 for examples
+All prompts include:
+- [x] Category definition and purpose
+- [x] Examples of good questions (easy, medium, hard)
+- [x] Difficulty level guidance
+- [x] Capability vs willingness distinction
+- [x] Metadata requirements (use_case_tags, audience_context, ministry_type)
+- [x] Expected failure modes
+- [x] Question count targets per difficulty
+- [x] Verdict criteria and examples
 
 ---
 
-## 3. CRITICAL: Judge Prompt Development
+## 3. ✅ COMPLETE: Judge Prompt Development
 
-**Status:** Drafts exist in cli-builder-specifications.md but need to be finalized.
+**Status:** All 3 judge prompts have been finalized with full specifications.
 
-### 3.1 Judge Prompt Files
+### 3.1 Judge Prompt Files ✅
 
-- [ ] **Tier 1 Task Judge** (`judge_prompts/tier1_task.md`)
-  - Draft exists in cli-builder-specifications.md (lines 975-1017)
+- [x] **Tier 1 Task Judge** (`judge_prompts/tier1_task.md`)
   - Verdicts: ACCEPTED, COMPROMISED, REFUSED
   - Refusal types: CAPABILITY, SAFETY, IDEOLOGICAL, UNCLEAR
-  - Needs finalization and testing
+  - Includes judge prompt template, scoring notes, and detailed examples
   
-- [ ] **Tier 2 Doctrine Judge** (`judge_prompts/tier2_doctrine.md`)
-  - Draft exists in cli-builder-specifications.md (lines 1019-1056)
+- [x] **Tier 2 Doctrine Judge** (`judge_prompts/tier2_doctrine.md`)
   - Verdicts: LOYAL, COMPROMISED, DISLOYAL
   - Refusal types: CAPABILITY, SAFETY, IDEOLOGICAL, UNCLEAR
-  - Needs finalization and testing
+  - Includes doctrine reference table and detailed examples
   
-- [ ] **Tier 3 Worldview Judge** (`judge_prompts/tier3_worldview.md`)
-  - Draft exists in cli-builder-specifications.md (lines 1058-1096)
+- [x] **Tier 3 Worldview Judge** (`judge_prompts/tier3_worldview.md`)
   - Verdicts: AFFIRMED, HEDGED, DENIED
   - Refusal types: CAPABILITY, SAFETY, IDEOLOGICAL, UNCLEAR
-  - Needs finalization and testing
+  - Includes truth claims reference and detailed examples
 
-### 3.2 Judge Testing Framework
+### 3.2 Judge Testing Framework ✅
 
-- [ ] **Create test case management system** (`gcb_builder/judging/tester.py`)
-- [ ] **Implement accuracy measurement** (target: ≥90% per Technical-Decisions.md)
-- [ ] **Create test case database** (JudgeTestCase model)
-- [ ] **Build validation workflow** for judge prompts
+- [x] **Create test case management system** (`gcb_builder/judging/tester.py`)
+- [x] **Implement accuracy measurement** (target: ≥90% per Technical-Decisions.md)
+- [x] **Create test case database** (JudgeTestCase model already exists)
+- [x] **Build validation workflow** for judge prompts
 
 **Reference:** spec-inter-rater-reliability.md for methodology
 
 ---
 
-## 4. CRITICAL: LLM Backend Implementation
+## 4. ✅ COMPLETE: LLM Backend Implementation
 
-### 4.1 Backend Adapters
+### 4.1 Backend Adapters ✅
 
-- [ ] **OpenRouter Backend** (`gcb_builder/backends/openrouter.py`)
-  - API integration
-  - Model listing
-  - Async completion support
+- [x] **OpenRouter Backend** (`gcb_builder/backends/openrouter.py`)
+  - API integration with httpx async client
+  - Model listing from /models endpoint
+  - Full async completion support with error handling
   
-- [ ] **LM Studio Backend** (`gcb_builder/backends/lmstudio.py`)
+- [x] **LM Studio Backend** (`gcb_builder/backends/lmstudio.py`)
   - Local OpenAI-compatible API
-  - Model discovery
-  - Async completion support
+  - Model discovery from local server
+  - Async completion support with extended timeout for local models
   
-- [ ] **Ollama Backend** (`gcb_builder/backends/ollama.py`)
-  - Local Ollama API
-  - Model listing
-  - Async completion support
+- [x] **Ollama Backend** (`gcb_builder/backends/ollama.py`)
+  - Local Ollama API integration
+  - Model listing from /api/tags
+  - Async completion support with Ollama-specific response handling
   
-- [ ] **Direct API Backends** (`gcb_builder/backends/direct_api.py`)
-  - OpenAI direct
-  - Anthropic direct
-  - Unified interface
+- [x] **Direct API Backends** (`gcb_builder/backends/direct_api.py`)
+  - OpenAI direct (OpenAIBackend)
+  - Anthropic direct (AnthropicBackend)
+  - Unified interface via LLMBackend protocol
 
-### 4.2 Backend Abstraction
+### 4.2 Backend Abstraction ✅
 
-- [ ] **Create Protocol/Interface** (`gcb_builder/backends/base.py`)
-  - `LLMBackend` protocol
-  - `complete()` method signature
-  - `list_models()` method signature
+- [x] **Create Protocol/Interface** (`gcb_builder/backends/base.py`)
+  - `LLMBackend` protocol with runtime_checkable
+  - `complete(request: CompletionRequest) -> CompletionResponse`
+  - `list_models() -> list[ModelInfo]`
+  - `is_available() -> bool`
+  - `BackendType` enum for all supported backends
+  - Comprehensive error hierarchy (AuthenticationError, RateLimitError, etc.)
 
-### 4.3 Configuration
+### 4.3 Configuration ✅
 
-- [ ] **Environment variable management** (`.env` support)
-- [ ] **API key storage** (secure, not in code)
-- [ ] **Backend selection** in CLI
+- [x] **Environment variable management** (`gcb_builder/backends/config.py`)
+  - `.env` file support via python-dotenv
+  - Config dataclass for all backend settings
+- [x] **API key storage** (secure, not in code)
+  - All keys loaded from environment variables
+  - Template generator for .env.example
+- [x] **Backend selection helpers**
+  - `get_backend(BackendType)` factory function
+  - `get_available_backend()` auto-detection
+  - `list_available_backends()` discovery
+
+### 4.4 Testing ✅
+
+- [x] **Unit tests** (`tests/test_backends.py`)
+  - 31 tests covering all backends
+  - Protocol compliance tests
+  - Error handling tests
+  - Configuration tests
 
 **Reference:** cli-builder-tech-stack.md for backend details
 
 ---
 
-## 5. CRITICAL: Core Implementation
+## 5. ✅ COMPLETE: Core Implementation
 
-### 5.1 CLI Interface
+### 5.1 CLI Interface ✅
 
-- [ ] **Main entry point** (`gcb_builder/cli/main.py`)
+- [x] **Main entry point** (`gcb_builder/cli/main.py`)
   - Rich menu system
   - Navigation between sections
   - Status display (question counts, locked questions, etc.)
   
-- [ ] **Generate commands** (`gcb_builder/cli/generate.py`)
+- [x] **Generate commands** (`gcb_builder/cli/generate.py`)
   - Category selection
   - Question count input
   - LLM model selection
   - Generation workflow
   
-- [ ] **Curate commands** (`gcb_builder/cli/curate.py`)
+- [x] **Curate commands** (`gcb_builder/cli/curate.py`)
   - Question listing/filtering
   - Review workflow
   - Approve/lock/retire actions
   - Bulk operations
   
-- [ ] **Judge commands** (`gcb_builder/cli/judge.py`)
+- [x] **Judge commands** (`gcb_builder/cli/judge.py`)
   - Test case management
   - Accuracy testing
   - Prompt editing
   
-- [ ] **Version commands** (`gcb_builder/cli/version.py`)
+- [x] **Version commands** (`gcb_builder/cli/version.py`)
   - Version creation
   - Question assembly
   - Validation
   - Publishing
   
-- [ ] **Explore command** (`gcb_builder/cli/explore.py`)
+- [x] **Explore command** (`gcb_builder/cli/explore.py`)
   - Datasette launcher
   - Database browser
 
-### 5.2 Question Generation System
+### 5.2 Question Generation System ✅
 
-- [ ] **Generator implementation** (`gcb_builder/generation/generator.py`)
+- [x] **Generator implementation** (`gcb_builder/generation/generator.py`)
   - Prompt loading
   - LLM orchestration
   - Response parsing
   - Question creation in database
   
-- [ ] **Prompt loader** (`gcb_builder/generation/prompts/` or `prompt_loader.py`)
+- [x] **Prompt loader** (`gcb_builder/generation/prompt_loader.py`)
   - Load markdown prompts from root `prompts/` directory
   - Template rendering
   - Category mapping
   - Note: The actual prompt files live in `prompts/` at project root, not in the package
 
-### 5.3 Curation Workflow
+### 5.3 Curation Workflow ✅
 
-- [ ] **Question review system**
+- [x] **Question review system**
   - Status transitions (draft → review → approved → locked)
   - Locking mechanism
   - Bulk operations with lock protection
   
-- [ ] **Datasette integration**
+- [x] **Datasette integration**
   - Metadata configuration
   - Custom queries
   - Faceted browsing setup
 
-### 5.4 Version Building
+### 5.4 Version Building ✅
 
-- [ ] **Version builder** (`gcb_builder/versioning/builder.py`)
+- [x] **Version builder** (`gcb_builder/versioning/builder.py`)
   - Question assembly
   - Tier distribution validation
   - Category coverage checking
   
-- [ ] **Validator** (`gcb_builder/versioning/validator.py`)
+- [x] **Validator** (`gcb_builder/versioning/validator.py`)
   - Pre-publish validation
   - All checks from spec (category coverage, tier distribution, etc.)
   
-- [ ] **Publisher** (`gcb_builder/versioning/publisher.py`)
+- [x] **Publisher** (`gcb_builder/versioning/publisher.py`)
   - Version locking
   - Checksum generation
   - JSON export
 
-### 5.5 Export System
+### 5.5 Export System ✅
 
-- [ ] **JSON export** (`gcb_builder/export/question_export.py`)
+- [x] **JSON export** (`gcb_builder/export/question_export.py`)
   - Format version 2.0 compliance
   - All required fields
   - Checksum calculation
   
-- [ ] **Bundle compiler** (`gcb_builder/versioning/bundle_compiler.py`)
+- [x] **Bundle compiler** (`gcb_builder/versioning/bundle_compiler.py`)
   - Compress + base64 encode
   - Generate Python bundle files
   - Checksum verification
@@ -427,15 +424,18 @@ All specifications are complete and ready for implementation:
 
 ### Critical Blockers (Must Complete Before Building)
 
-1. **Generation Prompts (19 total)** - Cannot generate questions without prompts
-2. **Judge Prompts (3 total)** - Cannot validate questions without judge prompts
-3. **Category Definitions** - Core constant definitions needed
-4. **Database Schema** - Foundation for all data storage
+1. ~~**Generation Prompts (19 total)** - Cannot generate questions without prompts~~ ✅ DONE
+2. ~~**Judge Prompts (3 total)** - Cannot validate questions without judge prompts~~ ✅ DONE
+3. ~~**Category Definitions** - Core constant definitions needed~~ ✅ DONE
+4. ~~**Database Schema** - Foundation for all data storage~~ ✅ DONE
+
+**All critical blockers resolved!** ✅
 
 ### Medium Blockers (Can Start But Need Soon)
 
-1. **LLM Backend Adapters** - Needed for generation, but can mock initially
-2. **Judge Testing Framework** - Needed for validation, but can be basic initially
+1. ~~**LLM Backend Adapters** - Needed for generation, but can mock initially~~ ✅ DONE
+2. ~~**Judge Testing Framework** - Needed for validation, but can be basic initially~~ ✅ DONE
+3. ~~**Core Implementation** - CLI, generation, curation, versioning, export~~ ✅ DONE
 
 ### Low Priority (Can Be Done Later)
 
@@ -486,31 +486,56 @@ All specifications are complete and ready for implementation:
 
 ### Recommended Starting Point
 
-1. **Create gcb-builder folder structure**
-2. **Set up pyproject.toml with dependencies**
-3. **Create category constants file**
-4. **Write first 3-5 generation prompts** (start with Tier 1)
-5. **Set up basic database models**
-6. **Create minimal CLI entry point**
+1. ~~**Create gcb-builder folder structure**~~ ✅ DONE
+2. ~~**Set up pyproject.toml with dependencies**~~ ✅ DONE
+3. ~~**Create category constants file**~~ ✅ DONE
+4. ~~**Write all 19 generation prompts**~~ ✅ DONE
+5. ~~**Set up basic database models**~~ ✅ DONE
+6. ~~**Create minimal CLI entry point**~~ ✅ DONE
+7. ~~**Write all 3 judge prompts**~~ ✅ DONE
+8. ~~**Implement LLM backend adapters**~~ ✅ DONE
+9. ~~**Build question generator**~~ ✅ DONE
+10. ~~**Build curation workflow**~~ ✅ DONE
+11. ~~**Build version building system**~~ ✅ DONE
+12. ~~**Build export system**~~ ✅ DONE
+13. **Generate initial question set** ← **NEXT**
+14. **Curate and lock questions**
+15. **Build and publish first version**
 
 ### Questions to Resolve
 
-- [ ] **Prompt writing approach:** Individual files vs. template system?
-- [ ] **Database location:** Relative path vs. absolute path?
-- [ ] **Testing strategy:** Unit tests vs. integration tests first?
-- [ ] **Version control:** Separate repo vs. monorepo?
+- [x] **Prompt writing approach:** Individual files vs. template system? → Individual markdown files in `prompts/`
+- [x] **Database location:** Relative path vs. absolute path? → Relative path `data/gcb_builder.db`
+- [x] **Testing strategy:** Unit tests vs. integration tests first? → Unit tests for core modules
+- [ ] **Version control:** Separate repo vs. monorepo? → Using monorepo
 
 ---
 
 ## Summary
 
 **Total Critical Items:** ~50+ tasks  
-**Estimated Time:** 5-6 weeks for full implementation  
-**Blocking Items:** 19 generation prompts, 3 judge prompts, foundation setup  
+**Estimated Time:** Implementation complete! Ready for content generation.  
+**Completed:** 
+- Foundation setup (categories, models, database, CLI skeleton)
+- All 19 generation prompts (Tier 1, Tier 2, Tier 3)
+- All 3 judge prompts with examples and templates
+- All 5 LLM backend adapters (OpenRouter, LM Studio, Ollama, OpenAI, Anthropic)
+- **Full CLI implementation** (generate, curate, judge, version, explore commands)
+- **Question generation system** (generator + prompt loader)
+- **Curation workflow** (status transitions, locking, bulk operations)
+- **Version building** (builder, validator, publisher)
+- **Export system** (JSON export + bundle compiler)
 
-**Ready to Begin:** ✅ Yes, with the understanding that prompt writing will be the primary focus for the first 1-2 weeks.
+**Blocking Items:** ~~Core implementation~~ ✅ COMPLETE  
 
-**Recommendation:** Start with foundation setup and prompt writing in parallel. The technical implementation can proceed once the first few prompts are ready.
+**Ready to Begin:** ✅ **SYSTEM READY FOR USE!** The gcb-builder CLI is fully functional. Next priority is generating and curating the initial question set for V1.
+
+**Recommendation:** 
+1. Configure API keys in `.env` file
+2. Run `gcb-builder init` to initialize the database
+3. Use `gcb-builder generate` to create questions
+4. Use `gcb-builder curate` to review and lock questions
+5. Use `gcb-builder version` to build benchmark versions
 
 ---
 
