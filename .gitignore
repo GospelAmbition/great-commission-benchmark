@@ -97,3 +97,6 @@ archive/*.zip
 # Private governance documents
 documents/Founding-Committee.md
 /questions/*
+
+# Deployment monitoring
+.deployment-errors.md
