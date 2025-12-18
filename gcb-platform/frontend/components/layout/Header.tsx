@@ -18,14 +18,14 @@ export function Header() {
   const { user, isLoading } = useUser();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" role="banner">
       <div className="container flex h-16 items-center">
-        <Link href="/" className="mr-6 flex items-center space-x-2">
+        <Link href="/" className="mr-6 flex items-center space-x-2" aria-label="Great Commission Benchmark - Home">
           <span className="font-bold text-xl">Great Commission Benchmark</span>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium" aria-label="Main navigation">
           <Link
             href="/"
             className="transition-colors hover:text-foreground/80 text-foreground/60"
@@ -103,13 +103,13 @@ export function Header() {
           {/* Mobile Menu */}
           <Sheet>
             <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
+              <Button variant="ghost" size="icon" aria-label="Open navigation menu">
+                <Menu className="h-5 w-5" aria-hidden="true" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right">
-              <nav className="flex flex-col space-y-4 mt-8">
+            <SheetContent side="right" aria-label="Mobile navigation">
+              <nav className="flex flex-col space-y-4 mt-8" aria-label="Mobile navigation">
                 <Link
                   href="/"
                   className="text-lg font-medium transition-colors hover:text-foreground/80"

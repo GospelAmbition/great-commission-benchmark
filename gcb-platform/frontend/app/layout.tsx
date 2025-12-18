@@ -27,9 +27,18 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className={`${inter.variable} antialiased font-sans`}>
         <Auth0Provider>
+          {/* Skip to main content link for accessibility */}
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-[--ga-red] focus:text-white focus:rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[--ga-red]"
+          >
+            Skip to main content
+          </a>
           <div className="flex min-h-screen flex-col">
             <Header />
-            <main className="flex-1">{children}</main>
+            <main id="main-content" className="flex-1" role="main" tabIndex={-1}>
+              {children}
+            </main>
             <Footer />
           </div>
           <Toaster />

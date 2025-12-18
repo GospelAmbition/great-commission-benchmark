@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { TesterAgreementModal } from "@/components/tester-agreement/TesterAgreementModal";
 
 export default function NewTestPage() {
   const { user, isLoading: userLoading } = useUser();
@@ -30,6 +31,8 @@ export default function NewTestPage() {
   const [costEstimate, setCostEstimate] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [showAgreementModal, setShowAgreementModal] = useState(false);
+  const [agreementAccepted, setAgreementAccepted] = useState(false);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -44,9 +47,10 @@ export default function NewTestPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [modelsData, versionsData] = await Promise.all([
+      const [modelsData, versionsData, profile] = await Promise.all([
         apiClient.getModels({ limit: 100 }),
         apiClient.getVersions(),
+        apiClient.getProfile().catch(() => null),
       ]);
       if (modelsData.items) {
         setModels(modelsData.items);
@@ -57,6 +61,12 @@ export default function NewTestPage() {
           setSelectedVersion(versionsData.versions[0].version);
         }
       }
+      // Check if tester agreement is accepted
+      if (profile && !profile.tester_agreement_accepted) {
+        setShowAgreementModal(true);
+      } else {
+        setAgreementAccepted(true);
+      }
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
@@ -66,6 +76,12 @@ export default function NewTestPage() {
 
   async function handleCreateTest() {
     if (!selectedModel || !selectedVersion) return;
+    
+    // Check agreement before creating test
+    if (!agreementAccepted) {
+      setShowAgreementModal(true);
+      return;
+    }
 
     setCreating(true);
     try {
@@ -81,6 +97,11 @@ export default function NewTestPage() {
     } finally {
       setCreating(false);
     }
+  }
+
+  function handleAgreementAccepted() {
+    setAgreementAccepted(true);
+    setShowAgreementModal(false);
   }
 
   useEffect(() => {
@@ -108,6 +129,11 @@ export default function NewTestPage() {
 
   return (
     <div className="container py-8 max-w-3xl">
+      <TesterAgreementModal
+        open={showAgreementModal}
+        onAccept={handleAgreementAccepted}
+      />
+      
       <div className="mb-8">
         <h1 className="text-4xl font-bold">Run a Benchmark Test</h1>
         <p className="mt-2 text-muted-foreground">

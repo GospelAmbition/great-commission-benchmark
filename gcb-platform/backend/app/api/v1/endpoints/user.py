@@ -1,5 +1,6 @@
 """User API endpoints"""
 from typing import Optional
+from datetime import datetime
 from fastapi import APIRouter, Query, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -369,3 +370,21 @@ async def update_notification_preferences(
             newsletter=prefs.newsletter
         )
     )
+
+
+@router.post("/tester-agreement/accept")
+async def accept_tester_agreement(
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Accept the tester agreement"""
+    if current_user.tester_agreement_accepted:
+        return {"message": "Agreement already accepted", "accepted": True}
+    
+    current_user.tester_agreement_accepted = True
+    current_user.tester_agreement_accepted_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    return {"message": "Tester agreement accepted", "accepted": True}

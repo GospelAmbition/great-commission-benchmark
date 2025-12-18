@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="border-t bg-muted/50">
+    <footer className="border-t bg-muted/50" role="contentinfo" aria-label="Site footer">
       <div className="container py-12 md:py-16">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           <div>
@@ -94,8 +94,16 @@ export function Footer() {
             </ul>
           </div>
         </div>
-        <div className="mt-12 border-t pt-8 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Great Commission Benchmark. All rights reserved.</p>
+        <div className="mt-12 border-t pt-8 space-y-4">
+          <div className="text-center text-xs text-muted-foreground">
+            <p>
+              <strong>Disclaimer:</strong> This benchmark is for informational purposes only and does 
+              not constitute an endorsement or recommendation of any AI model or service.
+            </p>
+          </div>
+          <div className="text-center text-sm text-muted-foreground">
+            <p>© {new Date().getFullYear()} Great Commission Benchmark. All rights reserved.</p>
+          </div>
         </div>
       </div>
     </footer>

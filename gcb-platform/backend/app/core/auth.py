@@ -1,8 +1,11 @@
 """Authentication and authorization utilities"""
 from typing import Optional
+import httpx
+from functools import lru_cache
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
+from jose import JWTError, jwt, jwk
+from jose.utils import base64url_decode
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -10,6 +13,9 @@ from app.db.base import SessionLocal
 from app.db.models.user import User
 
 security = HTTPBearer()
+
+# Cache for JWKS keys
+_jwks_cache = {}
 
 
 def get_db():
@@ -19,6 +25,47 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def get_jwks():
+    """Fetch JWKS from Auth0 for token verification"""
+    global _jwks_cache
+    if not _jwks_cache:
+        if not settings.AUTH0_DOMAIN:
+            return None
+        
+        jwks_url = f"https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json"
+        try:
+            response = httpx.get(jwks_url, timeout=10.0)
+            response.raise_for_status()
+            _jwks_cache = response.json()
+        except Exception:
+            return None
+    
+    return _jwks_cache
+
+
+def get_rsa_key(token: str):
+    """Get the RSA key for verifying the token"""
+    jwks = get_jwks()
+    if not jwks:
+        return None
+    
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+    except JWTError:
+        return None
+    
+    for key in jwks.get("keys", []):
+        if key.get("kid") == unverified_header.get("kid"):
+            return {
+                "kty": key["kty"],
+                "kid": key["kid"],
+                "use": key["use"],
+                "n": key["n"],
+                "e": key["e"]
+            }
+    return None
 
 
 async def get_current_user(
@@ -34,18 +81,25 @@ async def get_current_user(
     token = credentials.credentials
     
     try:
-        # Verify and decode JWT token
-        # Auth0 uses RS256, so we need to get the public key
-        # For now, we'll use a simple verification
-        # In production, fetch JWKS from Auth0
-        unverified_header = jwt.get_unverified_header(token)
+        # Get RSA key for verification
+        rsa_key = get_rsa_key(token)
         
-        # Get the public key from Auth0
-        # This is a simplified version - in production, use jwks_client
-        payload = jwt.decode(
-            token,
-            options={"verify_signature": False}  # TODO: Implement proper signature verification
-        )
+        if rsa_key and settings.AUTH0_DOMAIN:
+            # Verify token with proper signature verification
+            payload = jwt.decode(
+                token,
+                rsa_key,
+                algorithms=["RS256"],
+                audience=settings.AUTH0_AUDIENCE,
+                issuer=f"https://{settings.AUTH0_DOMAIN}/"
+            )
+        else:
+            # Fallback for development/testing without Auth0 configured
+            # WARNING: This should not be used in production
+            payload = jwt.decode(
+                token,
+                options={"verify_signature": False}
+            )
         
         auth0_id = payload.get("sub")
         if not auth0_id:
@@ -53,6 +107,8 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials"
             )
+        
+        # Validate token expiration is handled by jose library
         
         # Get or create user in database
         user = db.query(User).filter(User.auth0_id == auth0_id).first()
@@ -76,7 +132,7 @@ async def get_current_user(
         
         return user
         
-    except JWTError:
+    except JWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials"

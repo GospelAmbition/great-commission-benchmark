@@ -1,5 +1,5 @@
 """User model"""
-from sqlalchemy import Column, String, DateTime, Text
+from sqlalchemy import Column, String, DateTime, Text, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -17,5 +17,7 @@ class User(Base):
     name = Column(String(255))
     role = Column(String(50), default="user")  # 'user', 'moderator', 'admin'
     credentials = Column(Text)  # For moderators: background, expertise
+    tester_agreement_accepted = Column(Boolean, default=False, nullable=False)
+    tester_agreement_accepted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -208,6 +208,16 @@ export default function ResearchPage() {
         </div>
       )}
 
+      {/* Disclaimer */}
+      <div className="mb-4 p-4 bg-muted rounded-lg border-l-4 border-[--ga-red]">
+        <p className="text-sm text-muted-foreground">
+          <strong>Disclaimer:</strong> This benchmark is for informational purposes only and does not 
+          constitute an endorsement or recommendation of any AI model or service. Results reflect 
+          performance on specific test questions at a point in time and may not predict performance 
+          on other tasks or future model versions.
+        </p>
+      </div>
+
       {/* Leaderboard Table */}
       <Card>
         <CardHeader>

@@ -1,12 +1,13 @@
 """Public API endpoints"""
 from typing import Optional, List
 from datetime import datetime
-from fastapi import APIRouter, Query, Depends, HTTPException
+from fastapi import APIRouter, Query, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from uuid import UUID
 
 from app.core.auth import get_db
+from app.core.cache import cache, make_cache_key, CACHE_TTL
 from app.db.models.test_run import TestRun
 from app.db.models.model import Model
 from app.db.models.question_set import QuestionSet
@@ -55,8 +56,26 @@ async def get_leaderboard(
             QuestionSet.semantic_version == version
         ).first()
     
+    # Return empty leaderboard if no question set exists
     if not question_set:
-        raise HTTPException(status_code=404, detail="Version not found")
+        return LeaderboardResponse(
+            semantic_version="1.0.0",
+            marketing_version="1.0",
+            filters={
+                "category": category,
+                "tier": str(tier) if tier else None,
+                "provider": provider,
+                "trust_tier": trust_tier
+            },
+            total_models=0,
+            entries=[],
+            pagination={
+                "limit": limit,
+                "offset": offset,
+                "total": 0,
+                "has_more": False
+            }
+        )
     
     # Build query for completed test runs
     query = db.query(TestRun).filter(
@@ -307,8 +326,17 @@ async def get_model_detail(
 
 
 @router.get("/versions", response_model=VersionsResponse)
-async def list_versions(db: Session = Depends(get_db)):
+async def list_versions(response: Response, db: Session = Depends(get_db)):
     """List all benchmark versions"""
+    # Check cache first
+    cache_key = make_cache_key("versions")
+    cached_result = await cache.get(cache_key)
+    if cached_result:
+        response.headers["X-Cache"] = "HIT"
+        return cached_result
+    
+    response.headers["X-Cache"] = "MISS"
+    
     question_sets = db.query(QuestionSet).order_by(QuestionSet.created_at.desc()).all()
     
     versions = []
@@ -348,16 +376,30 @@ async def list_versions(db: Session = Depends(get_db)):
         if qs.status == "active" and not current_version:
             current_version = qs.semantic_version
     
-    return VersionsResponse(
+    result = VersionsResponse(
         versions=versions,
         current_version=current_version or versions[0].semantic_version if versions else "1.0"
     )
+    
+    # Cache the result
+    await cache.set(cache_key, result, CACHE_TTL["versions"])
+    
+    return result
 
 
 @router.get("/stats", response_model=StatsResponse)
-async def get_stats(db: Session = Depends(get_db)):
+async def get_stats(response: Response, db: Session = Depends(get_db)):
     """Get platform statistics"""
     from datetime import datetime
+    
+    # Check cache first
+    cache_key = make_cache_key("public_stats")
+    cached_result = await cache.get(cache_key)
+    if cached_result:
+        response.headers["X-Cache"] = "HIT"
+        return cached_result
+    
+    response.headers["X-Cache"] = "MISS"
     
     # Get current version
     current_qs = db.query(QuestionSet).filter(QuestionSet.status == "active").first()
@@ -385,7 +427,7 @@ async def get_stats(db: Session = Depends(get_db)):
     # Count providers
     providers_represented = db.query(Model.provider).distinct().count()
     
-    return StatsResponse(
+    result = StatsResponse(
         total_models_tested=total_models_tested,
         total_test_runs=total_test_runs,
         current_benchmark_version=current_version,
@@ -394,6 +436,11 @@ async def get_stats(db: Session = Depends(get_db)):
         providers_represented=providers_represented,
         last_updated=datetime.utcnow()
     )
+    
+    # Cache the result
+    await cache.set(cache_key, result, CACHE_TTL["public_stats"])
+    
+    return result
 
 
 @router.get("/leaderboard/compare")
