@@ -1,9 +1,9 @@
 """Webhook endpoints"""
-from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Request, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.db.base import get_db
+from app.core.auth import get_db
 from app.services.payment import PaymentService
 from app.db.models.test_run import TestRun
 from app.services.executor import BenchmarkExecutor

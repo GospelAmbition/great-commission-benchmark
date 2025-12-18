@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from app.db.base import get_db
+from app.core.auth import get_db
 from app.db.models.question_set import QuestionSet
 from app.db.models.question import Question
 from app.db.models.methodology_version import MethodologyVersion

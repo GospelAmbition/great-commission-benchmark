@@ -2,7 +2,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
-from app.db.base import get_db
+from app.core.auth import get_db
 from app.db.models.newsletter_subscriber import NewsletterSubscriber
 from app.schemas.newsletter import (
     NewsletterSubscribeRequest,

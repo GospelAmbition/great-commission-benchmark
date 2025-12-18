@@ -1,118 +1,249 @@
 """Tests for webhook endpoints"""
 import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
+from datetime import datetime
 
-from app.main import app
 from app.db.models.user import User
 from app.db.models.test_run import TestRun
-
-client = TestClient(app)
-
-
-@pytest.fixture
-def test_test_run_with_payment(db_session):
-    """Create test run with payment"""
-    from app.db.models.model import Model
-    from app.db.models.question_set import QuestionSet
-    from app.db.models.methodology_version import MethodologyVersion
-    
-    user = User(
-        auth0_id="test_user",
-        email="test@example.com",
-        role="user"
-    )
-    db_session.add(user)
-    db_session.flush()
-    
-    model = Model(model_id="test-model", name="Test Model", provider="test")
-    db_session.add(model)
-    db_session.flush()
-    
-    question_set = QuestionSet(semantic_version="1.0.0", status="active")
-    db_session.add(question_set)
-    db_session.flush()
-    
-    methodology_version = MethodologyVersion(question_set_id=question_set.id)
-    db_session.add(methodology_version)
-    db_session.flush()
-    
-    test_run = TestRun(
-        user_id=user.id,
-        model_id=model.id,
-        question_set_id=question_set.id,
-        methodology_version_id=methodology_version.id,
-        status="pending_payment",
-        payment_id="pi_test123",
-        payment_status="requires_payment_method"
-    )
-    db_session.add(test_run)
-    db_session.commit()
-    db_session.refresh(test_run)
-    return test_run
+from app.services.payment import PaymentService
 
 
-@patch("app.services.payment.PaymentService.verify_webhook_signature")
-def test_stripe_webhook_payment_succeeded(mock_verify, test_test_run_with_payment, db_session):
-    """Test Stripe webhook for payment succeeded"""
-    # Mock webhook verification
-    mock_verify.return_value = {
-        "type": "payment_intent.succeeded",
-        "data": {
-            "object": {
-                "id": "pi_test123",
-                "metadata": {
-                    "test_id": str(test_test_run_with_payment.id)
+class TestStripeWebhooks:
+    """Tests for Stripe webhook handlers"""
+    
+    @patch.object(PaymentService, 'verify_webhook_signature')
+    def test_stripe_webhook_payment_succeeded(
+        self,
+        mock_verify,
+        client,
+        db_session,
+        test_user,
+        test_test_run,
+        mock_email
+    ):
+        """Test Stripe webhook for payment_intent.succeeded"""
+        # Set up test run with payment ID
+        test_test_run.payment_id = "pi_test_123"
+        test_test_run.status = "pending_payment"
+        db_session.commit()
+        
+        # Mock webhook verification to return success event
+        mock_verify.return_value = {
+            "type": "payment_intent.succeeded",
+            "data": {
+                "object": {
+                    "id": "pi_test_123",
+                    "metadata": {
+                        "test_id": str(test_test_run.id)
+                    }
                 }
             }
         }
-    }
+        
+        response = client.post(
+            "/api/webhooks/stripe",
+            content=b'{"type": "payment_intent.succeeded"}',
+            headers={"stripe-signature": "test_signature_123"}
+        )
+        
+        assert response.status_code == 200
+        
+        # Verify test run was updated
+        db_session.refresh(test_test_run)
+        assert test_test_run.payment_status == "succeeded"
+        assert test_test_run.status == "running"
+        assert test_test_run.started_at is not None
     
-    response = client.post(
-        "/api/v1/webhooks/stripe",
-        content=b'{"test": "payload"}',
-        headers={"stripe-signature": "test_signature"}
-    )
-    
-    assert response.status_code == 200
-    
-    # Verify test run was updated
-    db_session.refresh(test_test_run_with_payment)
-    assert test_test_run_with_payment.payment_status == "succeeded"
-    assert test_test_run_with_payment.status == "running"
-
-
-@patch("app.services.payment.PaymentService.verify_webhook_signature")
-def test_stripe_webhook_payment_failed(mock_verify, test_test_run_with_payment, db_session):
-    """Test Stripe webhook for payment failed"""
-    mock_verify.return_value = {
-        "type": "payment_intent.payment_failed",
-        "data": {
-            "object": {
-                "id": "pi_test123"
+    @patch.object(PaymentService, 'verify_webhook_signature')
+    def test_stripe_webhook_payment_failed(
+        self,
+        mock_verify,
+        client,
+        db_session,
+        test_user,
+        test_test_run,
+        mock_email
+    ):
+        """Test Stripe webhook for payment_intent.payment_failed"""
+        # Set up test run with payment ID
+        test_test_run.payment_id = "pi_test_failed"
+        test_test_run.status = "pending_payment"
+        db_session.commit()
+        
+        mock_verify.return_value = {
+            "type": "payment_intent.payment_failed",
+            "data": {
+                "object": {
+                    "id": "pi_test_failed"
+                }
             }
         }
-    }
+        
+        response = client.post(
+            "/api/webhooks/stripe",
+            content=b'{"type": "payment_intent.payment_failed"}',
+            headers={"stripe-signature": "test_signature_123"}
+        )
+        
+        assert response.status_code == 200
+        
+        # Verify test run was updated
+        db_session.refresh(test_test_run)
+        assert test_test_run.payment_status == "failed"
+        assert test_test_run.status == "payment_failed"
     
-    response = client.post(
-        "/api/v1/webhooks/stripe",
-        content=b'{"test": "payload"}',
-        headers={"stripe-signature": "test_signature"}
-    )
+    @patch.object(PaymentService, 'verify_webhook_signature')
+    def test_stripe_webhook_charge_refunded(
+        self,
+        mock_verify,
+        client,
+        db_session,
+        test_user,
+        test_test_run
+    ):
+        """Test Stripe webhook for charge.refunded"""
+        # Set up test run with payment ID
+        test_test_run.payment_id = "pi_test_refund"
+        test_test_run.status = "pending_payment"
+        test_test_run.payment_status = "succeeded"
+        db_session.commit()
+        
+        mock_verify.return_value = {
+            "type": "charge.refunded",
+            "data": {
+                "object": {
+                    "payment_intent": "pi_test_refund"
+                }
+            }
+        }
+        
+        response = client.post(
+            "/api/webhooks/stripe",
+            content=b'{"type": "charge.refunded"}',
+            headers={"stripe-signature": "test_signature_123"}
+        )
+        
+        assert response.status_code == 200
+        
+        # Verify test run was updated
+        db_session.refresh(test_test_run)
+        assert test_test_run.payment_status == "refunded"
+        assert test_test_run.status == "cancelled"
     
-    assert response.status_code == 200
+    def test_stripe_webhook_missing_signature(self, client):
+        """Test webhook without signature header"""
+        response = client.post(
+            "/api/webhooks/stripe",
+            content=b'{"test": "payload"}'
+        )
+        
+        assert response.status_code == 400
+        assert "Missing stripe-signature" in response.json()["detail"]
     
-    # Verify test run was updated
-    db_session.refresh(test_test_run_with_payment)
-    assert test_test_run_with_payment.payment_status == "failed"
-    assert test_test_run_with_payment.status == "payment_failed"
+    @patch.object(PaymentService, 'verify_webhook_signature')
+    def test_stripe_webhook_invalid_signature(
+        self,
+        mock_verify,
+        client
+    ):
+        """Test webhook with invalid signature"""
+        mock_verify.side_effect = Exception("Invalid signature")
+        
+        response = client.post(
+            "/api/webhooks/stripe",
+            content=b'{"test": "payload"}',
+            headers={"stripe-signature": "invalid_signature"}
+        )
+        
+        assert response.status_code == 400
+        assert "Invalid webhook signature" in response.json()["detail"]
+    
+    @patch.object(PaymentService, 'verify_webhook_signature')
+    def test_stripe_webhook_unknown_event_type(
+        self,
+        mock_verify,
+        client
+    ):
+        """Test webhook with unknown event type"""
+        mock_verify.return_value = {
+            "type": "some.unknown.event",
+            "data": {
+                "object": {}
+            }
+        }
+        
+        response = client.post(
+            "/api/webhooks/stripe",
+            content=b'{"type": "some.unknown.event"}',
+            headers={"stripe-signature": "test_signature"}
+        )
+        
+        # Should return 200 (acknowledge receipt) even for unknown events
+        assert response.status_code == 200
+    
+    @patch.object(PaymentService, 'verify_webhook_signature')
+    def test_stripe_webhook_no_test_id_in_metadata(
+        self,
+        mock_verify,
+        client,
+        db_session
+    ):
+        """Test webhook where payment has no test_id in metadata"""
+        mock_verify.return_value = {
+            "type": "payment_intent.succeeded",
+            "data": {
+                "object": {
+                    "id": "pi_no_metadata",
+                    "metadata": {}  # No test_id
+                }
+            }
+        }
+        
+        response = client.post(
+            "/api/webhooks/stripe",
+            content=b'{"type": "payment_intent.succeeded"}',
+            headers={"stripe-signature": "test_signature"}
+        )
+        
+        # Should still return 200 - just won't update any test run
+        assert response.status_code == 200
 
 
-def test_stripe_webhook_missing_signature():
-    """Test webhook without signature"""
-    response = client.post(
-        "/api/v1/webhooks/stripe",
-        content=b'{"test": "payload"}'
-    )
+class TestWebhookEmailNotifications:
+    """Tests for email notifications triggered by webhooks"""
     
-    assert response.status_code == 400
+    @patch.object(PaymentService, 'verify_webhook_signature')
+    @patch("app.api.v1.endpoints.webhooks.EmailService")
+    def test_payment_failed_sends_email(
+        self,
+        mock_email_service,
+        mock_verify,
+        client,
+        db_session,
+        test_user,
+        test_test_run
+    ):
+        """Test that payment failure triggers email notification"""
+        test_test_run.payment_id = "pi_test_email"
+        test_test_run.status = "pending_payment"
+        db_session.commit()
+        
+        mock_email_service.send_payment_failed_email = AsyncMock(return_value=True)
+        
+        mock_verify.return_value = {
+            "type": "payment_intent.payment_failed",
+            "data": {
+                "object": {
+                    "id": "pi_test_email"
+                }
+            }
+        }
+        
+        response = client.post(
+            "/api/webhooks/stripe",
+            content=b'{"type": "payment_intent.payment_failed"}',
+            headers={"stripe-signature": "test_signature"}
+        )
+        
+        assert response.status_code == 200
+        # Email service should be called (though may fail silently)

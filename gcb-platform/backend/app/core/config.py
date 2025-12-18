@@ -1,5 +1,6 @@
 """Application configuration"""
-from pydantic_settings import BaseSettings
+import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
 
@@ -15,8 +16,13 @@ class Settings(BaseSettings):
     AUTH0_CLIENT_SECRET: str = ""
     AUTH0_AUDIENCE: str = ""
     
-    # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001"]
+    # CORS (stored as string, parsed to list)
+    CORS_ORIGINS_STR: str = "http://localhost:3000,http://localhost:3001"
+    
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        """Parse CORS origins from comma-separated string"""
+        return [origin.strip() for origin in self.CORS_ORIGINS_STR.split(",") if origin.strip()]
     
     # API
     API_V1_PREFIX: str = "/api/v1"
@@ -37,9 +43,11 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     EMAIL_FROM: str = "Great Commission Benchmark <noreply@gcb.app>"
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore"
+    )
 
 
 settings = Settings()

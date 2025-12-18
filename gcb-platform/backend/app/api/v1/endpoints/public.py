@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from uuid import UUID
 
-from app.db.base import get_db
+from app.core.auth import get_db
 from app.db.models.test_run import TestRun
 from app.db.models.model import Model
 from app.db.models.question_set import QuestionSet

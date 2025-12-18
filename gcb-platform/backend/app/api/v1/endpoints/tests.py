@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from uuid import UUID
 
-from app.db.base import get_db
+from app.core.auth import get_db
 from app.core.auth import require_auth
 from app.db.models.user import User
 from app.db.models.test_run import TestRun

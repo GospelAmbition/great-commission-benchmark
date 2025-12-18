@@ -1,161 +1,379 @@
 """Tests for moderator endpoints"""
 import pytest
-from fastapi.testclient import TestClient
 from uuid import uuid4
 
-from app.main import app
 from app.db.models.user import User
 from app.db.models.test_run import TestRun
-from app.db.models.model import Model
 from app.db.models.result import Result
-
-client = TestClient(app)
-
-
-@pytest.fixture
-def moderator_user(db_session):
-    """Create moderator user"""
-    user = User(
-        auth0_id="moderator_auth0_id",
-        email="moderator@example.com",
-        name="Moderator",
-        role="moderator"
-    )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-    return user
+from app.db.models.moderation_log import ModerationLog
 
 
-@pytest.fixture
-def completed_test_run(db_session, moderator_user):
-    """Create completed test run"""
-    from app.db.models.question_set import QuestionSet
-    from app.db.models.methodology_version import MethodologyVersion
+class TestModeratorEndpoints:
+    """Tests for moderator API endpoints"""
     
-    model = Model(model_id="test-model", name="Test Model", provider="test")
-    db_session.add(model)
-    db_session.flush()
+    def test_get_moderation_queue(
+        self,
+        client,
+        db_session,
+        moderator_user,
+        completed_test_run
+    ):
+        """Test GET /api/moderator/queue"""
+        from main import app
+        from app.core.auth import get_current_user, require_moderator
+        
+        async def override_auth():
+            return moderator_user
+        
+        app.dependency_overrides[get_current_user] = override_auth
+        app.dependency_overrides[require_moderator] = override_auth
+        
+        response = client.get("/api/moderator/queue")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert "total" in data
+        
+        app.dependency_overrides.clear()
     
-    question_set = QuestionSet(semantic_version="1.0.0", status="active")
-    db_session.add(question_set)
-    db_session.flush()
+    def test_get_moderation_queue_with_status_filter(
+        self,
+        client,
+        db_session,
+        moderator_user,
+        completed_test_run
+    ):
+        """Test moderation queue filtering by status"""
+        from main import app
+        from app.core.auth import get_current_user, require_moderator
+        
+        async def override_auth():
+            return moderator_user
+        
+        app.dependency_overrides[get_current_user] = override_auth
+        app.dependency_overrides[require_moderator] = override_auth
+        
+        response = client.get("/api/moderator/queue?status=automated")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        
+        app.dependency_overrides.clear()
     
-    methodology_version = MethodologyVersion(question_set_id=question_set.id)
-    db_session.add(methodology_version)
-    db_session.flush()
+    def test_get_queue_item_detail(
+        self,
+        client,
+        db_session,
+        moderator_user,
+        completed_test_run,
+        test_results
+    ):
+        """Test GET /api/moderator/queue/{test_id}"""
+        from main import app
+        from app.core.auth import get_current_user, require_moderator
+        
+        async def override_auth():
+            return moderator_user
+        
+        app.dependency_overrides[get_current_user] = override_auth
+        app.dependency_overrides[require_moderator] = override_auth
+        
+        response = client.get(f"/api/moderator/queue/{completed_test_run.id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "test_id" in data
+        assert "sample_verdicts" in data
+        assert "existing_reviews" in data
+        
+        app.dependency_overrides.clear()
     
-    test_run = TestRun(
-        user_id=moderator_user.id,
-        model_id=model.id,
-        question_set_id=question_set.id,
-        methodology_version_id=methodology_version.id,
-        status="completed",
-        trust_tier="automated"
-    )
-    db_session.add(test_run)
-    db_session.commit()
-    db_session.refresh(test_run)
-    return test_run
+    def test_get_queue_item_detail_not_found(
+        self,
+        client,
+        db_session,
+        moderator_user
+    ):
+        """Test queue item detail for non-existent test"""
+        from main import app
+        from app.core.auth import get_current_user, require_moderator
+        
+        async def override_auth():
+            return moderator_user
+        
+        app.dependency_overrides[get_current_user] = override_auth
+        app.dependency_overrides[require_moderator] = override_auth
+        
+        response = client.get(f"/api/moderator/queue/{uuid4()}")
+        
+        assert response.status_code == 404
+        
+        app.dependency_overrides.clear()
+    
+    def test_submit_review(
+        self,
+        client,
+        db_session,
+        moderator_user,
+        completed_test_run,
+        test_results
+    ):
+        """Test POST /api/moderator/reviews"""
+        from main import app
+        from app.core.auth import get_current_user, require_moderator
+        
+        async def override_auth():
+            return moderator_user
+        
+        app.dependency_overrides[get_current_user] = override_auth
+        app.dependency_overrides[require_moderator] = override_auth
+        
+        response = client.post(
+            "/api/moderator/reviews",
+            json={
+                "test_id": str(completed_test_run.id),
+                "verdict_reviews": [
+                    {
+                        "result_id": str(test_results[0].id),
+                        "verdict": "agree"
+                    }
+                ],
+                "overall_assessment": "verified",
+                "notes": "Test review notes"
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "review_id" in data
+        assert "test_id" in data
+        assert "trust_tier" in data
+        assert data["trust_tier"] == "reviewed"  # First review sets to "reviewed"
+        
+        app.dependency_overrides.clear()
+    
+    def test_submit_review_concerns_triggers_second_review(
+        self,
+        client,
+        db_session,
+        moderator_user,
+        completed_test_run,
+        test_results
+    ):
+        """Test that concerns trigger second review requirement"""
+        from main import app
+        from app.core.auth import get_current_user, require_moderator
+        
+        async def override_auth():
+            return moderator_user
+        
+        app.dependency_overrides[get_current_user] = override_auth
+        app.dependency_overrides[require_moderator] = override_auth
+        
+        response = client.post(
+            "/api/moderator/reviews",
+            json={
+                "test_id": str(completed_test_run.id),
+                "verdict_reviews": [
+                    {
+                        "result_id": str(test_results[0].id),
+                        "verdict": "disagree"
+                    }
+                ],
+                "overall_assessment": "concerns",
+                "notes": "Found issues"
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["trust_tier"] == "pending_review"
+        assert data["requires_second_review"] == True
+        
+        app.dependency_overrides.clear()
+    
+    def test_get_moderator_activity(
+        self,
+        client,
+        db_session,
+        moderator_user
+    ):
+        """Test GET /api/moderator/activity"""
+        from main import app
+        from app.core.auth import get_current_user, require_moderator
+        
+        async def override_auth():
+            return moderator_user
+        
+        app.dependency_overrides[get_current_user] = override_auth
+        app.dependency_overrides[require_moderator] = override_auth
+        
+        response = client.get("/api/moderator/activity")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert "total" in data
+        
+        app.dependency_overrides.clear()
+    
+    def test_get_moderator_stats(
+        self,
+        client,
+        db_session,
+        moderator_user
+    ):
+        """Test GET /api/moderator/stats"""
+        from main import app
+        from app.core.auth import get_current_user, require_moderator
+        
+        async def override_auth():
+            return moderator_user
+        
+        app.dependency_overrides[get_current_user] = override_auth
+        app.dependency_overrides[require_moderator] = override_auth
+        
+        response = client.get("/api/moderator/stats")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "personal" in data
+        assert "system_wide" in data
+        assert "total_reviews" in data["personal"]
+        assert "agreement_rate" in data["personal"]
+        
+        app.dependency_overrides.clear()
+    
+    def test_moderator_requires_role(
+        self,
+        client,
+        db_session,
+        test_user
+    ):
+        """Test that moderator endpoints require moderator role"""
+        from main import app
+        from app.core.auth import get_current_user
+        
+        async def override_auth():
+            return test_user  # Regular user, not moderator
+        
+        app.dependency_overrides[get_current_user] = override_auth
+        
+        response = client.get("/api/moderator/queue")
+        
+        assert response.status_code == 403
+        
+        app.dependency_overrides.clear()
+    
+    def test_get_community_submission_queue(
+        self,
+        client,
+        db_session,
+        moderator_user
+    ):
+        """Test GET /api/moderator/community"""
+        from main import app
+        from app.core.auth import get_current_user, require_moderator
+        
+        async def override_auth():
+            return moderator_user
+        
+        app.dependency_overrides[get_current_user] = override_auth
+        app.dependency_overrides[require_moderator] = override_auth
+        
+        response = client.get("/api/moderator/community")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert "total" in data
+        
+        app.dependency_overrides.clear()
 
 
-def test_get_moderation_queue(moderator_user, completed_test_run, auth_headers):
-    """Test getting moderation queue"""
-    response = client.get(
-        "/api/v1/moderator/queue",
-        headers=auth_headers(moderator_user)
-    )
+class TestTrustTierProgression:
+    """Tests for trust tier progression logic"""
     
-    assert response.status_code == 200
-    data = response.json()
-    assert "items" in data
-    assert "total" in data
-
-
-def test_get_queue_item_detail(moderator_user, completed_test_run, auth_headers):
-    """Test getting queue item detail"""
-    response = client.get(
-        f"/api/v1/moderator/queue/{completed_test_run.id}",
-        headers=auth_headers(moderator_user)
-    )
+    def test_trust_tier_first_review(
+        self,
+        client,
+        db_session,
+        moderator_user,
+        completed_test_run,
+        test_results
+    ):
+        """Test trust tier updates to 'reviewed' after first review"""
+        from main import app
+        from app.core.auth import get_current_user, require_moderator
+        
+        async def override_auth():
+            return moderator_user
+        
+        app.dependency_overrides[get_current_user] = override_auth
+        app.dependency_overrides[require_moderator] = override_auth
+        
+        # First review
+        response = client.post(
+            "/api/moderator/reviews",
+            json={
+                "test_id": str(completed_test_run.id),
+                "verdict_reviews": [],
+                "overall_assessment": "verified"
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["trust_tier"] == "reviewed"
+        
+        app.dependency_overrides.clear()
     
-    assert response.status_code == 200
-    data = response.json()
-    assert "test_id" in data
-    assert "sample_verdicts" in data
-
-
-def test_submit_review(moderator_user, completed_test_run, auth_headers, db_session):
-    """Test submitting a review"""
-    # Create a sample result
-    from app.db.models.question import Question
-    question = Question(
-        question_set_id=completed_test_run.question_set_id,
-        tier=1,
-        category="test",
-        content="Test question"
-    )
-    db_session.add(question)
-    db_session.commit()
-    db_session.refresh(question)
-    
-    result = Result(
-        test_run_id=completed_test_run.id,
-        question_id=question.id,
-        verdict="ACCEPTED",
-        response="Test response"
-    )
-    db_session.add(result)
-    db_session.commit()
-    db_session.refresh(result)
-    
-    response = client.post(
-        "/api/v1/moderator/reviews",
-        json={
-            "test_id": str(completed_test_run.id),
-            "verdict_reviews": [
-                {
-                    "result_id": str(result.id),
-                    "verdict": "agree"
+    def test_trust_tier_validated_after_three_reviews(
+        self,
+        client,
+        db_session,
+        completed_test_run,
+        test_results
+    ):
+        """Test trust tier updates to 'validated' after three reviews"""
+        from main import app
+        from app.core.auth import get_current_user, require_moderator
+        
+        # Create three different moderators
+        moderators = []
+        for i in range(3):
+            mod = User(
+                auth0_id=f"mod_{i}_auth0",
+                email=f"mod{i}@example.com",
+                name=f"Moderator {i}",
+                role="moderator"
+            )
+            db_session.add(mod)
+            moderators.append(mod)
+        db_session.commit()
+        
+        for i, mod in enumerate(moderators):
+            async def make_override(m=mod):
+                return m
+            
+            app.dependency_overrides[get_current_user] = make_override
+            app.dependency_overrides[require_moderator] = make_override
+            
+            response = client.post(
+                "/api/moderator/reviews",
+                json={
+                    "test_id": str(completed_test_run.id),
+                    "verdict_reviews": [],
+                    "overall_assessment": "verified"
                 }
-            ],
-            "overall_assessment": "verified"
-        },
-        headers=auth_headers(moderator_user)
-    )
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert "review_id" in data
-    assert "trust_tier" in data
-
-
-def test_get_moderator_stats(moderator_user, auth_headers):
-    """Test getting moderator stats"""
-    response = client.get(
-        "/api/v1/moderator/stats",
-        headers=auth_headers(moderator_user)
-    )
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert "personal" in data
-    assert "system_wide" in data
-
-
-def test_moderator_requires_role(db_session):
-    """Test that moderator endpoints require moderator role"""
-    regular_user = User(
-        auth0_id="regular_user",
-        email="user@example.com",
-        role="user"
-    )
-    db_session.add(regular_user)
-    db_session.commit()
-    
-    response = client.get(
-        "/api/v1/moderator/queue",
-        headers=auth_headers(regular_user)
-    )
-    
-    assert response.status_code == 403
+            )
+            
+            assert response.status_code == 200
+        
+        # After third review, should be validated
+        data = response.json()
+        assert data["trust_tier"] == "validated"
+        
+        app.dependency_overrides.clear()

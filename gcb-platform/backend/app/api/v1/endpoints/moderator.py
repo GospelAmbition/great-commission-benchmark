@@ -7,7 +7,7 @@ from uuid import UUID
 from datetime import datetime, timedelta
 import random
 
-from app.db.base import get_db
+from app.core.auth import get_db
 from app.core.auth import require_moderator
 from app.db.models.user import User
 from app.db.models.test_run import TestRun
