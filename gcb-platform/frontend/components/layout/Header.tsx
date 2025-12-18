@@ -1,0 +1,160 @@
+"use client";
+
+import Link from "next/link";
+import { useUser } from "@auth0/nextjs-auth0/client";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
+export function Header() {
+  const { user, isLoading } = useUser();
+
+  return (
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-16 items-center">
+        <Link href="/" className="mr-6 flex items-center space-x-2">
+          <span className="font-bold text-xl">Great Commission Benchmark</span>
+        </Link>
+
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+          <Link
+            href="/"
+            className="transition-colors hover:text-foreground/80 text-foreground/60"
+          >
+            Home
+          </Link>
+          <Link
+            href="/research"
+            className="transition-colors hover:text-foreground/80 text-foreground/60"
+          >
+            Research
+          </Link>
+          <Link
+            href="/contribute"
+            className="transition-colors hover:text-foreground/80 text-foreground/60"
+          >
+            Contribute
+          </Link>
+          <Link
+            href="/about"
+            className="transition-colors hover:text-foreground/80 text-foreground/60"
+          >
+            About
+          </Link>
+        </nav>
+
+        <div className="flex flex-1 items-center justify-end space-x-4">
+          {isLoading ? (
+            <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
+          ) : user ? (
+            <>
+              <Link href="/dashboard" className="hidden md:block">
+                <Button variant="ghost" size="sm">
+                  Dashboard
+                </Button>
+              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>
+                        {user.name?.[0] || user.email?.[0] || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium">{user.name || "User"}</p>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard">My Dashboard</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/tests/new">Run New Test</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/settings">Account Settings</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <a href="/api/auth/logout">Logout</a>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <Button asChild>
+              <a href="/api/auth/login">Login</a>
+            </Button>
+          )}
+
+          {/* Mobile Menu */}
+          <Sheet>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right">
+              <nav className="flex flex-col space-y-4 mt-8">
+                <Link
+                  href="/"
+                  className="text-lg font-medium transition-colors hover:text-foreground/80"
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/research"
+                  className="text-lg font-medium transition-colors hover:text-foreground/80"
+                >
+                  Research
+                </Link>
+                <Link
+                  href="/contribute"
+                  className="text-lg font-medium transition-colors hover:text-foreground/80"
+                >
+                  Contribute
+                </Link>
+                <Link
+                  href="/about"
+                  className="text-lg font-medium transition-colors hover:text-foreground/80"
+                >
+                  About
+                </Link>
+                {user && (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      className="text-lg font-medium transition-colors hover:text-foreground/80"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/tests/new"
+                      className="text-lg font-medium transition-colors hover:text-foreground/80"
+                    >
+                      Run New Test
+                    </Link>
+                  </>
+                )}
+              </nav>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+    </header>
+  );
+}

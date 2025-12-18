@@ -1,0 +1,371 @@
+"""User API endpoints"""
+from typing import Optional
+from fastapi import APIRouter, Query, Depends, HTTPException
+from sqlalchemy.orm import Session
+from uuid import UUID
+
+from app.db.base import get_db
+from app.core.auth import require_auth
+from app.db.models.user import User
+from app.db.models.test_run import TestRun
+from app.db.models.community_submission import CommunitySubmission
+from app.db.models.result import Result
+from app.services.scoring import ScoringService
+from app.schemas.user import (
+    UserProfileResponse,
+    UserProfile,
+    UserStats,
+    UpdateProfileRequest,
+    UserTestsResponse,
+    TestListItem,
+    UserSubmissionsResponse,
+    SubmissionListItem,
+    UserActivityResponse,
+    ActivityItem,
+    NotificationPreferencesResponse,
+    NotificationPreferences
+)
+
+router = APIRouter()
+
+
+@router.get("/profile", response_model=UserProfileResponse)
+async def get_profile(
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Get current user's profile"""
+    # Calculate stats
+    test_runs = db.query(TestRun).filter(TestRun.user_id == current_user.id).all()
+    
+    stats = UserStats(
+        total_tests=len(test_runs),
+        completed_tests=sum(1 for t in test_runs if t.status == "completed"),
+        pending_tests=sum(1 for t in test_runs if t.status == "pending_payment"),
+        running_tests=sum(1 for t in test_runs if t.status == "running"),
+        total_submissions=db.query(CommunitySubmission).filter(
+            CommunitySubmission.user_id == current_user.id
+        ).count(),
+        approved_submissions=db.query(CommunitySubmission).filter(
+            CommunitySubmission.user_id == current_user.id,
+            CommunitySubmission.status == "approved"
+        ).count(),
+        total_contribution=sum(float(t.total_cost or 0) for t in test_runs)
+    )
+    
+    return UserProfileResponse(
+        user=UserProfile(
+            id=current_user.id,
+            auth0_id=current_user.auth0_id,
+            email=current_user.email,
+            name=current_user.name,
+            role=current_user.role,
+            organization=None,  # TODO: Add organization field to User model
+            created_at=current_user.created_at
+        ),
+        stats=stats
+    )
+
+
+@router.put("/profile", response_model=UserProfileResponse)
+async def update_profile(
+    request: UpdateProfileRequest,
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Update user profile"""
+    if request.name is not None:
+        current_user.name = request.name
+    
+    # TODO: Add organization field to User model
+    # if request.organization is not None:
+    #     current_user.organization = request.organization
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    # Return updated profile
+    return await get_profile(current_user, db)
+
+
+@router.get("/tests", response_model=UserTestsResponse)
+async def get_user_tests(
+    status: Optional[str] = Query(None),
+    model_id: Optional[UUID] = Query(None),
+    version: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    sort: str = Query("created_at", regex="^(created_at|completed_at|score)$"),
+    order: str = Query("desc", regex="^(asc|desc)$"),
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Get user's test run history"""
+    query = db.query(TestRun).filter(TestRun.user_id == current_user.id)
+    
+    if status:
+        query = query.filter(TestRun.status == status)
+    
+    if model_id:
+        query = query.filter(TestRun.model_id == model_id)
+    
+    # Apply sorting
+    if sort == "created_at":
+        query = query.order_by(TestRun.created_at.desc() if order == "desc" else TestRun.created_at.asc())
+    elif sort == "completed_at":
+        query = query.order_by(TestRun.completed_at.desc() if order == "desc" else TestRun.completed_at.asc())
+    
+    test_runs = query.offset(offset).limit(limit).all()
+    total = query.count()
+    
+    # Build test list items
+    tests = []
+    for test_run in test_runs:
+        scores = None
+        if test_run.status == "completed":
+            try:
+                scores_data = ScoringService.calculate_scores(db, str(test_run.id))
+                scores = {
+                    "overall": scores_data["overall"],
+                    "tier1": scores_data["tier1"],
+                    "tier2": scores_data["tier2"],
+                    "tier3": scores_data["tier3"]
+                }
+            except:
+                pass
+        
+        # Calculate progress
+        total_questions = db.query(Result).filter(Result.test_run_id == test_run.id).count()
+        # TODO: Get total from question_set
+        progress = {
+            "completed": total_questions,
+            "total": 300,  # Placeholder
+            "percentage": int((total_questions / 300) * 100) if total_questions > 0 else 0
+        }
+        
+        tests.append(TestListItem(
+            id=test_run.id,
+            model={
+                "id": str(test_run.model.id),
+                "name": test_run.model.name,
+                "provider": test_run.model.provider
+            },
+            status=test_run.status,
+            payment_status=test_run.payment_status or "pending",
+            scores=scores,
+            progress=progress,
+            benchmark_version=test_run.question_set.semantic_version,
+            created_at=test_run.created_at,
+            started_at=test_run.started_at,
+            completed_at=test_run.completed_at,
+            trust_tier=test_run.trust_tier,
+            leaderboard_rank=None  # TODO: Calculate rank
+        ))
+    
+    return UserTestsResponse(
+        tests=tests,
+        pagination={
+            "limit": limit,
+            "offset": offset,
+            "total": total,
+            "has_more": (offset + limit) < total
+        }
+    )
+
+
+@router.get("/tests/{test_id}")
+async def get_test_detail(
+    test_id: UUID,
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Get detailed test run information"""
+    test_run = db.query(TestRun).filter(
+        TestRun.id == test_id,
+        TestRun.user_id == current_user.id
+    ).first()
+    
+    if not test_run:
+        raise HTTPException(status_code=404, detail="Test not found")
+    
+    scores = None
+    if test_run.status == "completed":
+        try:
+            scores_data = ScoringService.calculate_scores(db, str(test_run.id))
+            scores = scores_data
+        except:
+            pass
+    
+    return {
+        "test": {
+            "id": str(test_run.id),
+            "model": {
+                "id": str(test_run.model.id),
+                "name": test_run.model.name,
+                "provider": test_run.model.provider,
+                "model_id": test_run.model.model_id
+            },
+            "status": test_run.status,
+            "payment": {
+                "status": test_run.payment_status or "pending",
+                "amount": float(test_run.total_cost or 0),
+                "currency": "USD"
+            },
+            "scores": scores,
+            "benchmark_version": test_run.question_set.semantic_version,
+            "created_at": test_run.created_at.isoformat(),
+            "started_at": test_run.started_at.isoformat() if test_run.started_at else None,
+            "completed_at": test_run.completed_at.isoformat() if test_run.completed_at else None,
+            "trust_tier": test_run.trust_tier
+        }
+    }
+
+
+@router.get("/submissions", response_model=UserSubmissionsResponse)
+async def get_user_submissions(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Get user's community submissions"""
+    submissions = db.query(CommunitySubmission).filter(
+        CommunitySubmission.user_id == current_user.id
+    ).order_by(CommunitySubmission.created_at.desc()).offset(offset).limit(limit).all()
+    
+    total = db.query(CommunitySubmission).filter(
+        CommunitySubmission.user_id == current_user.id
+    ).count()
+    
+    submission_items = []
+    for sub in submissions:
+        submission_items.append(SubmissionListItem(
+            id=sub.id,
+            model_name=sub.model_name or "Unknown",
+            model_provider="Unknown",  # Not stored in model
+            status=sub.status,
+            submitted_at=sub.submitted_at,
+            reviewed_at=sub.reviewed_at,
+            reviewer_notes=sub.reviewer_notes
+        ))
+    
+    return UserSubmissionsResponse(
+        submissions=submission_items,
+        pagination={
+            "limit": limit,
+            "offset": offset,
+            "total": total,
+            "has_more": (offset + limit) < total
+        }
+    )
+
+
+@router.get("/activity", response_model=UserActivityResponse)
+async def get_user_activity(
+    limit: int = Query(50, ge=1, le=100),
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Get user activity feed"""
+    activities = []
+    
+    # Get recent test runs
+    test_runs = db.query(TestRun).filter(
+        TestRun.user_id == current_user.id
+    ).order_by(TestRun.created_at.desc()).limit(limit).all()
+    
+    for test_run in test_runs:
+        activities.append(ActivityItem(
+            type="test_created",
+            timestamp=test_run.created_at,
+            title=f"Test created for {test_run.model.name}",
+            description=f"Test run {test_run.id} created",
+            link=f"/tests/{test_run.id}"
+        ))
+        
+        if test_run.completed_at:
+            activities.append(ActivityItem(
+                type="test_completed",
+                timestamp=test_run.completed_at,
+                title=f"Test completed for {test_run.model.name}",
+                description=f"Test run {test_run.id} completed",
+                link=f"/tests/{test_run.id}"
+            ))
+    
+    # Sort by timestamp descending
+    activities.sort(key=lambda a: a.timestamp, reverse=True)
+    
+    return UserActivityResponse(activities=activities[:limit])
+
+
+@router.get("/notifications", response_model=NotificationPreferencesResponse)
+async def get_notification_preferences(
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Get notification preferences"""
+    from app.db.models.notification_preference import NotificationPreference
+    
+    prefs = db.query(NotificationPreference).filter(
+        NotificationPreference.user_id == current_user.id
+    ).first()
+    
+    if not prefs:
+        # Create defaults
+        prefs = NotificationPreference(
+            user_id=current_user.id,
+            test_completion=True,
+            publication=True,
+            moderation_updates=True,
+            newsletter=False
+        )
+        db.add(prefs)
+        db.commit()
+    
+    return NotificationPreferencesResponse(
+        preferences=NotificationPreferences(
+            test_completed=prefs.test_completion,
+            test_failed=prefs.test_completion,  # Map to test_completion
+            submission_approved=prefs.publication,
+            submission_rejected=prefs.publication,  # Map to publication
+            payment_confirmation=prefs.moderation_updates,  # Map to moderation_updates
+            newsletter=prefs.newsletter
+        )
+    )
+
+
+@router.put("/notifications", response_model=NotificationPreferencesResponse)
+async def update_notification_preferences(
+    preferences: NotificationPreferences,
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Update notification preferences"""
+    from app.db.models.notification_preference import NotificationPreference
+    
+    prefs = db.query(NotificationPreference).filter(
+        NotificationPreference.user_id == current_user.id
+    ).first()
+    
+    if not prefs:
+        prefs = NotificationPreference(user_id=current_user.id)
+        db.add(prefs)
+    
+    prefs.test_completion = preferences.test_completed
+    prefs.publication = preferences.submission_approved  # Map to publication
+    prefs.moderation_updates = preferences.payment_confirmation  # Map to moderation_updates
+    prefs.newsletter = preferences.newsletter
+    
+    db.commit()
+    db.refresh(prefs)
+    
+    return NotificationPreferencesResponse(
+        preferences=NotificationPreferences(
+            test_completed=prefs.test_completion,
+            test_failed=prefs.test_completion,  # Map to test_completion
+            submission_approved=prefs.publication,
+            submission_rejected=prefs.publication,  # Map to publication
+            payment_confirmation=prefs.moderation_updates,  # Map to moderation_updates
+            newsletter=prefs.newsletter
+        )
+    )
