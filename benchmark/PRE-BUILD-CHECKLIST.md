@@ -18,7 +18,7 @@ Based on review of all specifications and the REVIEW-GAPS-AND-DECISIONS.md docum
 | **Judge Prompts** | 3 | 0 | ✅ **COMPLETE** |
 | **LLM Backend Adapters** | 4 | 0 | ✅ **COMPLETE** |
 | **Core Implementation** | 15+ | 0 | ✅ **COMPLETE** |
-| **Documentation** | 6 | 5 | ⚠️ **NON-BLOCKING** (README done) |
+| **Documentation** | 6 | 4 | ⚠️ **NON-BLOCKING** (README done) |
 
 **Critical Path:** ~~Foundation~~ → ~~Prompts~~ → ~~LLM Backends~~ → ~~Core Implementation~~ → Testing
 
@@ -325,7 +325,7 @@ These can be done in parallel with implementation:
 
 ### 6.1 User Documentation
 
-- [ ] **CLI Builder README** (`gcb-builder/README.md`)
+- [x] **CLI Builder README** (`gcb-builder/README.md`)
   - Installation instructions
   - Quick start guide
   - Workflow overview
