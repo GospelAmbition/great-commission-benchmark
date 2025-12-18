@@ -6,14 +6,22 @@ from typing import Optional
 
 from app.core.config import settings
 
-# Create engine with connection pooling and lazy connection
-# pool_pre_ping=True will verify connections before using them
+# Create engine with connection pooling
+# Using shorter timeout to fail fast during healthchecks
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,  # Verify connections before using
     pool_recycle=300,    # Recycle connections after 5 minutes
-    connect_args={"connect_timeout": 10}  # 10 second connection timeout
+    connect_args={"connect_timeout": 5}  # 5 second connection timeout (reduced from 10)
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+
+def get_engine_safe():
+    """Get engine for health checks - returns the engine without making a connection.
+    
+    The actual connection test should be wrapped in a try/except by the caller.
+    """
+    return engine

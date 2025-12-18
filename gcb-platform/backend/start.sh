@@ -2,12 +2,15 @@
 set -e
 
 echo "Starting Great Commission Benchmark Backend..."
+echo "PORT=${PORT:-8000}"
+echo "DATABASE_URL is $([ -n "$DATABASE_URL" ] && echo 'set' || echo 'NOT SET')"
 
 # Run database migrations with timeout (allow failure - app might still work with existing schema)
 # The timeout prevents blocking if DB is not ready, allowing the health check to pass
-echo "Running database migrations (30s timeout)..."
+# Reduced timeout to 15s to ensure app starts faster for healthcheck
+echo "Running database migrations (15s timeout)..."
 set +e  # Temporarily disable exit on error for migrations
-timeout 30 alembic upgrade head
+timeout 15 alembic upgrade head 2>&1
 MIGRATION_STATUS=$?
 set -e  # Re-enable exit on error
 
