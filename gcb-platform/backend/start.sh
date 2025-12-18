@@ -1,16 +1,37 @@
 #!/bin/bash
 set -e
 
-echo "Starting Great Commission Benchmark Backend..."
+echo "============================================"
+echo "Starting Great Commission Benchmark Backend"
+echo "============================================"
+echo "Timestamp: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 echo "PORT=${PORT:-8000}"
-echo "DATABASE_URL is $([ -n "$DATABASE_URL" ] && echo 'set' || echo 'NOT SET')"
+echo "PYTHON: $(python --version 2>&1)"
+echo "DATABASE_URL is $([ -n "$DATABASE_URL" ] && echo 'SET (length: '${#DATABASE_URL}')' || echo 'NOT SET')"
+
+# Quick Python import test to catch early errors
+echo "Testing Python imports..."
+python -c "
+import sys
+print(f'Python path: {sys.executable}')
+try:
+    from app.core.config import settings
+    print('Config loaded OK')
+    print(f'  CORS origins: {len(settings.CORS_ORIGINS)} configured')
+except Exception as e:
+    print(f'Config load FAILED: {e}')
+    sys.exit(1)
+" || {
+    echo "ERROR: Failed to load Python config. Check environment variables."
+    exit 1
+}
 
 # Run database migrations with timeout (allow failure - app might still work with existing schema)
 # The timeout prevents blocking if DB is not ready, allowing the health check to pass
-# Reduced timeout to 15s to ensure app starts faster for healthcheck
-echo "Running database migrations (15s timeout)..."
+# Reduced timeout to 10s to ensure app starts faster for healthcheck
+echo "Running database migrations (10s timeout)..."
 set +e  # Temporarily disable exit on error for migrations
-timeout 15 alembic upgrade head 2>&1
+timeout 10 alembic upgrade head 2>&1
 MIGRATION_STATUS=$?
 set -e  # Re-enable exit on error
 
@@ -23,5 +44,7 @@ else
 fi
 
 # Start the application (use exec to replace shell process)
+echo "============================================"
 echo "Starting uvicorn server on port ${PORT:-8000}..."
+echo "============================================"
 exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}

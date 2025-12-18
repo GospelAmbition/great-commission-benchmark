@@ -1,21 +1,40 @@
 """
 Great Commission Benchmark Platform - FastAPI Backend
 """
+import logging
+import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
+# Configure logging early
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
+logger = logging.getLogger(__name__)
+
+logger.info("Starting main.py import...")
+
 from app.core.config import settings
+logger.info("Config loaded successfully")
+
 from app.core.security_headers import SecurityHeadersMiddleware
+logger.info("Security headers middleware loaded")
+
 from app.api.v1.router import api_router
+logger.info("API router loaded successfully")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown events"""
     # Startup
+    logger.info("Application startup complete - ready to serve requests")
     yield
     # Shutdown
+    logger.info("Application shutting down")
 
 
 app = FastAPI(
@@ -24,6 +43,7 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+logger.info("FastAPI app instance created")
 
 # Security headers middleware (must be first)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -49,6 +69,10 @@ async def health_check():
     The health check should be fast and not block on external dependencies.
     """
     return {"status": "ok"}
+
+
+logger.info("===== Application module loaded successfully =====")
+logger.info(f"CORS origins configured: {settings.CORS_ORIGINS}")
 
 
 if __name__ == "__main__":
