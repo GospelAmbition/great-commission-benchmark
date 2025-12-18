@@ -2,6 +2,8 @@
 
 This tool automatically monitors Railway deployments, detects failures, and extracts error logs into a format that Cursor can read and use for iterative fixes.
 
+> **Note**: For build failures (npm errors, compilation errors, etc.), use [`watch_builds.py`](./README-build-monitor.md) instead.
+
 ## Quick Start
 
 ### 1. Install Railway CLI
