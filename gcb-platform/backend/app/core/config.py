@@ -28,6 +28,15 @@ class Settings(BaseSettings):
     # Runner API
     RUNNER_API_KEY: str = ""
     
+    # Stripe
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_PUBLISHABLE_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    
+    # Email (Resend)
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = "Great Commission Benchmark <noreply@gcb.app>"
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

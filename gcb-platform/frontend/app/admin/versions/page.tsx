@@ -1,0 +1,475 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useUser } from "@auth0/nextjs-auth0/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
+import { toast } from "sonner";
+
+interface BenchmarkVersion {
+  version: string;
+  status: "draft" | "locked" | "published" | "archived";
+  question_count: number;
+  tier1_count: number;
+  tier2_count: number;
+  tier3_count: number;
+  created_at: string;
+  published_at?: string;
+  is_current: boolean;
+}
+
+export default function AdminVersionsPage() {
+  const { user, isLoading: userLoading } = useUser();
+  const router = useRouter();
+  const [versions, setVersions] = useState<BenchmarkVersion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newVersion, setNewVersion] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState<BenchmarkVersion | null>(null);
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
+
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push("/api/auth/login");
+      return;
+    }
+    if (user) {
+      loadVersions();
+    }
+  }, [user, userLoading, router]);
+
+  async function loadVersions() {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/admin/versions");
+      if (response.ok) {
+        const data = await response.json();
+        setVersions(data.versions || []);
+      } else {
+        // Use placeholder data for demo
+        setVersions([
+          {
+            version: "1.0.0",
+            status: "published",
+            question_count: 100,
+            tier1_count: 70,
+            tier2_count: 20,
+            tier3_count: 10,
+            created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+            published_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+            is_current: true,
+          },
+          {
+            version: "0.9.0",
+            status: "archived",
+            question_count: 80,
+            tier1_count: 56,
+            tier2_count: 16,
+            tier3_count: 8,
+            created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+            published_at: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000).toISOString(),
+            is_current: false,
+          },
+          {
+            version: "1.1.0",
+            status: "draft",
+            question_count: 50,
+            tier1_count: 35,
+            tier2_count: 10,
+            tier3_count: 5,
+            created_at: new Date().toISOString(),
+            is_current: false,
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Failed to load versions:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCreateVersion() {
+    if (!newVersion) return;
+    setCreating(true);
+    try {
+      const response = await fetch("/api/admin/versions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ version: newVersion }),
+      });
+
+      if (response.ok) {
+        toast.success(`Version ${newVersion} created`);
+        setShowCreateDialog(false);
+        setNewVersion("");
+        loadVersions();
+      } else {
+        throw new Error("Failed to create version");
+      }
+    } catch (error) {
+      console.error("Failed to create version:", error);
+      toast.error("Failed to create version");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleLockVersion(version: string) {
+    try {
+      const response = await fetch(`/api/admin/versions/${version}/lock`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        toast.success(`Version ${version} locked`);
+        loadVersions();
+      } else {
+        throw new Error("Failed to lock");
+      }
+    } catch (error) {
+      console.error("Failed to lock version:", error);
+      toast.error("Failed to lock version");
+    }
+  }
+
+  async function handlePublishVersion() {
+    if (!selectedVersion) return;
+    try {
+      const response = await fetch(
+        `/api/admin/versions/${selectedVersion.version}/publish`,
+        {
+          method: "PUT",
+        }
+      );
+
+      if (response.ok) {
+        toast.success(`Version ${selectedVersion.version} published`);
+        setShowPublishDialog(false);
+        setSelectedVersion(null);
+        loadVersions();
+      } else {
+        throw new Error("Failed to publish");
+      }
+    } catch (error) {
+      console.error("Failed to publish version:", error);
+      toast.error("Failed to publish version");
+    }
+  }
+
+  function getTierDistribution(v: BenchmarkVersion) {
+    const total = v.question_count || 1;
+    return {
+      tier1: Math.round((v.tier1_count / total) * 100),
+      tier2: Math.round((v.tier2_count / total) * 100),
+      tier3: Math.round((v.tier3_count / total) * 100),
+    };
+  }
+
+  function validateDistribution(v: BenchmarkVersion) {
+    const dist = getTierDistribution(v);
+    const isValid = dist.tier1 >= 65 && dist.tier1 <= 75 &&
+                   dist.tier2 >= 15 && dist.tier2 <= 25 &&
+                   dist.tier3 >= 5 && dist.tier3 <= 15;
+    return isValid;
+  }
+
+  if (userLoading || loading) {
+    return (
+      <div className="container py-8">
+        <Skeleton className="h-12 w-64 mb-8" />
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const currentVersion = versions.find((v) => v.is_current);
+
+  return (
+    <div className="container py-8">
+      <div className="mb-8">
+        <Button asChild variant="ghost" className="mb-4">
+          <Link href="/admin">← Back to Admin Dashboard</Link>
+        </Button>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold">Version Management</h1>
+            <p className="mt-2 text-muted-foreground">
+              Manage benchmark versions and question sets
+            </p>
+          </div>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            Create New Version
+          </Button>
+        </div>
+      </div>
+
+      {/* Current Version */}
+      {currentVersion && (
+        <Card className="mb-8 border-[--ga-red]">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Current Version</CardTitle>
+              <Badge className="bg-[--ga-red]">Active</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-4">
+              <div>
+                <div className="text-3xl font-bold">{currentVersion.version}</div>
+                <div className="text-sm text-muted-foreground">Version</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold">{currentVersion.question_count}</div>
+                <div className="text-sm text-muted-foreground">Total Questions</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold">
+                  {currentVersion.published_at
+                    ? new Date(currentVersion.published_at).toLocaleDateString()
+                    : "—"}
+                </div>
+                <div className="text-sm text-muted-foreground">Published</div>
+              </div>
+              <div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Tier 1</span>
+                    <span>{currentVersion.tier1_count} ({getTierDistribution(currentVersion).tier1}%)</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Tier 2</span>
+                    <span>{currentVersion.tier2_count} ({getTierDistribution(currentVersion).tier2}%)</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Tier 3</span>
+                    <span>{currentVersion.tier3_count} ({getTierDistribution(currentVersion).tier3}%)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* All Versions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>All Versions</CardTitle>
+          <CardDescription>
+            Benchmark version history and drafts
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Version</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Questions</TableHead>
+                <TableHead>Tier Distribution</TableHead>
+                <TableHead>Validation</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {versions.map((v) => {
+                const dist = getTierDistribution(v);
+                const isValid = validateDistribution(v);
+                return (
+                  <TableRow key={v.version}>
+                    <TableCell className="font-medium">
+                      {v.version}
+                      {v.is_current && (
+                        <Badge className="ml-2 bg-[--ga-red]" variant="default">
+                          Current
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          v.status === "published"
+                            ? "default"
+                            : v.status === "locked"
+                            ? "secondary"
+                            : v.status === "archived"
+                            ? "outline"
+                            : "outline"
+                        }
+                      >
+                        {v.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{v.question_count}</TableCell>
+                    <TableCell>
+                      <div className="text-xs space-y-1">
+                        <div>T1: {dist.tier1}%</div>
+                        <div>T2: {dist.tier2}%</div>
+                        <div>T3: {dist.tier3}%</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {isValid ? (
+                        <Badge variant="outline" className="text-green-600 border-green-600">
+                          Valid
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive">Invalid</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(v.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {v.status === "draft" && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleLockVersion(v.version)}
+                              disabled={!isValid}
+                            >
+                              Lock
+                            </Button>
+                          </>
+                        )}
+                        {v.status === "locked" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedVersion(v);
+                              setShowPublishDialog(true);
+                            }}
+                          >
+                            Publish
+                          </Button>
+                        )}
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/admin/versions/${v.version}`}>View</Link>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Create Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Version</DialogTitle>
+            <DialogDescription>
+              Create a new benchmark version draft
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="version">Version Number</Label>
+            <Input
+              id="version"
+              placeholder="e.g., 1.2.0"
+              value={newVersion}
+              onChange={(e) => setNewVersion(e.target.value)}
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Use semantic versioning (MAJOR.MINOR.PATCH)
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateVersion} disabled={!newVersion || creating}>
+              {creating ? "Creating..." : "Create Version"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Publish Dialog */}
+      <Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Publish Version</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to publish version {selectedVersion?.version}? This
+              will make it the current active version.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Questions:</span>
+                <span className="font-medium">{selectedVersion?.question_count}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tier 1:</span>
+                <span className="font-medium">
+                  {selectedVersion && getTierDistribution(selectedVersion).tier1}%
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tier 2:</span>
+                <span className="font-medium">
+                  {selectedVersion && getTierDistribution(selectedVersion).tier2}%
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tier 3:</span>
+                <span className="font-medium">
+                  {selectedVersion && getTierDistribution(selectedVersion).tier3}%
+                </span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPublishDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePublishVersion}
+              className="bg-[--ga-red] hover:bg-[--ga-dark-red]"
+            >
+              Publish Version
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

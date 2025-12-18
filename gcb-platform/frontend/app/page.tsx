@@ -20,9 +20,9 @@ export default function Home() {
       try {
         // Load top 3 performers
         const leaderboard = await apiClient.getLeaderboard({ limit: 3 });
-        if (leaderboard.items) {
+        if (leaderboard?.items) {
           setTopPerformers(
-            leaderboard.items.map((item: any, index: number) => ({
+            leaderboard.items.map((item, index) => ({
               rank: index + 1,
               model_id: item.model_id,
               model_name: item.model_name,
@@ -34,9 +34,9 @@ export default function Home() {
 
         // Load top 10 for quick rankings
         const top10 = await apiClient.getLeaderboard({ limit: 10 });
-        if (top10.items) {
+        if (top10?.items) {
           setRankings(
-            top10.items.map((item: any, index: number) => ({
+            top10.items.map((item, index) => ({
               rank: index + 1,
               model_id: item.model_id,
               model_name: item.model_name,

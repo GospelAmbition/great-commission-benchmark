@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,15 +11,237 @@ import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// Initialize Stripe
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
+
+function PaymentForm({ testId, test, onSuccess }: { testId: string; test: any; onSuccess: () => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [tip, setTip] = useState<number>(0);
+  const [tipPercentage, setTipPercentage] = useState<number>(0);
+  const [processing, setProcessing] = useState(false);
+  const [paymentIntent, setPaymentIntent] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Create payment intent when component mounts
+    async function createIntent() {
+      try {
+        const intent = await apiClient.createPaymentIntent(testId, tipPercentage || undefined);
+        setPaymentIntent(intent);
+      } catch (err: any) {
+        setError(err.detail || "Failed to create payment intent");
+        toast.error("Failed to initialize payment");
+      }
+    }
+    createIntent();
+  }, [testId, tipPercentage]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setProcessing(true);
+    setError(null);
+
+    try {
+      // Create payment intent with tip if tip changed
+      let intent = paymentIntent;
+      if (tipPercentage > 0 && (!intent || intent.breakdown.tip_amount !== tip)) {
+        // Recalculate tip percentage from dollar amount
+        const baseCost = test.estimated_cost || test.cost_estimate || 0;
+        const calculatedTipPercentage = Math.round((tip / baseCost) * 100);
+        intent = await apiClient.createPaymentIntent(testId, calculatedTipPercentage);
+        setPaymentIntent(intent);
+      }
+
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        throw new Error("Card element not found");
+      }
+
+      // Confirm payment
+      const { error: confirmError, paymentIntent: confirmedIntent } = await stripe.confirmCardPayment(
+        intent.client_secret,
+        {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              email: test.user_email,
+            },
+          },
+        }
+      );
+
+      if (confirmError) {
+        setError(confirmError.message || "Payment failed");
+        toast.error(confirmError.message || "Payment failed");
+      } else if (confirmedIntent && confirmedIntent.status === "succeeded") {
+        toast.success("Payment successful! Test starting...");
+        // Wait a moment for webhook to process, then redirect
+        setTimeout(() => {
+          onSuccess();
+        }, 1000);
+      }
+    } catch (err: any) {
+      setError(err.message || "Payment failed");
+      toast.error("Payment failed. Please try again.");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const baseCost = test.estimated_cost || test.cost_estimate || 0;
+  const totalCost = paymentIntent ? paymentIntent.breakdown.total : baseCost + tip;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Model:</span>
+          <span className="font-medium">{test.model_name}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Version:</span>
+          <span className="font-medium">{test.version || "Current"}</span>
+        </div>
+      </div>
+
+      <div className="border-t pt-4 space-y-4">
+        {paymentIntent && (
+          <>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">API Cost:</span>
+              <span className="font-medium">${paymentIntent.breakdown.api_cost.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Processing Fee:</span>
+              <span className="font-medium">${paymentIntent.breakdown.processing_fee.toFixed(2)}</span>
+            </div>
+          </>
+        )}
+        <div>
+          <Label htmlFor="tip">Tip (Optional)</Label>
+          <div className="flex gap-2 mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setTip(1);
+                setTipPercentage(0); // Will recalculate
+              }}
+              className={tip === 1 ? "bg-[--ga-accent-red]" : ""}
+            >
+              $1
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setTip(5);
+                setTipPercentage(0);
+              }}
+              className={tip === 5 ? "bg-[--ga-accent-red]" : ""}
+            >
+              $5
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setTip(10);
+                setTipPercentage(0);
+              }}
+              className={tip === 10 ? "bg-[--ga-accent-red]" : ""}
+            >
+              $10
+            </Button>
+            <Input
+              id="tip"
+              type="number"
+              placeholder="Custom"
+              value={tip || ""}
+              onChange={(e) => {
+                const value = parseFloat(e.target.value) || 0;
+                setTip(value);
+                setTipPercentage(0);
+              }}
+              className="w-24"
+              min="0"
+              step="0.01"
+            />
+          </div>
+        </div>
+        {paymentIntent && (
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>Tip:</span>
+            <span>${paymentIntent.breakdown.tip_amount.toFixed(2)}</span>
+          </div>
+        )}
+        <div className="border-t pt-4 flex justify-between text-lg font-bold">
+          <span>Total:</span>
+          <span>${totalCost.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <Label>Card Information</Label>
+        <div className="p-4 border rounded-lg">
+          <CardElement
+            options={{
+              style: {
+                base: {
+                  fontSize: "16px",
+                  color: "#424770",
+                  "::placeholder": {
+                    color: "#aab7c4",
+                  },
+                },
+                invalid: {
+                  color: "#9e2146",
+                },
+              },
+            }}
+          />
+        </div>
+      </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex gap-4">
+        <Button
+          type="submit"
+          disabled={!stripe || processing || !paymentIntent}
+          className="bg-[--ga-red] hover:bg-[--ga-dark-red] flex-1"
+        >
+          {processing ? "Processing..." : `Pay $${totalCost.toFixed(2)} Now`}
+        </Button>
+        <Button type="button" variant="outline" asChild>
+          <a href="/tests/new">Cancel</a>
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 export default function PaymentPage() {
   const params = useParams();
   const router = useRouter();
   const testId = params.id as string;
   const [test, setTest] = useState<any>(null);
-  const [tip, setTip] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     if (testId) {
@@ -38,20 +262,8 @@ export default function PaymentPage() {
     }
   }
 
-  async function handlePayment() {
-    // In Phase D, this will integrate with Stripe
-    // For now, we'll simulate payment and start the test
-    setProcessing(true);
-    try {
-      await apiClient.startTest(testId);
-      toast.success("Payment successful! Test started.");
-      router.push(`/tests/${testId}/processing`);
-    } catch (error) {
-      console.error("Failed to process payment:", error);
-      toast.error("Payment failed. Please try again.");
-    } finally {
-      setProcessing(false);
-    }
+  function handleSuccess() {
+    router.push(`/tests/${testId}/processing`);
   }
 
   if (loading) {
@@ -80,8 +292,22 @@ export default function PaymentPage() {
     );
   }
 
-  const baseCost = test.estimated_cost || 5.0;
-  const totalCost = baseCost + tip;
+  if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+    return (
+      <div className="container py-8 max-w-3xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Configuration Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              Stripe is not configured. Please set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8 max-w-3xl">
@@ -132,87 +358,10 @@ export default function PaymentPage() {
             Review your test details and payment amount
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Model:</span>
-              <span className="font-medium">{test.model_name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Version:</span>
-              <span className="font-medium">{test.version}</span>
-            </div>
-          </div>
-
-          <div className="border-t pt-4 space-y-4">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Test Cost:</span>
-              <span className="font-medium">${baseCost.toFixed(2)}</span>
-            </div>
-            <div>
-              <Label htmlFor="tip">Tip (Optional)</Label>
-              <div className="flex gap-2 mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setTip(1)}
-                  className={tip === 1 ? "bg-[--ga-accent-red]" : ""}
-                >
-                  $1
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setTip(5)}
-                  className={tip === 5 ? "bg-[--ga-accent-red]" : ""}
-                >
-                  $5
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setTip(10)}
-                  className={tip === 10 ? "bg-[--ga-accent-red]" : ""}
-                >
-                  $10
-                </Button>
-                <Input
-                  id="tip"
-                  type="number"
-                  placeholder="Custom"
-                  value={tip || ""}
-                  onChange={(e) => setTip(parseFloat(e.target.value) || 0)}
-                  className="w-24"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-            </div>
-            <div className="border-t pt-4 flex justify-between text-lg font-bold">
-              <span>Total:</span>
-              <span>${totalCost.toFixed(2)}</span>
-            </div>
-          </div>
-
-          <div className="bg-muted p-4 rounded-lg">
-            <p className="text-sm text-muted-foreground">
-              <strong>Note:</strong> Payment processing will be integrated with Stripe in Phase D.
-              For now, clicking "Pay Now" will simulate payment and start your test.
-            </p>
-          </div>
-
-          <div className="flex gap-4">
-            <Button
-              onClick={handlePayment}
-              disabled={processing}
-              className="bg-[--ga-red] hover:bg-[--ga-dark-red] flex-1"
-            >
-              {processing ? "Processing..." : `Pay $${totalCost.toFixed(2)} Now`}
-            </Button>
-            <Button asChild variant="outline">
-              <a href="/tests/new">Cancel</a>
-            </Button>
-          </div>
+        <CardContent>
+          <Elements stripe={stripePromise}>
+            <PaymentForm testId={testId} test={test} onSuccess={handleSuccess} />
+          </Elements>
         </CardContent>
       </Card>
     </div>

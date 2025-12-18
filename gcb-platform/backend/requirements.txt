@@ -10,4 +10,5 @@ python-jose[cryptography]==3.3.0
 httpx==0.26.0
 pytest==7.4.4
 pytest-asyncio==0.23.3
-httpx==0.26.0
+stripe==7.8.0
+resend==0.7.0

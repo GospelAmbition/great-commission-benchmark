@@ -103,6 +103,19 @@ class BenchmarkExecutor:
             
             self.db.commit()
             
+            # Send completion email notification
+            try:
+                from app.services.email import EmailService
+                await EmailService.send_test_completed_email(
+                    test_run.user.email,
+                    str(test_run.id),
+                    test_run.model.name,
+                    scores.get("overall", 0)
+                )
+            except Exception as e:
+                # Don't fail the test if email fails
+                print(f"Failed to send completion email: {str(e)}")
+            
             return test_run
             
         except Exception as e:

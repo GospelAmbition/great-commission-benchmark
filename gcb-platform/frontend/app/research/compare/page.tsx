@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/api";
+import { apiClient, CompareResponse } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadarChart } from "@/components/charts/RadarChart";
@@ -18,16 +18,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export default function ComparePage() {
+function ComparePageContent() {
   const searchParams = useSearchParams();
   const modelIdsParam = searchParams.get("models");
-  const [comparison, setComparison] = useState<any>(null);
+  const [comparison, setComparison] = useState<CompareResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (modelIdsParam) {
       const ids = modelIdsParam.split(",").slice(0, 5);
       loadComparison(ids);
+    } else {
+      setLoading(false);
     }
   }, [modelIdsParam]);
 
@@ -76,7 +78,7 @@ export default function ComparePage() {
   }
 
   const categories = comparison.categories || [];
-  const radarData = comparison.models.map((model: any) => ({
+  const radarData = comparison.models.map((model) => ({
     label: model.model_name,
     scores: model.category_scores || {},
   }));
@@ -96,7 +98,7 @@ export default function ComparePage() {
 
       {/* Side-by-side Scores */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        {comparison.models.map((model: any) => (
+        {comparison.models.map((model) => (
           <Card key={model.model_id}>
             <CardHeader>
               <CardTitle className="text-lg">{model.model_name}</CardTitle>
@@ -160,7 +162,7 @@ export default function ComparePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Category</TableHead>
-                  {comparison.models.map((model: any) => (
+                  {comparison.models.map((model) => (
                     <TableHead key={model.model_id}>{model.model_name}</TableHead>
                   ))}
                   <TableHead>Best</TableHead>
@@ -168,11 +170,11 @@ export default function ComparePage() {
               </TableHeader>
               <TableBody>
                 {categories.map((category: string) => {
-                  const scores = comparison.models.map((model: any) => {
+                  const scores = comparison.models.map((model) => {
                     const score = model.category_scores?.[category] || 0;
                     return { model: model.model_name, score };
                   });
-                  const best = scores.reduce((max: any, curr: any) =>
+                  const best = scores.reduce((max, curr) =>
                     curr.score > max.score ? curr : max
                   );
 
@@ -181,7 +183,7 @@ export default function ComparePage() {
                       <TableCell className="font-medium capitalize">
                         {category}
                       </TableCell>
-                      {scores.map((item: any, idx: number) => (
+                      {scores.map((item, idx) => (
                         <TableCell
                           key={idx}
                           className={
@@ -203,5 +205,21 @@ export default function ComparePage() {
         </Card>
       )}
     </div>
+  );
+}
+
+export default function ComparePage() {
+  return (
+    <Suspense fallback={
+      <div className="container py-8">
+        <Skeleton className="h-12 w-64 mb-8" />
+        <div className="grid gap-6 md:grid-cols-2">
+          <Skeleton className="h-96" />
+          <Skeleton className="h-96" />
+        </div>
+      </div>
+    }>
+      <ComparePageContent />
+    </Suspense>
   );
 }

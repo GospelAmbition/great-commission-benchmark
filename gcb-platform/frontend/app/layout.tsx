@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { UserProvider } from '@auth0/nextjs-auth0/client';
+import { Auth0Provider } from '@auth0/nextjs-auth0/client';
 import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.variable} antialiased font-sans`}>
-        <UserProvider>
+        <Auth0Provider>
           <div className="flex min-h-screen flex-col">
             <Header />
             <main className="flex-1">{children}</main>
@@ -34,7 +34,7 @@ export default function RootLayout({
           </div>
           <Toaster />
           <UmamiAnalytics />
-        </UserProvider>
+        </Auth0Provider>
       </body>
     </html>
   );

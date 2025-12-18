@@ -48,7 +48,7 @@ export default function DashboardPage() {
       ]);
 
       setProfile(profileData);
-      if (testsData.items) {
+      if (testsData?.items) {
         setTests(testsData.items);
       }
       setSubmissions(submissionsData || []);

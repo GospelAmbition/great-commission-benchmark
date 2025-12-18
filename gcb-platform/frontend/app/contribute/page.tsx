@@ -40,7 +40,7 @@ export default function ContributePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Have a fine-tuned model you've tested? Submit your results via the CLI tool for
+              Have a fine-tuned model you&apos;ve tested? Submit your results via the CLI tool for
               community review.
             </p>
             <Button asChild variant="outline">

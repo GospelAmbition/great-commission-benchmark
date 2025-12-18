@@ -61,8 +61,18 @@ async def create_test(
     if not methodology_version:
         raise HTTPException(status_code=404, detail="Methodology version not found")
     
-    # Estimate cost (simplified - should query OpenRouter for actual pricing)
-    cost_estimate = float(model.estimated_cost_per_test or 20.0)
+    # Calculate cost using pricing service
+    from app.db.models.question import Question
+    question_count = db.query(Question).filter(
+        Question.question_set_id == question_set.id
+    ).count()
+    
+    from app.services.pricing import PricingService
+    pricing_breakdown = await PricingService.calculate_test_cost(
+        model.model_id,
+        question_count
+    )
+    cost_estimate = float(pricing_breakdown["total"])
     
     # Create test run
     test_run = TestRun(
@@ -77,7 +87,7 @@ async def create_test(
     db.commit()
     db.refresh(test_run)
     
-    # TODO: Create Stripe payment intent (Phase D)
+    # Payment intent will be created via /api/payments/create-intent endpoint
     payment_intent_id = None
     
     return CreateTestResponse(
@@ -107,8 +117,12 @@ async def start_test(
     if test_run.status != "pending_payment":
         raise HTTPException(status_code=400, detail=f"Test cannot be started. Current status: {test_run.status}")
     
-    # TODO: Verify payment completed (Phase D)
-    # For now, allow starting without payment verification
+    # Verify payment completed
+    if test_run.payment_status != "succeeded":
+        raise HTTPException(
+            status_code=402,
+            detail="Payment required. Please complete payment before starting the test."
+        )
     
     # Update status
     from datetime import datetime
