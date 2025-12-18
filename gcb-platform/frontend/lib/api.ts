@@ -204,7 +204,8 @@ export class ApiClient {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
+        // Skip undefined and empty strings to avoid backend validation errors
+        if (value !== undefined && value !== '') {
           queryParams.append(key, String(value));
         }
       });
@@ -234,7 +235,8 @@ export class ApiClient {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
+        // Skip undefined and empty strings to avoid backend validation errors
+        if (value !== undefined && value !== '') {
           queryParams.append(key, String(value));
         }
       });
@@ -284,7 +286,8 @@ export class ApiClient {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
+        // Skip undefined and empty strings to avoid backend validation errors
+        if (value !== undefined && value !== '') {
           queryParams.append(key, String(value));
         }
       });
@@ -356,7 +359,8 @@ export class ApiClient {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
+        // Skip undefined and empty strings to avoid backend validation errors
+        if (value !== undefined && value !== '') {
           queryParams.append(key, String(value));
         }
       });

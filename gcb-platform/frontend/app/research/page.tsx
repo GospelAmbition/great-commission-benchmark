@@ -118,16 +118,16 @@ export default function ResearchPage() {
             <div>
               <label className="text-sm font-medium mb-2 block">Provider</label>
               <Select
-                value={filters.provider}
+                value={filters.provider || "all"}
                 onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, provider: value }))
+                  setFilters((prev) => ({ ...prev, provider: value === "all" ? "" : value }))
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All providers" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All providers</SelectItem>
+                  <SelectItem value="all">All providers</SelectItem>
                   <SelectItem value="openai">OpenAI</SelectItem>
                   <SelectItem value="anthropic">Anthropic</SelectItem>
                   <SelectItem value="google">Google</SelectItem>
@@ -138,16 +138,16 @@ export default function ResearchPage() {
             <div>
               <label className="text-sm font-medium mb-2 block">Trust Tier</label>
               <Select
-                value={filters.trust_tier}
+                value={filters.trust_tier || "all"}
                 onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, trust_tier: value }))
+                  setFilters((prev) => ({ ...prev, trust_tier: value === "all" ? "" : value }))
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All tiers" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All tiers</SelectItem>
+                  <SelectItem value="all">All tiers</SelectItem>
                   <SelectItem value="automated">Automated</SelectItem>
                   <SelectItem value="reviewed">Reviewed</SelectItem>
                   <SelectItem value="validated">Validated</SelectItem>
@@ -157,16 +157,16 @@ export default function ResearchPage() {
             <div>
               <label className="text-sm font-medium mb-2 block">Category</label>
               <Select
-                value={filters.category}
+                value={filters.category || "all"}
                 onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, category: value }))
+                  setFilters((prev) => ({ ...prev, category: value === "all" ? "" : value }))
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All categories</SelectItem>
+                  <SelectItem value="all">All categories</SelectItem>
                   <SelectItem value="scripture">Scripture</SelectItem>
                   <SelectItem value="theology">Theology</SelectItem>
                   <SelectItem value="ethics">Ethics</SelectItem>
@@ -177,16 +177,16 @@ export default function ResearchPage() {
             <div>
               <label className="text-sm font-medium mb-2 block">Tier</label>
               <Select
-                value={filters.tier}
+                value={filters.tier || "all"}
                 onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, tier: value }))
+                  setFilters((prev) => ({ ...prev, tier: value === "all" ? "" : value }))
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All tiers" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All tiers</SelectItem>
+                  <SelectItem value="all">All tiers</SelectItem>
                   <SelectItem value="tier1">Tier 1 (Task)</SelectItem>
                   <SelectItem value="tier2">Tier 2 (Doctrine)</SelectItem>
                   <SelectItem value="tier3">Tier 3 (Worldview)</SelectItem>
@@ -223,9 +223,9 @@ export default function ResearchPage() {
         <CardHeader>
           <CardTitle>Leaderboard</CardTitle>
           <CardDescription>
-            Showing {pagination.offset + 1}-
-            {Math.min(pagination.offset + pagination.limit, pagination.total)} of{" "}
-            {pagination.total} models
+            {pagination.total > 0
+              ? `Showing ${pagination.offset + 1}-${Math.min(pagination.offset + pagination.limit, pagination.total)} of ${pagination.total} models`
+              : "No models to display"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -234,6 +234,13 @@ export default function ResearchPage() {
               {[1, 2, 3, 4, 5].map((i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
+            </div>
+          ) : leaderboard.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-lg text-muted-foreground mb-2">No benchmark results available yet</p>
+              <p className="text-sm text-muted-foreground">
+                Check back soon as we continue to evaluate AI models on the Great Commission Benchmark.
+              </p>
             </div>
           ) : (
             <>

@@ -1,14 +1,29 @@
 """Application configuration"""
-import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 from typing import List
 
 
 class Settings(BaseSettings):
     """Application settings"""
     
-    # Database
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/gcb"
+    # Database (raw URL from environment, may use postgres:// scheme)
+    DATABASE_URL_RAW: str = Field(
+        default="postgresql://postgres:postgres@localhost:5432/gcb",
+        validation_alias="DATABASE_URL"
+    )
+    
+    @property
+    def DATABASE_URL(self) -> str:
+        """Convert postgres:// to postgresql:// for SQLAlchemy 2.0+ compatibility.
+        
+        Railway and Heroku provide DATABASE_URL with postgres:// scheme,
+        but SQLAlchemy 2.0+ only accepts postgresql://
+        """
+        url = self.DATABASE_URL_RAW
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
     
     # Auth0
     AUTH0_DOMAIN: str = ""
