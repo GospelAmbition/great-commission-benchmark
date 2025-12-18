@@ -22,59 +22,59 @@ This document provides a comprehensive review of the CLI applications, platform,
 
 ### 1.1 Foundation & Setup
 
-- [ ] **[BUILD]** Create project structure (`pyproject.toml`, directory layout)
-- [ ] **[BUILD]** Define all 19 categories from benchmark-vision.md as code constants
-- [ ] **[BUILD]** Implement SQLAlchemy database models (Question, BenchmarkVersion, VersionQuestion, JudgeTestCase)
-- [ ] **[BUILD]** Create database migrations strategy with Alembic
-- [ ] **[BUILD]** Build CLI entry point with rich menus and navigation
+- [x] **[BUILD]** Create project structure (`pyproject.toml`, directory layout)
+- [x] **[BUILD]** Define all 19 categories from benchmark-vision.md as code constants
+- [x] **[BUILD]** Implement SQLAlchemy database models (Question, BenchmarkVersion, VersionQuestion, JudgeTestCase)
+- [x] **[BUILD]** Create database migrations strategy with Alembic
+- [x] **[BUILD]** Build CLI entry point with rich menus and navigation
 
 ### 1.2 Question Generation System
 
-- [ ] **[WRITE]** Create generation prompt template for Category 3.1 (Missiological Research)
-- [ ] **[WRITE]** Create generation prompt template for Category 3.2 (Evangelistic Material Creation)
-- [ ] **[WRITE]** Create generation prompt template for Category 3.3 (Apologetic Purposes)
-- [ ] **[WRITE]** Create generation prompt template for Category 3.4 (Conversational AI Tools)
-- [ ] **[WRITE]** Create generation prompt template for Category 3.5 (Intercessory Prayer Purposes)
-- [ ] **[WRITE]** Create generation prompt template for Category 3.6 (Problematic Vocabulary)
-- [ ] **[WRITE]** Create generation prompt template for Category 3.7 (Difficult Passages)
-- [ ] **[WRITE]** Create generation prompt templates for Tier 2 doctrines (4.1-4.6)
-- [ ] **[WRITE]** Create generation prompt templates for Tier 3 worldview affirmations (5.1-5.6)
-- [ ] **[BUILD]** Implement LLM-based question generator
+- [x] **[WRITE]** Create generation prompt template for Category 3.1 (Missiological Research)
+- [x] **[WRITE]** Create generation prompt template for Category 3.2 (Evangelistic Material Creation)
+- [x] **[WRITE]** Create generation prompt template for Category 3.3 (Apologetic Purposes)
+- [x] **[WRITE]** Create generation prompt template for Category 3.4 (Conversational AI Tools)
+- [x] **[WRITE]** Create generation prompt template for Category 3.5 (Intercessory Prayer Purposes)
+- [x] **[WRITE]** Create generation prompt template for Category 3.6 (Problematic Vocabulary)
+- [x] **[WRITE]** Create generation prompt template for Category 3.7 (Difficult Passages)
+- [x] **[WRITE]** Create generation prompt templates for Tier 2 doctrines (4.1-4.6)
+- [x] **[WRITE]** Create generation prompt templates for Tier 3 worldview affirmations (5.1-5.6)
+- [x] **[BUILD]** Implement LLM-based question generator
 - [x] **[DECISION]** Define minimum question count per category for V1: **Full expected build (210 Tier 1, 60 Tier 2, 30 Tier 3) — no subset for V1** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#minimum-question-count-for-v1))
 
 ### 1.3 LLM Backend Adapters
 
-- [ ] **[BUILD]** Implement OpenRouter backend adapter
-- [ ] **[BUILD]** Implement LM Studio backend adapter
-- [ ] **[BUILD]** Implement Ollama backend adapter
-- [ ] **[BUILD]** Implement direct API backends (OpenAI, Anthropic)
+- [x] **[BUILD]** Implement OpenRouter backend adapter
+- [x] **[BUILD]** Implement LM Studio backend adapter
+- [x] **[BUILD]** Implement Ollama backend adapter
+- [x] **[BUILD]** Implement direct API backends (OpenAI, Anthropic)
 - [x] **[DECISION]** Determine default/recommended models for question generation: **OpenRouter: GPT 5.2, Gemini 3, Claude Opus** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#question-generation-model-selection))
 
 ### 1.4 Judge Prompt Development
 
-- [ ] **[WRITE]** Finalize Tier 1 Task Judge prompt (draft exists in specs)
-- [ ] **[WRITE]** Finalize Tier 2 Doctrine Judge prompt (draft exists in specs)
-- [ ] **[WRITE]** Finalize Tier 3 Worldview Judge prompt (draft exists in specs)
-- [ ] **[BUILD]** Implement judge prompt testing framework
-- [ ] **[BUILD]** Create judge test case management system
+- [x] **[WRITE]** Finalize Tier 1 Task Judge prompt (draft exists in specs)
+- [x] **[WRITE]** Finalize Tier 2 Doctrine Judge prompt (draft exists in specs)
+- [x] **[WRITE]** Finalize Tier 3 Worldview Judge prompt (draft exists in specs)
+- [x] **[BUILD]** Implement judge prompt testing framework
+- [x] **[BUILD]** Create judge test case management system
 - [x] **[SPEC]** Define inter-rater reliability measurement methodology (See [spec-inter-rater-reliability.md](./spec-inter-rater-reliability.md))
 - [x] **[DECISION]** Minimum accuracy threshold for judge prompts before locking: **≥90%** (See [Technical-Decisions.md](../documents/Technical-Decisions.md#judge-prompt-accuracy-threshold))
 
 ### 1.5 Curation Workflow
 
-- [ ] **[BUILD]** Build question review/approval workflow
-- [ ] **[BUILD]** Implement question locking mechanism
-- [ ] **[BUILD]** Build Datasette integration for database exploration
-- [ ] **[BUILD]** Create bulk operations (delete drafts, regenerate category)
+- [x] **[BUILD]** Build question review/approval workflow
+- [x] **[BUILD]** Implement question locking mechanism
+- [x] **[BUILD]** Build Datasette integration for database exploration
+- [x] **[BUILD]** Create bulk operations (delete drafts, regenerate category)
 - [x] **[SPEC]** Define curation guidelines for reviewers (See [spec-curation-guidelines.md](./spec-curation-guidelines.md))
 
 ### 1.6 Version Building & Publishing
 
-- [ ] **[BUILD]** Implement version creation and assembly
-- [ ] **[BUILD]** Build pre-publish validation (category coverage, tier distribution, etc.)
-- [ ] **[BUILD]** Implement version locking mechanism
-- [ ] **[BUILD]** Create JSON export for platform publication
-- [ ] **[BUILD]** Build bundle compiler for CLI distribution (compress + base64 encode)
+- [x] **[BUILD]** Implement version creation and assembly
+- [x] **[BUILD]** Build pre-publish validation (category coverage, tier distribution, etc.)
+- [x] **[BUILD]** Implement version locking mechanism
+- [x] **[BUILD]** Create JSON export for platform publication
+- [x] **[BUILD]** Build bundle compiler for CLI distribution (compress + base64 encode)
 - [x] **[SPEC]** Document version release workflow
 
 ---
