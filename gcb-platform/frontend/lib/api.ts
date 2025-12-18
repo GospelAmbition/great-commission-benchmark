@@ -235,8 +235,8 @@ export class ApiClient {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        // Skip undefined and empty strings to avoid backend validation errors
-        if (value !== undefined && value !== '') {
+        // Skip undefined values to avoid backend validation errors
+        if (value !== undefined) {
           queryParams.append(key, String(value));
         }
       });
@@ -359,8 +359,8 @@ export class ApiClient {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        // Skip undefined and empty strings to avoid backend validation errors
-        if (value !== undefined && value !== '') {
+        // Skip undefined values to avoid backend validation errors
+        if (value !== undefined) {
           queryParams.append(key, String(value));
         }
       });
