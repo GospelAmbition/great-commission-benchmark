@@ -52,8 +52,7 @@ All project documentation is in the [`benchmark/`](./benchmark/) folder:
 - **[Pricing Model](./benchmark/process-pricing-model.md)** — Financial sustainability
 
 ### CLI Tools
-- **[GCB Runner CLI](./benchmark/cli-runner-specifications.md)** — Run benchmarks locally
-- **[GCB Builder CLI](./benchmark/cli-builder-specifications.md)** — Build benchmark versions
+- **[GCB Runner CLI](./benchmark/cli-runner-specifications.md)** — Run benchmarks locally (fetches questions from Platform API)
 
 See [`benchmark/README.md`](./benchmark/README.md) for the complete documentation index.
 

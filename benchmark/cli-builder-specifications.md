@@ -34,6 +34,19 @@ todos:
     status: pending
 ---
 
+> **⚠️ DEPRECATED: This specification is archived for historical reference.**
+>
+> **The GCB Builder CLI has been sunset.** Questions are now generated externally (using any tool) and managed directly through the Platform's web-based CMS. The Platform handles question import, curation, approval, version assembly, and distribution via API.
+>
+> **Current workflow:**
+> 1. Generate questions externally (manual writing, ChatGPT, Claude, spreadsheets, etc.)
+> 2. Upload questions to Platform via admin UI (JSON/CSV import)
+> 3. Review and approve questions in Platform
+> 4. Assemble versions in Platform
+> 5. Runner fetches questions via Platform API
+>
+> See [feature-question-management.md](./feature-question-management.md) for the current Platform-based workflow.
+
 # GCB Builder CLI
 
 ## Purpose

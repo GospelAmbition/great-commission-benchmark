@@ -81,11 +81,13 @@ Semantic Version → Marketing Version
 
 ### Locking Process
 
-1. **Final review** — Committee reviews complete question set
-2. **Calibration** — Human reviewers validate expected verdicts
-3. **Lock date set** — Announcement of transition timeline
-4. **Lock executed** — Questions become immutable
-5. **Activation** — New version becomes default for testing
+1. **Question import** — Questions generated externally are uploaded to Platform via admin UI
+2. **Review and approval** — Committee reviews questions in Platform, approves them
+3. **Version assembly** — Admin selects approved questions and assembles version in Platform
+4. **Final validation** — Platform validates tier distribution, category coverage, etc.
+5. **Lock executed** — Version is locked in Platform (questions become immutable)
+6. **Publish** — Version is published and becomes available via API
+7. **Activation** — New version becomes default ("current") for testing
 
 ### What Triggers Version Changes
 
@@ -98,6 +100,59 @@ Semantic Version → Marketing Version
 | **Question refinements** | Minor (1.0 → 1.1) | Stays same (Version 1) | Improving existing questions |
 | **Methodology refinements** | Patch (1.1 → 1.1.1) | Stays same (Version 1) | Judge prompt improvements |
 | **Bug fixes** | Patch (1.1 → 1.1.1) | Stays same (Version 1) | Correcting evaluation errors |
+
+---
+
+## Question Management
+
+Questions are managed through the Platform's CMS (Content Management System). The workflow supports external question generation with Platform-based curation and version assembly.
+
+### Question Lifecycle
+
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│    Draft     │────▶│    Review    │────▶│   Approved   │────▶│  In Version  │
+│  (imported)  │     │  (pending)   │     │  (ready)     │     │  (locked)    │
+└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+       │                    │                    │                    │
+   Upload to         Committee           Available for      Part of locked
+   Platform          review              version assembly   version
+```
+
+### Question Workflow
+
+1. **External Generation**
+   - Questions generated using any tool (manual writing, ChatGPT, Claude, spreadsheets, etc.)
+   - Questions prepared in JSON or CSV format
+
+2. **Import to Platform**
+   - Admin uploads questions via Platform admin UI
+   - Questions enter "draft" status
+   - Platform validates format and required fields
+
+3. **Review and Approval**
+   - Committee reviews questions in Platform browser/editor
+   - Questions can be edited directly in Platform
+   - Approved questions move to "approved" status
+
+4. **Version Assembly**
+   - Admin selects approved questions for new version
+   - Platform validates tier distribution and category coverage
+   - Version created in "draft" status
+
+5. **Version Locking**
+   - When version is locked, all questions in that version become immutable
+   - Questions cannot be deleted if part of a locked version
+   - Version moves to "active" or "archived" status
+
+### Question States
+
+| State | Description | Can Edit | Can Delete |
+|-------|-------------|----------|------------|
+| **Draft** | Newly imported, pending review | Yes | Yes |
+| **Review** | Under committee review | Yes | Yes |
+| **Approved** | Approved for use in versions | Yes | Yes (if not in locked version) |
+| **In Version** | Part of a locked version | No | No |
 
 ---
 
@@ -274,6 +329,27 @@ Every version change must document:
 ### Database Schema
 
 ```sql
+-- Questions (individual question management)
+CREATE TABLE questions (
+    id UUID PRIMARY KEY,
+    content TEXT NOT NULL,
+    category VARCHAR(10) NOT NULL,  -- e.g., '3.2'
+    tier INTEGER NOT NULL,           -- 1, 2, or 3
+    difficulty VARCHAR(20),         -- 'easy', 'medium', 'hard'
+    expected_verdict VARCHAR(20),   -- 'ACCEPTED', 'REFUSED', etc.
+    expected_refusal_type VARCHAR(50),
+    tests_capability BOOLEAN,
+    tests_willingness BOOLEAN,
+    use_case_tags TEXT[],
+    audience_context VARCHAR(50),
+    ministry_type VARCHAR(50),
+    status VARCHAR(20) NOT NULL,     -- 'draft', 'review', 'approved'
+    created_at TIMESTAMP NOT NULL,
+    approved_at TIMESTAMP,
+    approved_by UUID REFERENCES users(id),
+    notes TEXT
+);
+
 -- Question set versioning
 CREATE TABLE question_sets (
     id UUID PRIMARY KEY,
@@ -283,7 +359,15 @@ CREATE TABLE question_sets (
     created_at TIMESTAMP NOT NULL,
     locked_at TIMESTAMP,
     archived_at TIMESTAMP,
+    is_current BOOLEAN DEFAULT FALSE,
     notes TEXT
+);
+
+-- Junction table: questions in versions
+CREATE TABLE question_set_questions (
+    question_set_id UUID REFERENCES question_sets(id),
+    question_id UUID REFERENCES questions(id),
+    PRIMARY KEY (question_set_id, question_id)
 );
 
 -- Methodology versioning (tied to question set)
@@ -315,6 +399,12 @@ CREATE TABLE test_runs (
 | `GET /api/results?version=1.2` | Filter results by semantic version |
 | `GET /api/results?marketing_version=Version+2` | Filter results by marketing version |
 | `GET /api/model/{id}/history` | Model performance across versions |
+| `POST /api/admin/questions/import` | Import questions (JSON/CSV) |
+| `GET /api/admin/questions` | List/search questions |
+| `PUT /api/admin/questions/:id` | Edit question |
+| `POST /api/admin/questions/:id/approve` | Approve question |
+| `POST /api/admin/versions` | Create version (select questions) |
+| `PUT /api/admin/versions/:version/publish` | Lock and publish version |
 
 ---
 
@@ -323,4 +413,6 @@ CREATE TABLE test_runs (
 - [Question Security](./process-question-security.md) — Question protection and versioning
 - [Core Publication Model](./process-publication-model.md) — How results are published
 - [Deployment Vision](./platform-deployment-vision.md) — Overall deployment strategy
+- [Question Management Feature](./feature-question-management.md) — Platform CMS features
+- [Version Release Workflow](./process-version-release-workflow.md) — Step-by-step release process
 

@@ -50,14 +50,20 @@ Use for question additions, refinements, or small category updates.
 
 ### Pre-Release (1-2 weeks before)
 
-1. **Prepare question changes**
-   - Finalize new/updated questions in draft state
+1. **Generate questions externally**
+   - Create questions using any tool (manual writing, ChatGPT, Claude, spreadsheets, etc.)
+   - Prepare questions in JSON or CSV format for import
    - Ensure questions pass validation (formatting, calibration)
    - Review category coverage and tier distribution
 
-2. **Internal review**
-   - Committee reviews proposed changes
+2. **Upload to Platform**
+   - Import questions via Platform admin UI (JSON/CSV upload)
+   - Questions enter "draft" status
+
+3. **Internal review**
+   - Committee reviews questions in Platform
    - Human reviewers validate expected verdicts for new questions
+   - Approve questions in Platform (moves to "approved" status)
    - Address any concerns
 
 ### Release Week
@@ -74,10 +80,10 @@ Use for question additions, refinements, or small category updates.
    - List summary of changes
 
 5. **Lock and publish**
-   - Lock question set (becomes immutable)
-   - Generate JSON export for platform
-   - Build CLI bundle
-   - Deploy to production
+   - Assemble version in Platform (select approved questions)
+   - Lock version in Platform (becomes immutable)
+   - Publish version (becomes available via API)
+   - Runner users can now fetch new version
 
 6. **Update documentation**
    - Add changelog entry
@@ -130,10 +136,10 @@ Use for new question sets (annual refresh or contamination response).
 ### Release Day
 
 7. **Lock and publish**
-   - Lock new question set
-   - Generate all exports (JSON, CLI bundle)
-   - Deploy to production
-   - New version becomes default
+   - Assemble version in Platform (select approved questions)
+   - Lock new question set in Platform (becomes immutable)
+   - Publish version (becomes available via API)
+   - New version becomes default (marked as "current")
 
 8. **Archive old version**
    - Previous version moves to "archived" state
@@ -164,8 +170,10 @@ Before any release, verify:
 - [ ] Total question count meets version requirements
 
 ### Technical
-- [ ] JSON export generates without errors
-- [ ] CLI bundle compiles successfully
+- [ ] Questions import successfully to Platform
+- [ ] Version assembly validates correctly
+- [ ] Version locks without errors
+- [ ] API endpoints serve questions correctly
 - [ ] Version numbers are correct and consistent
 
 ---
@@ -199,8 +207,9 @@ If question contamination is detected:
 | Role | Responsibilities |
 |------|------------------|
 | **Release Manager** | Coordinates timeline, ensures checklist completion |
-| **Question Committee** | Reviews and approves question changes |
-| **Technical Lead** | Validates exports, deploys to production |
+| **Question Committee** | Reviews and approves questions in Platform |
+| **Platform Admin** | Imports questions, assembles versions, locks and publishes |
+| **Technical Lead** | Validates Platform functionality, ensures API availability |
 | **Communications** | Drafts announcements, updates documentation |
 
 For small teams, one person may fill multiple roles.

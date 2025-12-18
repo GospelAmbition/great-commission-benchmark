@@ -1,3 +1,9 @@
+> **⚠️ DEPRECATED: This specification is archived for historical reference.**
+>
+> **The Builder-to-Platform export workflow is no longer used.** Questions are now uploaded directly to the Platform via admin UI (JSON/CSV import) and managed through the Platform's CMS. Version assembly and publishing happen entirely within the Platform.
+>
+> See [feature-question-management.md](./feature-question-management.md) for the current Platform-based workflow.
+
 # Specification: Builder Exports to Platform
 
 This document specifies how benchmark version exports from the GCB Builder CLI are transferred to and processed by the GCB Platform.

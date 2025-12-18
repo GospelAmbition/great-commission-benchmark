@@ -666,7 +666,7 @@ When reviewing many questions:
 
 ### Using Datasette for Curation
 
-The CLI Builder includes Datasette for complex curation queries:
+The Platform CMS includes question browser and editor for curation:
 
 **Find questions missing metadata:**
 ```sql
@@ -779,7 +779,7 @@ Before a benchmark version is built, verify:
 
 ## Related Documents
 
-- [cli-builder-specifications.md](./cli-builder-specifications.md) — Curation workflow implementation
+- [feature-question-management.md](./feature-question-management.md) — Platform CMS curation workflow
 - [benchmark-categories.md](./benchmark-categories.md) — Canonical category definitions
 - [benchmark-scoring.md](./benchmark-scoring.md) — How verdicts translate to scores
 - [spec-inter-rater-reliability.md](./spec-inter-rater-reliability.md) — Judge accuracy validation

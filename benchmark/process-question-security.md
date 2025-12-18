@@ -209,8 +209,10 @@ Testers agree to:
 - ❌ Not publish questions publicly (web, social media, forums)
 - ❌ Not share questions with LLM providers
 - ❌ Not use questions for model training
+- ❌ Not share API keys or allow unauthorized access
 - ✅ Report any suspected leaks
 - ✅ Follow benchmark usage guidelines
+- ✅ Keep API keys secure
 
 ### Enforcement
 
@@ -253,11 +255,27 @@ The versioning system enables valuable analysis:
 
 ### API Security
 
-Questions are delivered via:
-- Authenticated API calls
-- Server-side execution only (questions never sent to client)
-- Rate limiting to prevent bulk extraction
-- Audit logging of all access
+Questions are delivered via authenticated API:
+
+**Platform Tests (Server-side execution):**
+- Questions never sent to client
+- Execution happens on Platform servers
+- Maximum security for question protection
+
+**Runner CLI (API-based distribution):**
+- Questions fetched via authenticated API (API key required)
+- Questions cached locally for offline operation
+- Rate limiting prevents bulk extraction (50 requests/hour)
+- All access logged for audit
+- API keys can be revoked at any time
+- Checksums verify question integrity
+
+**Security Measures:**
+- API key authentication required for Runner access
+- Rate limiting on question fetch endpoints
+- Audit logging of all API access
+- Key management and rotation support
+- Questions only served to authenticated users
 
 ---
 

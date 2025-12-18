@@ -1,3 +1,7 @@
+> **⚠️ DEPRECATED: This document is archived for historical reference.**
+>
+> **The GCB Builder CLI has been sunset.** Questions are now managed directly through the Platform's web-based CMS. See [feature-question-management.md](./feature-question-management.md) for current Platform architecture.
+
 # GCB Version Builder CLI - Tech Stack
 
 This document explains the technology choices for the GCB Version Builder CLI and the reasoning behind them.

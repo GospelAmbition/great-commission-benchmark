@@ -136,6 +136,82 @@ If OpenRouter has significant downtime or discontinues service:
 | Database writes | Store results, verdicts, responses |
 | Moderation workflows | Handle review queues and escalations |
 | Payment processing | Stripe integration for charges |
+| Question Management | Import, review, approve, version assembly |
+| Questions API | Serve questions to Runner CLI via authenticated API |
+
+---
+
+## Question Management System
+
+The Platform includes a lightweight CMS for managing benchmark questions without in-platform generation.
+
+### Components
+
+**Question Import:**
+- JSON/CSV file upload via admin UI
+- Bulk import with validation
+- Format checking and error reporting
+
+**Question Browser/Editor:**
+- List/search/filter questions by status, category, tier
+- Edit question content and metadata
+- View question history and approval status
+
+**Approval Workflow:**
+- Questions move through: Draft → Review → Approved
+- Committee members approve questions
+- Questions cannot be deleted if part of locked version
+
+**Version Assembly:**
+- Admin selects approved questions for new version
+- Platform validates tier distribution and category coverage
+- Version created in draft status, then locked and published
+
+**API for Runner:**
+- Authenticated endpoints for Runner CLI
+- Rate limiting and access control
+- Local caching support for offline operation
+
+### Architecture Integration
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              Question Management (Admin UI)                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────────┐ │
+│  │ Import   │  │ Browser  │  │ Approval │  │ Version     │ │
+│  │ (Upload) │  │ (Edit)   │  │ Workflow │  │ Assembly    │ │
+│  └──────────┘  └──────────┘  └──────────┘  └─────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│              FastAPI Backend                                │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────────┐ │
+│  │ Question │  │ Version   │  │ Questions│  │ Validation  │ │
+│  │ Import   │  │ Assembly  │  │ API      │  │ Logic       │ │
+│  └──────────┘  └──────────┘  └──────────┘  └─────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌──────────────────┐
+                    │   PostgreSQL     │
+                    │  (Questions DB)  │
+                    └──────────────────┘
+                              │
+                              ▼
+                    ┌──────────────────┐
+                    │   Runner CLI     │
+                    │  (API Client)   │
+                    └──────────────────┘
+```
+
+### Key Features
+
+- **No in-platform generation** — Questions generated externally, uploaded to Platform
+- **Lightweight CMS** — Simple import, review, approve, version workflow
+- **Version control** — Questions locked when version is published
+- **API distribution** — Questions served to Runner via authenticated API
+- **Audit trail** — All question changes logged
 
 ---
 
@@ -159,12 +235,21 @@ If OpenRouter has significant downtime or discontinues service:
 ┌────────────────┐     ┌────────────────┐     ┌────────────────┐
 │ QuestionSets   │     │ Questions      │     │ ModerationLogs │
 ├────────────────┤     ├────────────────┤     ├────────────────┤
-│ id             │────▶│ question_set_id│     │ test_run_id    │
-│ version        │     │ content        │     │ moderator_id   │
-│ status         │     │ category       │     │ action         │
-│ created_at     │     │ tier           │     │ notes          │
-│ locked_at      │     └────────────────┘     │ created_at     │
-└────────────────┘                            └────────────────┘
+│ id             │     │ id             │     │ test_run_id    │
+│ semantic_ver   │     │ content        │     │ moderator_id   │
+│ marketing_ver  │     │ category       │     │ action         │
+│ status         │     │ tier           │     │ notes          │
+│ created_at     │     │ status         │     │ created_at     │
+│ locked_at      │     │ approved_at    │     └────────────────┘
+│ is_current     │     │ approved_by    │
+└────────────────┘     └────────────────┘
+         │                     │
+         └──────────┬──────────┘
+                    │
+         ┌──────────────────────┐
+         │ question_set_questions│
+         │ (junction table)     │
+         └──────────────────────┘
 ```
 
 ### Data Characteristics

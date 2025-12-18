@@ -1,3 +1,9 @@
+> **⚠️ DEPRECATED: This specification is archived for historical reference.**
+>
+> **The Builder-to-Runner bundle compilation workflow is no longer used.** The Runner now fetches questions directly from the Platform API using an API key. Questions are no longer embedded in the Runner package.
+>
+> See [spec-questions-api.md](./spec-questions-api.md) for the current API-based distribution model and [cli-runner-specifications.md](./cli-runner-specifications.md) for updated Runner architecture.
+
 # Specification: Builder to Runner Distribution
 
 This document specifies how benchmark versions from the GCB Builder CLI get compiled and distributed to the GCB Runner CLI.

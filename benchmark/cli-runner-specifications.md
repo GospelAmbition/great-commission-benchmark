@@ -10,7 +10,7 @@ A lightweight Python CLI for **community members** who want to:
 2. View their results locally
 3. Export or upload results to the GCB platform
 
-This tool is intentionally simple and focused. It does not include question generation, curation, or version building features—those are in the separate [GCB Version Builder CLI](cli-builder-specifications.md).
+This tool is intentionally simple and focused. Questions are fetched from the Platform API—no embedded bundles.
 
 ---
 
@@ -34,7 +34,7 @@ This tool is intentionally simple and focused. It does not include question gene
 # Install
 pip install gcb-runner
 
-# Configure your API keys
+# Configure your API keys (Platform API key + model backend keys)
 gcb-runner config
 
 # Run the benchmark against a model
@@ -63,12 +63,13 @@ gcb-runner upload
 ```mermaid
 flowchart LR
     subgraph input [Input]
-        QS[Official Question Set]
+        PlatformAPI[Platform API]
         Config[API Configuration]
     end
     
     subgraph runner [Test Runner]
         CLI[CLI Interface]
+        Cache[Local Cache]
         Runner[Test Executor]
         Judge[LLM Judge]
     end
@@ -88,7 +89,8 @@ flowchart LR
         Upload[Platform Upload]
     end
     
-    QS --> Runner
+    PlatformAPI -->|Fetch Questions| Cache
+    Cache --> Runner
     Config --> Runner
     CLI --> Runner
     Runner --> OR
@@ -123,17 +125,11 @@ gcb-runner/
 │   │   ├── lmstudio.py
 │   │   ├── ollama.py
 │   │   └── direct.py
-│   ├── versions/           # Embedded benchmark versions
-│   │   ├── __init__.py     # Version registry
-│   │   ├── loader.py       # Secure bundle loading
-│   │   ├── v1_0/           # Benchmark V1.0
-│   │   │   ├── __init__.py
-│   │   │   └── bundle.py   # Compiled questions
-│   │   ├── v2_0/           # Benchmark V2.0
-│   │   │   └── ...
-│   │   └── v3_0/           # Benchmark V3.0 (current)
-│   │       └── ...
-│   ├── questions.py        # Question set loader (uses versions/)
+│   ├── api/                 # Platform API client
+│   │   ├── __init__.py
+│   │   ├── client.py        # API client for fetching questions
+│   │   └── cache.py         # Local caching logic
+│   ├── questions.py         # Question set loader (fetches from API)
 │   ├── results.py          # Results storage and display
 │   ├── export.py           # Export and upload
 │   └── viewer/             # Results viewer (zero new deps)
@@ -143,7 +139,14 @@ gcb-runner/
 │       ├── report.py       # Static HTML report generator
 │       └── api.py          # API endpoint handlers
 ├── data/                   # Local data directory (user data only)
-│   └── results.db          # SQLite results database
+│   ├── results.db          # SQLite results database
+│   └── cache/              # Cached question sets
+│       ├── versions.json
+│       ├── v2.0/
+│       │   ├── questions.json
+│       │   └── metadata.json
+│       └── v1.2/
+│           └── ...
 ├── pyproject.toml
 └── README.md
 ```
@@ -162,6 +165,10 @@ $ gcb-runner config
 ╔═══════════════════════════════════════════════════════════════╗
 ║              Great Commission Benchmark - Runner               ║
 ╚═══════════════════════════════════════════════════════════════╝
+
+? Configure Platform API access:
+  ❯ Enter Platform API key: ****************************
+    (Get your API key from https://greatcommissionbenchmark.ai/dashboard)
 
 ? Configure which backend?
   ❯ OpenRouter (cloud - 100+ models)
@@ -196,10 +203,12 @@ $ gcb-runner test --model gpt-4o --backend openrouter
 Benchmark Version: Version 2 (2.0) (Current)
 CLI Version: 1.3.0
 
-Loading questions from embedded bundle...
+Fetching questions from Platform API...
+  ✓ Connected to Platform API
+  ✓ Version 2.0 found (300 questions)
+  ✓ Cached locally for offline use
   ✓ 300 questions loaded (Tier 1: 210, Tier 2: 60, Tier 3: 30)
   ✓ Scoring weights: 70% Task / 20% Doctrine / 10% Worldview
-  ✓ Bundle checksum verified
 
 Testing: gpt-4o via OpenRouter
 Judge: gpt-4o
@@ -903,28 +912,50 @@ gcb-runner/
 
 ### Question Set Loader
 
-Loads embedded benchmark versions from compiled bundles:
+Fetches benchmark versions from Platform API with local caching:
 
 ```python
 # gcb_runner/questions.py
 
-from gcb_runner.versions.loader import VersionLoader
+from gcb_runner.api.client import PlatformAPIClient
+from gcb_runner.api.cache import QuestionCache
 
 class QuestionSetLoader:
-    def load(self, version: str = "latest") -> QuestionSet:
-        """Load question set from embedded bundle."""
-        return VersionLoader.load(version)
+    def __init__(self, api_key: str):
+        self.api_client = PlatformAPIClient(api_key)
+        self.cache = QuestionCache()
     
-    def list_available(self) -> list[dict]:
-        """List all available benchmark versions."""
-        return VersionLoader.list_versions()
+    async def load(self, version: str = "current") -> QuestionSet:
+        """Load question set from Platform API (with caching)."""
+        # Check cache first
+        cached = self.cache.get(version)
+        if cached and not cached.is_stale():
+            return cached
+        
+        # Fetch from API
+        data = await self.api_client.fetch_questions(version)
+        
+        # Cache for offline use
+        self.cache.store(version, data)
+        
+        return QuestionSet(
+            version=data["version"]["semantic_version"],
+            questions=data["questions"],
+            judge_prompts=data["judge_prompts"],
+            scoring_config=data["scoring"]
+        )
     
-    def get_current_version(self) -> str:
-        """Get the current (recommended) benchmark version."""
-        return VersionLoader.CURRENT_VERSION
+    async def list_available(self) -> list[dict]:
+        """List all available benchmark versions from Platform."""
+        return await self.api_client.list_versions()
+    
+    async def get_current_version(self) -> str:
+        """Get the current benchmark version."""
+        versions = await self.list_available()
+        return versions["current_version"]
 ```
 
-Questions are embedded in the CLI package itself — no network access required. See [Benchmark Version System](#benchmark-version-system) for implementation details.
+Questions are fetched from the Platform API and cached locally for offline use. See [spec-questions-api.md](./spec-questions-api.md) for API details.
 
 ---
 
@@ -1198,70 +1229,37 @@ Configuration stored in `~/.gcb-runner/config.json`:
 
 ---
 
-## Benchmark Version System
+## API Configuration
 
-The GCB Runner includes **embedded benchmark versions** — question sets are compiled directly into the tool rather than fetched from a server. This provides:
+The Runner fetches questions from the Platform API. Configuration includes:
 
-- **Offline capability** — Run benchmarks without network access
-- **Version stability** — Each CLI release has locked, immutable question sets
-- **Light obfuscation** — Questions aren't sitting in plain text files
-- **Simple UX** — Users just select which version to run
+### Platform API Key
 
-### Version Architecture
+Users must obtain an API key from the Platform dashboard:
+- Visit `https://greatcommissionbenchmark.ai/dashboard`
+- Generate API key
+- Store securely in Runner config
 
-```
-gcb-runner/
-├── gcb_runner/
-│   ├── versions/                    # Embedded benchmark versions
-│   │   ├── __init__.py              # Version registry
-│   │   ├── loader.py                # Secure loading logic
-│   │   ├── v1_0/                    # Benchmark 1.0 (Version 1)
-│   │   │   ├── __init__.py
-│   │   │   └── bundle.py            # Compiled question bundle
-│   │   ├── v1_1/                    # Benchmark 1.1 (Version 1)
-│   │   │   ├── __init__.py
-│   │   │   └── bundle.py
-│   │   ├── v1_2/                    # Benchmark 1.2 (Version 1)
-│   │   │   ├── __init__.py
-│   │   │   └── bundle.py
-│   │   └── v2_0/                    # Benchmark 2.0 (Version 2, latest)
-│   │       ├── __init__.py
-│   │       └── bundle.py
-│   └── ...
-```
+### Local Caching
 
-### Version Selection UX
+Questions are cached locally after first fetch:
+- Enables offline operation
+- Cache location: `~/.gcb-runner/cache/`
+- Cache invalidation: Daily check or manual refresh
+- Cache respects ETags for conditional requests
 
-```
-$ gcb-runner test --model gpt-4o
+### Version Selection
 
-╔═══════════════════════════════════════════════════════════════╗
-║              Great Commission Benchmark - Runner               ║
-╚═══════════════════════════════════════════════════════════════╝
+Users can specify versions:
+- `--version current` - Latest active version (default)
+- `--version 2.0` - Specific semantic version
+- `gcb-runner versions` - List all available versions
 
-? Select benchmark version:
-  ❯ Version 2 (2.0) - Current                    300 questions
-    Version 1 (1.2) - Archived                   300 questions
-    Version 1 (1.1) - Archived                   280 questions
-    Version 1 (1.0) - Archived                   120 questions
+See [spec-questions-api.md](./spec-questions-api.md) for complete API documentation.
 
-Using benchmark 2.0 (Version 2)...
-```
+---
 
-Or specify directly:
-
-```bash
-# Use latest (default)
-gcb-runner test --model gpt-4o
-
-# Use specific version
-gcb-runner test --model gpt-4o --benchmark-version 2.0
-
-# List available versions
-gcb-runner versions
-```
-
-### Version Listing Command
+## Version Listing Command
 
 ```
 $ gcb-runner versions
@@ -1269,6 +1267,9 @@ $ gcb-runner versions
 ╔═══════════════════════════════════════════════════════════════╗
 ║           Available Benchmark Versions                         ║
 ╚═══════════════════════════════════════════════════════════════╝
+
+Fetching versions from Platform API...
+  ✓ Connected to Platform API
 
 ┌─────────────────────┬──────────────┬────────────┬─────────────────┐
 │ Version             │ Status       │ Questions  │ Released        │
@@ -1289,284 +1290,6 @@ Use --benchmark-version to select a specific version.
 
 ---
 
-## Question Bundle Format
-
-### Compiled Bundle Structure
-
-Questions are compiled into Python modules with light obfuscation:
-
-```python
-# gcb_runner/versions/v3_0/bundle.py
-
-"""
-GCB Benchmark V3.0 - Question Bundle
-Generated: 2025-12-01T00:00:00Z
-Checksum: sha256:abc123...
-
-DO NOT MODIFY - This file is auto-generated by gcb-builder.
-"""
-
-import base64
-import zlib
-from typing import Any
-
-# Metadata (visible)
-VERSION = "3.0"
-RELEASE_DATE = "2025-12-01"
-QUESTION_COUNT = 300
-TIER_DISTRIBUTION = {"tier1": 210, "tier2": 60, "tier3": 30}
-CHECKSUM = "sha256:abc123def456..."
-
-# Question data (compressed + encoded)
-# This isn't security - determined users can decode it.
-# It's just friction to prevent casual browsing.
-_BUNDLE_DATA = """
-eJzVWNtu2zgQfV9g/4HwS+ILJUq2nTgI0KJFs0WLLrZAi32gKMoWI4kCScV2
-... (base64 encoded, zlib compressed JSON) ...
-"""
-
-def _decode_bundle() -> dict[str, Any]:
-    """Decode the question bundle. Internal use only."""
-    compressed = base64.b64decode(_BUNDLE_DATA)
-    json_bytes = zlib.decompress(compressed)
-    return json.loads(json_bytes)
-
-# Judge prompts (also embedded)
-_JUDGE_PROMPTS = """
-eJzVWNtu2zgQfV9g/4HwS+ILJUq2nTgI0KJFs0WLLrZAi32gKMoWI4kCScV2
-... (base64 encoded judge prompts) ...
-"""
-```
-
-### Why This Approach?
-
-| Approach | Pros | Cons |
-|----------|------|------|
-| **Plain JSON files** | Easy to inspect/debug | Trivially readable |
-| **Encrypted bundles** | "Secure" | Key distribution problem; false security |
-| **Compiled + compressed** | Raises friction; honest about limits | Determined users can still decode |
-| **Server fetch only** | Central control | Requires network; single point of failure |
-
-We chose **compiled + compressed** because:
-
-1. **Honest security model** — We're not claiming the questions are secret, just not trivially browsable
-2. **Works offline** — No network dependency for running benchmarks
-3. **Version stability** — Once released, a CLI version always has the same questions
-4. **Simple distribution** — Single `pip install` includes everything
-
-### What This Protects Against
-
-✅ **Casual browsing** — `cat bundle.py` doesn't show questions  
-✅ **Accidental exposure** — Questions won't appear in IDE file trees  
-✅ **Simple extraction** — Requires writing code to decode  
-
-### What This Does NOT Protect Against
-
-❌ **Determined reverse engineering** — Anyone who wants to can decode it  
-❌ **Memory inspection** — Questions exist in memory during runs  
-❌ **Response logging** — Users can log the prompts sent to LLMs  
-
-**This is intentional.** The goal isn't DRM — it's preventing the questions from being obviously visible while maintaining an honest, open-source approach.
-
----
-
-## Version Loader Implementation
-
-```python
-# gcb_runner/versions/loader.py
-
-from importlib import import_module
-from typing import Protocol
-import hashlib
-
-class QuestionSet(Protocol):
-    version: str
-    questions: list[dict]
-    judge_prompts: dict[str, str]
-    scoring_config: dict
-
-class VersionLoader:
-    """Load embedded benchmark versions."""
-    
-    AVAILABLE_VERSIONS = {
-        "1.0": "gcb_runner.versions.v1_0",
-        "1.1": "gcb_runner.versions.v1_1",
-        "1.2": "gcb_runner.versions.v1_2",
-        "2.0": "gcb_runner.versions.v2_0",
-    }
-    
-    CURRENT_VERSION = "2.0"
-    
-    @classmethod
-    def list_versions(cls) -> list[dict]:
-        """List all available benchmark versions."""
-        versions = []
-        for version_id, module_path in cls.AVAILABLE_VERSIONS.items():
-            module = import_module(f"{module_path}.bundle")
-            versions.append({
-                "version": version_id,
-                "release_date": module.RELEASE_DATE,
-                "question_count": module.QUESTION_COUNT,
-                "tier_distribution": module.TIER_DISTRIBUTION,
-                "is_current": version_id == cls.CURRENT_VERSION,
-            })
-        return sorted(versions, key=lambda v: v["version"], reverse=True)
-    
-    @classmethod
-    def load(cls, version: str = "latest") -> QuestionSet:
-        """Load a benchmark version."""
-        if version == "latest":
-            version = cls.CURRENT_VERSION
-        
-        if version not in cls.AVAILABLE_VERSIONS:
-            available = ", ".join(cls.AVAILABLE_VERSIONS.keys())
-            raise ValueError(f"Unknown version: {version}. Available: {available}")
-        
-        module_path = cls.AVAILABLE_VERSIONS[version]
-        bundle = import_module(f"{module_path}.bundle")
-        
-        # Decode and verify
-        data = bundle._decode_bundle()
-        
-        # Verify checksum
-        computed = hashlib.sha256(
-            json.dumps(data, sort_keys=True).encode()
-        ).hexdigest()
-        
-        if f"sha256:{computed}" != bundle.CHECKSUM:
-            raise RuntimeError("Bundle checksum mismatch - data may be corrupted")
-        
-        return QuestionSet(
-            version=version,
-            questions=data["questions"],
-            judge_prompts=data["judge_prompts"],
-            scoring_config=data["scoring"]
-        )
-```
-
----
-
-## CLI Release Workflow
-
-### How Versions Get Into the CLI
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    VERSION RELEASE WORKFLOW                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  1. VERSION BUILDER                                              │
-│     └─ gcb-builder exports locked version → gcb-v3.0.json       │
-│                                                                  │
-│  2. COMPILE BUNDLE                                               │
-│     └─ gcb-compile-bundle gcb-v3.0.json → v3_0/bundle.py        │
-│        (Compresses, encodes, generates checksums)                │
-│                                                                  │
-│  3. ADD TO RUNNER                                                │
-│     └─ Add v3_0/ to gcb_runner/versions/                        │
-│     └─ Update AVAILABLE_VERSIONS registry                        │
-│     └─ Set CURRENT_VERSION = "3.0"                              │
-│                                                                  │
-│  4. RELEASE CLI                                                  │
-│     └─ Bump gcb-runner version (e.g., 1.3.0)                    │
-│     └─ Publish to PyPI                                          │
-│                                                                  │
-│  5. USERS UPDATE                                                 │
-│     └─ pip install --upgrade gcb-runner                         │
-│     └─ New benchmark versions now available                      │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Bundle Compilation Tool
-
-A helper script (can be in gcb-builder or separate) compiles JSON exports:
-
-```bash
-# In the gcb-builder project, after publishing a version:
-gcb-compile-bundle gcb-v3.0.json --output ../gcb-runner/gcb_runner/versions/v3_0/
-
-# Creates:
-#   v3_0/__init__.py
-#   v3_0/bundle.py (compiled question bundle)
-```
-
-```python
-# compile_bundle.py (standalone script or part of gcb-builder)
-
-import json
-import zlib
-import base64
-import hashlib
-from pathlib import Path
-from datetime import datetime
-
-def compile_bundle(input_path: str, output_dir: str) -> None:
-    """Compile a JSON question set export into a Python bundle."""
-    
-    with open(input_path) as f:
-        data = json.load(f)
-    
-    version = data["benchmark_version"]
-    version_slug = f"v{version.replace('.', '_')}"
-    
-    # Compute checksum
-    checksum = hashlib.sha256(
-        json.dumps(data, sort_keys=True).encode()
-    ).hexdigest()
-    
-    # Compress and encode
-    json_bytes = json.dumps(data).encode()
-    compressed = zlib.compress(json_bytes, level=9)
-    encoded = base64.b64encode(compressed).decode()
-    
-    # Generate bundle.py
-    bundle_code = f'''"""
-GCB Benchmark V{version} - Question Bundle
-Generated: {datetime.utcnow().isoformat()}Z
-Checksum: sha256:{checksum}
-
-DO NOT MODIFY - This file is auto-generated by gcb-compile-bundle.
-"""
-
-import base64
-import zlib
-import json
-from typing import Any
-
-VERSION = "{version}"
-RELEASE_DATE = "{data.get('locked_at', '')[:10]}"
-QUESTION_COUNT = {len(data['questions'])}
-TIER_DISTRIBUTION = {data['metadata']['tier_counts']}
-CHECKSUM = "sha256:{checksum}"
-
-_BUNDLE_DATA = """
-{encoded}
-"""
-
-def _decode_bundle() -> dict[str, Any]:
-    """Decode the question bundle. Internal use only."""
-    compressed = base64.b64decode(_BUNDLE_DATA.strip())
-    json_bytes = zlib.decompress(compressed)
-    return json.loads(json_bytes)
-'''
-    
-    # Write files
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-    
-    (output_path / "__init__.py").write_text(
-        f'"""GCB Benchmark V{version}"""\n'
-    )
-    (output_path / "bundle.py").write_text(bundle_code)
-    
-    print(f"✓ Compiled V{version} to {output_path}")
-    print(f"  Questions: {len(data['questions'])}")
-    print(f"  Checksum: sha256:{checksum[:16]}...")
-```
-
----
-
 ## Version Compatibility
 
 ### CLI Version vs Benchmark Version
@@ -1577,21 +1300,14 @@ def _decode_bundle() -> dict[str, Any]:
 | **Benchmark Semantic Version** | `2.0` | The question set version (tracks evolution) |
 | **Benchmark Marketing Version** | `Version 2` | The marketing milestone name |
 
-A single CLI release may include multiple benchmark versions:
-
-```
-gcb-runner 1.3.0
-├── Benchmark 1.0 - Version 1 (archived)
-├── Benchmark 1.1 - Version 1 (archived)
-├── Benchmark 1.2 - Version 1 (archived)
-└── Benchmark 2.0 - Version 2 (current)
-```
+The CLI fetches available benchmark versions from the Platform API. All versions published on the Platform are accessible to users with valid API keys.
 
 ### Backward Compatibility
 
-- New CLI versions **add** benchmark versions, never remove them
-- Users can always run older benchmark versions for comparison
+- The Platform maintains all historical benchmark versions
+- Users can run any published version via `--benchmark-version`
 - Results always record both CLI version and benchmark version used
+- Older versions remain available even after new versions are published
 
 ### Results Export Format
 

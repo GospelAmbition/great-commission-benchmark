@@ -1538,11 +1538,191 @@ Update user role.
 
 ---
 
+### POST /api/admin/questions/import
+
+Import questions from JSON or CSV file.
+
+**Request Body:** (multipart/form-data)
+
+```json
+{
+  "file": "<upload>",
+  "format": "json",  // or "csv"
+  "dry_run": false  // Validate without importing
+}
+```
+
+**Response:** `201 Created`
+
+```json
+{
+  "imported": {
+    "total": 25,
+    "saved": 23,
+    "skipped": 2,
+    "errors": []
+  },
+  "questions": [
+    {
+      "id": "uuid",
+      "content": "Write a gospel presentation...",
+      "status": "draft"
+    }
+  ]
+}
+```
+
+---
+
+### GET /api/admin/questions
+
+List all questions with filtering and search.
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `status` | string | - | Filter: "draft", "review", "approved", "retired" |
+| `category` | string | - | Filter by category (e.g., "3.2") |
+| `tier` | integer | - | Filter by tier (1, 2, or 3) |
+| `search` | string | - | Search in question content |
+| `limit` | integer | 50 | Number of results |
+| `offset` | integer | 0 | Pagination offset |
+
+**Response:** `200 OK`
+
+```json
+{
+  "questions": [
+    {
+      "id": "uuid",
+      "content": "Write a gospel presentation...",
+      "category": "3.2",
+      "tier": 1,
+      "status": "approved",
+      "created_at": "2025-12-01T00:00:00Z",
+      "approved_at": "2025-12-02T00:00:00Z"
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+---
+
+### GET /api/admin/questions/:id
+
+Get a single question by ID.
+
+**Path Parameters:**
+- `id`: Question UUID
+
+**Response:** `200 OK`
+
+```json
+{
+  "question": {
+    "id": "uuid",
+    "content": "Write a gospel presentation...",
+    "category": "3.2",
+    "tier": 1,
+    "difficulty": "medium",
+    "expected_verdict": "ACCEPTED",
+    "status": "approved",
+    "use_case_tags": ["content_generation"],
+    "created_at": "2025-12-01T00:00:00Z",
+    "approved_at": "2025-12-02T00:00:00Z",
+    "in_versions": ["2.0"]
+  }
+}
+```
+
+---
+
+### PUT /api/admin/questions/:id
+
+Update a question (only if not in locked version).
+
+**Path Parameters:**
+- `id`: Question UUID
+
+**Request Body:**
+
+```json
+{
+  "content": "Updated question content...",
+  "category": "3.2",
+  "difficulty": "hard",
+  "expected_verdict": "ACCEPTED"
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "question": { ... },
+  "message": "Question updated successfully"
+}
+```
+
+---
+
+### POST /api/admin/questions/:id/approve
+
+Approve a question (moves from draft/review to approved).
+
+**Path Parameters:**
+- `id`: Question UUID
+
+**Response:** `200 OK`
+
+```json
+{
+  "question": {
+    "id": "uuid",
+    "status": "approved",
+    "approved_at": "2025-12-16T10:00:00Z"
+  },
+  "message": "Question approved"
+}
+```
+
+---
+
+### DELETE /api/admin/questions/:id
+
+Delete a question (only if not in any locked version).
+
+**Path Parameters:**
+- `id`: Question UUID
+
+**Response:** `200 OK`
+
+```json
+{
+  "message": "Question deleted successfully"
+}
+```
+
+**Error Response:** `409 Conflict` (if question is in locked version)
+
+```json
+{
+  "error": {
+    "code": "QUESTION_IN_USE",
+    "message": "Cannot delete question that is part of locked version 2.0"
+  }
+}
+```
+
+---
+
 ### POST /api/admin/versions
 
 Create a new benchmark version.
 
-**Request Body:** (multipart/form-data with JSON file)
+**Request Body:**
 
 ```json
 {
@@ -1550,7 +1730,7 @@ Create a new benchmark version.
   "marketing_version": "Version 2",
   "release_date": "2026-01-01",
   "changelog": "Added new questions...",
-  "questions_file": "<upload>"
+  "question_ids": ["uuid1", "uuid2", "uuid3"]  // Selected question IDs
 }
 ```
 
@@ -1563,6 +1743,14 @@ Create a new benchmark version.
     "marketing_version": "Version 2",
     "status": "draft",
     "question_count": 310
+  },
+  "validation": {
+    "passed": true,
+    "tier_distribution": {
+      "tier1": 217,
+      "tier2": 62,
+      "tier3": 31
+    }
   }
 }
 ```
@@ -1712,7 +1900,137 @@ Handle Stripe webhook events.
 
 ---
 
-## Error Codes Reference
+## 8. Questions API (Runner)
+
+API endpoints for the Runner CLI to fetch benchmark questions and versions. Requires API key authentication.
+
+> **See also:** [spec-questions-api.md](./spec-questions-api.md) for detailed specification.
+
+### GET /api/runner/versions
+
+List all available benchmark versions.
+
+**Authentication:** API Key (Bearer token)
+
+**Response:** `200 OK`
+
+```json
+{
+  "versions": [
+    {
+      "semantic_version": "2.0",
+      "marketing_version": "Version 2",
+      "status": "current",
+      "release_date": "2025-12-01",
+      "question_count": 300,
+      "tier_distribution": {
+        "tier1": 210,
+        "tier2": 60,
+        "tier3": 30
+      },
+      "is_current": true
+    }
+  ],
+  "current_version": "2.0"
+}
+```
+
+---
+
+### GET /api/runner/questions
+
+Fetch the complete question set for a benchmark version.
+
+**Authentication:** API Key (Bearer token)
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `version` | string | Yes | Semantic version (e.g., "2.0") or "current" |
+
+**Response:** `200 OK`
+
+```json
+{
+  "version": {
+    "semantic_version": "2.0",
+    "marketing_version": "Version 2",
+    "release_date": "2025-12-01",
+    "question_count": 300,
+    "checksum": "sha256:abc123...",
+    "locked_at": "2025-12-01T00:00:00Z"
+  },
+  "questions": [
+    {
+      "id": 1,
+      "content": "Write a gospel presentation...",
+      "category": "3.2",
+      "tier": 1,
+      "difficulty": "medium",
+      "expected_verdict": "ACCEPTED",
+      "expected_refusal_type": null,
+      "tests_capability": true,
+      "tests_willingness": true,
+      "use_case_tags": ["content_generation"],
+      "audience_context": "secular_western",
+      "ministry_type": "campus_ministry"
+    }
+  ],
+  "judge_prompts": {
+    "tier1_task": "You are evaluating...",
+    "tier2_doctrine": "You are evaluating...",
+    "tier3_worldview": "You are evaluating..."
+  },
+  "scoring": {
+    "weights": {
+      "tier1": 0.70,
+      "tier2": 0.20,
+      "tier3": 0.10
+    }
+  },
+  "metadata": {
+    "total_questions": 300,
+    "tier_counts": {
+      "tier1": 210,
+      "tier2": 60,
+      "tier3": 30
+    }
+  }
+}
+```
+
+---
+
+### GET /api/runner/judge-prompts
+
+Fetch judge prompts for a benchmark version.
+
+**Authentication:** API Key (Bearer token)
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `version` | string | Yes | Semantic version (e.g., "2.0") or "current" |
+
+**Response:** `200 OK`
+
+```json
+{
+  "version": "2.0",
+  "judge_prompts": {
+    "tier1_task": "You are evaluating...",
+    "tier2_doctrine": "You are evaluating...",
+    "tier3_worldview": "You are evaluating..."
+  },
+  "updated_at": "2025-12-01T00:00:00Z"
+}
+```
+
+---
+
+## 9. Error Codes Reference
 
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
@@ -1736,6 +2054,7 @@ Handle Stripe webhook events.
 | Authenticated API | 300 requests | 1 minute |
 | Test execution | 10 concurrent | - |
 | Submissions | 5 per hour | 1 hour |
+| Questions API | 50 requests | 1 hour |
 
 Rate limit headers:
 - `X-RateLimit-Limit`: Request limit
@@ -1773,10 +2092,12 @@ Interactive documentation:
 
 - [platform-technical-architecture.md](./platform-technical-architecture.md) — System architecture
 - [spec-export-schema-validation.md](./spec-export-schema-validation.md) — CLI export format
+- [spec-questions-api.md](./spec-questions-api.md) — Questions API for Runner
 - [feature-leaderboard.md](./feature-leaderboard.md) — Leaderboard feature spec
 - [feature-user-dashboard.md](./feature-user-dashboard.md) — User dashboard spec
 - [feature-moderator-dashboard.md](./feature-moderator-dashboard.md) — Moderator dashboard spec
 - [feature-retesting.md](./feature-retesting.md) — Retesting feature spec
+- [feature-question-management.md](./feature-question-management.md) — Question management CMS
 
 ---
 

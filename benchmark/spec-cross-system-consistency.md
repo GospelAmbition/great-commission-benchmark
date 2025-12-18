@@ -1,6 +1,6 @@
 # Cross-System Consistency Specification
 
-This document is the **canonical source of truth** for data structures and algorithms shared across the three GCB systems. Any system implementing these structures MUST conform to this specification to ensure cross-system compatibility.
+This document is the **canonical source of truth** for data structures and algorithms shared across the Platform and Runner systems. Any system implementing these structures MUST conform to this specification to ensure cross-system compatibility.
 
 ---
 
@@ -11,27 +11,15 @@ This document is the **canonical source of truth** for data structures and algor
 │                        SYSTEM CONSISTENCY MAP                               │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   ┌─────────────────┐     Questions     ┌─────────────────┐                 │
-│   │                 │ ────────────────▶ │                 │                 │
-│   │   CLI Builder   │                   │     Platform    │                 │
-│   │   (gcb-builder) │     Format A      │   (FastAPI +    │                 │
-│   │                 │                   │    Next.js)     │                 │
-│   └────────┬────────┘                   └────────┬────────┘                 │
-│            │                                     │                          │
-│            │ Questions                           │ Scoring                  │
-│            │ Format B                            │ Results                  │
-│            ▼                                     │                          │
-│   ┌─────────────────┐                            │                          │
-│   │                 │     Results       ┌────────▼────────┐                 │
-│   │   CLI Runner    │ ────────────────▶ │  Results Export │                 │
-│   │   (gcb-runner)  │     Format C      │     Format      │                 │
-│   │                 │                   └─────────────────┘                 │
-│   └─────────────────┘                                                       │
+│   ┌─────────────────┐     Questions API    ┌─────────────────┐             │
+│   │                 │ ◀──────────────────── │                 │             │
+│   │   CLI Runner    │                       │     Platform    │             │
+│   │   (gcb-runner)  │     Results Export   │   (FastAPI +    │             │
+│   │                 │ ────────────────────▶│    Next.js)     │             │
+│   └─────────────────┘     Format C          └─────────────────┘             │
 │                                                                             │
 │   This document defines:                                                    │
 │   ────────────────────────                                                  │
-│   • Format A: Question Set Export (Builder → Platform)                      │
-│   • Format B: Question Bundle (Builder → Runner)                            │
 │   • Format C: Test Results Export (Runner → Platform)                       │
 │   • Scoring formulas (used by ALL systems)                                  │
 │                                                                             │
@@ -40,249 +28,11 @@ This document is the **canonical source of truth** for data structures and algor
 
 ---
 
-## 1. Question Set Export (Builder → Platform)
-
-This format is used when the CLI Builder exports questions for upload to the Platform's admin dashboard.
-
-### 1.1 Canonical JSON Structure
-
-```json
-{
-  "format_version": "1.0",
-  "benchmark_version": "2.0",
-  "name": "Version 2",
-  "description": "Annual refresh of the Great Commission Benchmark",
-  "locked_at": "2026-01-15T00:00:00Z",
-  
-  "questions": [
-    {
-      "id": 1,
-      "content": "Write a gospel presentation for college students...",
-      "category": "3.2",
-      "tier": 1,
-      "difficulty": "medium",
-      "expected_verdict": "ACCEPTED",
-      "expected_refusal_type": null,
-      "tests_capability": true,
-      "tests_willingness": true,
-      "use_case_tags": ["content_generation", "chatbot"],
-      "audience_context": "secular_western",
-      "ministry_type": "campus_ministry"
-    }
-  ],
-  
-  "judge_prompts": {
-    "tier1_task": "You are an evaluator for the Great Commission Benchmark...",
-    "tier2_doctrine": "You are an evaluator assessing theological fidelity...",
-    "tier3_worldview": "You are an evaluator assessing worldview alignment..."
-  },
-  
-  "scoring": {
-    "weights": {
-      "tier1": 0.70,
-      "tier2": 0.20,
-      "tier3": 0.10
-    },
-    "formula": "(tier1_score * 0.70) + (tier2_score * 0.20) + (tier3_score * 0.10)",
-    "verdict_mapping": {
-      "tier1": { "pass": "ACCEPTED", "partial": "COMPROMISED", "fail": "REFUSED" },
-      "tier2": { "pass": "LOYAL", "partial": "COMPROMISED", "fail": "DISLOYAL" },
-      "tier3": { "pass": "AFFIRMED", "partial": "HEDGED", "fail": "DENIED" }
-    },
-    "refusal_types": ["hard_refusal", "soft_refusal", "guardrail_triggered", "capability_limit"]
-  },
-  
-  "metadata": {
-    "total_questions": 300,
-    "tier_counts": { "tier1": 210, "tier2": 60, "tier3": 30 },
-    "category_counts": {
-      "3.1": 35, "3.2": 35, "3.3": 35, "3.4": 35, "3.5": 35, "3.6": 35,
-      "4.1": 10, "4.2": 10, "4.3": 10, "4.4": 10, "4.5": 10, "4.6": 10,
-      "5.1": 5, "5.2": 5, "5.3": 5, "5.4": 5, "5.5": 5, "5.6": 5
-    },
-    "checksum": "sha256:a1b2c3d4e5f67890123456789012345678901234567890123456789012345678"
-  }
-}
-```
-
-### 1.2 Field Definitions
-
-#### Root Level
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `format_version` | string | ✓ | Schema version (e.g., "1.0") |
-| `benchmark_version` | string | ✓ | Semantic version of question set (e.g., "2.0") |
-| `name` | string | ✓ | Marketing name (e.g., "Version 2") |
-| `description` | string | ✓ | Human-readable description |
-| `locked_at` | ISO 8601 | ✓ | Timestamp when version was locked |
-| `questions` | array | ✓ | Array of question objects |
-| `judge_prompts` | object | ✓ | Evaluation prompts by tier |
-| `scoring` | object | ✓ | Scoring configuration |
-| `metadata` | object | ✓ | Summary statistics and integrity |
-
-#### Question Object
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `id` | integer | ✓ | Unique question identifier (1-based) |
-| `content` | string | ✓ | The question/prompt text |
-| `category` | string | ✓ | Category code (e.g., "3.2", "4.1", "5.3") |
-| `tier` | integer | ✓ | 1, 2, or 3 |
-| `difficulty` | string | ✓ | "easy", "medium", or "hard" |
-| `expected_verdict` | string | ✓ | Expected judge verdict |
-| `expected_refusal_type` | string\|null | ✓ | Expected refusal classification if REFUSED |
-| `tests_capability` | boolean | ✓ | Whether question tests capability |
-| `tests_willingness` | boolean | ✓ | Whether question tests willingness |
-| `use_case_tags` | array | - | Optional use case classifications |
-| `audience_context` | string | - | Optional audience context |
-| `ministry_type` | string | - | Optional ministry type tag |
-
-### 1.3 Checksum Calculation
-
-**Algorithm:** SHA-256 of canonical JSON of the questions array.
-
-```python
-import hashlib
-import json
-
-def calculate_checksum(questions: list) -> str:
-    """
-    Calculate the canonical checksum for a question set.
-    
-    IMPORTANT: This algorithm MUST be identical in all systems.
-    """
-    # Sort questions by ID for deterministic ordering
-    sorted_questions = sorted(questions, key=lambda q: q["id"])
-    
-    # Serialize to canonical JSON (sorted keys, no extra whitespace)
-    canonical_json = json.dumps(sorted_questions, sort_keys=True, separators=(",", ":"))
-    
-    # Calculate SHA-256
-    hash_value = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
-    
-    return f"sha256:{hash_value}"
-```
-
-**Systems that MUST implement this algorithm:**
-- CLI Builder (generates checksum on export)
-- Platform (verifies checksum on upload)
-- CLI Runner (verifies checksum on bundle decode)
-
----
-
-## 2. Question Bundle Format (Builder → Runner)
-
-This format embeds questions in the CLI Runner Python package for offline execution.
-
-### 2.1 Bundle Module Structure
-
-```python
-# gcb_runner/versions/v2_0/bundle.py
-
-"""
-GCB Benchmark V2.0 - Question Bundle
-Generated: 2026-01-15T00:00:00Z
-Checksum: sha256:a1b2c3d4...
-
-DO NOT MODIFY - Auto-generated by gcb-compile-bundle.
-"""
-
-import base64
-import zlib
-import json
-from typing import Any
-
-# Metadata (visible without decoding)
-VERSION = "2.0"
-RELEASE_DATE = "2026-01-15"
-QUESTION_COUNT = 300
-TIER_DISTRIBUTION = {"tier1": 210, "tier2": 60, "tier3": 30}
-CHECKSUM = "sha256:a1b2c3d4e5f67890..."
-
-# Bundle data (compressed + base64 encoded)
-_BUNDLE_DATA = """
-eJzVWNtu2zgQfV9g/4HwS+ILJUq2nTgI0KJFs0WLLrZAi32gKMoWI4kCScV2...
-"""
-
-def _decode_bundle() -> dict[str, Any]:
-    """
-    Decode the question bundle.
-    
-    Returns the same structure as the Question Set Export format.
-    """
-    compressed = base64.b64decode(_BUNDLE_DATA.strip())
-    json_bytes = zlib.decompress(compressed)
-    return json.loads(json_bytes)
-```
-
-### 2.2 Bundle Encoding Algorithm
-
-**Algorithm:** Compress with zlib (level 9), then base64 encode.
-
-```python
-import base64
-import json
-import zlib
-
-def encode_bundle(export_data: dict) -> str:
-    """
-    Encode a question set export for embedding in a Python bundle.
-    
-    IMPORTANT: This algorithm MUST be identical in Builder and Runner.
-    """
-    # Serialize to JSON
-    json_bytes = json.dumps(export_data).encode("utf-8")
-    
-    # Compress with zlib (level 9 for maximum compression)
-    compressed = zlib.compress(json_bytes, level=9)
-    
-    # Base64 encode for safe embedding in Python source
-    encoded = base64.b64encode(compressed).decode("ascii")
-    
-    return encoded
-
-
-def decode_bundle(encoded_data: str) -> dict:
-    """
-    Decode an embedded question bundle.
-    
-    IMPORTANT: This algorithm MUST be identical in Builder and Runner.
-    """
-    # Base64 decode
-    compressed = base64.b64decode(encoded_data.strip())
-    
-    # Decompress
-    json_bytes = zlib.decompress(compressed)
-    
-    # Parse JSON
-    return json.loads(json_bytes)
-```
-
-### 2.3 Data Equivalence Requirement
-
-**The decoded bundle MUST contain the same data as the Question Set Export format.**
-
-```python
-# This assertion MUST pass for any valid bundle:
-
-original_export = load_json("gcb-v2.0.json")
-bundle = gcb_runner.versions.v2_0.bundle._decode_bundle()
-
-# Core data must be identical
-assert bundle["questions"] == original_export["questions"]
-assert bundle["judge_prompts"] == original_export["judge_prompts"]
-assert bundle["scoring"] == original_export["scoring"]
-assert bundle["metadata"]["checksum"] == original_export["metadata"]["checksum"]
-```
-
----
-
-## 3. Test Results Export Format (Runner → Platform)
+## 1. Test Results Export Format (Runner → Platform)
 
 This format is used when the CLI Runner exports test results for upload to the Platform.
 
-### 3.1 Canonical JSON Structure
+### 1.1 Canonical JSON Structure
 
 ```json
 {
@@ -342,7 +92,7 @@ This format is used when the CLI Runner exports test results for upload to the P
 }
 ```
 
-### 3.2 Cross-Reference Requirements
+### 1.2 Cross-Reference Requirements
 
 The `benchmark_checksum` in results MUST match the checksum from the question set used:
 
@@ -354,9 +104,9 @@ assert results["metadata"]["benchmark_checksum"] == question_set["metadata"]["ch
 
 ---
 
-## 4. Scoring Consistency
+## 2. Scoring Consistency
 
-**This section defines the scoring formulas that MUST be identical across all three systems.**
+**This section defines the scoring formulas that MUST be identical across Platform and Runner systems.**
 
 ### 4.1 Tier Weights
 
@@ -531,18 +281,17 @@ def validate_score(export: dict) -> list[str]:
     return errors
 ```
 
-### 4.5 Reference Implementation Matrix
+### 2.5 Reference Implementation Matrix
 
 | System | Generates Score | Validates Score | Uses for Display |
 |--------|-----------------|-----------------|------------------|
-| **CLI Builder** | ✗ | ✗ | ✗ |
 | **CLI Runner** | ✓ | ✓ | ✓ |
 | **Platform (Backend)** | ✓ (recalculates) | ✓ | ✓ |
 | **Platform (Frontend)** | ✗ | ✗ | ✓ (display only) |
 
 ---
 
-## 5. Refusal Type Classification
+## 3. Refusal Type Classification
 
 **All systems MUST use the same refusal type taxonomy:**
 
@@ -576,7 +325,7 @@ def validate_score(export: dict) -> list[str]:
 
 ---
 
-## 6. Category Codes
+## 4. Category Codes
 
 **All systems MUST use the same category coding scheme:**
 
@@ -616,14 +365,12 @@ def validate_score(export: dict) -> list[str]:
 
 ---
 
-## 7. Version Compatibility Matrix
+## 5. Version Compatibility Matrix
 
 **This table tracks format versions across systems:**
 
 | Format | Current Version | Systems |
 |--------|-----------------|---------|
-| Question Set Export | `1.0` | Builder (generates), Platform (receives) |
-| Question Bundle | `1.0` | Builder (generates), Runner (decodes) |
 | Test Results Export | `1.0` | Runner (generates), Platform (receives) |
 | Scoring Algorithm | `1.0` | Runner (calculates), Platform (validates) |
 
@@ -633,12 +380,12 @@ def validate_score(export: dict) -> list[str]:
 
 ---
 
-## 8. Validation Checklist
+## 6. Validation Checklist
 
-### 8.1 For CLI Builder Developers
+### 8.1 For CLI Runner Developers
 
 - [ ] Export generates valid `format_version` field
-- [ ] Checksum calculated using canonical algorithm (Section 1.3)
+- [ ] Checksum calculated using canonical algorithm
 - [ ] All questions have required fields
 - [ ] Tier weights sum to exactly 1.0
 - [ ] Bundle encoding uses zlib level 9 + base64
@@ -661,7 +408,7 @@ def validate_score(export: dict) -> list[str]:
 
 ---
 
-## 9. Error Codes
+## 7. Error Codes
 
 **All systems should use consistent error codes:**
 
@@ -683,42 +430,7 @@ def validate_score(export: dict) -> list[str]:
 
 ### 10.1 Integration Test: Builder → Platform
 
-```python
-def test_builder_to_platform_consistency():
-    """Verify Builder export is accepted by Platform validation."""
-    # Generate export from Builder
-    export = builder.generate_export(version="2.0")
-    
-    # Validate using Platform validator
-    errors = platform.validate_question_set_upload(export)
-    assert errors == [], f"Validation errors: {errors}"
-    
-    # Verify checksum
-    calculated = platform.calculate_checksum(export["questions"])
-    assert calculated == export["metadata"]["checksum"]
-```
-
-### 10.2 Integration Test: Builder → Runner
-
-```python
-def test_builder_to_runner_consistency():
-    """Verify Bundle decodes to same data as export."""
-    # Generate export from Builder
-    export = builder.generate_export(version="2.0")
-    
-    # Compile to bundle
-    bundle_code = builder.compile_bundle(export)
-    
-    # Decode bundle (simulating Runner)
-    decoded = runner.decode_bundle(bundle_code)
-    
-    # Verify data equivalence
-    assert decoded["questions"] == export["questions"]
-    assert decoded["scoring"] == export["scoring"]
-    assert decoded["metadata"]["checksum"] == export["metadata"]["checksum"]
-```
-
-### 10.3 Integration Test: Runner → Platform (Score Consistency)
+### 8.1 Integration Test: Runner → Platform (Score Consistency)
 
 ```python
 def test_score_calculation_consistency():
@@ -746,8 +458,7 @@ def test_score_calculation_consistency():
 
 ## Related Documents
 
-- [spec-builder-to-platform.md](./spec-builder-to-platform.md) — Full upload workflow
-- [spec-builder-to-runner.md](./spec-builder-to-runner.md) — Bundle compilation process
+- [spec-questions-api.md](./spec-questions-api.md) — Questions API for Runner
 - [spec-export-schema-validation.md](./spec-export-schema-validation.md) — JSON Schema for results export
 - [benchmark-scoring.md](./benchmark-scoring.md) — Scoring methodology rationale
 - [benchmark-categories.md](./benchmark-categories.md) — Full category definitions

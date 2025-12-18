@@ -10,7 +10,6 @@ The GCB system uses two distinct export schemas:
 
 | Schema | Producer | Consumer | Purpose |
 |--------|----------|----------|---------|
-| **Benchmark Version Export** | CLI Builder | Platform, CLI Runner | Question sets, judge prompts, scoring config |
 | **Test Results Export** | CLI Runner | Platform | Model evaluation results for leaderboard |
 
 All systems must validate against these schemas to ensure data integrity and cross-system compatibility.
@@ -21,16 +20,15 @@ All systems must validate against these schemas to ensure data integrity and cro
 
 | Schema | Format Version | File Naming Convention |
 |--------|----------------|------------------------|
-| Benchmark Version | `2.0` | `gcb-v{version}.json` (e.g., `gcb-v2.0.json`) |
 | Test Results | `1.0` | `gcb-results-{model}-{date}.json` |
 
 ---
 
-# Part 1: Benchmark Version Export Schema
+# Test Results Export Schema
 
-This schema defines the structure for benchmark versions exported from the CLI Builder for use by the Platform and CLI Runner.
+This schema defines the structure for test results exported from the CLI Runner for upload to the Platform.
 
-## Benchmark Version Schema
+## Test Results Schema
 
 | Field | Value | Notes |
 |-------|-------|-------|
@@ -641,7 +639,7 @@ This schema defines the structure for test results exported from the CLI Runner 
         },
         "export_source": {
           "type": "string",
-          "enum": ["cli_runner", "cli_builder", "platform"],
+          "enum": ["cli_runner", "platform"],
           "description": "System that generated this export"
         }
       }
@@ -1171,9 +1169,8 @@ def normalize_export(data: dict) -> dict:
 
 ## Related Documents
 
-- [cli-builder-specifications.md](./cli-builder-specifications.md) — CLI Builder implementation (produces Benchmark Version exports)
 - [cli-runner-specifications.md](./cli-runner-specifications.md) — CLI Runner implementation (produces Test Results exports)
-- [spec-builder-to-platform.md](./spec-builder-to-platform.md) — Builder-to-Platform data flow
+- [spec-questions-api.md](./spec-questions-api.md) — Questions API for Runner
 - [benchmark-scoring.md](./benchmark-scoring.md) — Scoring methodology and formulas
 - [platform-testing-methodology.md](./platform-testing-methodology.md) — Verdict classification framework
 
