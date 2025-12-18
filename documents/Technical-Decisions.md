@@ -1,6 +1,6 @@
 # Great Commission Benchmark — Technical Decisions
 
-This document serves as a permanent record of all technical decisions made during the development of the Great Commission Benchmark platform, CLI tools, and related systems.
+This document serves as a permanent record of all technical decisions made during the development of the Great Commission Benchmark platform, CLI Runner, and related systems.
 
 **Purpose:** To maintain a complete historical record of technical choices, rationale, and implementation details that will persist beyond working documents like REVIEW-GAPS-AND-DECISIONS.md.
 
@@ -86,59 +86,6 @@ Qwen3 Coder 30B's only advantage is mathematics (89% vs 66.7%), which is not rel
 ---
 
 ## Question Generation Model Selection
-
-**Decision Date:** December 16, 2025  
-**Status:** ✅ Finalized  
-**Context:** Section 1.3 LLM Backend Adapters - CLI Builder
-
-### Decision
-
-**Default/recommended models for question generation:** **OpenRouter** with the following models:
-- **GPT 5.2** (OpenAI)
-- **Gemini 3** (Google)
-- **Claude Opus** (Anthropic)
-
-### Rationale
-
-Question generation requires high-quality models capable of:
-- Understanding complex theological and missiological concepts
-- Following detailed prompt instructions for category-specific question generation
-- Producing diverse, well-structured questions across 19 categories
-- Generating questions that test both capability and willingness appropriately
-
-### Recommended Models
-
-| Model | Provider | Use Case | Rationale |
-|-------|----------|----------|-----------|
-| **GPT 5.2** | OpenAI | Primary generation model | Latest GPT model with strong instruction following and reasoning capabilities |
-| **Gemini 3** | Google | Alternative/backup generation | Provides diversity in generation style and approach |
-| **Claude Opus** | Anthropic | High-quality refinement | Excellent for generating nuanced questions requiring deep understanding |
-
-### Backend Selection: OpenRouter
-
-**Why OpenRouter:**
-- **Single API interface** — Simplifies implementation with one adapter for multiple models
-- **Access to 100+ models** — Flexibility to experiment with different models
-- **Pay-per-use pricing** — Cost-effective for question generation workloads
-- **Consistent interface** — OpenAI-compatible API format (de facto standard)
-- **Model availability** — All three recommended models available through OpenRouter
-
-### Implementation Details
-
-- **Backend:** OpenRouter (`openrouter` adapter)
-- **Model IDs (verify exact identifiers on OpenRouter):**
-  - GPT 5.2: `openai/gpt-5.2` (or latest identifier)
-  - Gemini 3: `google/gemini-3` (or latest identifier)
-  - Claude Opus: `anthropic/claude-opus` (or latest identifier)
-- **Usage pattern:** CLI Builder will support selecting between these models for question generation
-- **Fallback:** Architecture supports direct API backends (OpenAI, Anthropic) if needed
-
-### Notes
-
-- These models represent the current state-of-the-art for question generation as of December 2025
-- Model identifiers may need verification/updates as OpenRouter's model catalog evolves
-- The CLI Builder architecture supports adding additional models or switching backends as needed
-- Local models (via LM Studio/Ollama) remain available for question generation but are not the default recommendation
 
 ---
 
@@ -673,7 +620,6 @@ Discord was selected for community discussions:
 
 **Decision Date:** December 16, 2025  
 **Status:** ✅ Finalized  
-**Context:** Section 1.2 Question Generation System - CLI Builder
 
 ### Decision
 
@@ -705,7 +651,6 @@ The full question set is required for V1 to ensure:
 
 **Decision Date:** December 16, 2025  
 **Status:** ✅ Finalized  
-**Context:** Section 1.4 Judge Prompt Development - CLI Builder
 
 ### Decision
 
@@ -846,78 +791,13 @@ If the local version is outdated, a non-blocking alert is displayed, but users c
 
 ### Implementation Tasks
 
-1. **[BUILD]** Create FastAPI endpoint `/api/cli/versions` in platform backend
+1. **[BUILD]** Create FastAPI endpoint `/api/cli/versions` in gcb-platform backend
 2. **[BUILD]** Implement `VersionChecker` class in CLI runner
 3. **[BUILD]** Integrate version check into CLI commands (test, versions, etc.)
 4. **[BUILD]** Add version check configuration to CLI config system
 5. **[BUILD]** Add `packaging` dependency to CLI runner `pyproject.toml`
 
 ---
-
-## Manual Upload vs Automated Pipeline
-
-**Decision Date:** December 16, 2025  
-**Status:** ✅ Finalized  
-**Context:** Section 6.1 CLI Builder → Platform - Integration & End-to-End
-
-### Decision
-
-**CLI Builder → Platform upload workflow:** **Manual upload workflow selected**
-
-### Decision Analysis
-
-**Manual Upload (Preferred Approach):**
-- CLI Builder generates JSON file (e.g., `gcb-v1.0.0.json`)
-- User manually uploads via web form or API endpoint
-- Platform verifies checksum, format, and content before accepting
-
-**Pros:**
-- ✅ **Human verification step** — Builder can review JSON before upload (catch errors early)
-- ✅ **Security control** — No automated credentials needed; reduces attack surface
-- ✅ **Audit trail** — Clear record of who uploaded what and when
-- ✅ **Simple implementation** — Just need upload form/endpoint with validation
-- ✅ **Flexibility** — Builder can review, edit, or regenerate before upload
-- ✅ **No infrastructure dependencies** — No CI/CD, webhooks, or API keys to manage
-- ✅ **Version control friendly** — JSON files can be committed to git for history
-- ✅ **Offline workflow** — Builder can work completely offline, upload later
-
-**Cons:**
-- ❌ **Extra step** — Requires manual action (but this is intentional for verification)
-- ❌ **Potential for delay** — Human step means not instant (but acceptable for version releases)
-- ❌ **Possible human error** — Could upload wrong file (mitigated by checksum verification)
-
-**Automated Pipeline Approach:**
-- CLI Builder publishes to git repo or triggers webhook
-- CI/CD pipeline or webhook handler automatically uploads to platform
-- Platform validates and processes automatically
-
-**Pros:**
-- ✅ **Instant deployment** — No manual step, immediate availability
-- ✅ **Consistency** — Eliminates possibility of forgetting to upload
-- ✅ **Integration** — Fits into modern DevOps workflows
-
-**Cons:**
-- ❌ **Complexity** — Requires CI/CD setup, webhook infrastructure, API authentication
-- ❌ **Security concerns** — Need secure API keys, webhook secrets, access controls
-- ❌ **Less control** — No human review step before platform receives data
-- ❌ **Infrastructure overhead** — Additional services to maintain (GitHub Actions, webhook handlers, etc.)
-- ❌ **Debugging difficulty** — Automated failures harder to diagnose
-- ❌ **Overkill for use case** — Version releases are infrequent (not daily deployments)
-- ❌ **Dependency risk** — Platform must be available when pipeline runs
-
-### Rationale
-
-1. Version releases are infrequent (not daily)
-2. Human verification is valuable for quality control
-3. Simplicity reduces security and maintenance burden
-4. The workflow already includes a manual review step (publishing locks the version)
-
-### Implementation Plan
-
-- CLI Builder generates JSON with checksum
-- Web form or authenticated API endpoint accepts upload
-- Platform validates: checksum match, format version, required fields
-- Moderator/admin reviews before making version live (if needed)
 
 ---
 

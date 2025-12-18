@@ -414,21 +414,19 @@ def validate_score(export: dict) -> list[str]:
 
 | Code | Description | Systems |
 |------|-------------|---------|
-| `CHECKSUM_MISMATCH` | Calculated checksum differs from declared | Builder, Runner, Platform |
+| `CHECKSUM_MISMATCH` | Calculated checksum differs from declared | Runner, Platform |
 | `INVALID_FORMAT_VERSION` | Unsupported format version | Runner, Platform |
 | `WEIGHT_SUM_ERROR` | Tier weights don't sum to 1.0 | Runner, Platform |
 | `SCORE_MISMATCH` | Calculated score differs from reported | Platform |
 | `INVALID_VERDICT` | Verdict not valid for tier | Runner, Platform |
-| `MISSING_REQUIRED_FIELD` | Required field not present | All |
-| `INVALID_TIER` | Tier value not 1, 2, or 3 | All |
-| `INVALID_CATEGORY` | Category code not in canonical list | All |
-| `DUPLICATE_QUESTION_ID` | Same question ID appears multiple times | All |
+| `MISSING_REQUIRED_FIELD` | Required field not present | Runner, Platform |
+| `INVALID_TIER` | Tier value not 1, 2, or 3 | Runner, Platform |
+| `INVALID_CATEGORY` | Category code not in canonical list | Runner, Platform |
+| `DUPLICATE_QUESTION_ID` | Same question ID appears multiple times | Runner, Platform |
 
 ---
 
 ## 10. Testing Cross-System Consistency
-
-### 10.1 Integration Test: Builder → Platform
 
 ### 8.1 Integration Test: Runner → Platform (Score Consistency)
 

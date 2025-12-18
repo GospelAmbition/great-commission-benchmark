@@ -1,6 +1,6 @@
 # Great Commission Benchmark — Testing Strategies
 
-This document defines the testing strategies, standards, and practices for the Great Commission Benchmark platform and CLI tools.
+This document defines the testing strategies, standards, and practices for the Great Commission Benchmark platform and CLI Runner.
 
 **Last Updated:** December 17, 2025
 
@@ -11,15 +11,14 @@ This document defines the testing strategies, standards, and practices for the G
 1. [Testing Philosophy](#testing-philosophy)
 2. [Test Categories](#test-categories)
 3. [Platform Testing](#platform-testing)
-4. [CLI Builder Testing](#cli-builder-testing)
-5. [CLI Runner Testing](#cli-runner-testing)
-6. [Integration Testing](#integration-testing)
-7. [End-to-End Testing](#end-to-end-testing)
-8. [Performance Testing](#performance-testing)
-9. [Accessibility Testing](#accessibility-testing)
-10. [Test Data Management](#test-data-management)
-11. [Continuous Integration](#continuous-integration)
-12. [Testing Checklist](#testing-checklist)
+4. [CLI Runner Testing](#cli-runner-testing)
+5. [Integration Testing](#integration-testing)
+6. [End-to-End Testing](#end-to-end-testing)
+7. [Performance Testing](#performance-testing)
+8. [Accessibility Testing](#accessibility-testing)
+9. [Test Data Management](#test-data-management)
+10. [Continuous Integration](#continuous-integration)
+11. [Testing Checklist](#testing-checklist)
 
 ---
 
@@ -59,7 +58,6 @@ This document defines the testing strategies, standards, and practices for the G
 |-----------|-----------------|----------------|
 | **Backend API** | 80%+ | Auth, payments, test execution |
 | **Frontend Components** | 70%+ | Forms, data display, auth flows |
-| **CLI Builder** | 80%+ | Question generation, export |
 | **CLI Runner** | 80%+ | Test execution, result storage |
 
 ---
@@ -94,7 +92,7 @@ This document defines the testing strategies, standards, and practices for the G
 
 #### Unit Tests
 
-Location: `platform/backend/tests/unit/`
+Location: `gcb-platform/backend/tests/unit/`
 
 ```python
 # Example: Test scoring calculation
@@ -124,7 +122,7 @@ def test_weighted_score_with_zero_tier():
 
 #### API Tests
 
-Location: `platform/backend/tests/api/`
+Location: `gcb-platform/backend/tests/api/`
 
 ```python
 # Example: Test leaderboard endpoint
@@ -157,7 +155,7 @@ def test_leaderboard_requires_no_auth(client):
 
 #### Database Tests
 
-Location: `platform/backend/tests/db/`
+Location: `gcb-platform/backend/tests/db/`
 
 ```python
 # Example: Test repository patterns
@@ -193,7 +191,7 @@ def test_get_user_test_runs(repo, sample_user):
 #### Running Backend Tests
 
 ```bash
-cd platform/backend
+cd gcb-platform/backend
 source venv/bin/activate
 
 # Run all tests
@@ -224,7 +222,7 @@ pytest -n auto
 
 #### Component Tests
 
-Location: `platform/frontend/__tests__/components/`
+Location: `gcb-platform/frontend/__tests__/components/`
 
 ```typescript
 // Example: Test leaderboard table component
@@ -262,7 +260,7 @@ describe('LeaderboardTable', () => {
 
 #### Hook Tests
 
-Location: `platform/frontend/__tests__/hooks/`
+Location: `gcb-platform/frontend/__tests__/hooks/`
 
 ```typescript
 // Example: Test leaderboard data hook
@@ -297,7 +295,7 @@ describe('useLeaderboard', () => {
 #### Running Frontend Tests
 
 ```bash
-cd platform/frontend
+cd gcb-platform/frontend
 
 # Run all tests
 pnpm test
@@ -313,136 +311,6 @@ pnpm test LeaderboardTable.test.tsx
 
 # Update snapshots
 pnpm test -u
-```
-
----
-
-## CLI Builder Testing
-
-### Unit Tests
-
-Location: `cli/builder/tests/unit/`
-
-```python
-# Example: Test question validation
-import pytest
-from pydantic import ValidationError
-from gcb_builder.core.schemas import QuestionCreate
-
-def test_question_create_valid():
-    """Test valid question creation."""
-    question = QuestionCreate(
-        content="Write a prayer for a missionary feeling discouraged.",
-        category_id="3.5",
-        tier=1,
-        expected_verdict="ACCEPTED",
-        tests_capability=True,
-        tests_willingness=True,
-    )
-    assert question.content == "Write a prayer for a missionary feeling discouraged."
-
-def test_question_content_too_short():
-    """Test that short content is rejected."""
-    with pytest.raises(ValidationError) as exc_info:
-        QuestionCreate(
-            content="Too short",  # Less than 20 chars
-            category_id="3.5",
-            tier=1,
-            expected_verdict="ACCEPTED",
-            tests_capability=True,
-            tests_willingness=True,
-        )
-    assert "Question content too short" in str(exc_info.value)
-
-def test_question_invalid_tier():
-    """Test that invalid tier is rejected."""
-    with pytest.raises(ValidationError):
-        QuestionCreate(
-            content="A sufficiently long question content here.",
-            category_id="3.5",
-            tier=4,  # Invalid: must be 1, 2, or 3
-            expected_verdict="ACCEPTED",
-            tests_capability=True,
-            tests_willingness=True,
-        )
-```
-
-### Generation Tests
-
-Location: `cli/builder/tests/generation/`
-
-```python
-# Example: Test prompt template loading
-import pytest
-from gcb_builder.generation.prompts import load_prompt_template
-
-def test_load_tier1_prompt():
-    """Test loading Tier 1 prompt template."""
-    template = load_prompt_template("tier1", "3.1")
-    
-    assert template is not None
-    assert "{category_description}" in template
-    assert "{example_questions}" in template
-
-def test_load_nonexistent_prompt():
-    """Test loading nonexistent prompt returns None."""
-    template = load_prompt_template("tier1", "99.99")
-    
-    assert template is None
-```
-
-### Export Tests
-
-Location: `cli/builder/tests/export/`
-
-```python
-# Example: Test version export format
-import pytest
-import json
-from gcb_builder.versioning.exporter import export_version
-
-def test_export_format_structure(populated_question_bank):
-    """Test exported JSON has correct structure."""
-    exported = export_version("3.0")
-    data = json.loads(exported)
-    
-    assert "format_version" in data
-    assert "benchmark_version" in data
-    assert "questions" in data
-    assert "judge_prompts" in data
-    assert "scoring" in data
-
-def test_export_question_count(populated_question_bank):
-    """Test export includes expected question count."""
-    exported = export_version("3.0")
-    data = json.loads(exported)
-    
-    questions = data["questions"]
-    tier1 = [q for q in questions if q["tier"] == 1]
-    tier2 = [q for q in questions if q["tier"] == 2]
-    tier3 = [q for q in questions if q["tier"] == 3]
-    
-    assert len(tier1) == 210  # Full expected build
-    assert len(tier2) == 60
-    assert len(tier3) == 30
-```
-
-### Running Builder Tests
-
-```bash
-cd cli/builder
-source venv/bin/activate
-
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=gcb_builder --cov-report=html
-
-# Run specific category
-pytest tests/unit/
-pytest tests/generation/
-pytest tests/export/
 ```
 
 ---
@@ -606,7 +474,7 @@ pytest -m "not slow"  # Skip slow tests
 
 ### API Integration Tests
 
-Location: `platform/backend/tests/integration/`
+Location: `gcb-platform/backend/tests/integration/`
 
 ```python
 # Example: Test full test execution flow
@@ -702,7 +570,7 @@ def test_cli_submission_to_platform(
 
 ### Playwright Setup
 
-Location: `platform/e2e/`
+Location: `gcb-platform/e2e/`
 
 ```typescript
 // playwright.config.ts
@@ -729,7 +597,7 @@ export default defineConfig({
 
 ### E2E Test Examples
 
-Location: `platform/e2e/tests/`
+Location: `gcb-platform/e2e/tests/`
 
 ```typescript
 // Example: Test leaderboard viewing
@@ -786,7 +654,7 @@ test.describe('Authentication', () => {
 ### Running E2E Tests
 
 ```bash
-cd platform/e2e
+cd gcb-platform/e2e
 
 # Install Playwright browsers
 npx playwright install
@@ -996,11 +864,11 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          cd platform/backend
+          cd gcb-platform/backend
           pip install -e ".[dev]"
       - name: Run tests
         run: |
-          cd platform/backend
+          cd gcb-platform/backend
           pytest --cov=app --cov-report=xml
       - name: Upload coverage
         uses: codecov/codecov-action@v3
@@ -1017,11 +885,11 @@ jobs:
           version: 8
       - name: Install dependencies
         run: |
-          cd platform/frontend
+          cd gcb-platform/frontend
           pnpm install
       - name: Run tests
         run: |
-          cd platform/frontend
+          cd gcb-platform/frontend
           pnpm test:ci
 
   e2e-tests:
@@ -1035,13 +903,13 @@ jobs:
         run: npx playwright install --with-deps
       - name: Run E2E tests
         run: |
-          cd platform/e2e
+          cd gcb-platform/e2e
           npx playwright test
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: playwright-report
-          path: platform/e2e/playwright-report/
+          path: gcb-platform/e2e/playwright-report/
 ```
 
 ---

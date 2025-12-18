@@ -52,8 +52,6 @@ When community testers run the benchmark locally using the CLI Runner, they can 
 ```
 
 > **⚠️ Document Scope:** This specification covers submitting **test results** (model responses and verdicts) from the CLI Runner to the Platform for moderation and leaderboard publication.
->
-> This is **NOT** the specification for uploading new benchmark versions. For publishing new question sets, see [spec-builder-to-platform.md](./spec-builder-to-platform.md).
 
 ---
 
@@ -736,7 +734,6 @@ Get user's submission history.
 - [spec-api-endpoints.md](./spec-api-endpoints.md) — API documentation (Section 4: Submissions)
 - [cli-runner-specifications.md](./cli-runner-specifications.md) — CLI Runner implementation
 - [process-moderation-process.md](./process-moderation-process.md) — Moderation workflow
-- [spec-builder-to-platform.md](./spec-builder-to-platform.md) — Benchmark version uploads (different workflow)
 
 ---
 

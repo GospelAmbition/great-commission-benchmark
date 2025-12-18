@@ -1220,10 +1220,9 @@ Configuration stored in `~/.gcb-runner/config.json`:
 - **`gcb-runner versions` command**
 - Documentation
 
-### Phase 5: Version Management
+### Phase 6: Version Management
 
-- **Bundle compilation tooling** (in gcb-builder)
-- **Multi-version CLI releases**
+- Multi-version CLI releases
 - Version selection UX
 - Checksum verification
 
@@ -1329,15 +1328,3 @@ The CLI fetches available benchmark versions from the Platform API. All versions
 
 ---
 
-## Differences from Version Builder CLI
-
-| Feature | GCB Runner | GCB Version Builder |
-|---------|------------|---------------------|
-| Question Generation | ❌ | ✓ |
-| Question Curation | ❌ | ✓ |
-| Judge Development | ❌ | ✓ |
-| Version Building | ❌ | ✓ |
-| Run Benchmarks | ✓ | Limited testing only |
-| Platform Upload | ✓ | ❌ |
-| Target Users | Community | Version Builders |
-| Complexity | Simple | Full-featured |

@@ -1,6 +1,6 @@
 # Great Commission Benchmark — Deployment Procedures
 
-This document defines the deployment procedures, environments, and release workflows for the Great Commission Benchmark platform and CLI tools.
+This document defines the deployment procedures, environments, and release workflows for the Great Commission Benchmark platform and CLI Runner.
 
 **Last Updated:** December 17, 2025
 
@@ -31,7 +31,6 @@ This document defines the deployment procedures, environments, and release workf
 | **Frontend** | Railway | Git push to `main` |
 | **Backend API** | Railway | Git push to `main` |
 | **Database** | Railway PostgreSQL | Managed service |
-| **CLI Builder** | PyPI | Manual release |
 | **CLI Runner** | PyPI | Manual release |
 
 ### Deployment Philosophy
@@ -113,7 +112,7 @@ jobs:
       - name: Run pre-deployment checks
         run: |
           # Verify build succeeds
-          cd platform/frontend && pnpm build
+          cd gcb-platform/frontend && pnpm build
           cd ../backend && pip install -e . && pytest
       
       - name: Notify deployment start
@@ -195,7 +194,7 @@ railway logs --service fastapi-backend
 
 ### PyPI Release Process
 
-Both CLI tools (`gcb-builder` and `gcb-runner`) are distributed via PyPI.
+The CLI Runner (`gcb-runner`) is distributed via PyPI.
 
 #### Pre-Release Checklist
 
@@ -285,7 +284,7 @@ railway run --service fastapi-backend -- alembic upgrade head
 
 ```bash
 # After making model changes
-cd platform/backend
+cd gcb-platform/backend
 source venv/bin/activate
 
 # Generate migration

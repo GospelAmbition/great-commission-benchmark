@@ -96,3 +96,4 @@ archive/*.zip
 
 # Private governance documents
 documents/Founding-Committee.md
+/questions/*

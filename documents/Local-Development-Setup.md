@@ -11,13 +11,12 @@ This document provides step-by-step instructions for setting up a local developm
 1. [Prerequisites](#prerequisites)
 2. [Repository Setup](#repository-setup)
 3. [Platform Development](#platform-development)
-4. [CLI Builder Development](#cli-builder-development)
-5. [CLI Runner Development](#cli-runner-development)
-6. [Environment Variables](#environment-variables)
-7. [Database Setup](#database-setup)
-8. [Running Services Locally](#running-services-locally)
-9. [IDE Configuration](#ide-configuration)
-10. [Troubleshooting](#troubleshooting)
+4. [CLI Runner Development](#cli-runner-development)
+5. [Environment Variables](#environment-variables)
+6. [Database Setup](#database-setup)
+7. [Running Services Locally](#running-services-locally)
+8. [IDE Configuration](#ide-configuration)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -77,11 +76,10 @@ cd great-commission-benchmark
 
 ```
 great-commission-benchmark/
-├── platform/                 # Web platform
+├── gcb-platform/              # Web platform
 │   ├── frontend/             # Next.js application
 │   └── backend/              # FastAPI application
 ├── cli/
-│   ├── builder/              # gcb-builder CLI tool
 │   └── runner/               # gcb-runner CLI tool
 ├── benchmark/                # Specification documents
 ├── documents/                # Legal and process documents
@@ -96,7 +94,7 @@ great-commission-benchmark/
 
 ```bash
 # Navigate to frontend directory
-cd platform/frontend
+cd gcb-platform/frontend
 
 # Install dependencies
 pnpm install
@@ -114,7 +112,7 @@ The frontend will be available at `http://localhost:3000`.
 
 ```bash
 # Navigate to backend directory
-cd platform/backend
+cd gcb-platform/backend
 
 # Create virtual environment
 python -m venv venv
@@ -146,68 +144,16 @@ For full local development, run both services in separate terminals:
 
 **Terminal 1 (Frontend):**
 ```bash
-cd platform/frontend
+cd gcb-platform/frontend
 pnpm dev
 ```
 
 **Terminal 2 (Backend):**
 ```bash
-cd platform/backend
+cd gcb-platform/backend
 source venv/bin/activate
 uvicorn app.main:app --reload --port 8000
 ```
-
----
-
-## CLI Builder Development
-
-The GCB Builder CLI is used by version builders to create and curate benchmark questions.
-
-### Setup
-
-```bash
-# Navigate to builder directory
-cd cli/builder
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # or .\venv\Scripts\activate on Windows
-
-# Install in editable mode with dev dependencies
-pip install -e ".[dev]"
-
-# Copy environment template
-cp .env.example .env
-
-# Verify installation
-gcb-builder --help
-```
-
-### Development Workflow
-
-```bash
-# Run CLI commands during development
-gcb-builder generate --category 3.1
-
-# Launch database explorer
-gcb-builder explore
-# Opens Datasette at http://localhost:8001
-
-# Run tests
-pytest
-
-# Type checking
-mypy gcb_builder/
-```
-
-### Database Location
-
-The builder uses SQLite for the question bank:
-
-| Environment | Location |
-|-------------|----------|
-| **Development** | `./data/questions.db` |
-| **Production** | `~/.gcb-builder/questions.db` |
 
 ---
 
@@ -315,20 +261,6 @@ ENVIRONMENT=development
 SECRET_KEY=dev-secret-key-change-in-production
 ```
 
-### CLI Builder (.env)
-
-```bash
-# LLM Backend (primary)
-OPENROUTER_API_KEY=sk-or-xxx
-
-# Alternative backends (optional)
-OPENAI_API_KEY=sk-xxx
-ANTHROPIC_API_KEY=sk-ant-xxx
-
-# Database path (optional, defaults to ~/.gcb-builder/questions.db)
-GCB_BUILDER_DB_PATH=./data/questions.db
-```
-
 ### CLI Runner (.env)
 
 ```bash
@@ -384,7 +316,7 @@ docker run --name gcb-postgres \
 
 ```bash
 # Navigate to backend
-cd platform/backend
+cd gcb-platform/backend
 source venv/bin/activate
 
 # Run all migrations
@@ -415,11 +347,11 @@ echo "Starting Great Commission Benchmark development environment..."
 tmux new-session -d -s gcb
 
 # Frontend
-tmux send-keys -t gcb "cd platform/frontend && pnpm dev" C-m
+tmux send-keys -t gcb "cd gcb-platform/frontend && pnpm dev" C-m
 
 # Backend
 tmux split-window -h -t gcb
-tmux send-keys -t gcb "cd platform/backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000" C-m
+tmux send-keys -t gcb "cd gcb-platform/backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000" C-m
 
 # Attach to session
 tmux attach -t gcb
@@ -432,7 +364,6 @@ tmux attach -t gcb
 | **Frontend** | http://localhost:3000 | Next.js application |
 | **Backend API** | http://localhost:8000 | FastAPI endpoints |
 | **API Docs** | http://localhost:8000/docs | Swagger UI |
-| **Builder Explorer** | http://localhost:8001 | Datasette (when running) |
 | **Runner Viewer** | http://localhost:8080 | Results dashboard (when running) |
 
 ---
@@ -455,7 +386,7 @@ Install the following extensions:
 
 ```json
 {
-  "python.defaultInterpreterPath": "./platform/backend/venv/bin/python",
+  "python.defaultInterpreterPath": "./gcb-platform/backend/venv/bin/python",
   "python.analysis.typeCheckingMode": "basic",
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -471,10 +402,9 @@ Install the following extensions:
 ### PyCharm
 
 1. Open the project root folder
-2. Configure Python interpreter for each CLI project:
-   - `cli/builder/venv/bin/python`
+2. Configure Python interpreter for each project:
    - `cli/runner/venv/bin/python`
-   - `platform/backend/venv/bin/python`
+   - `gcb-platform/backend/venv/bin/python`
 3. Enable Django/FastAPI support if prompted
 4. Configure pytest as the test runner
 
