@@ -43,8 +43,18 @@ app.include_router(api_router, prefix="/api")
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "ok"}
+    """Health check endpoint - returns ok even if database is not ready"""
+    try:
+        # Try to check database connectivity without failing
+        from sqlalchemy import text
+        from app.db.base import engine
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"status": "ok", "database": "connected"}
+    except Exception:
+        # Return ok even if database check fails - app can start without DB
+        # Railway will retry, and once DB is ready, it will show connected
+        return {"status": "ok", "database": "checking"}
 
 
 if __name__ == "__main__":
