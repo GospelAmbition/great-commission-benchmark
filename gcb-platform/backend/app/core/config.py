@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     AUTH0_AUDIENCE: str = ""
     
     # CORS (stored as string, parsed to list)
-    CORS_ORIGINS_STR: str = "http://localhost:3000,http://localhost:3001"
+    CORS_ORIGINS_STR: str = "http://localhost:3000,http://localhost:3001,https://frontend-production-8b79.up.railway.app"
     
     @property
     def CORS_ORIGINS(self) -> List[str]:

@@ -43,27 +43,12 @@ app.include_router(api_router, prefix="/api")
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint - returns ok immediately, then checks database.
+    """Health check endpoint - returns ok immediately.
     
     This ensures the app can pass healthchecks even before the database is ready.
+    The health check should be fast and not block on external dependencies.
     """
-    # Return ok immediately - the app is running and can accept requests
-    # Database connectivity is checked separately for monitoring purposes
-    db_status = "unknown"
-    try:
-        from sqlalchemy import text
-        from app.db.base import get_engine_safe
-        engine = get_engine_safe()
-        if engine:
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            db_status = "connected"
-        else:
-            db_status = "not_configured"
-    except Exception:
-        db_status = "checking"
-    
-    return {"status": "ok", "database": db_status}
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":

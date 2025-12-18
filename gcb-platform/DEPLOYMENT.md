@@ -2,6 +2,16 @@
 
 This guide covers deploying the GCB platform to production.
 
+## Current Test Deployment (Railway)
+
+| Service | URL |
+|---------|-----|
+| Backend | https://backend-production-ba51.up.railway.app |
+| Frontend | https://frontend-production-8b79.up.railway.app |
+| Health Check | https://backend-production-ba51.up.railway.app/health |
+
+These are temporary Railway URLs for testing. Custom domains (gcb.app, api.gcb.app) will be configured later.
+
 ## Prerequisites
 
 Before deploying, ensure you have:
@@ -93,6 +103,21 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_xxxxxxxx
 # Analytics (optional)
 NEXT_PUBLIC_UMAMI_SCRIPT_URL=https://analytics.gcb.app/umami.js
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=your-website-id
+```
+
+### Railway Test Environment Variables
+
+For the current Railway test deployment:
+
+**Backend:**
+```env
+CORS_ORIGINS_STR=http://localhost:3000,https://frontend-production-8b79.up.railway.app
+```
+
+**Frontend:**
+```env
+NEXT_PUBLIC_API_URL=https://backend-production-ba51.up.railway.app
+AUTH0_BASE_URL=https://frontend-production-8b79.up.railway.app
 ```
 
 ## Database Migration
