@@ -15,6 +15,7 @@ from app.db.models.model import Model
 from app.db.models.question import Question
 from app.db.models.question_set import QuestionSet
 from app.db.models.moderation_log import ModerationLog
+from app.db.models.user_api_key import UserAPIKey
 from app.schemas.admin import (
     UserListItem,
     UserListResponse,
@@ -1049,6 +1050,10 @@ async def get_admin_stats(
     
     total_moderation_logs = db.query(ModerationLog).count()
     
+    # API key stats
+    total_api_keys = db.query(UserAPIKey).count()
+    active_api_keys = db.query(UserAPIKey).filter(UserAPIKey.is_active == True).count()
+    
     return AdminStatsResponse(
         users={
             "total": total_users,
@@ -1066,5 +1071,9 @@ async def get_admin_stats(
         moderation={
             "pending_reviews": pending_reviews,
             "total_reviews": total_moderation_logs
+        },
+        api_keys={
+            "total": total_api_keys,
+            "active": active_api_keys
         }
     )

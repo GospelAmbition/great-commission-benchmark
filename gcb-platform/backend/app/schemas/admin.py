@@ -114,6 +114,7 @@ class AdminStatsResponse(BaseModel):
     tests: Dict
     revenue: Dict
     moderation: Dict
+    api_keys: Dict
 
 
 class CategoryStats(BaseModel):

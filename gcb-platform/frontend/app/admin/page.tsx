@@ -17,15 +17,30 @@ export default function AdminDashboardPage() {
   async function loadDashboardData() {
     setLoading(true);
     try {
-      // In a real implementation, this would call admin API endpoints
+      const response = await fetch("/api/admin/stats");
+      if (!response.ok) {
+        throw new Error("Failed to fetch stats");
+      }
+      const data = await response.json();
+      setStats({
+        total_users: data.users?.total || 0,
+        total_tests: data.tests?.total || 0,
+        total_revenue: data.revenue?.total || 0,
+        moderation_queue_size: data.moderation?.pending_reviews || 0,
+        total_api_keys: data.api_keys?.total || 0,
+        active_api_keys: data.api_keys?.active || 0,
+      });
+    } catch (error) {
+      console.error("Failed to load admin dashboard:", error);
+      // Set fallback values on error
       setStats({
         total_users: 0,
         total_tests: 0,
         total_revenue: 0,
         moderation_queue_size: 0,
+        total_api_keys: 0,
+        active_api_keys: 0,
       });
-    } catch (error) {
-      console.error("Failed to load admin dashboard:", error);
     } finally {
       setLoading(false);
     }
@@ -35,8 +50,8 @@ export default function AdminDashboardPage() {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
-        <div className="grid gap-6 md:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid gap-6 md:grid-cols-5">
+          {[1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} className="h-32" />
           ))}
         </div>
@@ -54,7 +69,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid gap-6 md:grid-cols-4 mb-8">
+      <div className="grid gap-6 md:grid-cols-5 mb-8">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -95,6 +110,19 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{stats?.moderation_queue_size || 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              API Keys Issued
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.active_api_keys || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats?.total_api_keys || 0} total ({stats?.total_api_keys - stats?.active_api_keys || 0} revoked)
+            </p>
           </CardContent>
         </Card>
       </div>
