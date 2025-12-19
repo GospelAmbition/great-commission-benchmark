@@ -122,8 +122,9 @@ require_admin = require_role("admin")
 
 def is_fee_waived(user: User) -> bool:
     """
-    Check if user has CLI submission fee waived.
+    Check if user has fees waived.
     
+    This applies to both platform test requests and CLI submission fees.
     Fee is automatically waived for moderators and admins.
     Regular users can have fee waived via the fee_waived flag.
     

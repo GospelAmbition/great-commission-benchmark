@@ -1,5 +1,5 @@
 """CommunitySubmission model"""
-from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey
+from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

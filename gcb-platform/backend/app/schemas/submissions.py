@@ -16,3 +16,7 @@ class SubmissionUploadResponse(BaseModel):
     status: str
     validation_errors: Optional[List[str]] = None
     message: str
+    fee_waived: Optional[bool] = None  # Whether fee was waived
+    payment_required: Optional[bool] = None  # Whether payment is required
+    payment_intent_id: Optional[str] = None  # Stripe payment intent ID if payment required
+    payment_url: Optional[str] = None  # URL to complete payment

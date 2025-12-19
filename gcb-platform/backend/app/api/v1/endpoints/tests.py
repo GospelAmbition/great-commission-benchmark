@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.core.auth import get_db
-from app.core.auth import require_auth
+from app.core.auth import require_auth, is_fee_waived
 from app.db.models.user import User
 from app.db.models.test_run import TestRun
 from app.db.models.model import Model
@@ -74,14 +74,20 @@ async def create_test(
     )
     cost_estimate = float(pricing_breakdown["total"])
     
+    # Check if fee is waived for this user
+    fee_waived = is_fee_waived(current_user)
+    
     # Create test run
+    # Note: status is "pending_payment" for all tests, but fee-waived users have
+    # payment_status="succeeded" so they can start the test immediately
     test_run = TestRun(
         user_id=current_user.id,
         model_id=request.model_id,
         question_set_id=question_set.id,
         methodology_version_id=methodology_version.id,
         status="pending_payment",
-        total_cost=cost_estimate
+        total_cost=0.0 if fee_waived else cost_estimate,
+        payment_status="succeeded" if fee_waived else None
     )
     db.add(test_run)
     db.commit()
@@ -92,9 +98,10 @@ async def create_test(
     
     return CreateTestResponse(
         test_id=test_run.id,
-        cost_estimate=cost_estimate,
+        cost_estimate=0.0 if fee_waived else cost_estimate,
         payment_intent_id=payment_intent_id,
-        status=test_run.status
+        status=test_run.status,
+        fee_waived=fee_waived
     )
 
 
@@ -276,6 +283,9 @@ async def retest(
     if original_test.status != "completed":
         raise HTTPException(status_code=400, detail="Can only retest completed tests")
     
+    # Check if fee is waived for this user
+    fee_waived = is_fee_waived(current_user)
+    
     # Create new test run with same parameters
     new_test = TestRun(
         user_id=current_user.id,
@@ -283,7 +293,8 @@ async def retest(
         question_set_id=original_test.question_set_id,
         methodology_version_id=original_test.methodology_version_id,
         status="pending_payment",
-        total_cost=original_test.total_cost
+        total_cost=0.0 if fee_waived else original_test.total_cost,
+        payment_status="succeeded" if fee_waived else None
     )
     db.add(new_test)
     db.commit()
@@ -292,7 +303,8 @@ async def retest(
     return RetestResponse(
         new_test_id=new_test.id,
         original_test_id=original_test.id,
-        cost_estimate=float(new_test.total_cost or 0)
+        cost_estimate=0.0 if fee_waived else float(new_test.total_cost or 0),
+        fee_waived=fee_waived
     )
 
 

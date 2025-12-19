@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -42,6 +43,8 @@ interface AdminUser {
   created_at: string;
   test_count: number;
   last_login?: string;
+  fee_waived?: boolean;
+  fee_waived_reason?: string | null;
 }
 
 export default function AdminUsersPage() {
@@ -56,6 +59,9 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [newRole, setNewRole] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [feeWaiverUser, setFeeWaiverUser] = useState<AdminUser | null>(null);
+  const [feeWaiverReason, setFeeWaiverReason] = useState<string>("");
+  const [feeWaiverSaving, setFeeWaiverSaving] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
@@ -83,10 +89,10 @@ export default function AdminUsersPage() {
         ...(roleFilter !== "all" && { role: roleFilter }),
       });
 
-      const response = await fetch(`/api/admin/users?${params}`);
+      const response = await fetch(`/api/v1/admin/users?${params}`);
       if (response.ok) {
         const data = await response.json();
-        setUsers(data.items || []);
+        setUsers(data.users || []);
         setPagination((prev) => ({ ...prev, total: data.total || 0 }));
       } else {
         // Use placeholder data for demo
@@ -131,7 +137,7 @@ export default function AdminUsersPage() {
     if (!selectedUser || !newRole) return;
     setSaving(true);
     try {
-      const response = await fetch(`/api/admin/users/${selectedUser.id}/role`, {
+      const response = await fetch(`/api/v1/admin/users/${selectedUser.id}/role`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRole }),
@@ -150,6 +156,37 @@ export default function AdminUsersPage() {
       toast.error("Failed to update user role");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleFeeWaiverToggle() {
+    if (!feeWaiverUser) return;
+    setFeeWaiverSaving(true);
+    try {
+      const waived = !feeWaiverUser.fee_waived;
+      const response = await fetch(`/api/v1/admin/users/${feeWaiverUser.id}/fee-waiver`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          waived,
+          reason: feeWaiverReason || undefined
+        }),
+      });
+
+      if (response.ok) {
+        toast.success(`Fee waiver ${waived ? 'granted' : 'revoked'}`);
+        setFeeWaiverUser(null);
+        setFeeWaiverReason("");
+        loadUsers();
+      } else {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to update fee waiver");
+      }
+    } catch (error: any) {
+      console.error("Failed to update fee waiver:", error);
+      toast.error(error.message || "Failed to update fee waiver");
+    } finally {
+      setFeeWaiverSaving(false);
     }
   }
 
@@ -238,6 +275,7 @@ export default function AdminUsersPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Fee Waiver</TableHead>
                 <TableHead>Tests</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead>Last Login</TableHead>
@@ -262,6 +300,15 @@ export default function AdminUsersPage() {
                       {u.role}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    {(u.role === "moderator" || u.role === "admin" || u.fee_waived) ? (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        {u.role === "moderator" || u.role === "admin" ? "Auto-waived" : "Waived"}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>{u.test_count}</TableCell>
                   <TableCell>
                     {new Date(u.created_at).toLocaleDateString()}
@@ -272,16 +319,30 @@ export default function AdminUsersPage() {
                       : "—"}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedUser(u);
-                        setNewRole(u.role);
-                      }}
-                    >
-                      Edit Role
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser(u);
+                          setNewRole(u.role);
+                        }}
+                      >
+                        Edit Role
+                      </Button>
+                      {(u.role === "user") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setFeeWaiverUser(u);
+                            setFeeWaiverReason(u.fee_waived_reason || "");
+                          }}
+                        >
+                          {u.fee_waived ? "Revoke Waiver" : "Grant Waiver"}
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -345,6 +406,62 @@ export default function AdminUsersPage() {
             </Button>
             <Button onClick={handleRoleChange} disabled={saving}>
               {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fee Waiver Dialog */}
+      <Dialog open={!!feeWaiverUser} onOpenChange={() => setFeeWaiverUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {feeWaiverUser?.fee_waived ? "Revoke" : "Grant"} Fee Waiver
+            </DialogTitle>
+            <DialogDescription>
+              {feeWaiverUser?.fee_waived 
+                ? `Revoke fee waiver for ${feeWaiverUser?.name} (${feeWaiverUser?.email})`
+                : `Grant fee waiver for ${feeWaiverUser?.name} (${feeWaiverUser?.email}). This waives all fees for both platform test requests and CLI submission uploads.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {feeWaiverUser?.fee_waived_reason && (
+              <div className="p-3 bg-muted rounded-md">
+                <p className="text-sm font-medium mb-1">Current Reason:</p>
+                <p className="text-sm text-muted-foreground">{feeWaiverUser.fee_waived_reason}</p>
+              </div>
+            )}
+            <div>
+              <Label htmlFor="fee-waiver-reason">Reason (Optional)</Label>
+              <Input
+                id="fee-waiver-reason"
+                placeholder="e.g., Stewardship team member"
+                value={feeWaiverReason}
+                onChange={(e) => setFeeWaiverReason(e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Note: Moderators and admins automatically have fee waived by role.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setFeeWaiverUser(null);
+              setFeeWaiverReason("");
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleFeeWaiverToggle} 
+              disabled={feeWaiverSaving}
+              variant={feeWaiverUser?.fee_waived ? "destructive" : "default"}
+            >
+              {feeWaiverSaving 
+                ? "Saving..." 
+                : feeWaiverUser?.fee_waived 
+                  ? "Revoke Waiver" 
+                  : "Grant Waiver"}
             </Button>
           </DialogFooter>
         </DialogContent>

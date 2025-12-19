@@ -20,6 +20,8 @@ from app.schemas.admin import (
     UserListResponse,
     UpdateUserRoleRequest,
     UpdateUserRoleResponse,
+    UpdateFeeWaiverRequest,
+    UpdateFeeWaiverResponse,
     QuestionImportRequest,
     QuestionImportResponse,
     QuestionCreateRequest,
@@ -69,7 +71,9 @@ async def list_users(
             name=user.name,
             role=user.role,
             created_at=user.created_at.isoformat() if user.created_at else "",
-            test_count=test_count
+            test_count=test_count,
+            fee_waived=user.fee_waived,
+            fee_waived_reason=user.fee_waived_reason
         ))
     
     return UserListResponse(users=user_items, total=total)
@@ -108,6 +112,42 @@ async def update_user_role(
         user_id=user.id,
         role=user.role,
         message=f"User role updated from {old_role} to {request.role}"
+    )
+
+
+@router.put("/users/{user_id}/fee-waiver", response_model=UpdateFeeWaiverResponse)
+async def update_fee_waiver(
+    user_id: UUID,
+    request: UpdateFeeWaiverRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Update user fee waiver status"""
+    user = db.query(User).filter(User.id == user_id).first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Note: Moderators and admins automatically have fee waived by role
+    # This flag is for granting waiver to regular users (e.g., stewardship team)
+    
+    user.fee_waived = request.waived
+    user.fee_waived_reason = request.reason
+    user.fee_waived_at = datetime.utcnow() if request.waived else None
+    user.fee_waived_by = current_user.id if request.waived else None
+    
+    db.commit()
+    db.refresh(user)
+    
+    message = f"Fee waiver {'granted' if request.waived else 'revoked'}"
+    if request.reason:
+        message += f": {request.reason}"
+    
+    return UpdateFeeWaiverResponse(
+        user_id=user.id,
+        fee_waived=user.fee_waived,
+        fee_waived_reason=user.fee_waived_reason,
+        message=message
     )
 
 

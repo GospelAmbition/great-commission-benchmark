@@ -1,17 +1,20 @@
 """Submissions API endpoints"""
 from typing import List
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.core.auth import get_db
-from app.core.auth import require_auth
+from app.core.auth import require_auth, is_fee_waived
 from app.db.models.user import User
 from app.db.models.community_submission import CommunitySubmission
 from app.schemas.submissions import (
     SubmissionUploadRequest,
     SubmissionUploadResponse
 )
+from app.services.payment import PaymentService
+from app.services.pricing import PricingService
 
 router = APIRouter()
 
@@ -43,25 +46,75 @@ async def upload_submission(
     # Extract version info
     version = export_data.get("version", "1.0")
     
-    # Create submission record
-    submission = CommunitySubmission(
-        user_id=current_user.id,
-        model_name=model_name,
-        cli_version=export_data.get("cli_version", "1.0"),
-        question_set_version=version,
-        results_package=export_data,  # Store full export as JSONB
-        status="pending"
-    )
-    db.add(submission)
-    db.commit()
-    db.refresh(submission)
+    # Check if fee is waived
+    fee_is_waived = is_fee_waived(current_user)
     
-    return SubmissionUploadResponse(
-        submission_id=submission.id,
-        status=submission.status,
-        validation_errors=None,
-        message="Submission received and queued for review"
-    )
+    if fee_is_waived:
+        # Create submission directly without payment
+        submission = CommunitySubmission(
+            user_id=current_user.id,
+            model_name=model_name,
+            cli_version=export_data.get("cli_version", "1.0"),
+            question_set_version=version,
+            results_package=export_data,  # Store full export as JSONB
+            status="pending",
+            fee_waived=True
+        )
+        db.add(submission)
+        db.commit()
+        db.refresh(submission)
+        
+        return SubmissionUploadResponse(
+            submission_id=submission.id,
+            status=submission.status,
+            validation_errors=None,
+            message="Submission received and queued for review",
+            fee_waived=True,
+            payment_required=False
+        )
+    else:
+        # Fee is required - create payment intent
+        # Calculate submission fee (fixed $20 for CLI submissions)
+        submission_fee = PricingService.SUBMISSION_FEE
+        
+        # Create payment intent
+        payment_intent = PaymentService.create_payment_intent(
+            amount=submission_fee,
+            currency="usd",
+            metadata={
+                "type": "cli_submission",
+                "user_id": str(current_user.id),
+                "model_name": model_name,
+                "version": version
+            },
+            customer_email=current_user.email
+        )
+        
+        # Create submission record with payment pending
+        submission = CommunitySubmission(
+            user_id=current_user.id,
+            model_name=model_name,
+            cli_version=export_data.get("cli_version", "1.0"),
+            question_set_version=version,
+            results_package=export_data,  # Store full export as JSONB
+            status="pending_payment",  # Status indicates payment required
+            fee_waived=False,
+            payment_id=payment_intent["id"]
+        )
+        db.add(submission)
+        db.commit()
+        db.refresh(submission)
+        
+        return SubmissionUploadResponse(
+            submission_id=submission.id,
+            status=submission.status,
+            validation_errors=None,
+            message="Payment required to complete submission",
+            fee_waived=False,
+            payment_required=True,
+            payment_intent_id=payment_intent["id"],
+            payment_url=f"/submissions/{submission.id}/payment"  # Frontend payment page
+        )
 
 
 def validate_export_schema(export_data: dict) -> List[str]:

@@ -1,5 +1,5 @@
 """User model"""
-from sqlalchemy import Column, String, DateTime, Text, Boolean
+from sqlalchemy import Column, String, DateTime, Text, Boolean, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid

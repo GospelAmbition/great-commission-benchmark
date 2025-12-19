@@ -12,6 +12,8 @@ class UserListItem(BaseModel):
     role: str
     created_at: str
     test_count: int
+    fee_waived: Optional[bool] = None
+    fee_waived_reason: Optional[str] = None
 
 
 class UserListResponse(BaseModel):
@@ -29,6 +31,20 @@ class UpdateUserRoleResponse(BaseModel):
     """Update user role response"""
     user_id: UUID
     role: str
+    message: str
+
+
+class UpdateFeeWaiverRequest(BaseModel):
+    """Update fee waiver request"""
+    waived: bool
+    reason: Optional[str] = None
+
+
+class UpdateFeeWaiverResponse(BaseModel):
+    """Update fee waiver response"""
+    user_id: UUID
+    fee_waived: bool
+    fee_waived_reason: Optional[str] = None
     message: str
 
 

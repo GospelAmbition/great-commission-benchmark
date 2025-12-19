@@ -10,6 +10,9 @@ class PricingService:
     # Fixed processing fee in USD
     PROCESSING_FEE = Decimal("2.00")
     
+    # CLI submission fee in USD
+    SUBMISSION_FEE = Decimal("20.00")
+    
     @staticmethod
     async def calculate_test_cost(
         model_id: str,

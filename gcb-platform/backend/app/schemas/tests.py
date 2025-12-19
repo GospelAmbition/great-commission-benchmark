@@ -18,6 +18,7 @@ class CreateTestResponse(BaseModel):
     cost_estimate: float
     payment_intent_id: Optional[str] = None
     status: str
+    fee_waived: bool = False
 
 
 class TestProgressResponse(BaseModel):
@@ -49,6 +50,7 @@ class RetestResponse(BaseModel):
     new_test_id: UUID
     original_test_id: UUID
     cost_estimate: float
+    fee_waived: bool = False
 
 
 class RetestHistoryItem(BaseModel):
