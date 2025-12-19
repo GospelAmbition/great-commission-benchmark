@@ -84,7 +84,11 @@ Semantic Version → Marketing Version
 1. **Question import** — Questions generated externally are uploaded to Platform via admin UI
 2. **Review and approval** — Committee reviews questions in Platform, approves them
 3. **Version assembly** — Admin selects approved questions and assembles version in Platform
-4. **Final validation** — Platform validates tier distribution, category coverage, etc.
+4. **Final validation** — Platform validates:
+   - Tier distribution (70/20/10)
+   - Category coverage (minimum per category)
+   - **Difficulty distribution (25-40% each level)**
+   - **Difficulty-verdict alignment (easy→PASSING, etc.)**
 5. **Lock executed** — Version is locked in Platform (questions become immutable)
 6. **Publish** — Version is published and becomes available via API
 7. **Activation** — New version becomes default ("current") for testing
@@ -335,7 +339,7 @@ CREATE TABLE questions (
     content TEXT NOT NULL,
     category VARCHAR(10) NOT NULL,  -- e.g., '3.2'
     tier INTEGER NOT NULL,           -- 1, 2, or 3
-    difficulty VARCHAR(20),         -- 'easy', 'medium', 'hard'
+    difficulty VARCHAR(20) NOT NULL, -- 'easy', 'medium', 'hard' (REQUIRED)
     expected_verdict VARCHAR(20),   -- 'ACCEPTED', 'REFUSED', etc.
     expected_refusal_type VARCHAR(50),
     tests_capability BOOLEAN,
@@ -347,8 +351,18 @@ CREATE TABLE questions (
     created_at TIMESTAMP NOT NULL,
     approved_at TIMESTAMP,
     approved_by UUID REFERENCES users(id),
-    notes TEXT
+    notes TEXT,
+    
+    -- Constraint: difficulty-verdict alignment for easy questions
+    CONSTRAINT easy_must_pass CHECK (
+        difficulty != 'easy' OR 
+        expected_verdict IN ('ACCEPTED', 'LOYAL', 'AFFIRMED')
+    )
 );
+
+-- Index for difficulty-based queries
+CREATE INDEX idx_questions_difficulty ON questions(difficulty);
+CREATE INDEX idx_questions_tier_difficulty ON questions(tier, difficulty);
 
 -- Question set versioning
 CREATE TABLE question_sets (
@@ -396,15 +410,64 @@ CREATE TABLE test_runs (
 |----------|---------|
 | `GET /api/versions` | List all versions with status |
 | `GET /api/versions/current` | Get current active version |
+| `GET /api/versions/:version/difficulty-stats` | Get difficulty distribution for version |
 | `GET /api/results?version=1.2` | Filter results by semantic version |
+| `GET /api/results?version=1.2&difficulty=hard` | Filter results by version and difficulty |
 | `GET /api/results?marketing_version=Version+2` | Filter results by marketing version |
 | `GET /api/model/{id}/history` | Model performance across versions |
+| `GET /api/model/{id}/difficulty-breakdown` | Model performance by difficulty |
 | `POST /api/admin/questions/import` | Import questions (JSON/CSV) |
 | `GET /api/admin/questions` | List/search questions |
+| `GET /api/admin/questions?difficulty=hard` | Filter questions by difficulty |
 | `PUT /api/admin/questions/:id` | Edit question |
 | `POST /api/admin/questions/:id/approve` | Approve question |
 | `POST /api/admin/versions` | Create version (select questions) |
+| `POST /api/admin/versions/:version/validate-difficulty` | Validate difficulty distribution |
 | `PUT /api/admin/versions/:version/publish` | Lock and publish version |
+
+### Difficulty Stats Response Format
+
+```json
+GET /api/versions/1.0/difficulty-stats
+
+{
+  "version": "1.0",
+  "total_questions": 300,
+  "difficulty_distribution": {
+    "easy": {
+      "count": 100,
+      "percentage": 33.3,
+      "in_range": true,
+      "expected_verdict_alignment": {
+        "all_passing": true,
+        "violations": 0
+      }
+    },
+    "medium": {
+      "count": 100,
+      "percentage": 33.3,
+      "in_range": true,
+      "expected_verdict_alignment": {
+        "refused_count": 5,
+        "refused_percentage": 5.0,
+        "under_threshold": true
+      }
+    },
+    "hard": {
+      "count": 100,
+      "percentage": 33.3,
+      "in_range": true,
+      "expected_verdict_distribution": {
+        "passing": 60,
+        "compromised": 15,
+        "refused": 25
+      }
+    }
+  },
+  "validation_passed": true,
+  "validation_errors": []
+}
+```
 
 ---
 

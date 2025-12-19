@@ -228,7 +228,7 @@ async def import_questions(
                     tier=tier,
                     category=category,
                     content=content,
-                    metadata=metadata
+                    question_metadata=metadata
                 )
                 db.add(question)
                 imported += 1
@@ -270,19 +270,27 @@ async def list_questions(
     total = query.count()
     questions = query.offset(offset).limit(limit).all()
     
+    # Build response with explicit serialization to avoid circular references
+    items = []
+    for q in questions:
+        is_locked = q.question_set.status == "locked" if q.question_set else False
+        # Get question_metadata if it exists
+        metadata = None
+        if hasattr(q, 'question_metadata') and q.question_metadata:
+            metadata = q.question_metadata if isinstance(q.question_metadata, dict) else None
+        
+        items.append({
+            "id": str(q.id),
+            "question_set_id": str(q.question_set_id),
+            "tier": q.tier,
+            "category": q.category,
+            "content": q.content,  # Return full content, not truncated
+            "metadata": metadata,
+            "is_locked": is_locked
+        })
+    
     return {
-        "items": [
-            {
-                "id": q.id,
-                "question_set_id": q.question_set_id,
-                "tier": q.tier,
-                "category": q.category,
-                "content": q.content[:200] + "..." if len(q.content) > 200 else q.content,
-                "metadata": q.metadata,
-                "is_locked": q.question_set.status == "locked"
-            }
-            for q in questions
-        ],
+        "items": items,
         "total": total
     }
 
@@ -305,7 +313,7 @@ async def get_question(
         tier=question.tier,
         category=question.category,
         content=question.content,
-        metadata=question.metadata,
+        metadata=question.question_metadata,
         is_locked=question.question_set.status == "locked"
     )
 
@@ -334,8 +342,8 @@ async def update_question(
     if request.content is not None:
         question.content = request.content
     if request.metadata is not None:
-        question.metadata = request.metadata
-    
+        question.question_metadata = request.metadata
+
     db.commit()
     db.refresh(question)
     
@@ -345,7 +353,7 @@ async def update_question(
         tier=question.tier,
         category=question.category,
         content=question.content,
-        metadata=question.metadata,
+        metadata=question.question_metadata,
         is_locked=question.question_set.status == "locked"
     )
 

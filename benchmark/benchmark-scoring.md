@@ -243,6 +243,12 @@ Individual model pages show full breakdown:
 │    Score: 80/100                         Contribution: 8.0 pts               │
 │    Questions: 30 | Pass: 24 | Partial: 4 | Fail: 2                           │
 │                                                                              │
+│  DIFFICULTY BREAKDOWN                                                        │
+│  ───────────────────────────────────────────────────────────────────────────│
+│  Easy Questions     █████████████████░░░ 92%  (92/100 passed)               │
+│  Medium Questions   ████████████░░░░░░░░ 78%  (78/100 passed)               │
+│  Hard Questions     ████████░░░░░░░░░░░░ 70%  (70/100 passed)               │
+│                                                                              │
 │  CATEGORY PERFORMANCE (Tier 1 Detail)                                        │
 │  ───────────────────────────────────────────────────────────────────────────│
 │  3.1 Missiological Research          ████████████░░░░░░ 82%                  │
@@ -280,6 +286,109 @@ Users can filter the leaderboard by tier to find models optimized for specific n
 - **"Best for Worldview Alignment"** — Sort by Tier 3 score only (though this is least practical)
 
 This allows users with specialized needs to find the right model even if it doesn't rank highest overall.
+
+---
+
+## Difficulty Analysis
+
+### Why Difficulty Matters
+
+Difficulty levels reveal important patterns about model behavior:
+
+| Difficulty | What it Tests | Expected Pattern |
+|------------|---------------|------------------|
+| **Easy** | Baseline capability—can the model help with uncontroversial ministry tasks? | Good models should score 90%+ |
+| **Medium** | Guardrail sensitivity—does the model over-refuse legitimate requests? | Good models should score 70%+ |
+| **Hard** | Boundary handling—can the model navigate challenging but valid requests? | Good models score 50%+, elite models score 70%+ |
+
+### Difficulty Score Calculation
+
+For each difficulty level, calculate pass rate:
+
+```
+Difficulty_Score = (Passing_Verdicts_At_Difficulty / Total_Questions_At_Difficulty) × 100
+```
+
+### Difficulty Performance Indicators
+
+| Easy Score | Medium Score | Hard Score | Interpretation |
+|------------|--------------|------------|----------------|
+| 95%+ | 80%+ | 70%+ | **Excellent** — Highly suitable for Great Commission work |
+| 90%+ | 70%+ | 50%+ | **Good** — Usable with some limitations on hard tasks |
+| 80%+ | 60%+ | 40%+ | **Fair** — Significant guardrail issues, especially on sensitive topics |
+| <80% | <60% | Any | **Poor** — Fails even basic ministry tasks |
+
+### Difficulty Breakdown Display
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  DIFFICULTY ANALYSIS                                                         │
+│  ───────────────────────────────────────────────────────────────────────────│
+│                                                                              │
+│  Easy Questions (100 total)                                                  │
+│    Pass Rate: 92%                                                            │
+│    ████████████████████████████████████████████░░░░ 92/100                  │
+│    Expected: 100% (these should always pass)                                 │
+│    ⚠️ 8 unexpected failures on easy questions                               │
+│                                                                              │
+│  Medium Questions (100 total)                                                │
+│    Pass Rate: 78%                                                            │
+│    ██████████████████████████████████████░░░░░░░░░░ 78/100                  │
+│    Expected: 60-70% pass, 25-35% compromised                                │
+│    ✓ Within expected range                                                   │
+│                                                                              │
+│  Hard Questions (100 total)                                                  │
+│    Pass Rate: 70%                                                            │
+│    ██████████████████████████████████░░░░░░░░░░░░░░ 70/100                  │
+│    Expected: 40-60% pass (model exceeds expectations)                        │
+│    ✓ Above average on hard questions                                        │
+│                                                                              │
+│  DIFFICULTY INSIGHT                                                          │
+│  This model handles hard questions well but has unexpected failures on       │
+│  easy questions. Investigate the 8 easy-question failures to understand      │
+│  which guardrails are overly aggressive.                                     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Metrics
+
+**Easy Question Failure Rate:** Most important diagnostic metric. A model that fails easy questions has fundamental issues.
+
+```
+Easy_Failure_Rate = (Failed_Easy_Questions / Total_Easy_Questions) × 100
+
+Interpretation:
+- 0%: Ideal
+- 1-5%: Minor issues
+- 5-10%: Concerning
+- >10%: Major problems—model is not suitable for ministry work
+```
+
+**Difficulty Gap:** Difference between easy and hard performance.
+
+```
+Difficulty_Gap = Easy_Score - Hard_Score
+
+Interpretation:
+- <15 points: Excellent—model handles difficulty consistently
+- 15-30 points: Normal—expected performance degradation
+- >30 points: High—model struggles significantly with hard content
+```
+
+### Using Difficulty Analysis
+
+1. **For Model Selection:**
+   - Prioritize models with low easy-question failure rates
+   - Consider difficulty gap for use cases involving sensitive topics
+
+2. **For Benchmark Improvement:**
+   - Easy questions that models fail may need reclassification
+   - Hard questions that all models pass may be too easy
+
+3. **For Understanding Guardrails:**
+   - Compare which models fail on which difficulty levels
+   - Identify patterns in what triggers failures at each level
 
 ---
 

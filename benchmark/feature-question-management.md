@@ -84,15 +84,20 @@ content,category,tier,difficulty,expected_verdict,expected_refusal_type,tests_ca
 
 - **List View:** Table of all questions with filters
 - **Search:** Full-text search in question content
-- **Filters:** By status, category, tier, difficulty
-- **Sorting:** By date, category, tier
+- **Filters:** By status, category, tier, **difficulty**
+- **Sorting:** By date, category, tier, difficulty
 - **Pagination:** Handle large question sets
 
 **Filter Options:**
 - Status: Draft, Review, Approved, All
 - Category: 3.1, 3.2, 4.1, etc.
 - Tier: 1, 2, 3
-- Difficulty: Easy, Medium, Hard
+- **Difficulty: Easy, Medium, Hard, All**
+
+**Difficulty Filter Use Cases:**
+- Find all hard questions to review expected verdicts
+- Identify easy questions that might be mis-classified
+- Ensure balanced difficulty when assembling versions
 
 ### 3. Question Editor
 
@@ -135,15 +140,26 @@ content,category,tier,difficulty,expected_verdict,expected_refusal_type,tests_ca
 
 **Assembly Process:**
 
-1. Select approved questions (filter by category/tier)
+1. Select approved questions (filter by category/tier/difficulty)
 2. Platform validates:
    - Minimum questions per category
    - Tier distribution (70/20/10 target)
+   - **Difficulty distribution (25-40% each level)**
+   - **Difficulty-verdict alignment**
    - All questions are approved
 3. Create version draft
 4. Review and adjust
 5. Lock version (becomes immutable)
 6. Publish version (becomes available via API)
+
+**Difficulty Validation Rules:**
+
+| Check | Requirement | Failure Action |
+|-------|-------------|----------------|
+| Overall balance | 25-40% of questions at each difficulty | Warning: adjust selection |
+| Per-category balance | Each category has mix of difficulties | Warning: review category |
+| Easy → PASSING | All easy questions expect passing verdicts | Error: cannot proceed |
+| Medium → <10% REFUSED | Less than 10% of medium questions expect REFUSED | Warning: review questions |
 
 ### 6. Version Management
 
@@ -151,9 +167,35 @@ content,category,tier,difficulty,expected_verdict,expected_refusal_type,tests_ca
 
 - **List Versions:** All versions with status
 - **Version Details:** View questions in version, statistics
+- **Difficulty Stats:** View difficulty distribution and validation status
 - **Lock/Unlock:** Lock for publishing, unlock for edits (with justification)
 - **Publish:** Make version available via API
 - **Archive:** Move old versions to archived status
+
+**Version Statistics Display:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Version 1.0 Statistics                                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  TIER DISTRIBUTION                                               │
+│    Tier 1: 210/210 ✓    Tier 2: 60/60 ✓    Tier 3: 30/30 ✓      │
+│                                                                  │
+│  DIFFICULTY DISTRIBUTION                                         │
+│    Easy:   100 (33%) ✓   [Target: 25-40%]                        │
+│    Medium: 100 (33%) ✓   [Target: 25-40%]                        │
+│    Hard:   100 (33%) ✓   [Target: 25-40%]                        │
+│                                                                  │
+│  DIFFICULTY-VERDICT ALIGNMENT                                    │
+│    Easy questions → all PASSING:    ✓ 100/100                    │
+│    Medium questions → <10% REFUSED: ✓ 5/100 (5%)                 │
+│    Hard questions → mix of verdicts: ✓ balanced                  │
+│                                                                  │
+│  VALIDATION STATUS: ✓ Ready to lock                              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 

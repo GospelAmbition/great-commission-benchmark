@@ -1,6 +1,6 @@
 """Question model"""
 from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
@@ -19,6 +19,7 @@ class Question(Base):
     tier = Column(Integer, nullable=False, index=True)  # 1=Task, 2=Doctrinal, 3=Worldview
     subcategory = Column(String(100))
     expected_verdict = Column(String(50))
+    question_metadata = Column(JSONB)  # Store additional question metadata (difficulty, tags, etc.)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     question_set = relationship("QuestionSet", backref="questions")

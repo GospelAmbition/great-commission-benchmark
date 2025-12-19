@@ -44,6 +44,10 @@ interface Question {
   status?: "draft" | "pending" | "approved" | "rejected";
   created_at?: string;
   updated_at?: string;
+  metadata?: {
+    difficulty?: string;
+    [key: string]: unknown;
+  };
 }
 
 interface Version {
@@ -72,6 +76,11 @@ interface VersionStats {
       };
     };
   };
+  difficulty_stats?: {
+    easy: { count: number; percentage: number };
+    medium: { count: number; percentage: number };
+    hard: { count: number; percentage: number };
+  };
 }
 
 export default function AdminQuestionsPage() {
@@ -89,6 +98,7 @@ export default function AdminQuestionsPage() {
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [editedContent, setEditedContent] = useState("");
   const [saving, setSaving] = useState(false);
@@ -323,6 +333,7 @@ export default function AdminQuestionsPage() {
     }
     if (categoryFilter !== "all" && q.category !== categoryFilter) return false;
     if (statusFilter !== "all" && q.status !== statusFilter) return false;
+    if (difficultyFilter !== "all" && q.metadata?.difficulty !== difficultyFilter) return false;
     return true;
   });
 
@@ -511,6 +522,56 @@ export default function AdminQuestionsPage() {
             })}
           </div>
 
+          {/* Difficulty Distribution */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Difficulty Distribution</CardTitle>
+              <CardDescription>
+                Balance of easy, medium, and hard questions (target: 25-40% each)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-3">
+                {(["easy", "medium", "hard"] as const).map((difficulty) => {
+                  const diffStats = questions.filter(
+                    (q) => q.metadata?.difficulty === difficulty
+                  );
+                  const count = diffStats.length;
+                  const percentage = versionStats.total_questions > 0
+                    ? Math.round((count / versionStats.total_questions) * 100)
+                    : 0;
+                  const inRange = percentage >= 25 && percentage <= 40;
+                  
+                  return (
+                    <div
+                      key={difficulty}
+                      className="p-4 border rounded-lg space-y-2"
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium capitalize">{difficulty}</span>
+                        <Badge variant={inRange ? "default" : "destructive"}>
+                          {percentage}%
+                        </Badge>
+                      </div>
+                      <div className="text-2xl font-bold">{count}</div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all ${
+                            inRange ? "bg-green-500" : "bg-orange-500"
+                          }`}
+                          style={{ width: `${Math.min(100, percentage * 2.5)}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Target: 25-40% ({Math.round(versionStats.total_questions * 0.25)}-{Math.round(versionStats.total_questions * 0.4)})
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Category Completeness Grid */}
           <Card className="mb-6">
             <CardHeader>
@@ -605,7 +666,7 @@ export default function AdminQuestionsPage() {
             <CardTitle>Filters</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-5">
               <Input
                 placeholder="Search questions..."
                 value={search}
@@ -655,6 +716,17 @@ export default function AdminQuestionsPage() {
                   <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by difficulty" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Difficulties</SelectItem>
+                  <SelectItem value="easy">Easy</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="hard">Hard</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -675,6 +747,7 @@ export default function AdminQuestionsPage() {
                 <TableHead>Question</TableHead>
                 <TableHead>Tier</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Difficulty</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Updated</TableHead>
                 <TableHead>Actions</TableHead>
@@ -683,8 +756,10 @@ export default function AdminQuestionsPage() {
             <TableBody>
               {filteredQuestions.map((q) => (
                 <TableRow key={q.id}>
-                  <TableCell className="max-w-md truncate">
-                    {q.content.substring(0, 100)}...
+                  <TableCell className="max-w-md">
+                    <div className="whitespace-normal break-words">
+                      {q.content}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">Tier {q.tier}</Badge>
@@ -696,6 +771,15 @@ export default function AdminQuestionsPage() {
                         {getCategoryName(q.category)}
                       </div>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {q.metadata?.difficulty ? (
+                      <Badge variant="secondary" className="capitalize">
+                        {q.metadata.difficulty}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge

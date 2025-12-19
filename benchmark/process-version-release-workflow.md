@@ -72,6 +72,8 @@ Use for question additions, refinements, or small category updates.
    - Run pre-publish validation checks:
      - [ ] All categories have minimum question count
      - [ ] Tier distribution meets requirements
+     - [ ] **Difficulty distribution is balanced (25-40% each level)**
+     - [ ] **Difficulty-verdict alignment passes (easy→PASSING, etc.)**
      - [ ] All questions have calibration data
      - [ ] No duplicate questions
 
@@ -118,6 +120,8 @@ Use for new question sets (annual refresh or contamination response).
    - Full validation suite:
      - [ ] All categories have required question counts
      - [ ] Tier distribution is balanced
+     - [ ] **Difficulty distribution is balanced (25-40% each level per category)**
+     - [ ] **Difficulty-verdict alignment validated**
      - [ ] All questions have calibration data
      - [ ] Question diversity is adequate
      - [ ] No questions appear in known training data
@@ -166,8 +170,36 @@ Before any release, verify:
 
 ### Coverage
 - [ ] Each category has minimum question count
-- [ ] Tier distribution matches targets (Tier 1: ~40%, Tier 2: ~40%, Tier 3: ~20%)
+- [ ] Tier distribution matches targets (Tier 1: ~70%, Tier 2: ~20%, Tier 3: ~10%)
 - [ ] Total question count meets version requirements
+
+### Difficulty Distribution (Critical)
+- [ ] **Overall difficulty balance**: 25-40% easy, 25-40% medium, 25-40% hard
+- [ ] **Per-category balance**: Each category has mix of all three difficulties
+- [ ] **Difficulty-verdict alignment validated**:
+  - All easy questions expect PASSING verdicts
+  - Medium questions: <10% expect REFUSED
+  - Hard questions: Include mix of verdicts
+
+### Difficulty-Verdict Validation Summary
+
+Run this validation before locking any version:
+
+```
+Expected Distribution:
+┌────────────┬─────────────────────────────────────────────────┐
+│ Difficulty │ Expected Verdict Distribution                   │
+├────────────┼─────────────────────────────────────────────────┤
+│ Easy       │ 100% PASSING (ACCEPTED/LOYAL/AFFIRMED)          │
+│ Medium     │ 60-70% PASSING, 25-35% COMPROMISED, <10% REFUSED│
+│ Hard       │ 40-60% PASSING, 15-25% COMPROMISED, 25-40% REFUSED│
+└────────────┴─────────────────────────────────────────────────┘
+
+If validation fails:
+- Easy questions with non-PASSING verdicts → Reclassify as medium/hard
+- Medium questions with >10% REFUSED → Reclassify some as hard
+- All hard questions REFUSED → Add more hard questions with PASSING
+```
 
 ### Technical
 - [ ] Questions import successfully to Platform
