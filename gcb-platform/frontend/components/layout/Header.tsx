@@ -13,9 +13,11 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useUserProfile } from "@/lib/useUserProfile";
 
 export function Header() {
   const { data: session, status } = useSession();
+  const { isAdmin, isModerator } = useUserProfile();
   const user = session?.user;
   const isLoading = status === "loading";
 
@@ -89,6 +91,19 @@ export function Header() {
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard/settings">Account Settings</Link>
                   </DropdownMenuItem>
+                  {isModerator && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/moderator">Moderator Panel</Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">Admin Dashboard</Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
                     Logout
@@ -150,6 +165,22 @@ export function Header() {
                     >
                       Run New Test
                     </Link>
+                    {isModerator && (
+                      <Link
+                        href="/moderator"
+                        className="text-lg font-medium transition-colors hover:text-foreground/80"
+                      >
+                        Moderator Panel
+                      </Link>
+                    )}
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        className="text-lg font-medium transition-colors hover:text-foreground/80"
+                      >
+                        Admin Dashboard
+                      </Link>
+                    )}
                   </>
                 )}
               </nav>

@@ -25,6 +25,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -49,6 +56,9 @@ export default function AdminVersionsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newVersion, setNewVersion] = useState("");
+  const [newMarketingVersion, setNewMarketingVersion] = useState("");
+  const [copyFromVersion, setCopyFromVersion] = useState(false);
+  const [sourceVersion, setSourceVersion] = useState("");
   const [creating, setCreating] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<BenchmarkVersion | null>(null);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
@@ -118,23 +128,55 @@ export default function AdminVersionsPage() {
     if (!newVersion) return;
     setCreating(true);
     try {
-      const response = await fetch("/api/admin/versions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ version: newVersion }),
-      });
+      if (copyFromVersion && sourceVersion) {
+        // Copy from existing version
+        const response = await fetch(`/api/admin/versions/${sourceVersion}/copy`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            new_semantic_version: newVersion,
+            new_marketing_version: newMarketingVersion || `Version ${newVersion}`,
+          }),
+        });
 
-      if (response.ok) {
-        toast.success(`Version ${newVersion} created`);
-        setShowCreateDialog(false);
-        setNewVersion("");
-        loadVersions();
+        if (response.ok) {
+          toast.success(`Version ${newVersion} created by copying from ${sourceVersion}`);
+          setShowCreateDialog(false);
+          setNewVersion("");
+          setNewMarketingVersion("");
+          setCopyFromVersion(false);
+          setSourceVersion("");
+          loadVersions();
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || "Failed to copy version");
+        }
       } else {
-        throw new Error("Failed to create version");
+        // Create empty version
+        const response = await fetch("/api/admin/versions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            version: newVersion,
+            marketing_version: newMarketingVersion || `Version ${newVersion}`,
+          }),
+        });
+
+        if (response.ok) {
+          toast.success(`Version ${newVersion} created`);
+          setShowCreateDialog(false);
+          setNewVersion("");
+          setNewMarketingVersion("");
+          setCopyFromVersion(false);
+          setSourceVersion("");
+          loadVersions();
+        } else {
+          throw new Error("Failed to create version");
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create version:", error);
-      toast.error("Failed to create version");
+      toast.error(error.message || "Failed to create version");
     } finally {
       setCreating(false);
     }
@@ -399,25 +441,83 @@ export default function AdminVersionsPage() {
               Create a new benchmark version draft
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="version">Version Number</Label>
-            <Input
-              id="version"
-              placeholder="e.g., 1.2.0"
-              value={newVersion}
-              onChange={(e) => setNewVersion(e.target.value)}
-              className="mt-1"
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              Use semantic versioning (MAJOR.MINOR.PATCH)
-            </p>
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="version">Version Number</Label>
+              <Input
+                id="version"
+                placeholder="e.g., 1.2.0"
+                value={newVersion}
+                onChange={(e) => setNewVersion(e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Use semantic versioning (MAJOR.MINOR.PATCH)
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="marketing-version">Marketing Version (Optional)</Label>
+              <Input
+                id="marketing-version"
+                placeholder="e.g., Version 1.2"
+                value={newMarketingVersion}
+                onChange={(e) => setNewMarketingVersion(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="copy-from"
+                checked={copyFromVersion}
+                onChange={(e) => {
+                  setCopyFromVersion(e.target.checked);
+                  if (!e.target.checked) {
+                    setSourceVersion("");
+                  }
+                }}
+                className="rounded"
+              />
+              <Label htmlFor="copy-from" className="cursor-pointer">
+                Copy questions from existing version
+              </Label>
+            </div>
+            {copyFromVersion && (
+              <div>
+                <Label htmlFor="source-version">Source Version</Label>
+                <Select value={sourceVersion} onValueChange={setSourceVersion}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select version to copy from" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {versions.map((v) => (
+                      <SelectItem key={v.version} value={v.version}>
+                        {v.version} - {v.question_count} questions
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  All questions from the selected version will be copied to the new version
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowCreateDialog(false);
+              setNewVersion("");
+              setNewMarketingVersion("");
+              setCopyFromVersion(false);
+              setSourceVersion("");
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleCreateVersion} disabled={!newVersion || creating}>
-              {creating ? "Creating..." : "Create Version"}
+            <Button
+              onClick={handleCreateVersion}
+              disabled={!newVersion || creating || (copyFromVersion && !sourceVersion)}
+            >
+              {creating ? "Creating..." : copyFromVersion ? "Copy Version" : "Create Version"}
             </Button>
           </DialogFooter>
         </DialogContent>

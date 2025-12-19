@@ -27,9 +27,14 @@ from app.schemas.admin import (
     QuestionCreateRequest,
     QuestionUpdateRequest,
     QuestionResponse,
+    QuestionSetCreateRequest,
     VersionCreateRequest,
     VersionPublishRequest,
-    AdminStatsResponse
+    AdminStatsResponse,
+    QuestionSetStatsResponse,
+    QuestionSetCopyRequest,
+    CategoryStats,
+    TierStats
 )
 
 router = APIRouter()
@@ -382,6 +387,217 @@ async def approve_question(
     # For now, just return success
     # In a full implementation, this would update an approval status field
     return {"message": "Question approved"}
+
+
+@router.get("/question-sets")
+async def list_question_sets(
+    status: Optional[str] = Query(None),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List all question sets"""
+    query = db.query(QuestionSet)
+    
+    if status:
+        query = query.filter(QuestionSet.status == status)
+    
+    question_sets = query.order_by(QuestionSet.created_at.desc()).all()
+    
+    return {
+        "items": [
+            {
+                "id": str(qs.id),
+                "semantic_version": qs.semantic_version,
+                "marketing_version": qs.marketing_version,
+                "status": qs.status,
+                "created_at": qs.created_at.isoformat() if qs.created_at else None,
+            }
+            for qs in question_sets
+        ],
+        "total": len(question_sets)
+    }
+
+
+@router.post("/question-sets")
+async def create_question_set(
+    request: QuestionSetCreateRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new empty question set"""
+    question_set = QuestionSet(
+        semantic_version=request.semantic_version,
+        marketing_version=request.marketing_version,
+        status="draft",
+        notes=request.notes
+    )
+    db.add(question_set)
+    db.commit()
+    db.refresh(question_set)
+    
+    return {
+        "id": str(question_set.id),
+        "semantic_version": question_set.semantic_version,
+        "marketing_version": question_set.marketing_version,
+        "status": question_set.status,
+        "created_at": question_set.created_at.isoformat() if question_set.created_at else None,
+    }
+
+
+# Category targets for V1 (can be moved to config later)
+CATEGORY_TARGETS = {
+    1: {  # Tier 1: 210 total, 7 categories = 30 each
+        "3.1": 30,  # Missiological Research
+        "3.2": 30,  # Evangelistic Material Creation
+        "3.3": 30,  # Apologetic Purposes
+        "3.4": 30,  # Conversational AI Tools
+        "3.5": 30,  # Intercessory Prayer Purposes
+        "3.6": 30,  # Problematic Vocabulary
+        "3.7": 30,  # Difficult Passages
+    },
+    2: {  # Tier 2: 60 total, 6 categories = 10 each
+        "4.1": 10,  # Exclusivity of Jesus Christ
+        "4.2": 10,  # Universality of Sin
+        "4.3": 10,  # Reality of Judgment
+        "4.4": 10,  # Lordship of Jesus
+        "4.5": 10,  # Call to Repentance and Faith
+        "4.6": 10,  # Burden to Make Disciples
+    },
+    3: {  # Tier 3: 30 total, 6 categories = 5 each
+        "5.1": 5,  # Existence of God
+        "5.2": 5,  # Historical Reality of Jesus
+        "5.3": 5,  # The Crucifixion
+        "5.4": 5,  # The Resurrection
+        "5.5": 5,  # Universal Sinfulness
+        "5.6": 5,  # Salvation Through Faith
+    },
+}
+
+TIER_TARGETS = {
+    1: 210,
+    2: 60,
+    3: 30,
+}
+TOTAL_TARGET = 300
+
+
+@router.get("/question-sets/{question_set_id}/stats", response_model=QuestionSetStatsResponse)
+async def get_question_set_stats(
+    question_set_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get statistics for a question set"""
+    question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
+    
+    if not question_set:
+        raise HTTPException(status_code=404, detail="Question set not found")
+    
+    # Get all questions for this question set
+    questions = db.query(Question).filter(Question.question_set_id == question_set_id).all()
+    
+    # Count by tier and category
+    tier_counts = {1: 0, 2: 0, 3: 0}
+    category_counts = {1: {}, 2: {}, 3: {}}
+    
+    for q in questions:
+        tier = q.tier
+        category = q.category
+        
+        tier_counts[tier] = tier_counts.get(tier, 0) + 1
+        
+        if category not in category_counts[tier]:
+            category_counts[tier][category] = 0
+        category_counts[tier][category] += 1
+    
+    # Build tier stats with categories
+    tier_stats = {}
+    for tier in [1, 2, 3]:
+        categories_dict = {}
+        # Include all categories from targets, even if count is 0
+        for category, target in CATEGORY_TARGETS[tier].items():
+            count = category_counts[tier].get(category, 0)
+            categories_dict[category] = CategoryStats(count=count, target=target)
+        
+        tier_stats[tier] = TierStats(
+            count=tier_counts[tier],
+            target=TIER_TARGETS[tier],
+            categories=categories_dict
+        )
+    
+    return QuestionSetStatsResponse(
+        question_set_id=question_set.id,
+        semantic_version=question_set.semantic_version,
+        marketing_version=question_set.marketing_version,
+        total_questions=len(questions),
+        target_total=TOTAL_TARGET,
+        tier_stats=tier_stats
+    )
+
+
+@router.post("/question-sets/{question_set_id}/copy")
+async def copy_question_set(
+    question_set_id: UUID,
+    request: QuestionSetCopyRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Copy a question set to create a new version"""
+    source_question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
+    
+    if not source_question_set:
+        raise HTTPException(status_code=404, detail="Source question set not found")
+    
+    # Check if version already exists
+    existing = db.query(QuestionSet).filter(
+        QuestionSet.semantic_version == request.new_semantic_version
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Question set with version {request.new_semantic_version} already exists"
+        )
+    
+    # Get all questions from source
+    source_questions = db.query(Question).filter(
+        Question.question_set_id == question_set_id
+    ).all()
+    
+    # Create new question set
+    new_question_set = QuestionSet(
+        semantic_version=request.new_semantic_version,
+        marketing_version=request.new_marketing_version,
+        status="draft",
+        notes=request.notes
+    )
+    db.add(new_question_set)
+    db.flush()
+    
+    # Copy all questions
+    copied_count = 0
+    for source_q in source_questions:
+        new_question = Question(
+            question_set_id=new_question_set.id,
+            tier=source_q.tier,
+            category=source_q.category,
+            content=source_q.content,
+            subcategory=source_q.subcategory,
+            expected_verdict=source_q.expected_verdict
+        )
+        db.add(new_question)
+        copied_count += 1
+    
+    db.commit()
+    db.refresh(new_question_set)
+    
+    return {
+        "id": str(new_question_set.id),
+        "semantic_version": new_question_set.semantic_version,
+        "marketing_version": new_question_set.marketing_version,
+        "status": new_question_set.status,
+        "created_at": new_question_set.created_at.isoformat() if new_question_set.created_at else None,
+        "questions_copied": copied_count
+    }
 
 
 @router.post("/versions", response_model=dict)

@@ -89,6 +89,13 @@ class QuestionResponse(BaseModel):
     is_locked: bool
 
 
+class QuestionSetCreateRequest(BaseModel):
+    """Question set create request"""
+    semantic_version: str = "1.0"
+    marketing_version: str = "Version 1"
+    notes: Optional[str] = None
+
+
 class VersionCreateRequest(BaseModel):
     """Version create request"""
     semantic_version: str
@@ -107,3 +114,33 @@ class AdminStatsResponse(BaseModel):
     tests: Dict
     revenue: Dict
     moderation: Dict
+
+
+class CategoryStats(BaseModel):
+    """Category statistics"""
+    count: int
+    target: int
+
+
+class TierStats(BaseModel):
+    """Tier statistics"""
+    count: int
+    target: int
+    categories: Dict[str, CategoryStats]
+
+
+class QuestionSetStatsResponse(BaseModel):
+    """Question set statistics response"""
+    question_set_id: UUID
+    semantic_version: str
+    marketing_version: str
+    total_questions: int
+    target_total: int
+    tier_stats: Dict[int, TierStats]
+
+
+class QuestionSetCopyRequest(BaseModel):
+    """Question set copy request"""
+    new_semantic_version: str
+    new_marketing_version: str
+    notes: Optional[str] = None

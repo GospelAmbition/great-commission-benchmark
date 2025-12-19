@@ -38,7 +38,7 @@ import { toast } from "sonner";
 interface AdminUser {
   id: string;
   email: string;
-  name: string;
+  name: string | null;
   role: "user" | "moderator" | "admin";
   created_at: string;
   test_count: number;
@@ -53,7 +53,8 @@ export default function AdminUsersPage() {
   const userLoading = status === "loading";
   const router = useRouter();
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -81,55 +82,35 @@ export default function AdminUsersPage() {
   async function loadUsers() {
     setLoading(true);
     try {
-      // In a real implementation, this would call the admin users API
+      // Calculate offset from page (page is 1-based, offset is 0-based)
+      const offset = (pagination.page - 1) * pagination.limit;
       const params = new URLSearchParams({
-        page: String(pagination.page),
+        offset: String(offset),
         limit: String(pagination.limit),
         ...(search && { search }),
         ...(roleFilter !== "all" && { role: roleFilter }),
       });
 
-      const response = await fetch(`/api/v1/admin/users?${params}`);
+      const response = await fetch(`/api/admin/users?${params}`);
       if (response.ok) {
         const data = await response.json();
         setUsers(data.users || []);
         setPagination((prev) => ({ ...prev, total: data.total || 0 }));
       } else {
-        // Use placeholder data for demo
-        setUsers([
-          {
-            id: "1",
-            email: "admin@example.com",
-            name: "Admin User",
-            role: "admin",
-            created_at: new Date().toISOString(),
-            test_count: 5,
-            last_login: new Date().toISOString(),
-          },
-          {
-            id: "2",
-            email: "moderator@example.com",
-            name: "Moderator User",
-            role: "moderator",
-            created_at: new Date().toISOString(),
-            test_count: 12,
-            last_login: new Date().toISOString(),
-          },
-          {
-            id: "3",
-            email: "user@example.com",
-            name: "Regular User",
-            role: "user",
-            created_at: new Date().toISOString(),
-            test_count: 3,
-          },
-        ]);
-        setPagination((prev) => ({ ...prev, total: 3 }));
+        const error = await response.json().catch(() => ({ detail: "Failed to load users" }));
+        console.error("Failed to load users:", error);
+        toast.error(error.detail || error.error || "Failed to load users");
+        setUsers([]);
+        setPagination((prev) => ({ ...prev, total: 0 }));
       }
     } catch (error) {
       console.error("Failed to load users:", error);
+      toast.error("Failed to load users");
+      setUsers([]);
+      setPagination((prev) => ({ ...prev, total: 0 }));
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   }
 
@@ -137,7 +118,7 @@ export default function AdminUsersPage() {
     if (!selectedUser || !newRole) return;
     setSaving(true);
     try {
-      const response = await fetch(`/api/v1/admin/users/${selectedUser.id}/role`, {
+      const response = await fetch(`/api/admin/users/${selectedUser.id}/role`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRole }),
@@ -164,7 +145,7 @@ export default function AdminUsersPage() {
     setFeeWaiverSaving(true);
     try {
       const waived = !feeWaiverUser.fee_waived;
-      const response = await fetch(`/api/v1/admin/users/${feeWaiverUser.id}/fee-waiver`, {
+      const response = await fetch(`/api/admin/users/${feeWaiverUser.id}/fee-waiver`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -190,13 +171,13 @@ export default function AdminUsersPage() {
     }
   }
 
+  // Note: Backend already handles filtering, but we keep this for immediate UI feedback
   const filteredUsers = users.filter((u) => {
     if (search) {
       const searchLower = search.toLowerCase();
-      if (
-        !u.email.toLowerCase().includes(searchLower) &&
-        !u.name.toLowerCase().includes(searchLower)
-      ) {
+      const emailMatch = u.email.toLowerCase().includes(searchLower);
+      const nameMatch = u.name?.toLowerCase().includes(searchLower) ?? false;
+      if (!emailMatch && !nameMatch) {
         return false;
       }
     }
@@ -206,7 +187,7 @@ export default function AdminUsersPage() {
     return true;
   });
 
-  if (userLoading || loading) {
+  if (userLoading || initialLoading) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -263,7 +244,14 @@ export default function AdminUsersPage() {
       {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Users</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Users
+            {loading && (
+              <span className="text-sm font-normal text-muted-foreground">
+                Loading...
+              </span>
+            )}
+          </CardTitle>
           <CardDescription>
             {pagination.total} total users
           </CardDescription>
@@ -285,7 +273,7 @@ export default function AdminUsersPage() {
             <TableBody>
               {filteredUsers.map((u) => (
                 <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.name}</TableCell>
+                  <TableCell className="font-medium">{u.name || "—"}</TableCell>
                   <TableCell>{u.email}</TableCell>
                   <TableCell>
                     <Badge

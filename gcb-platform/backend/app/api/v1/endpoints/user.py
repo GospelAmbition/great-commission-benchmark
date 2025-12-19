@@ -62,6 +62,7 @@ async def get_profile(
             name=current_user.name,
             role=current_user.role,
             organization=None,  # TODO: Add organization field to User model
+            tester_agreement_accepted=current_user.tester_agreement_accepted,
             created_at=current_user.created_at
         ),
         stats=stats

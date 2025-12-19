@@ -100,6 +100,7 @@ export interface UserProfile {
   id: string;
   name?: string;
   email: string;
+  role?: 'user' | 'moderator' | 'admin';
   organization?: string;
   test_count?: number;
   contribution_count?: number;
@@ -391,7 +392,9 @@ export class ApiClient {
   }
 
   async getProfile(): Promise<UserProfile & { tester_agreement_accepted?: boolean }> {
-    return this.request('/api/user/profile');
+    // The API returns { user: {...}, stats: {...} }, extract the user
+    const response = await this.request<{ user: UserProfile & { tester_agreement_accepted?: boolean }; stats: unknown }>('/api/user/profile');
+    return response.user;
   }
 
   // API Keys

@@ -15,6 +15,7 @@ class UserProfile(BaseModel):
     name: Optional[str] = None
     role: str
     organization: Optional[str] = None
+    tester_agreement_accepted: bool = False
     created_at: datetime
 
 
