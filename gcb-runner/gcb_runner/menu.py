@@ -1588,7 +1588,17 @@ def list_versions_diagnostic():
         
         if not versions:
             console.print("[yellow]No benchmark versions found.[/yellow]")
-            console.print("[dim]This could mean the benchmark hasn't been published yet.[/dim]")
+            console.print()
+            console.print("[bold]Why?[/bold]")
+            console.print("  Question sets must be published (status='active') to appear here.")
+            console.print()
+            console.print("[bold]To publish a version (requires admin access):[/bold]")
+            console.print("  1. Go to Admin → Questions → Versions")
+            console.print("  2. Create a question set if needed")
+            console.print("  3. Add questions to the set")
+            console.print("  4. Click 'Publish' on the version")
+            console.print()
+            console.print("[dim]The API only returns 'active' or 'archived' versions.[/dim]")
         else:
             table = Table(title="Available Benchmark Versions", box=box.ROUNDED)
             table.add_column("Version", style="cyan")
