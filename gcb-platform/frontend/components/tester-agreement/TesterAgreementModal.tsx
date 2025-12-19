@@ -45,15 +45,15 @@ export function TesterAgreementModal({ open, onAccept }: TesterAgreementModalPro
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="max-w-3xl max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[85vh] p-0 flex flex-col overflow-hidden [&>button]:hidden">
+        <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
           <DialogTitle>Tester Agreement</DialogTitle>
           <DialogDescription>
             Before running benchmark tests, you must accept the Tester Agreement.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[60vh] overflow-y-auto pr-4">
+        <div className="overflow-y-auto px-6 flex-1 min-h-0">
           <div className="space-y-4 prose prose-sm max-w-none">
             <div className="p-4 bg-muted rounded-lg">
               <h3 className="text-lg font-semibold mb-2">Confidentiality Obligations</h3>
@@ -80,7 +80,7 @@ export function TesterAgreementModal({ open, onAccept }: TesterAgreementModalPro
               </ul>
             </div>
 
-            <p className="text-sm">
+            <p className="text-sm pb-2">
               By clicking "I Accept", you acknowledge that you have read and understood the{" "}
               <Link href="/tester-agreement" className="text-[--ga-red] hover:underline" target="_blank">
                 full Tester Agreement
@@ -91,13 +91,13 @@ export function TesterAgreementModal({ open, onAccept }: TesterAgreementModalPro
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg">
+          <div className="flex items-center gap-2 p-3 mx-6 bg-destructive/10 text-destructive rounded-lg flex-shrink-0">
             <AlertCircle className="h-4 w-4" />
             <p className="text-sm">{error}</p>
           </div>
         )}
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex-col sm:flex-row gap-2 flex-shrink-0 border-t px-6 py-4">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="accept"
@@ -117,7 +117,8 @@ export function TesterAgreementModal({ open, onAccept }: TesterAgreementModalPro
           <Button
             onClick={handleAccept}
             disabled={loading || !accepted}
-            className="bg-[--ga-red] hover:bg-[--ga-dark-red]"
+            variant="destructive"
+            className="bg-[--ga-red] hover:bg-[--ga-dark-red] text-white w-full sm:w-auto disabled:bg-[--ga-red]/50 disabled:text-white/70"
           >
             {loading ? "Accepting..." : "I Accept"}
           </Button>

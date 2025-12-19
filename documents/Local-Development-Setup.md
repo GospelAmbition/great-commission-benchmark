@@ -328,6 +328,35 @@ alembic revision --autogenerate -m "Description of changes"
 alembic downgrade -1
 ```
 
+### Setting Up Initial Administrator Account
+
+After running migrations and starting the services, you need to create your initial administrator account:
+
+1. **Sign in to the platform** (this creates your user account):
+   - Navigate to `http://localhost:3000`
+   - Sign in using Google OAuth
+   - This automatically creates your user account with the default "user" role
+
+2. **Promote your account to admin**:
+   ```bash
+   # Navigate to backend directory
+   cd gcb-platform/backend
+   source venv/bin/activate
+   
+   # List all users to find your email
+   python scripts/create_admin.py --list-users
+   
+   # Promote your email to admin
+   python scripts/create_admin.py --email your-email@example.com
+   ```
+
+3. **Verify admin access**:
+   - Sign out and sign back in to refresh your session
+   - Navigate to `/admin` in the frontend
+   - You should now have access to the admin dashboard
+
+**Note:** Once you have admin privileges, you can manage other users' roles through the admin dashboard or API endpoints.
+
 ---
 
 ## Running Services Locally

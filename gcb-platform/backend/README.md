@@ -55,6 +55,30 @@ The backend provides:
 
    The API will be available at `http://localhost:8000`
 
+6. **Set up initial administrator account:**
+   
+   The platform uses Google OAuth for authentication. Users are automatically created when they first sign in, but they start with the default "user" role. To set up your initial admin account:
+   
+   a. **Sign in to the platform** using Google OAuth (this creates your user account)
+   
+   b. **Promote your account to admin** using the setup script:
+      ```bash
+      # Activate your virtual environment first
+      source venv/bin/activate
+      
+      # Promote your email to admin
+      python scripts/create_admin.py --email your-email@example.com
+      
+      # Or list all users to find your email
+      python scripts/create_admin.py --list-users
+      ```
+   
+   Once you have admin privileges, you can:
+   - Access the admin dashboard at `/admin` in the frontend
+   - Manage other users via the admin API endpoints
+   - Create and manage question sets
+   - View system metrics and statistics
+
 ## API Documentation
 
 Interactive API documentation is available at:

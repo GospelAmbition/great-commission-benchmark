@@ -29,3 +29,4 @@ def downgrade() -> None:
     op.drop_column('users', 'fee_waived_by')
     op.drop_column('users', 'fee_waived_at')
     op.drop_column('users', 'fee_waived')
+
