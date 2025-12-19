@@ -54,9 +54,9 @@ export async function POST(
       return NextResponse.json({ error: "Version not found" }, { status: 404 });
     }
 
-    // Lock the question set
+    // Archive the question set
     const response = await fetch(
-      `${API_URL}/api/admin/question-sets/${questionSetId}/lock`,
+      `${API_URL}/api/admin/question-sets/${questionSetId}/archive`,
       {
         method: "POST",
         headers: {
@@ -74,9 +74,9 @@ export async function POST(
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Failed to lock version:", error);
+    console.error("Failed to archive version:", error);
     return NextResponse.json(
-      { error: "Failed to lock version" },
+      { error: "Failed to archive version" },
       { status: 500 }
     );
   }

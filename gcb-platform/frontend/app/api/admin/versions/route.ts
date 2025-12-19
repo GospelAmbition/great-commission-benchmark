@@ -43,23 +43,54 @@ export async function GET() {
 
     const data = await response.json();
     
-    // Transform to versions format expected by frontend
-    const versions = (data.items || []).map((qs: {
-      id: string;
-      semantic_version: string;
-      marketing_version: string;
-      status: string;
-      created_at: string;
-    }) => ({
-      version: qs.semantic_version,
-      status: qs.status === "active" ? "published" : qs.status,
-      question_count: 0, // Would need to count from questions
-      tier1_count: 0,
-      tier2_count: 0,
-      tier3_count: 0,
-      created_at: qs.created_at,
-      is_current: qs.status === "active",
-    }));
+    // Fetch stats for each question set to get actual counts
+    const versions = await Promise.all(
+      (data.items || []).map(async (qs: {
+        id: string;
+        semantic_version: string;
+        marketing_version: string;
+        status: string;
+        created_at: string;
+      }) => {
+        // Fetch stats for this question set
+        let questionCount = 0;
+        let tier1Count = 0;
+        let tier2Count = 0;
+        let tier3Count = 0;
+
+        try {
+          const statsResponse = await fetch(
+            `${API_URL}/api/admin/question-sets/${qs.id}/stats`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (statsResponse.ok) {
+            const stats = await statsResponse.json();
+            questionCount = stats.total_questions || 0;
+            tier1Count = stats.tier_stats?.[1]?.count || 0;
+            tier2Count = stats.tier_stats?.[2]?.count || 0;
+            tier3Count = stats.tier_stats?.[3]?.count || 0;
+          }
+        } catch (statsError) {
+          console.error(`Failed to fetch stats for ${qs.id}:`, statsError);
+        }
+
+        return {
+          version: qs.semantic_version,
+          status: qs.status === "active" ? "published" : qs.status,
+          question_count: questionCount,
+          tier1_count: tier1Count,
+          tier2_count: tier2Count,
+          tier3_count: tier3Count,
+          created_at: qs.created_at,
+          is_current: qs.status === "active",
+        };
+      })
+    );
 
     return NextResponse.json({ versions });
   } catch (error) {

@@ -64,6 +64,8 @@ export default function AdminVersionsPage() {
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [showEmptyDialog, setShowEmptyDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
@@ -284,6 +286,62 @@ export default function AdminVersionsPage() {
     }
   }
 
+  async function handleUnlockVersion() {
+    if (!selectedVersion) return;
+    setActionLoading(true);
+    try {
+      const response = await fetch(
+        `/api/admin/versions/${selectedVersion.version}/unlock`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (response.ok) {
+        toast.success(`Version ${selectedVersion.version} unlocked`);
+        setShowUnlockDialog(false);
+        setSelectedVersion(null);
+        loadVersions();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to unlock version");
+      }
+    } catch (error: any) {
+      console.error("Failed to unlock version:", error);
+      toast.error(error.message || "Failed to unlock version");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleArchiveVersion() {
+    if (!selectedVersion) return;
+    setActionLoading(true);
+    try {
+      const response = await fetch(
+        `/api/admin/versions/${selectedVersion.version}/archive`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (response.ok) {
+        toast.success(`Version ${selectedVersion.version} archived`);
+        setShowArchiveDialog(false);
+        setSelectedVersion(null);
+        loadVersions();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to archive version");
+      }
+    } catch (error: any) {
+      console.error("Failed to archive version:", error);
+      toast.error(error.message || "Failed to archive version");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   function getTierDistribution(v: BenchmarkVersion) {
     const total = v.question_count || 1;
     return {
@@ -454,7 +512,7 @@ export default function AdminVersionsPage() {
                       {new Date(v.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         {v.status === "draft" && (
                           <>
                             <Button
@@ -462,6 +520,7 @@ export default function AdminVersionsPage() {
                               size="sm"
                               onClick={() => handleLockVersion(v.version)}
                               disabled={!isValid}
+                              title={!isValid ? "Cannot lock: invalid tier distribution" : "Lock version"}
                             >
                               Lock
                             </Button>
@@ -489,15 +548,49 @@ export default function AdminVersionsPage() {
                           </>
                         )}
                         {v.status === "locked" && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedVersion(v);
+                                setShowUnlockDialog(true);
+                              }}
+                            >
+                              Unlock
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedVersion(v);
+                                setShowPublishDialog(true);
+                              }}
+                            >
+                              Publish
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedVersion(v);
+                                setShowArchiveDialog(true);
+                              }}
+                            >
+                              Archive
+                            </Button>
+                          </>
+                        )}
+                        {v.status === "published" && !v.is_current && (
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => {
                               setSelectedVersion(v);
-                              setShowPublishDialog(true);
+                              setShowArchiveDialog(true);
                             }}
                           >
-                            Publish
+                            Archive
                           </Button>
                         )}
                         <Button asChild variant="ghost" size="sm">
@@ -725,6 +818,88 @@ export default function AdminVersionsPage() {
               disabled={actionLoading}
             >
               {actionLoading ? "Deleting..." : "Delete Version"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unlock Version Dialog */}
+      <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unlock Version</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to unlock version {selectedVersion?.version}?
+              This will revert it to draft status, allowing further editing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Version:</span>
+                <span className="font-medium">{selectedVersion?.version}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Current Status:</span>
+                <span className="font-medium">Locked</span>
+              </div>
+              <div className="flex justify-between">
+                <span>New Status:</span>
+                <span className="font-medium">Draft</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                The version will need to be locked again before it can be published.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUnlockDialog(false)} disabled={actionLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUnlockVersion}
+              disabled={actionLoading}
+            >
+              {actionLoading ? "Unlocking..." : "Unlock Version"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Version Dialog */}
+      <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive Version</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to archive version {selectedVersion?.version}?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Version:</span>
+                <span className="font-medium">{selectedVersion?.version}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Questions:</span>
+                <span className="font-medium">{selectedVersion?.question_count}</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Archived versions are preserved but no longer active.
+                The questions will remain accessible for historical reference.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowArchiveDialog(false)} disabled={actionLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleArchiveVersion}
+              disabled={actionLoading}
+            >
+              {actionLoading ? "Archiving..." : "Archive Version"}
             </Button>
           </DialogFooter>
         </DialogContent>

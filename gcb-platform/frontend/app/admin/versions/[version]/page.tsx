@@ -65,8 +65,12 @@ export default function VersionDetailPage({
   const [versionStats, setVersionStats] = useState<VersionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [locking, setLocking] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -158,6 +162,52 @@ export default function VersionDetailPage({
     }
   }
 
+  async function handleUnlockVersion() {
+    setUnlocking(true);
+    try {
+      const response = await fetch(`/api/admin/versions/${version}/unlock`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        toast.success(`Version ${version} unlocked`);
+        setShowUnlockDialog(false);
+        loadVersionData();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to unlock");
+      }
+    } catch (error: any) {
+      console.error("Failed to unlock version:", error);
+      toast.error(error.message || "Failed to unlock version");
+    } finally {
+      setUnlocking(false);
+    }
+  }
+
+  async function handleArchiveVersion() {
+    setArchiving(true);
+    try {
+      const response = await fetch(`/api/admin/versions/${version}/archive`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        toast.success(`Version ${version} archived`);
+        setShowArchiveDialog(false);
+        loadVersionData();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to archive");
+      }
+    } catch (error: any) {
+      console.error("Failed to archive version:", error);
+      toast.error(error.message || "Failed to archive version");
+    } finally {
+      setArchiving(false);
+    }
+  }
+
   const getCategoryName = (category: string) => {
     const categoryMap: Record<string, string> = {
       "3.1": "Missiological Research",
@@ -240,6 +290,45 @@ export default function VersionDetailPage({
 
   const isValid = validateDistribution();
 
+  // Calculate actual percentages for validation display
+  const getValidationDetails = () => {
+    if (!versionStats || versionStats.total_questions === 0) {
+      return {
+        tier1: { percent: 0, valid: false, message: "No questions" },
+        tier2: { percent: 0, valid: false, message: "No questions" },
+        tier3: { percent: 0, valid: false, message: "No questions" },
+      };
+    }
+    const total = versionStats.total_questions;
+    const t1 = getTierProgress(1).current;
+    const t2 = getTierProgress(2).current;
+    const t3 = getTierProgress(3).current;
+    
+    const t1Pct = Math.round((t1 / total) * 100);
+    const t2Pct = Math.round((t2 / total) * 100);
+    const t3Pct = Math.round((t3 / total) * 100);
+    
+    return {
+      tier1: {
+        percent: t1Pct,
+        valid: t1Pct >= 65 && t1Pct <= 75,
+        message: t1Pct < 65 ? `Need ${65 - t1Pct}% more` : t1Pct > 75 ? `${t1Pct - 75}% too high` : "✓ Valid",
+      },
+      tier2: {
+        percent: t2Pct,
+        valid: t2Pct >= 15 && t2Pct <= 25,
+        message: t2Pct < 15 ? `Need ${15 - t2Pct}% more` : t2Pct > 25 ? `${t2Pct - 25}% too high` : "✓ Valid",
+      },
+      tier3: {
+        percent: t3Pct,
+        valid: t3Pct >= 5 && t3Pct <= 15,
+        message: t3Pct < 5 ? `Need ${5 - t3Pct}% more` : t3Pct > 15 ? `${t3Pct - 15}% too high` : "✓ Valid",
+      },
+    };
+  };
+
+  const validationDetails = getValidationDetails();
+
   return (
     <div className="container py-8">
       <div className="mb-8">
@@ -275,22 +364,48 @@ export default function VersionDetailPage({
               {versionInfo.marketing_version}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {versionInfo.status === "draft" && (
               <Button
                 variant="outline"
                 onClick={handleLockVersion}
                 disabled={!isValid || locking}
+                title={!isValid ? "Cannot lock: invalid tier distribution" : "Lock version to prepare for publishing"}
               >
                 {locking ? "Locking..." : "Lock Version"}
               </Button>
             )}
             {versionInfo.status === "locked" && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowUnlockDialog(true)}
+                  disabled={unlocking}
+                >
+                  Unlock
+                </Button>
+                <Button
+                  variant="brand"
+                  onClick={() => setShowPublishDialog(true)}
+                >
+                  Publish Version
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowArchiveDialog(true)}
+                  disabled={archiving}
+                >
+                  Archive
+                </Button>
+              </>
+            )}
+            {versionInfo.status === "active" && (
               <Button
-                variant="brand"
-                onClick={() => setShowPublishDialog(true)}
+                variant="outline"
+                onClick={() => setShowArchiveDialog(true)}
+                disabled={archiving}
               >
-                Publish Version
+                Archive Version
               </Button>
             )}
             <Button asChild variant="outline">
@@ -335,6 +450,62 @@ export default function VersionDetailPage({
                 {versionStats && versionStats.target_total > 0
                   ? Math.round((versionStats.total_questions / versionStats.target_total) * 100)
                   : 0}%
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Validation Status Card */}
+      <Card className={`mb-8 ${isValid ? "border-green-500" : "border-orange-500"}`}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Tier Distribution Validation</CardTitle>
+            {isValid ? (
+              <Badge variant="outline" className="text-green-600 border-green-600">
+                Valid - Ready to Lock
+              </Badge>
+            ) : (
+              <Badge variant="destructive">
+                Invalid - Adjust Distribution
+              </Badge>
+            )}
+          </div>
+          <CardDescription>
+            To lock a version, tier distribution must meet these requirements:
+            T1: 65-75%, T2: 15-25%, T3: 5-15%
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className={`p-4 rounded-lg border ${validationDetails.tier1.valid ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900" : "bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900"}`}>
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-medium">Tier 1</span>
+                <span className="text-sm text-muted-foreground">Required: 65-75%</span>
+              </div>
+              <div className="text-2xl font-bold">{validationDetails.tier1.percent}%</div>
+              <div className={`text-sm mt-1 ${validationDetails.tier1.valid ? "text-green-600" : "text-orange-600"}`}>
+                {validationDetails.tier1.message}
+              </div>
+            </div>
+            <div className={`p-4 rounded-lg border ${validationDetails.tier2.valid ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900" : "bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900"}`}>
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-medium">Tier 2</span>
+                <span className="text-sm text-muted-foreground">Required: 15-25%</span>
+              </div>
+              <div className="text-2xl font-bold">{validationDetails.tier2.percent}%</div>
+              <div className={`text-sm mt-1 ${validationDetails.tier2.valid ? "text-green-600" : "text-orange-600"}`}>
+                {validationDetails.tier2.message}
+              </div>
+            </div>
+            <div className={`p-4 rounded-lg border ${validationDetails.tier3.valid ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900" : "bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900"}`}>
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-medium">Tier 3</span>
+                <span className="text-sm text-muted-foreground">Required: 5-15%</span>
+              </div>
+              <div className="text-2xl font-bold">{validationDetails.tier3.percent}%</div>
+              <div className={`text-sm mt-1 ${validationDetails.tier3.valid ? "text-green-600" : "text-orange-600"}`}>
+                {validationDetails.tier3.message}
               </div>
             </div>
           </div>
@@ -515,6 +686,80 @@ export default function VersionDetailPage({
               disabled={publishing}
             >
               {publishing ? "Publishing..." : "Publish Version"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unlock Dialog */}
+      <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unlock Version</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to unlock version {version}?
+              This will revert it to draft status, allowing further editing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Current Status:</span>
+                <span className="font-medium">Locked</span>
+              </div>
+              <div className="flex justify-between">
+                <span>New Status:</span>
+                <span className="font-medium">Draft</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                The version will need to be locked again before it can be published.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUnlockVersion}
+              disabled={unlocking}
+            >
+              {unlocking ? "Unlocking..." : "Unlock Version"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Dialog */}
+      <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive Version</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to archive version {version}?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Questions:</span>
+                <span className="font-medium">{versionStats?.total_questions}</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Archived versions are preserved but no longer active.
+                The questions will remain accessible for historical reference.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowArchiveDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleArchiveVersion}
+              disabled={archiving}
+            >
+              {archiving ? "Archiving..." : "Archive Version"}
             </Button>
           </DialogFooter>
         </DialogContent>

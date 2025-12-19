@@ -740,6 +740,191 @@ async def copy_question_set(
     }
 
 
+@router.post("/question-sets/{question_set_id}/lock")
+async def lock_question_set(
+    question_set_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Lock a question set to prevent further editing"""
+    question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
+    
+    if not question_set:
+        raise HTTPException(status_code=404, detail="Question set not found")
+    
+    # Only draft versions can be locked
+    if question_set.status != "draft":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot lock a {question_set.status} version. Only draft versions can be locked."
+        )
+    
+    # Already locked
+    if question_set.locked_at is not None:
+        raise HTTPException(status_code=400, detail="Question set is already locked")
+    
+    # Validate tier distribution before locking
+    questions = db.query(Question).filter(Question.question_set_id == question_set_id).all()
+    total = len(questions)
+    
+    if total == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot lock an empty question set"
+        )
+    
+    tier_counts = {1: 0, 2: 0, 3: 0}
+    for q in questions:
+        if q.tier in tier_counts:
+            tier_counts[q.tier] += 1
+    
+    tier1_pct = (tier_counts[1] / total) * 100
+    tier2_pct = (tier_counts[2] / total) * 100
+    tier3_pct = (tier_counts[3] / total) * 100
+    
+    # Validate distribution (65-75% T1, 15-25% T2, 5-15% T3)
+    if not (65 <= tier1_pct <= 75 and 15 <= tier2_pct <= 25 and 5 <= tier3_pct <= 15):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid tier distribution. T1: {tier1_pct:.1f}%, T2: {tier2_pct:.1f}%, T3: {tier3_pct:.1f}%. "
+                   f"Required: T1 65-75%, T2 15-25%, T3 5-15%"
+        )
+    
+    question_set.locked_at = datetime.utcnow()
+    question_set.status = "locked"
+    db.commit()
+    
+    return {
+        "message": f"Question set {question_set.semantic_version} locked",
+        "version": question_set.semantic_version,
+        "status": question_set.status,
+        "locked_at": question_set.locked_at.isoformat()
+    }
+
+
+@router.post("/question-sets/{question_set_id}/unlock")
+async def unlock_question_set(
+    question_set_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Unlock a question set to allow editing (reverts to draft)"""
+    question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
+    
+    if not question_set:
+        raise HTTPException(status_code=404, detail="Question set not found")
+    
+    # Only locked versions can be unlocked
+    if question_set.status != "locked":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot unlock a {question_set.status} version. Only locked versions can be unlocked."
+        )
+    
+    question_set.locked_at = None
+    question_set.status = "draft"
+    db.commit()
+    
+    return {
+        "message": f"Question set {question_set.semantic_version} unlocked",
+        "version": question_set.semantic_version,
+        "status": question_set.status
+    }
+
+
+@router.post("/question-sets/{question_set_id}/archive")
+async def archive_question_set(
+    question_set_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Archive a question set"""
+    question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
+    
+    if not question_set:
+        raise HTTPException(status_code=404, detail="Question set not found")
+    
+    # Only active versions can be archived
+    if question_set.status not in ["active", "locked"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot archive a {question_set.status} version. Only active or locked versions can be archived."
+        )
+    
+    question_set.status = "archived"
+    question_set.archived_at = datetime.utcnow()
+    db.commit()
+    
+    return {
+        "message": f"Question set {question_set.semantic_version} archived",
+        "version": question_set.semantic_version,
+        "status": question_set.status,
+        "archived_at": question_set.archived_at.isoformat()
+    }
+
+
+@router.put("/question-sets/{question_set_id}/status")
+async def update_question_set_status(
+    question_set_id: UUID,
+    new_status: str = Query(..., description="New status: draft, locked, active, archived"),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Update the status of a question set"""
+    question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
+    
+    if not question_set:
+        raise HTTPException(status_code=404, detail="Question set not found")
+    
+    valid_statuses = ["draft", "locked", "active", "archived"]
+    if new_status not in valid_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+        )
+    
+    old_status = question_set.status
+    
+    # Validate transitions
+    valid_transitions = {
+        "draft": ["locked"],
+        "locked": ["draft", "active", "archived"],
+        "active": ["archived"],
+        "archived": ["active"],  # Allow reactivating
+    }
+    
+    if new_status not in valid_transitions.get(old_status, []) and new_status != old_status:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot transition from {old_status} to {new_status}. "
+                   f"Valid transitions: {', '.join(valid_transitions.get(old_status, []))}"
+        )
+    
+    # If transitioning to active, deactivate other active versions
+    if new_status == "active" and old_status != "active":
+        db.query(QuestionSet).filter(
+            QuestionSet.status == "active",
+            QuestionSet.id != question_set_id
+        ).update({"status": "archived", "archived_at": datetime.utcnow()})
+    
+    # Update timestamps based on transition
+    if new_status == "locked" and old_status == "draft":
+        question_set.locked_at = datetime.utcnow()
+    elif new_status == "draft" and old_status == "locked":
+        question_set.locked_at = None
+    elif new_status == "archived":
+        question_set.archived_at = datetime.utcnow()
+    
+    question_set.status = new_status
+    db.commit()
+    
+    return {
+        "message": f"Question set {question_set.semantic_version} status changed from {old_status} to {new_status}",
+        "version": question_set.semantic_version,
+        "status": question_set.status
+    }
+
+
 @router.post("/versions", response_model=dict)
 async def create_version(
     request: VersionCreateRequest,
@@ -806,13 +991,17 @@ async def publish_version(
     if not question_set:
         raise HTTPException(status_code=404, detail="Version not found")
     
-    if question_set.locked_at is not None:
-        raise HTTPException(status_code=400, detail="Version is already published")
+    # Only locked versions can be published
+    if question_set.status != "locked":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot publish a {question_set.status} version. Only locked versions can be published."
+        )
     
     # Deactivate other active versions
     db.query(QuestionSet).filter(
         QuestionSet.status == "active"
-    ).update({"status": "archived"})
+    ).update({"status": "archived", "archived_at": datetime.utcnow()})
     
     # Activate this version
     question_set.status = "active"

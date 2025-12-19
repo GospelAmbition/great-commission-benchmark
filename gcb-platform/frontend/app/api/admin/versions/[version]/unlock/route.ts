@@ -54,9 +54,9 @@ export async function POST(
       return NextResponse.json({ error: "Version not found" }, { status: 404 });
     }
 
-    // Lock the question set
+    // Unlock the question set
     const response = await fetch(
-      `${API_URL}/api/admin/question-sets/${questionSetId}/lock`,
+      `${API_URL}/api/admin/question-sets/${questionSetId}/unlock`,
       {
         method: "POST",
         headers: {
@@ -74,9 +74,9 @@ export async function POST(
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Failed to lock version:", error);
+    console.error("Failed to unlock version:", error);
     return NextResponse.json(
-      { error: "Failed to lock version" },
+      { error: "Failed to unlock version" },
       { status: 500 }
     );
   }
