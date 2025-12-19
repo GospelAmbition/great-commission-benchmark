@@ -1,7 +1,7 @@
 """Admin API endpoints"""
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc
 from uuid import UUID
 from datetime import datetime, timedelta
@@ -34,7 +34,9 @@ from app.schemas.admin import (
     QuestionSetStatsResponse,
     QuestionSetCopyRequest,
     CategoryStats,
-    TierStats
+    TierStats,
+    DifficultyStats,
+    DifficultyCount
 )
 
 router = APIRouter()
@@ -218,7 +220,7 @@ async def import_questions(
                     continue
                 
                 # Check if question set is locked
-                if question_set.status == "locked":
+                if question_set.locked_at is not None:
                     errors.append(f"Question {idx}: question set is locked")
                     continue
                 
@@ -256,24 +258,31 @@ async def list_questions(
     db: Session = Depends(get_db)
 ):
     """List questions"""
-    query = db.query(Question)
+    # Base query for filtering and counting (without eager loading)
+    base_query = db.query(Question)
     
     if question_set_id:
-        query = query.filter(Question.question_set_id == question_set_id)
+        base_query = base_query.filter(Question.question_set_id == question_set_id)
     if tier:
-        query = query.filter(Question.tier == tier)
+        base_query = base_query.filter(Question.tier == tier)
     if category:
-        query = query.filter(Question.category == category)
+        base_query = base_query.filter(Question.category == category)
     
-    query = query.order_by(Question.tier, Question.category)
+    # Get total count before applying eager loading
+    total = base_query.count()
     
-    total = query.count()
+    # Query with eager loading for fetching results
+    query = base_query.options(joinedload(Question.question_set)).order_by(Question.tier, Question.category)
     questions = query.offset(offset).limit(limit).all()
     
     # Build response with explicit serialization to avoid circular references
     items = []
     for q in questions:
-        is_locked = q.question_set.status == "locked" if q.question_set else False
+        # Check if question set is locked (locked_at is not None) or if question_set is missing
+        is_locked = False
+        if q.question_set:
+            # A question set is considered locked if locked_at is not None
+            is_locked = q.question_set.locked_at is not None
         # Get question_metadata if it exists
         metadata = None
         if hasattr(q, 'question_metadata') and q.question_metadata:
@@ -302,10 +311,15 @@ async def get_question(
     db: Session = Depends(get_db)
 ):
     """Get question details"""
-    question = db.query(Question).filter(Question.id == question_id).first()
+    question = db.query(Question).options(joinedload(Question.question_set)).filter(Question.id == question_id).first()
     
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
+    
+    # Check if question set is locked
+    is_locked = False
+    if question.question_set:
+        is_locked = question.question_set.locked_at is not None
     
     return QuestionResponse(
         id=question.id,
@@ -314,7 +328,7 @@ async def get_question(
         category=question.category,
         content=question.content,
         metadata=question.question_metadata,
-        is_locked=question.question_set.status == "locked"
+        is_locked=is_locked
     )
 
 
@@ -326,13 +340,13 @@ async def update_question(
     db: Session = Depends(get_db)
 ):
     """Update a question"""
-    question = db.query(Question).filter(Question.id == question_id).first()
+    question = db.query(Question).options(joinedload(Question.question_set)).filter(Question.id == question_id).first()
     
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
     
     # Check if question set is locked
-    if question.question_set.status == "locked":
+    if question.question_set and question.question_set.locked_at is not None:
         raise HTTPException(status_code=400, detail="Question set is locked")
     
     if request.tier is not None:
@@ -347,6 +361,11 @@ async def update_question(
     db.commit()
     db.refresh(question)
     
+    # Check if question set is locked
+    is_locked = False
+    if question.question_set:
+        is_locked = question.question_set.locked_at is not None
+    
     return QuestionResponse(
         id=question.id,
         question_set_id=question.question_set_id,
@@ -354,7 +373,7 @@ async def update_question(
         category=question.category,
         content=question.content,
         metadata=question.question_metadata,
-        is_locked=question.question_set.status == "locked"
+        is_locked=is_locked
     )
 
 
@@ -365,13 +384,13 @@ async def delete_question(
     db: Session = Depends(get_db)
 ):
     """Delete a question"""
-    question = db.query(Question).filter(Question.id == question_id).first()
+    question = db.query(Question).options(joinedload(Question.question_set)).filter(Question.id == question_id).first()
     
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
     
     # Check if question set is locked
-    if question.question_set.status == "locked":
+    if question.question_set and question.question_set.locked_at is not None:
         raise HTTPException(status_code=400, detail="Cannot delete question from locked question set")
     
     db.delete(question)
@@ -489,6 +508,86 @@ TIER_TARGETS = {
 TOTAL_TARGET = 300
 
 
+@router.delete("/question-sets/{question_set_id}")
+async def delete_question_set(
+    question_set_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a question set and all its questions"""
+    question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
+    
+    if not question_set:
+        raise HTTPException(status_code=404, detail="Question set not found")
+    
+    # Prevent deleting active/published versions
+    if question_set.status == "active":
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete an active version. Archive it first."
+        )
+    
+    # Prevent deleting locked versions
+    if question_set.locked_at is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete a locked version"
+        )
+    
+    # Delete all questions first
+    deleted_questions = db.query(Question).filter(
+        Question.question_set_id == question_set_id
+    ).delete(synchronize_session=False)
+    
+    # Delete the question set
+    db.delete(question_set)
+    db.commit()
+    
+    return {
+        "message": f"Question set {question_set.semantic_version} deleted",
+        "deleted_questions": deleted_questions
+    }
+
+
+@router.post("/question-sets/{question_set_id}/empty")
+async def empty_question_set(
+    question_set_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Remove all questions from a question set"""
+    question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
+    
+    if not question_set:
+        raise HTTPException(status_code=404, detail="Question set not found")
+    
+    # Prevent emptying active/published versions
+    if question_set.status == "active":
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot empty an active version"
+        )
+    
+    # Prevent emptying locked versions
+    if question_set.locked_at is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot empty a locked version"
+        )
+    
+    # Delete all questions
+    deleted_count = db.query(Question).filter(
+        Question.question_set_id == question_set_id
+    ).delete(synchronize_session=False)
+    
+    db.commit()
+    
+    return {
+        "message": f"Removed all questions from version {question_set.semantic_version}",
+        "deleted_questions": deleted_count
+    }
+
+
 @router.get("/question-sets/{question_set_id}/stats", response_model=QuestionSetStatsResponse)
 async def get_question_set_stats(
     question_set_id: UUID,
@@ -504,14 +603,29 @@ async def get_question_set_stats(
     # Get all questions for this question set
     questions = db.query(Question).filter(Question.question_set_id == question_set_id).all()
     
-    # Count by tier and category
+    # Count by tier, category, and difficulty
     tier_counts = {1: 0, 2: 0, 3: 0}
     category_counts = {1: {}, 2: {}, 3: {}}
+    difficulty_counts = {"easy": 0, "medium": 0, "hard": 0}
     
     for q in questions:
         tier = q.tier
         category = q.category
         
+        # Count difficulty from metadata
+        if q.question_metadata and isinstance(q.question_metadata, dict):
+            difficulty = q.question_metadata.get("difficulty", "").lower()
+            if difficulty in difficulty_counts:
+                difficulty_counts[difficulty] += 1
+        
+        # Skip if tier or category is None
+        if tier is None or category is None:
+            continue
+        
+        # Only process valid tiers (1, 2, 3)
+        if tier not in [1, 2, 3]:
+            continue
+            
         tier_counts[tier] = tier_counts.get(tier, 0) + 1
         
         if category not in category_counts[tier]:
@@ -533,13 +647,31 @@ async def get_question_set_stats(
             categories=categories_dict
         )
     
+    # Build difficulty stats
+    total_questions = len(questions)
+    difficulty_stats = DifficultyStats(
+        easy=DifficultyCount(
+            count=difficulty_counts["easy"],
+            percentage=round((difficulty_counts["easy"] / total_questions * 100) if total_questions > 0 else 0, 1)
+        ),
+        medium=DifficultyCount(
+            count=difficulty_counts["medium"],
+            percentage=round((difficulty_counts["medium"] / total_questions * 100) if total_questions > 0 else 0, 1)
+        ),
+        hard=DifficultyCount(
+            count=difficulty_counts["hard"],
+            percentage=round((difficulty_counts["hard"] / total_questions * 100) if total_questions > 0 else 0, 1)
+        )
+    )
+    
     return QuestionSetStatsResponse(
         question_set_id=question_set.id,
         semantic_version=question_set.semantic_version,
         marketing_version=question_set.marketing_version,
-        total_questions=len(questions),
+        total_questions=total_questions,
         target_total=TOTAL_TARGET,
-        tier_stats=tier_stats
+        tier_stats=tier_stats,
+        difficulty_stats=difficulty_stats
     )
 
 
@@ -674,7 +806,7 @@ async def publish_version(
     if not question_set:
         raise HTTPException(status_code=404, detail="Version not found")
     
-    if question_set.status == "locked":
+    if question_set.locked_at is not None:
         raise HTTPException(status_code=400, detail="Version is already published")
     
     # Deactivate other active versions

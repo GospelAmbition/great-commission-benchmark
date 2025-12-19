@@ -105,6 +105,12 @@ export default function AdminQuestionsPage() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [showAll, setShowAll] = useState(false);
+  const pageSize = 100;
 
   const categories = [
     "scripture",
@@ -130,10 +136,24 @@ export default function AdminQuestionsPage() {
 
   useEffect(() => {
     if (versionFilter) {
-      loadQuestions();
+      setCurrentPage(1); // Reset to first page when version changes
+      setShowAll(false); // Reset show all when version changes
+      loadQuestions(1, false);
       loadVersionStats();
     }
   }, [versionFilter]);
+
+  useEffect(() => {
+    if (versionFilter && currentPage > 1 && !showAll) {
+      loadQuestions(currentPage, false);
+    }
+  }, [currentPage]);
+
+  useEffect(() => {
+    if (versionFilter && showAll) {
+      loadQuestions(1, true);
+    }
+  }, [showAll]);
 
   async function loadVersions() {
     try {
@@ -191,10 +211,13 @@ export default function AdminQuestionsPage() {
     }
   }
 
-  async function loadQuestions() {
+  async function loadQuestions(page: number = 1, loadAll: boolean = false) {
     if (!versionFilter) return;
     
     setLoading(true);
+    const offset = loadAll ? 0 : (page - 1) * pageSize;
+    const limit = loadAll ? 1000 : pageSize; // Use 1000 as max to get all questions
+    
     try {
       // Get question_set_id from versions list
       const selectedVersion = versions.find(v => v.semantic_version === versionFilter);
@@ -209,21 +232,23 @@ export default function AdminQuestionsPage() {
           
           if (selectedQuestionSet) {
             const response = await fetch(
-              `/api/admin/questions?question_set_id=${selectedQuestionSet.id}`
+              `/api/admin/questions?question_set_id=${selectedQuestionSet.id}&limit=${limit}&offset=${offset}`
             );
             if (response.ok) {
               const data = await response.json();
               setQuestions(data.items || []);
+              setTotalQuestions(data.total || 0);
             }
           }
         }
       } else {
         const response = await fetch(
-          `/api/admin/questions?question_set_id=${selectedVersion.id}`
+          `/api/admin/questions?question_set_id=${selectedVersion.id}&limit=${limit}&offset=${offset}`
         );
         if (response.ok) {
           const data = await response.json();
           setQuestions(data.items || []);
+          setTotalQuestions(data.total || 0);
         }
       }
     } catch (error) {
@@ -246,7 +271,7 @@ export default function AdminQuestionsPage() {
       if (response.ok) {
         toast.success("Question updated");
         setSelectedQuestion(null);
-        loadQuestions();
+        loadQuestions(currentPage, showAll);
       } else {
         throw new Error("Failed to update");
       }
@@ -266,7 +291,7 @@ export default function AdminQuestionsPage() {
 
       if (response.ok) {
         toast.success("Question approved");
-        loadQuestions();
+        loadQuestions(currentPage, showAll);
       } else {
         throw new Error("Failed to approve");
       }
@@ -284,7 +309,7 @@ export default function AdminQuestionsPage() {
 
       if (response.ok) {
         toast.success("Question rejected");
-        loadQuestions();
+        loadQuestions(currentPage, showAll);
       } else {
         throw new Error("Failed to reject");
       }
@@ -311,7 +336,9 @@ export default function AdminQuestionsPage() {
         toast.success(`Imported ${result.imported} questions`);
         setShowImportDialog(false);
         setImportFile(null);
-        loadQuestions();
+        setCurrentPage(1);
+        setShowAll(false);
+        loadQuestions(1, false);
       } else {
         throw new Error("Failed to import");
       }
@@ -523,54 +550,52 @@ export default function AdminQuestionsPage() {
           </div>
 
           {/* Difficulty Distribution */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Difficulty Distribution</CardTitle>
-              <CardDescription>
-                Balance of easy, medium, and hard questions (target: 25-40% each)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                {(["easy", "medium", "hard"] as const).map((difficulty) => {
-                  const diffStats = questions.filter(
-                    (q) => q.metadata?.difficulty === difficulty
-                  );
-                  const count = diffStats.length;
-                  const percentage = versionStats.total_questions > 0
-                    ? Math.round((count / versionStats.total_questions) * 100)
-                    : 0;
-                  const inRange = percentage >= 25 && percentage <= 40;
-                  
-                  return (
-                    <div
-                      key={difficulty}
-                      className="p-4 border rounded-lg space-y-2"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium capitalize">{difficulty}</span>
-                        <Badge variant={inRange ? "default" : "destructive"}>
-                          {percentage}%
-                        </Badge>
+          {versionStats.difficulty_stats && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Difficulty Distribution</CardTitle>
+                <CardDescription>
+                  Balance of easy, medium, and hard questions (target: 25-40% each)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {(["easy", "medium", "hard"] as const).map((difficulty) => {
+                    const stats = versionStats.difficulty_stats![difficulty];
+                    const count = stats.count;
+                    const percentage = Math.round(stats.percentage);
+                    const inRange = percentage >= 25 && percentage <= 40;
+                    
+                    return (
+                      <div
+                        key={difficulty}
+                        className="p-4 border rounded-lg space-y-2"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium capitalize">{difficulty}</span>
+                          <Badge variant={inRange ? "default" : "destructive"}>
+                            {percentage}%
+                          </Badge>
+                        </div>
+                        <div className="text-2xl font-bold">{count}</div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all ${
+                              inRange ? "bg-green-500" : "bg-orange-500"
+                            }`}
+                            style={{ width: `${Math.min(100, percentage * 2.5)}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Target: 25-40% ({Math.round(versionStats.total_questions * 0.25)}-{Math.round(versionStats.total_questions * 0.4)})
+                        </div>
                       </div>
-                      <div className="text-2xl font-bold">{count}</div>
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all ${
-                            inRange ? "bg-green-500" : "bg-orange-500"
-                          }`}
-                          style={{ width: `${Math.min(100, percentage * 2.5)}%` }}
-                        />
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Target: 25-40% ({Math.round(versionStats.total_questions * 0.25)}-{Math.round(versionStats.total_questions * 0.4)})
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Category Completeness Grid */}
           <Card className="mb-6">
@@ -738,6 +763,15 @@ export default function AdminQuestionsPage() {
           <CardTitle>Questions</CardTitle>
           <CardDescription>
             {filteredQuestions.length} questions matching filters
+            {showAll ? (
+              <span className="ml-2">
+                (showing all {totalQuestions} questions)
+              </span>
+            ) : totalQuestions > pageSize ? (
+              <span className="ml-2">
+                (showing page {currentPage} of {Math.ceil(totalQuestions / pageSize)}, {totalQuestions} total)
+              </span>
+            ) : null}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -839,6 +873,89 @@ export default function AdminQuestionsPage() {
               ))}
             </TableBody>
           </Table>
+          
+          {/* Pagination Controls */}
+          {totalQuestions > pageSize && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                {Math.min(currentPage * pageSize, totalQuestions)} of {totalQuestions} questions
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1 || loading}
+                >
+                  First
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1 || loading}
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {/* Page number buttons */}
+                  {Array.from({ length: Math.ceil(totalQuestions / pageSize) }, (_, i) => i + 1)
+                    .filter(page => {
+                      // Show first, last, current, and pages around current
+                      const totalPages = Math.ceil(totalQuestions / pageSize);
+                      return (
+                        page === 1 ||
+                        page === totalPages ||
+                        Math.abs(page - currentPage) <= 1
+                      );
+                    })
+                    .reduce((acc: (number | string)[], page, i, arr) => {
+                      // Add ellipsis between non-consecutive pages
+                      if (i > 0 && page - (arr[i - 1] as number) > 1) {
+                        acc.push("...");
+                      }
+                      acc.push(page);
+                      return acc;
+                    }, [])
+                    .map((item, i) =>
+                      typeof item === "string" ? (
+                        <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground">
+                          {item}
+                        </span>
+                      ) : (
+                        <Button
+                          key={item}
+                          variant={currentPage === item ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(item)}
+                          disabled={loading}
+                          className="min-w-[32px]"
+                        >
+                          {item}
+                        </Button>
+                      )
+                    )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage >= Math.ceil(totalQuestions / pageSize) || loading}
+                >
+                  Next
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.ceil(totalQuestions / pageSize))}
+                  disabled={currentPage >= Math.ceil(totalQuestions / pageSize) || loading}
+                >
+                  Last
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

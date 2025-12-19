@@ -62,6 +62,9 @@ export default function AdminVersionsPage() {
   const [creating, setCreating] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<BenchmarkVersion | null>(null);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [showEmptyDialog, setShowEmptyDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -221,6 +224,63 @@ export default function AdminVersionsPage() {
     } catch (error) {
       console.error("Failed to publish version:", error);
       toast.error("Failed to publish version");
+    }
+  }
+
+  async function handleEmptyVersion() {
+    if (!selectedVersion) return;
+    setActionLoading(true);
+    try {
+      const response = await fetch(
+        `/api/admin/versions/${selectedVersion.version}/empty`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Removed ${data.deleted_questions} questions from version ${selectedVersion.version}`);
+        setShowEmptyDialog(false);
+        setSelectedVersion(null);
+        loadVersions();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to empty version");
+      }
+    } catch (error: any) {
+      console.error("Failed to empty version:", error);
+      toast.error(error.message || "Failed to empty version");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleDeleteVersion() {
+    if (!selectedVersion) return;
+    setActionLoading(true);
+    try {
+      const response = await fetch(
+        `/api/admin/versions/${selectedVersion.version}/delete`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (response.ok) {
+        toast.success(`Version ${selectedVersion.version} deleted`);
+        setShowDeleteDialog(false);
+        setSelectedVersion(null);
+        loadVersions();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to delete version");
+      }
+    } catch (error: any) {
+      console.error("Failed to delete version:", error);
+      toast.error(error.message || "Failed to delete version");
+    } finally {
+      setActionLoading(false);
     }
   }
 
@@ -405,6 +465,27 @@ export default function AdminVersionsPage() {
                             >
                               Lock
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedVersion(v);
+                                setShowEmptyDialog(true);
+                              }}
+                            >
+                              Empty
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setSelectedVersion(v);
+                                setShowDeleteDialog(true);
+                              }}
+                            >
+                              Delete
+                            </Button>
                           </>
                         )}
                         {v.status === "locked" && (
@@ -568,6 +649,82 @@ export default function AdminVersionsPage() {
               className="bg-[--ga-red] hover:bg-[--ga-dark-red]"
             >
               Publish Version
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Empty Version Dialog */}
+      <Dialog open={showEmptyDialog} onOpenChange={setShowEmptyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Empty Version</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove all questions from version {selectedVersion?.version}?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Questions to remove:</span>
+                <span className="font-medium text-destructive">{selectedVersion?.question_count}</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                The version will remain as a draft but will have no questions.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEmptyDialog(false)} disabled={actionLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleEmptyVersion}
+              disabled={actionLoading}
+            >
+              {actionLoading ? "Emptying..." : "Empty Version"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Version Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Version</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete version {selectedVersion?.version}?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Version:</span>
+                <span className="font-medium">{selectedVersion?.version}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Questions:</span>
+                <span className="font-medium text-destructive">{selectedVersion?.question_count}</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                This will permanently delete the version and all its questions.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={actionLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteVersion}
+              disabled={actionLoading}
+            >
+              {actionLoading ? "Deleting..." : "Delete Version"}
             </Button>
           </DialogFooter>
         </DialogContent>

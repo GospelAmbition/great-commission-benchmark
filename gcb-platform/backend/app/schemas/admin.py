@@ -129,6 +129,19 @@ class TierStats(BaseModel):
     categories: Dict[str, CategoryStats]
 
 
+class DifficultyCount(BaseModel):
+    """Difficulty count for a single difficulty level"""
+    count: int
+    percentage: float
+
+
+class DifficultyStats(BaseModel):
+    """Difficulty distribution statistics"""
+    easy: DifficultyCount
+    medium: DifficultyCount
+    hard: DifficultyCount
+
+
 class QuestionSetStatsResponse(BaseModel):
     """Question set statistics response"""
     question_set_id: UUID
@@ -137,6 +150,7 @@ class QuestionSetStatsResponse(BaseModel):
     total_questions: int
     target_total: int
     tier_stats: Dict[int, TierStats]
+    difficulty_stats: DifficultyStats
 
 
 class QuestionSetCopyRequest(BaseModel):

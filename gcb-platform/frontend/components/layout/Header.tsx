@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,8 +19,14 @@ import { useUserProfile } from "@/lib/useUserProfile";
 export function Header() {
   const { data: session, status } = useSession();
   const { isAdmin, isModerator } = useUserProfile();
+  const pathname = usePathname();
   const user = session?.user;
   const isLoading = status === "loading";
+
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname.startsWith(href);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" role="banner">
@@ -32,25 +39,41 @@ export function Header() {
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium" aria-label="Main navigation">
           <Link
             href="/"
-            className="transition-colors hover:text-foreground/80 text-foreground/60"
+            className={`transition-colors hover:text-foreground/80 pb-1 border-b-2 ${
+              isActive("/")
+                ? "text-foreground border-foreground"
+                : "text-foreground/60 border-transparent"
+            }`}
           >
             Home
           </Link>
           <Link
             href="/research"
-            className="transition-colors hover:text-foreground/80 text-foreground/60"
+            className={`transition-colors hover:text-foreground/80 pb-1 border-b-2 ${
+              isActive("/research")
+                ? "text-foreground border-foreground"
+                : "text-foreground/60 border-transparent"
+            }`}
           >
             Research
           </Link>
           <Link
             href="/contribute"
-            className="transition-colors hover:text-foreground/80 text-foreground/60"
+            className={`transition-colors hover:text-foreground/80 pb-1 border-b-2 ${
+              isActive("/contribute")
+                ? "text-foreground border-foreground"
+                : "text-foreground/60 border-transparent"
+            }`}
           >
             Contribute
           </Link>
           <Link
             href="/about"
-            className="transition-colors hover:text-foreground/80 text-foreground/60"
+            className={`transition-colors hover:text-foreground/80 pb-1 border-b-2 ${
+              isActive("/about")
+                ? "text-foreground border-foreground"
+                : "text-foreground/60 border-transparent"
+            }`}
           >
             About
           </Link>
@@ -129,25 +152,33 @@ export function Header() {
               <nav className="flex flex-col space-y-4 mt-8" aria-label="Mobile navigation">
                 <Link
                   href="/"
-                  className="text-lg font-medium transition-colors hover:text-foreground/80"
+                  className={`text-lg font-medium transition-colors hover:text-foreground/80 pl-3 border-l-2 ${
+                    isActive("/") ? "border-foreground" : "border-transparent"
+                  }`}
                 >
                   Home
                 </Link>
                 <Link
                   href="/research"
-                  className="text-lg font-medium transition-colors hover:text-foreground/80"
+                  className={`text-lg font-medium transition-colors hover:text-foreground/80 pl-3 border-l-2 ${
+                    isActive("/research") ? "border-foreground" : "border-transparent"
+                  }`}
                 >
                   Research
                 </Link>
                 <Link
                   href="/contribute"
-                  className="text-lg font-medium transition-colors hover:text-foreground/80"
+                  className={`text-lg font-medium transition-colors hover:text-foreground/80 pl-3 border-l-2 ${
+                    isActive("/contribute") ? "border-foreground" : "border-transparent"
+                  }`}
                 >
                   Contribute
                 </Link>
                 <Link
                   href="/about"
-                  className="text-lg font-medium transition-colors hover:text-foreground/80"
+                  className={`text-lg font-medium transition-colors hover:text-foreground/80 pl-3 border-l-2 ${
+                    isActive("/about") ? "border-foreground" : "border-transparent"
+                  }`}
                 >
                   About
                 </Link>
