@@ -68,8 +68,19 @@ class PlatformAPIClient:
         return await self._request("GET", "/api/runner/versions")
     
     async def get_questions(self, version: str = "current") -> dict[str, Any]:
-        """Fetch the complete question set for a benchmark version."""
-        return await self._request("GET", "/api/runner/questions", params={"version": version})
+        """Fetch the complete question set for a benchmark version.
+        
+        Args:
+            version: The semantic version (e.g. "1.0.0") or "current" for the active version.
+                     If None or empty, uses "current".
+        """
+        # Handle None/empty as current
+        if not version or version == "current":
+            params = {}  # No version param means get the active/current version
+        else:
+            params = {"version": version}
+        
+        return await self._request("GET", "/api/runner/questions", params=params)
     
     async def get_judge_prompts(self, version: str = "current") -> dict[str, Any]:
         """Fetch judge prompts for a benchmark version."""

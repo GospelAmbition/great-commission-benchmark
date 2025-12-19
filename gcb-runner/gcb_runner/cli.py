@@ -19,7 +19,7 @@ from gcb_runner.config import Config, BackendConfig, get_config_dir
 app = typer.Typer(
     name="gcb-runner",
     help="Run Great Commission Benchmark tests against AI models.",
-    no_args_is_help=True,
+    no_args_is_help=False,  # We handle no-args case in callback to launch menu
 )
 console = Console()
 
@@ -499,6 +499,52 @@ def report(
         webbrowser.open(f"file://{output.absolute()}")
 
 
+@app.command(name="help")
+def show_help(ctx: typer.Context):
+    """Show CLI command reference."""
+    print_header()
+    console.print()
+    console.print("[bold]Available Commands:[/bold]")
+    console.print()
+    
+    commands = [
+        ("gcb-runner", "Launch interactive menu (default)"),
+        ("gcb-runner help", "Show this command reference"),
+        ("gcb-runner config", "Configure API keys and preferences"),
+        ("gcb-runner test", "Run benchmark against a model"),
+        ("gcb-runner results", "View past test results"),
+        ("gcb-runner view", "Launch web dashboard"),
+        ("gcb-runner report", "Generate HTML report"),
+        ("gcb-runner export", "Export results to JSON"),
+        ("gcb-runner upload", "Upload results to platform"),
+        ("gcb-runner versions", "List benchmark versions"),
+    ]
+    
+    table = Table(box=None, show_header=False, padding=(0, 2))
+    table.add_column("Command", style="cyan")
+    table.add_column("Description")
+    
+    for cmd, desc in commands:
+        table.add_row(cmd, desc)
+    
+    console.print(table)
+    console.print()
+    console.print("[dim]Use 'gcb-runner <command> --help' for detailed options.[/dim]")
+    console.print("[dim]Example: gcb-runner test --help[/dim]")
+    console.print()
+    console.print("[bold]Quick Start:[/bold]")
+    console.print("  1. Run [cyan]gcb-runner[/cyan] to launch the interactive menu")
+    console.print("  2. Select [cyan]Setup Wizard[/cyan] to configure your API keys")
+    console.print("  3. Select [cyan]Run Benchmark Test[/cyan] to test a model")
+
+
+@app.command(name="menu")
+def menu_command():
+    """Launch the interactive menu interface."""
+    from gcb_runner.menu import run_menu
+    run_menu()
+
+
 def version_callback(value: bool):
     """Show version and exit."""
     if value:
@@ -511,10 +557,15 @@ def callback(
     ctx: typer.Context,
     version: bool = typer.Option(False, "--version", "-v", help="Show version", callback=version_callback, is_eager=True),
 ):
-    """GCB Runner - Great Commission Benchmark CLI"""
+    """GCB Runner - Great Commission Benchmark CLI
+    
+    Run without arguments to launch the interactive menu.
+    Use 'gcb-runner help' for command reference.
+    """
     if ctx.invoked_subcommand is None and not version:
-        console.print(ctx.get_help())
-        raise typer.Exit()
+        # Launch the interactive menu when no command is specified
+        from gcb_runner.menu import run_menu
+        run_menu()
 
 
 def main():

@@ -60,6 +60,7 @@ async def run_benchmark(
     try:
         # Fetch questions
         console.print("Fetching questions from Platform API...")
+        console.print(f"[dim]API URL: {config.platform.url}[/dim]")
         
         version = benchmark_version or "current"
         
@@ -71,10 +72,20 @@ async def run_benchmark(
             questions_data = cached_data
         else:
             try:
-                questions_data = await api_client.get_questions(version)
+                questions_data = await api_client.get_questions(version if version != "current" else None)
                 cache.store(version, questions_data)
                 console.print("[green]✓ Connected to Platform API[/green]")
             except Exception as e:
+                error_msg = str(e)
+                if "not found" in error_msg.lower():
+                    console.print("[red]Error: No benchmark questions available.[/red]")
+                    console.print()
+                    console.print("[dim]This could mean:[/dim]")
+                    console.print("  • No benchmark version has been published yet")
+                    console.print("  • The requested version doesn't exist")
+                    console.print()
+                    console.print("[dim]Run 'gcb-runner menu' → Diagnostics to troubleshoot.[/dim]")
+                    raise
                 if cached_data:
                     console.print(f"[yellow]Warning: Could not fetch fresh questions ({e}), using cache[/yellow]")
                     questions_data = cached_data

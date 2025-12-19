@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -216,7 +217,7 @@ export default function AdminQuestionsPage() {
     
     setLoading(true);
     const offset = loadAll ? 0 : (page - 1) * pageSize;
-    const limit = loadAll ? 1000 : pageSize; // Use 1000 as max to get all questions
+    const limit = loadAll ? 500 : pageSize; // Backend max is 500
     
     try {
       // Get question_set_id from versions list
@@ -452,7 +453,7 @@ export default function AdminQuestionsPage() {
         </div>
       </div>
 
-      {/* Version Selector */}
+      {/* Version Selector - Always visible */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Version</CardTitle>
@@ -483,282 +484,322 @@ export default function AdminQuestionsPage() {
         </CardContent>
       </Card>
 
-      {/* Stats */}
-      {versionStats && (
-        <>
-          <div className="grid gap-6 md:grid-cols-4 mb-8">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Questions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">
-                  {versionStats.total_questions} / {versionStats.target_total}
-                </div>
-                <div className="mt-2">
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all"
-                      style={{
-                        width: `${Math.min(100, (versionStats.total_questions / versionStats.target_total) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {Math.round((versionStats.total_questions / versionStats.target_total) * 100)}% complete
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            {[1, 2, 3].map((tier) => {
-              const progress = getTierProgress(tier);
-              const weight = tier === 1 ? "70%" : tier === 2 ? "20%" : "10%";
-              return (
-                <Card key={tier}>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Tier {tier} ({weight})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">
-                      {progress.current} / {progress.target}
-                    </div>
-                    <div className="mt-2">
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all ${
-                            progress.percent >= 100
-                              ? "bg-green-500"
-                              : progress.percent >= 80
-                              ? "bg-primary"
-                              : "bg-orange-500"
-                          }`}
-                          style={{ width: `${Math.min(100, progress.percent)}%` }}
-                        />
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {progress.percent}% complete
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+      {/* Tabbed Content */}
+      {versionFilter && (
+        <Tabs defaultValue="questions" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="questions">Questions</TabsTrigger>
+            <TabsTrigger value="question-stats">Question Statistics</TabsTrigger>
+            <TabsTrigger value="category-stats">Category Statistics</TabsTrigger>
+          </TabsList>
 
-          {/* Difficulty Distribution */}
-          {versionStats.difficulty_stats && (
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Difficulty Distribution</CardTitle>
-                <CardDescription>
-                  Balance of easy, medium, and hard questions (target: 25-40% each)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-3">
-                  {(["easy", "medium", "hard"] as const).map((difficulty) => {
-                    const stats = versionStats.difficulty_stats![difficulty];
-                    const count = stats.count;
-                    const percentage = Math.round(stats.percentage);
-                    const inRange = percentage >= 25 && percentage <= 40;
-                    
-                    return (
-                      <div
-                        key={difficulty}
-                        className="p-4 border rounded-lg space-y-2"
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium capitalize">{difficulty}</span>
-                          <Badge variant={inRange ? "default" : "destructive"}>
-                            {percentage}%
-                          </Badge>
-                        </div>
-                        <div className="text-2xl font-bold">{count}</div>
+          {/* Question Statistics Tab */}
+          <TabsContent value="question-stats">
+            {versionStats ? (
+              <div className="space-y-6">
+                {/* Tier Progress Stats */}
+                <div className="grid gap-6 md:grid-cols-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Total Questions
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">
+                        {versionStats.total_questions} / {versionStats.target_total}
+                      </div>
+                      <div className="mt-2">
                         <div className="h-2 bg-muted rounded-full overflow-hidden">
                           <div
-                            className={`h-full transition-all ${
-                              inRange ? "bg-green-500" : "bg-orange-500"
-                            }`}
-                            style={{ width: `${Math.min(100, percentage * 2.5)}%` }}
+                            className="h-full bg-primary transition-all"
+                            style={{
+                              width: `${Math.min(100, (versionStats.total_questions / versionStats.target_total) * 100)}%`,
+                            }}
                           />
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          Target: 25-40% ({Math.round(versionStats.total_questions * 0.25)}-{Math.round(versionStats.total_questions * 0.4)})
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {Math.round((versionStats.total_questions / versionStats.target_total) * 100)}% complete
                         </div>
                       </div>
+                    </CardContent>
+                  </Card>
+                  {[1, 2, 3].map((tier) => {
+                    const progress = getTierProgress(tier);
+                    const weight = tier === 1 ? "70%" : tier === 2 ? "20%" : "10%";
+                    return (
+                      <Card key={tier}>
+                        <CardHeader>
+                          <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Tier {tier} ({weight})
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-3xl font-bold">
+                            {progress.current} / {progress.target}
+                          </div>
+                          <div className="mt-2">
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={`h-full transition-all ${
+                                  progress.percent >= 100
+                                    ? "bg-green-500"
+                                    : progress.percent >= 80
+                                    ? "bg-primary"
+                                    : "bg-orange-500"
+                                }`}
+                                style={{ width: `${Math.min(100, progress.percent)}%` }}
+                              />
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {progress.percent}% complete
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     );
                   })}
                 </div>
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Category Completeness Grid */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Category Completeness</CardTitle>
-              <CardDescription>
-                Progress by category within {versionStats.semantic_version}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {[1, 2, 3].map((tier) => {
-                  const tierStat = versionStats.tier_stats[tier];
-                  if (!tierStat) return null;
-                  
-                  const categories = Object.entries(tierStat.categories).sort();
-                  
-                  return (
-                    <div key={tier}>
-                      <h3 className="text-lg font-semibold mb-3">
-                        Tier {tier} ({tier === 1 ? "70%" : tier === 2 ? "20%" : "10%"} weight)
-                      </h3>
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {categories.map(([category, stats]) => {
-                          const percent = stats.target > 0 
-                            ? Math.round((stats.count / stats.target) * 100) 
-                            : 0;
+                {/* Difficulty Distribution */}
+                {versionStats.difficulty_stats && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Difficulty Distribution</CardTitle>
+                      <CardDescription>
+                        Balance of easy, medium, and hard questions (target: 25-40% each)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4 md:grid-cols-3">
+                        {(["easy", "medium", "hard"] as const).map((difficulty) => {
+                          const stats = versionStats.difficulty_stats![difficulty];
+                          const count = stats.count;
+                          const percentage = Math.round(stats.percentage);
+                          const inRange = percentage >= 25 && percentage <= 40;
+                          
                           return (
                             <div
-                              key={category}
-                              className="p-3 border rounded-lg space-y-2"
+                              key={difficulty}
+                              className="p-4 border rounded-lg space-y-2"
                             >
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <div className="font-medium text-sm">
-                                    {category}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {getCategoryName(category)}
-                                  </div>
-                                </div>
-                                <Badge
-                                  variant={
-                                    percent >= 100
-                                      ? "default"
-                                      : percent >= 80
-                                      ? "secondary"
-                                      : "outline"
-                                  }
-                                >
-                                  {percent}%
+                              <div className="flex justify-between items-center">
+                                <span className="font-medium capitalize">{difficulty}</span>
+                                <Badge variant={inRange ? "default" : "destructive"}>
+                                  {percentage}%
                                 </Badge>
                               </div>
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-xs">
-                                  <span className="text-muted-foreground">
-                                    {stats.count} / {stats.target}
-                                  </span>
-                                  <span className="text-muted-foreground">
-                                    {stats.target - stats.count} remaining
-                                  </span>
-                                </div>
-                                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full transition-all ${
-                                      percent >= 100
-                                        ? "bg-green-500"
-                                        : percent >= 80
-                                        ? "bg-primary"
-                                        : "bg-orange-500"
-                                    }`}
-                                    style={{ width: `${Math.min(100, percent)}%` }}
-                                  />
-                                </div>
+                              <div className="text-2xl font-bold">{count}</div>
+                              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full transition-all ${
+                                    inRange ? "bg-green-500" : "bg-orange-500"
+                                  }`}
+                                  style={{ width: `${Math.min(100, percentage * 2.5)}%` }}
+                                />
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Target: 25-40% ({Math.round(versionStats.total_questions * 0.25)}-{Math.round(versionStats.total_questions * 0.4)})
                               </div>
                             </div>
                           );
                         })}
                       </div>
-                    </div>
-                  );
-                })}
+                    </CardContent>
+                  </Card>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
+            ) : loadingStats ? (
+              <Card>
+                <CardContent className="py-8">
+                  <Skeleton className="h-32 w-full" />
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  No statistics available for this version.
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
 
-      {/* Filters */}
-      {versionFilter && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Filters</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-5">
-              <Input
-                placeholder="Search questions..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <Select value={tierFilter} onValueChange={setTierFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by tier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Tiers</SelectItem>
-                  <SelectItem value="tier1">Tier 1</SelectItem>
-                  <SelectItem value="tier2">Tier 2</SelectItem>
-                  <SelectItem value="tier3">Tier 3</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {versionStats &&
-                    Object.keys(versionStats.tier_stats[1]?.categories || {})
-                      .concat(
-                        Object.keys(versionStats.tier_stats[2]?.categories || {})
-                      )
-                      .concat(
-                        Object.keys(versionStats.tier_stats[3]?.categories || {})
-                      )
-                      .map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat} - {getCategoryName(cat)}
-                        </SelectItem>
-                      ))}
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by difficulty" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Difficulties</SelectItem>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          {/* Category Statistics Tab */}
+          <TabsContent value="category-stats">
+            {versionStats ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Category Completeness</CardTitle>
+                  <CardDescription>
+                    Progress by category within {versionStats.semantic_version}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {[1, 2, 3].map((tier) => {
+                      const tierStat = versionStats.tier_stats[tier];
+                      if (!tierStat) return null;
+                      
+                      const categories = Object.entries(tierStat.categories).sort();
+                      
+                      return (
+                        <div key={tier}>
+                          <h3 className="text-lg font-semibold mb-3">
+                            Tier {tier} ({tier === 1 ? "70%" : tier === 2 ? "20%" : "10%"} weight)
+                          </h3>
+                          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {categories.map(([category, stats]) => {
+                              const percent = stats.target > 0 
+                                ? Math.round((stats.count / stats.target) * 100) 
+                                : 0;
+                              return (
+                                <div
+                                  key={category}
+                                  className="p-3 border rounded-lg space-y-2"
+                                >
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <div className="font-medium text-sm">
+                                        {category}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {getCategoryName(category)}
+                                      </div>
+                                    </div>
+                                    <Badge
+                                      variant={
+                                        percent >= 100
+                                          ? "default"
+                                          : percent >= 80
+                                          ? "secondary"
+                                          : "outline"
+                                      }
+                                    >
+                                      {percent}%
+                                    </Badge>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="flex justify-between text-xs">
+                                      <span className="text-muted-foreground">
+                                        {stats.count} / {stats.target}
+                                      </span>
+                                      <span className="text-muted-foreground">
+                                        {stats.target - stats.count} remaining
+                                      </span>
+                                    </div>
+                                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                      <div
+                                        className={`h-full transition-all ${
+                                          percent >= 100
+                                            ? "bg-green-500"
+                                            : percent >= 80
+                                            ? "bg-primary"
+                                            : "bg-orange-500"
+                                        }`}
+                                        style={{ width: `${Math.min(100, percent)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : loadingStats ? (
+              <Card>
+                <CardContent className="py-8">
+                  <Skeleton className="h-64 w-full" />
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  No category statistics available for this version.
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
 
-      {/* Questions Table */}
-      <Card>
+          {/* Questions Tab */}
+          <TabsContent value="questions">
+            {/* Filters */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Filters</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-5">
+                  <Input
+                    placeholder="Search questions..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                  <Select value={tierFilter} onValueChange={setTierFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by tier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Tiers</SelectItem>
+                      <SelectItem value="tier1">Tier 1</SelectItem>
+                      <SelectItem value="tier2">Tier 2</SelectItem>
+                      <SelectItem value="tier3">Tier 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {versionStats &&
+                        Object.keys(versionStats.tier_stats[1]?.categories || {})
+                          .concat(
+                            Object.keys(versionStats.tier_stats[2]?.categories || {})
+                          )
+                          .concat(
+                            Object.keys(versionStats.tier_stats[3]?.categories || {})
+                          )
+                          .map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat} - {getCategoryName(cat)}
+                            </SelectItem>
+                          ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Difficulties</SelectItem>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Questions Table */}
+            <Card>
         <CardHeader>
           <CardTitle>Questions</CardTitle>
           <CardDescription>
@@ -778,6 +819,7 @@ export default function AdminQuestionsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12 text-center">#</TableHead>
                 <TableHead>Question</TableHead>
                 <TableHead>Tier</TableHead>
                 <TableHead>Category</TableHead>
@@ -788,8 +830,11 @@ export default function AdminQuestionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredQuestions.map((q) => (
+              {filteredQuestions.map((q, index) => (
                 <TableRow key={q.id}>
+                  <TableCell className="text-center text-muted-foreground text-sm">
+                    {showAll ? index + 1 : (currentPage - 1) * pageSize + index + 1}
+                  </TableCell>
                   <TableCell className="max-w-md">
                     <div className="whitespace-normal break-words">
                       {q.content}
@@ -878,86 +923,122 @@ export default function AdminQuestionsPage() {
           {totalQuestions > pageSize && (
             <div className="flex items-center justify-between mt-4 pt-4 border-t">
               <div className="text-sm text-muted-foreground">
-                Showing {(currentPage - 1) * pageSize + 1} to{" "}
-                {Math.min(currentPage * pageSize, totalQuestions)} of {totalQuestions} questions
+                {showAll ? (
+                  `Showing all ${totalQuestions} questions`
+                ) : (
+                  <>
+                    Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                    {Math.min(currentPage * pageSize, totalQuestions)} of {totalQuestions} questions
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1 || loading}
-                >
-                  First
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1 || loading}
-                >
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1">
-                  {/* Page number buttons */}
-                  {Array.from({ length: Math.ceil(totalQuestions / pageSize) }, (_, i) => i + 1)
-                    .filter(page => {
-                      // Show first, last, current, and pages around current
-                      const totalPages = Math.ceil(totalQuestions / pageSize);
-                      return (
-                        page === 1 ||
-                        page === totalPages ||
-                        Math.abs(page - currentPage) <= 1
-                      );
-                    })
-                    .reduce((acc: (number | string)[], page, i, arr) => {
-                      // Add ellipsis between non-consecutive pages
-                      if (i > 0 && page - (arr[i - 1] as number) > 1) {
-                        acc.push("...");
-                      }
-                      acc.push(page);
-                      return acc;
-                    }, [])
-                    .map((item, i) =>
-                      typeof item === "string" ? (
-                        <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground">
-                          {item}
-                        </span>
-                      ) : (
-                        <Button
-                          key={item}
-                          variant={currentPage === item ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCurrentPage(item)}
-                          disabled={loading}
-                          className="min-w-[32px]"
-                        >
-                          {item}
-                        </Button>
-                      )
-                    )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage >= Math.ceil(totalQuestions / pageSize) || loading}
-                >
-                  Next
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(Math.ceil(totalQuestions / pageSize))}
-                  disabled={currentPage >= Math.ceil(totalQuestions / pageSize) || loading}
-                >
-                  Last
-                </Button>
+                {showAll ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowAll(false);
+                      setCurrentPage(1);
+                      loadQuestions(1, false);
+                    }}
+                    disabled={loading}
+                  >
+                    Show Paginated
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1 || loading}
+                    >
+                      First
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1 || loading}
+                    >
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {/* Page number buttons */}
+                      {Array.from({ length: Math.ceil(totalQuestions / pageSize) }, (_, i) => i + 1)
+                        .filter(page => {
+                          // Show first, last, current, and pages around current
+                          const totalPages = Math.ceil(totalQuestions / pageSize);
+                          return (
+                            page === 1 ||
+                            page === totalPages ||
+                            Math.abs(page - currentPage) <= 1
+                          );
+                        })
+                        .reduce((acc: (number | string)[], page, i, arr) => {
+                          // Add ellipsis between non-consecutive pages
+                          if (i > 0 && page - (arr[i - 1] as number) > 1) {
+                            acc.push("...");
+                          }
+                          acc.push(page);
+                          return acc;
+                        }, [])
+                        .map((item, i) =>
+                          typeof item === "string" ? (
+                            <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground">
+                              {item}
+                            </span>
+                          ) : (
+                            <Button
+                              key={item}
+                              variant={currentPage === item ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(item)}
+                              disabled={loading}
+                              className="min-w-[32px]"
+                            >
+                              {item}
+                            </Button>
+                          )
+                        )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage >= Math.ceil(totalQuestions / pageSize) || loading}
+                    >
+                      Next
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.ceil(totalQuestions / pageSize))}
+                      disabled={currentPage >= Math.ceil(totalQuestions / pageSize) || loading}
+                    >
+                      Last
+                    </Button>
+                    <div className="border-l pl-2 ml-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowAll(true)}
+                        disabled={loading}
+                      >
+                        Show All ({totalQuestions})
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
         </CardContent>
       </Card>
+          </TabsContent>
+        </Tabs>
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={!!selectedQuestion} onOpenChange={() => setSelectedQuestion(null)}>

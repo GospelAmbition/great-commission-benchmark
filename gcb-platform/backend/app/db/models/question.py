@@ -13,7 +13,7 @@ class Question(Base):
     __tablename__ = "questions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    question_set_id = Column(UUID(as_uuid=True), ForeignKey("question_sets.id"), nullable=False, index=True)
+    question_set_id = Column(UUID(as_uuid=True), ForeignKey("question_sets.id", ondelete="CASCADE"), nullable=False, index=True)
     content = Column(Text, nullable=False)
     category = Column(String(100), nullable=False, index=True)  # Use case category (3.1-3.7)
     tier = Column(Integer, nullable=False, index=True)  # 1=Task, 2=Doctrinal, 3=Worldview

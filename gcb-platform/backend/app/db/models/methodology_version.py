@@ -13,7 +13,7 @@ class MethodologyVersion(Base):
     __tablename__ = "methodology_versions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    question_set_id = Column(UUID(as_uuid=True), ForeignKey("question_sets.id"), nullable=False)
+    question_set_id = Column(UUID(as_uuid=True), ForeignKey("question_sets.id", ondelete="CASCADE"), nullable=False)
     judge_prompt = Column(Text, nullable=False)
     scoring_config = Column(JSONB, nullable=False)
     active_from = Column(DateTime(timezone=True), nullable=False)

@@ -8,21 +8,52 @@ A lightweight CLI tool for running the Great Commission Benchmark against AI mod
 # Install
 pip install gcb-runner
 
-# Configure your API keys
-gcb-runner config
+# Launch the interactive menu (default behavior)
+gcb-runner
 
-# Run the benchmark against a model
-gcb-runner test --model gpt-4o --backend openrouter
+# Show command reference
+gcb-runner help
 
-# View results
-gcb-runner results
-
-# Generate an HTML report
-gcb-runner report
-
-# Export for platform submission
-gcb-runner export
+# Or use individual commands directly:
+gcb-runner config                                    # Configure API keys
+gcb-runner test --model gpt-4o --backend openrouter  # Run benchmark
+gcb-runner results                                   # View results
+gcb-runner report                                    # Generate HTML report
+gcb-runner export                                    # Export for submission
 ```
+
+## Interactive Menu
+
+Running `gcb-runner` launches an interactive menu (this is the default behavior). The menu provides:
+
+- **🚀 Setup Wizard** - Guided 4-step configuration for first-time users
+- **🧪 Run Benchmark Test** - Interactive test runner with model and version selection
+- **📊 View Results** - Browse test runs, launch dashboard, generate reports
+- **⚙️ Configuration** - Manage API keys, backends, and preferences
+- **🔧 Diagnostics** - Test connections, verify API access, troubleshoot issues
+- **❓ Help & Documentation** - Quick start guide, scoring info, and more
+
+The menu is perfect for users who prefer a guided experience over command-line flags.
+
+### Diagnostics & Troubleshooting
+
+The diagnostics menu helps verify your setup is working correctly:
+
+```bash
+gcb-runner
+# Select [5] 🔧 Diagnostics & Connection Test
+```
+
+Available diagnostics:
+
+| Option | Description |
+|--------|-------------|
+| **Run Full Diagnostics** | Complete check of configuration, API, and backend |
+| **Test Platform API** | Verify connection to greatcommissionbenchmark.ai |
+| **Test Backend** | Check LM Studio/Ollama connectivity |
+| **List Versions** | Show all available benchmark versions |
+| **Test Question Download** | Verify questions can be fetched for a version |
+| **View API Endpoints** | Show API URLs for debugging |
 
 ## Overview
 
@@ -93,13 +124,21 @@ gcb-runner test --model local-model --backend lmstudio
 gcb-runner test --model llama3.2 --backend ollama
 
 # Run a specific benchmark version
-gcb-runner test --model gpt-4o --benchmark-version 2.0
+gcb-runner test --model gpt-4o --benchmark-version 1.0.0
 
 # Add a custom system prompt
 gcb-runner test --model gpt-4o --system-prompt "You are a helpful Christian assistant."
 
 # Resume an interrupted test
 gcb-runner test --model gpt-4o --resume
+```
+
+**Tip:** Use the interactive menu for guided version selection:
+```bash
+gcb-runner
+# Select [2] 🧪 Run Benchmark Test
+# Choose "Use a specific benchmark version?" → Yes
+# Select from the list of available versions
 ```
 
 ### Viewing Results
@@ -154,8 +193,15 @@ gcb-runner upload --run 3
 ### Listing Benchmark Versions
 
 ```bash
+# List all available benchmark versions
 gcb-runner versions
+
+# Or use the interactive menu for more details
+gcb-runner
+# Select [5] 🔧 Diagnostics → [4] List Available Versions
 ```
+
+This shows available versions with their status, question counts, and release dates.
 
 ## Supported Backends
 
@@ -217,6 +263,36 @@ The benchmark uses a weighted tier system:
 - **Configuration**: `~/.gcb-runner/config.json`
 - **Results database**: `~/.gcb-runner/data/results.db`
 - **Question cache**: `~/.gcb-runner/cache/`
+
+## Troubleshooting
+
+### "Resource not found" Error
+
+This error when running tests usually means:
+- No benchmark version has been published yet
+- The specified version doesn't exist
+
+**Solution:** Run diagnostics to check available versions:
+```bash
+gcb-runner
+# Select [5] 🔧 Diagnostics → [1] Run Full Diagnostics
+```
+
+### Connection Issues
+
+If you can't connect to the Platform API:
+
+1. Check your API key is configured: `gcb-runner config`
+2. Verify your internet connection
+3. Run connection test: Diagnostics → Test Platform API Connection
+
+### Local Backend Not Connecting
+
+For LM Studio or Ollama issues:
+
+1. Ensure the server is running
+2. Check the URL is correct (default: `localhost:1234` for LM Studio, `localhost:11434` for Ollama)
+3. Run backend test: Diagnostics → Test Backend Connection
 
 ## Development
 
