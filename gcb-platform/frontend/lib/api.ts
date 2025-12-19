@@ -153,6 +153,14 @@ export interface TestResult {
 
 export class ApiClient {
   private baseUrl: string;
+  
+  // Token caching to avoid redundant /api/auth/token requests
+  private cachedToken: string | null = null;
+  private tokenExpiresAt: number = 0;
+  private pendingTokenRequest: Promise<string | null> | null = null;
+  
+  // Cache token for 55 minutes (token is valid for 1 hour)
+  private static TOKEN_CACHE_DURATION_MS = 55 * 60 * 1000;
 
   constructor(baseUrl: string = API_URL) {
     this.baseUrl = baseUrl;
@@ -185,18 +193,53 @@ export class ApiClient {
   }
 
   private async getAuthToken(): Promise<string | null> {
-    // Get JWT token from NextAuth token endpoint
+    // Return cached token if still valid
+    if (this.cachedToken && Date.now() < this.tokenExpiresAt) {
+      return this.cachedToken;
+    }
+    
+    // If there's already a pending request, wait for it instead of making a new one
+    if (this.pendingTokenRequest) {
+      return this.pendingTokenRequest;
+    }
+    
+    // Fetch new token
+    this.pendingTokenRequest = this.fetchAuthToken();
+    
+    try {
+      const token = await this.pendingTokenRequest;
+      return token;
+    } finally {
+      this.pendingTokenRequest = null;
+    }
+  }
+  
+  private async fetchAuthToken(): Promise<string | null> {
     try {
       const response = await fetch('/api/auth/token');
       if (response.ok) {
         const data = await response.json();
-        return data.token || null;
+        const token = data.token || null;
+        
+        if (token) {
+          this.cachedToken = token;
+          this.tokenExpiresAt = Date.now() + ApiClient.TOKEN_CACHE_DURATION_MS;
+        }
+        
+        return token;
       }
     } catch (error) {
       // Silently fail - user may not be authenticated
       return null;
     }
     return null;
+  }
+  
+  // Clear cached token (useful for logout)
+  public clearTokenCache(): void {
+    this.cachedToken = null;
+    this.tokenExpiresAt = 0;
+    this.pendingTokenRequest = null;
   }
 
   // Public API endpoints

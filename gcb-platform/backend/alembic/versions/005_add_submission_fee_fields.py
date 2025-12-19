@@ -25,3 +25,4 @@ def downgrade() -> None:
     op.drop_column('community_submissions', 'payment_id')
     op.drop_column('community_submissions', 'fee_waived')
 
+

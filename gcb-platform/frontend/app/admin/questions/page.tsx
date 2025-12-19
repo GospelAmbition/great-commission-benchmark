@@ -146,11 +146,21 @@ export default function AdminQuestionsPage() {
           const defaultVersion = activeVersion || draftVersion || versionList[0];
           if (defaultVersion) {
             setVersionFilter(defaultVersion.semantic_version);
+          } else {
+            // No default version found, stop loading
+            setLoading(false);
           }
+        } else if (versionList.length === 0) {
+          // No versions available, stop loading
+          setLoading(false);
         }
+      } else {
+        // API error, stop loading
+        setLoading(false);
       }
     } catch (error) {
       console.error("Failed to load versions:", error);
+      setLoading(false);
     }
   }
 
@@ -359,7 +369,7 @@ export default function AdminQuestionsPage() {
   };
 
 
-  if (userLoading || loading) {
+  if (userLoading) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -370,6 +380,19 @@ export default function AdminQuestionsPage() {
 
   if (!user) {
     return null;
+  }
+
+  // Show loading skeleton only while fetching data with a version selected
+  if (loading && versionFilter) {
+    return (
+      <div className="container py-8">
+        <Button asChild variant="ghost" className="mb-4">
+          <Link href="/admin">← Back to Admin Dashboard</Link>
+        </Button>
+        <Skeleton className="h-12 w-64 mb-8" />
+        <Skeleton className="h-96" />
+      </div>
+    );
   }
 
   return (
@@ -397,19 +420,28 @@ export default function AdminQuestionsPage() {
           <CardTitle>Version</CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={versionFilter} onValueChange={setVersionFilter}>
-            <SelectTrigger className="w-full md:w-64">
-              <SelectValue placeholder="Select version" />
-            </SelectTrigger>
-            <SelectContent>
-              {versions.map((v) => (
-                <SelectItem key={v.id} value={v.semantic_version}>
-                  {v.semantic_version} - {v.marketing_version}
-                  {v.status === "active" && " (Active)"}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {versions.length === 0 ? (
+            <div className="text-muted-foreground">
+              <p>No question sets available.</p>
+              <p className="text-sm mt-2">
+                Create a question set in the <Link href="/admin/versions" className="text-primary underline">Versions</Link> page first.
+              </p>
+            </div>
+          ) : (
+            <Select value={versionFilter} onValueChange={setVersionFilter}>
+              <SelectTrigger className="w-full md:w-64">
+                <SelectValue placeholder="Select version" />
+              </SelectTrigger>
+              <SelectContent>
+                {versions.map((v) => (
+                  <SelectItem key={v.id} value={v.semantic_version}>
+                    {v.semantic_version} - {v.marketing_version}
+                    {v.status === "active" && " (Active)"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </CardContent>
       </Card>
 
