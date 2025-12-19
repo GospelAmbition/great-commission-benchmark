@@ -13,8 +13,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Store the Google provider account ID in the token
       if (account) {
         token.sub = account.providerAccountId
-        token.email = profile?.email || account.email
-        token.name = profile?.name || account.name
+        token.email = profile?.email || (typeof account.email === 'string' ? account.email : undefined)
+        token.name = profile?.name || (typeof account.name === 'string' ? account.name : undefined)
       }
       return token
     },
