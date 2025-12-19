@@ -117,8 +117,8 @@ export function TesterAgreementModal({ open, onAccept }: TesterAgreementModalPro
           <Button
             onClick={handleAccept}
             disabled={loading || !accepted}
-            variant="destructive"
-            className="bg-[--ga-red] hover:bg-[--ga-dark-red] text-white w-full sm:w-auto disabled:bg-[--ga-red]/50 disabled:text-white/70"
+            variant="brand"
+            className="w-full sm:w-auto"
           >
             {loading ? "Accepting..." : "I Accept"}
           </Button>

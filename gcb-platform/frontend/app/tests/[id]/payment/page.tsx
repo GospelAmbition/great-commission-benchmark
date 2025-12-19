@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -15,6 +16,121 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
+
+// Dev Mode Payment Form - bypasses Stripe for local development
+function DevModePaymentForm({ testId, test, onSuccess }: { testId: string; test: any; onSuccess: () => void }) {
+  const [processing, setProcessing] = useState(false);
+  const [costEstimate, setCostEstimate] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load cost estimate
+    async function loadCost() {
+      try {
+        // We'll create a mock payment intent just to get the cost breakdown
+        const intent = await apiClient.createPaymentIntent(testId).catch(() => null);
+        if (intent) {
+          setCostEstimate(intent.breakdown);
+        }
+      } catch (err) {
+        // If payment intent creation fails in dev mode, show estimated cost from test
+        setCostEstimate({
+          api_cost: test.estimated_cost || test.cost_estimate || 0,
+          processing_fee: 0,
+          tip_amount: 0,
+          total: test.estimated_cost || test.cost_estimate || 0
+        });
+      }
+    }
+    loadCost();
+  }, [testId, test]);
+
+  const handleDevComplete = async () => {
+    setProcessing(true);
+    setError(null);
+    try {
+      await apiClient.devCompletePayment(testId);
+      toast.success("Payment bypassed (dev mode). Test starting...");
+      onSuccess();
+    } catch (err: any) {
+      setError(err.detail || err.message || "Failed to complete dev payment");
+      toast.error("Failed to complete dev payment");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const baseCost = costEstimate?.total || test.estimated_cost || test.cost_estimate || 0;
+
+  return (
+    <div className="space-y-6">
+      <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
+        <AlertDescription className="text-amber-800 dark:text-amber-200">
+          <strong>Development Mode:</strong> Payment processing is bypassed. 
+          The cost shown below is what would be charged in production.
+        </AlertDescription>
+      </Alert>
+
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Model:</span>
+          <span className="font-medium">{test.model_name || test.model_id}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Version:</span>
+          <span className="font-medium">{test.version || "Current"}</span>
+        </div>
+      </div>
+
+      <div className="border-t pt-4 space-y-4">
+        {costEstimate && (
+          <>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">API Cost (estimated):</span>
+              <span className="font-medium">${costEstimate.api_cost?.toFixed(2) || "0.00"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Processing Fee:</span>
+              <span className="font-medium">${costEstimate.processing_fee?.toFixed(2) || "0.00"}</span>
+            </div>
+          </>
+        )}
+        <div className="border-t pt-4 flex justify-between text-lg font-bold">
+          <span>Total:</span>
+          <span>${baseCost.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div className="p-4 border-2 border-dashed border-amber-500 rounded-lg bg-amber-50 dark:bg-amber-950">
+        <div className="text-center text-amber-800 dark:text-amber-200">
+          <p className="font-medium mb-2">💳 Card input disabled in dev mode</p>
+          <p className="text-sm">Click below to accept the cost and start the test</p>
+        </div>
+      </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex gap-4">
+        <Button
+          type="button"
+          variant="brand"
+          onClick={handleDevComplete}
+          disabled={processing}
+          className="flex-1"
+        >
+          {processing ? "Processing..." : `Accept Cost & Start Test (Dev Mode)`}
+        </Button>
+        <Button type="button" variant="outline" asChild>
+          <a href="/tests/new">Cancel</a>
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function PaymentForm({ testId, test, onSuccess }: { testId: string; test: any; onSuccess: () => void }) {
   const stripe = useStripe();
@@ -223,8 +339,9 @@ function PaymentForm({ testId, test, onSuccess }: { testId: string; test: any; o
       <div className="flex gap-4">
         <Button
           type="submit"
+          variant="brand"
           disabled={!stripe || processing || !paymentIntent}
-          className="bg-[--ga-red] hover:bg-[--ga-dark-red] flex-1"
+          className="flex-1"
         >
           {processing ? "Processing..." : `Pay $${totalCost.toFixed(2)} Now`}
         </Button>
@@ -242,10 +359,12 @@ export default function PaymentPage() {
   const testId = params.id as string;
   const [test, setTest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [devMode, setDevMode] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (testId) {
       loadTest();
+      checkDevMode();
     }
   }, [testId]);
 
@@ -262,11 +381,22 @@ export default function PaymentPage() {
     }
   }
 
+  async function checkDevMode() {
+    try {
+      const { dev_mode, stripe_configured } = await apiClient.checkPaymentDevMode();
+      // Use dev mode if explicitly enabled OR if Stripe is not configured
+      setDevMode(dev_mode || !stripe_configured);
+    } catch (error) {
+      // If we can't check, fall back to checking if Stripe key is present
+      setDevMode(!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+    }
+  }
+
   function handleSuccess() {
     router.push(`/tests/${testId}/processing`);
   }
 
-  if (loading) {
+  if (loading || devMode === null) {
     return (
       <div className="container py-8 max-w-3xl">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -292,29 +422,25 @@ export default function PaymentPage() {
     );
   }
 
-  if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-    return (
-      <div className="container py-8 max-w-3xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Configuration Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Stripe is not configured. Please set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Check if we should use dev mode or real Stripe
+  const useDevMode = devMode || !process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
   return (
     <div className="container py-8 max-w-3xl">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold">Payment</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-4xl font-bold">Payment</h1>
+          {useDevMode && (
+            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
+              Dev Mode
+            </Badge>
+          )}
+        </div>
         <p className="mt-2 text-muted-foreground">
-          Confirm your payment to start the test
+          {useDevMode 
+            ? "Review the estimated cost and start your test (development mode)"
+            : "Confirm your payment to start the test"
+          }
         </p>
       </div>
 
@@ -355,13 +481,17 @@ export default function PaymentPage() {
         <CardHeader>
           <CardTitle>Payment Summary</CardTitle>
           <CardDescription>
-            Review your test details and payment amount
+            Review your test details and {useDevMode ? "estimated cost" : "payment amount"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Elements stripe={stripePromise}>
-            <PaymentForm testId={testId} test={test} onSuccess={handleSuccess} />
-          </Elements>
+          {useDevMode ? (
+            <DevModePaymentForm testId={testId} test={test} onSuccess={handleSuccess} />
+          ) : (
+            <Elements stripe={stripePromise}>
+              <PaymentForm testId={testId} test={test} onSuccess={handleSuccess} />
+            </Elements>
+          )}
         </CardContent>
       </Card>
     </div>

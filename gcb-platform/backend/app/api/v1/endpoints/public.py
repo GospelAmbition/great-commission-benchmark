@@ -5,6 +5,7 @@ from fastapi import APIRouter, Query, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from uuid import UUID
+import logging
 
 from app.core.auth import get_db
 from app.core.cache import cache, make_cache_key, CACHE_TTL
@@ -14,6 +15,7 @@ from app.db.models.question_set import QuestionSet
 from app.db.models.result import Result
 from app.db.models.question import Question
 from app.services.scoring import ScoringService
+from app.services.openrouter import OpenRouterClient
 from app.schemas.public import (
     LeaderboardResponse,
     LeaderboardEntry,
@@ -28,6 +30,8 @@ from app.schemas.public import (
     StatsResponse,
     ComparisonResponse
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -242,6 +246,88 @@ async def list_models(
     )
 
 
+@router.get("/available-models")
+async def list_available_models(
+    response: Response,
+    search: Optional[str] = Query(None, description="Search filter for model name or ID"),
+    limit: int = Query(100, ge=1, le=500),
+):
+    """
+    List available models from OpenRouter API.
+    This returns all models that can be tested, not just ones already in our database.
+    """
+    # Check cache first
+    cache_key = make_cache_key("openrouter_models")
+    cached_result = await cache.get(cache_key)
+    
+    if cached_result and not search:
+        response.headers["X-Cache"] = "HIT"
+        models_data = cached_result
+    else:
+        response.headers["X-Cache"] = "MISS"
+        openrouter = OpenRouterClient()
+        try:
+            models_data = await openrouter.list_models()
+        except Exception as e:
+            logger.error(f"Failed to fetch models from OpenRouter: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to fetch models from OpenRouter. Please try again later."
+            )
+        finally:
+            await openrouter.close()
+        
+        # Cache the raw models data for 5 minutes
+        if not search:
+            await cache.set(cache_key, models_data, 300)
+    
+    # Filter and transform the models
+    items = []
+    for model in models_data:
+        model_id = model.get("id", "")
+        model_name = model.get("name", model_id)
+        
+        # Apply search filter if provided
+        if search:
+            search_lower = search.lower()
+            if search_lower not in model_id.lower() and search_lower not in model_name.lower():
+                continue
+        
+        # Extract provider from model ID (e.g., "anthropic/claude-3" -> "anthropic")
+        provider = model_id.split("/")[0] if "/" in model_id else "unknown"
+        
+        # Get pricing info
+        pricing = model.get("pricing", {})
+        prompt_cost = float(pricing.get("prompt", 0)) if pricing.get("prompt") else 0
+        completion_cost = float(pricing.get("completion", 0)) if pricing.get("completion") else 0
+        
+        items.append({
+            "id": model_id,
+            "model_id": model_id,
+            "name": model_name,
+            "provider": provider,
+            "context_length": model.get("context_length", 0),
+            "pricing": {
+                "prompt": prompt_cost,
+                "completion": completion_cost
+            },
+            # Estimate cost per test based on average token usage
+            # Rough estimate: ~50k input tokens, ~20k output tokens per full test
+            "estimated_cost_per_test": round((prompt_cost * 50000 + completion_cost * 20000) / 1000000, 2)
+        })
+    
+    # Sort by name
+    items.sort(key=lambda x: x["name"])
+    
+    # Apply limit
+    items = items[:limit]
+    
+    return {
+        "items": items,
+        "total": len(items)
+    }
+
+
 @router.get("/models/{model_id}")
 async def get_model_detail(
     model_id: UUID,
@@ -327,7 +413,7 @@ async def get_model_detail(
 
 @router.get("/versions", response_model=VersionsResponse)
 async def list_versions(response: Response, db: Session = Depends(get_db)):
-    """List all benchmark versions"""
+    """List all published benchmark versions (excludes drafts)"""
     # Check cache first
     cache_key = make_cache_key("versions")
     cached_result = await cache.get(cache_key)
@@ -337,7 +423,10 @@ async def list_versions(response: Response, db: Session = Depends(get_db)):
     
     response.headers["X-Cache"] = "MISS"
     
-    question_sets = db.query(QuestionSet).order_by(QuestionSet.created_at.desc()).all()
+    # Only return published versions (active or archived), not drafts
+    question_sets = db.query(QuestionSet).filter(
+        QuestionSet.status.in_(["active", "archived"])
+    ).order_by(QuestionSet.created_at.desc()).all()
     
     versions = []
     current_version = None

@@ -31,3 +31,18 @@ class RefundResponse(BaseModel):
     refund_id: str
     amount: Decimal
     status: str
+
+
+class DevPaymentCompleteRequest(BaseModel):
+    """Dev mode payment completion request"""
+    test_id: UUID
+    accepted_cost: bool = True  # User must acknowledge the cost
+
+
+class DevPaymentCompleteResponse(BaseModel):
+    """Dev mode payment completion response"""
+    test_id: UUID
+    status: str
+    payment_status: str
+    total_cost: float
+    message: str

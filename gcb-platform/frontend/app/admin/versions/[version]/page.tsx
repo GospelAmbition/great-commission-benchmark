@@ -253,14 +253,13 @@ export default function VersionDetailPage({
               <Badge
                 variant={
                   versionInfo.status === "active"
-                    ? "default"
+                    ? "brand"
                     : versionInfo.status === "locked"
                     ? "secondary"
                     : versionInfo.status === "archived"
                     ? "outline"
                     : "outline"
                 }
-                className={versionInfo.status === "active" ? "bg-[--ga-red]" : ""}
               >
                 {versionInfo.status}
               </Badge>
@@ -288,8 +287,8 @@ export default function VersionDetailPage({
             )}
             {versionInfo.status === "locked" && (
               <Button
+                variant="brand"
                 onClick={() => setShowPublishDialog(true)}
-                className="bg-[--ga-red] hover:bg-[--ga-dark-red]"
               >
                 Publish Version
               </Button>
@@ -511,9 +510,9 @@ export default function VersionDetailPage({
               Cancel
             </Button>
             <Button
+              variant="brand"
               onClick={handlePublishVersion}
               disabled={publishing}
-              className="bg-[--ga-red] hover:bg-[--ga-dark-red]"
             >
               {publishing ? "Publishing..." : "Publish Version"}
             </Button>

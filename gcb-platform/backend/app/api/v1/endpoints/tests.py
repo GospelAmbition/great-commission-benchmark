@@ -38,36 +38,60 @@ async def create_test(
     db: Session = Depends(get_db)
 ):
     """Create a new test run"""
-    # Verify model exists
-    model = db.query(Model).filter(Model.id == request.model_id).first()
-    if not model:
-        raise HTTPException(status_code=404, detail="Model not found")
+    from app.db.models.methodology_version import MethodologyVersion
+    from app.db.models.question import Question
+    from app.services.pricing import PricingService
     
-    # Get question set (default to current if not specified)
-    if request.question_set_id:
+    # Look up model by OpenRouter model ID (string), or create if doesn't exist
+    model = db.query(Model).filter(Model.model_id == request.model_id).first()
+    if not model:
+        # Create the model entry - extract provider and name from model_id
+        provider = request.model_id.split("/")[0] if "/" in request.model_id else "unknown"
+        model_name = request.model_id.split("/")[-1] if "/" in request.model_id else request.model_id
+        
+        model = Model(
+            model_id=request.model_id,
+            name=model_name,
+            provider=provider,
+            is_active=True
+        )
+        db.add(model)
+        db.commit()
+        db.refresh(model)
+    
+    # Get question set - by version if specified, otherwise by question_set_id or default to active
+    if request.version:
+        # Look up by semantic version through MethodologyVersion
+        methodology_version = db.query(MethodologyVersion).filter(
+            MethodologyVersion.semantic_version == request.version
+        ).first()
+        if not methodology_version:
+            raise HTTPException(status_code=404, detail=f"Version {request.version} not found")
+        question_set = db.query(QuestionSet).filter(
+            QuestionSet.id == methodology_version.question_set_id
+        ).first()
+    elif request.question_set_id:
         question_set = db.query(QuestionSet).filter(QuestionSet.id == request.question_set_id).first()
+        methodology_version = db.query(MethodologyVersion).filter(
+            MethodologyVersion.question_set_id == question_set.id
+        ).order_by(MethodologyVersion.active_from.desc()).first() if question_set else None
     else:
         question_set = db.query(QuestionSet).filter(QuestionSet.status == "active").first()
+        methodology_version = db.query(MethodologyVersion).filter(
+            MethodologyVersion.question_set_id == question_set.id
+        ).order_by(MethodologyVersion.active_from.desc()).first() if question_set else None
     
     if not question_set:
         raise HTTPException(status_code=404, detail="Question set not found")
-    
-    # Get methodology version
-    from app.db.models.methodology_version import MethodologyVersion
-    methodology_version = db.query(MethodologyVersion).filter(
-        MethodologyVersion.question_set_id == question_set.id
-    ).order_by(MethodologyVersion.active_from.desc()).first()
     
     if not methodology_version:
         raise HTTPException(status_code=404, detail="Methodology version not found")
     
     # Calculate cost using pricing service
-    from app.db.models.question import Question
     question_count = db.query(Question).filter(
         Question.question_set_id == question_set.id
     ).count()
     
-    from app.services.pricing import PricingService
     pricing_breakdown = await PricingService.calculate_test_cost(
         model.model_id,
         question_count
@@ -82,7 +106,7 @@ async def create_test(
     # payment_status="succeeded" so they can start the test immediately
     test_run = TestRun(
         user_id=current_user.id,
-        model_id=request.model_id,
+        model_id=model.id,  # Use database UUID, not OpenRouter model ID
         question_set_id=question_set.id,
         methodology_version_id=methodology_version.id,
         status="pending_payment",

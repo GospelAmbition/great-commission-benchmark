@@ -98,7 +98,7 @@ export default function ModelDetailPage() {
             <Button asChild variant="outline">
               <Link href={`/research/compare?models=${modelId}`}>Compare</Link>
             </Button>
-            <Button asChild className="bg-[--ga-red] hover:bg-[--ga-dark-red]">
+            <Button asChild variant="brand">
               <Link href="/tests/new">Run Test</Link>
             </Button>
           </div>

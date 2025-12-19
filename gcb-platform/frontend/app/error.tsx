@@ -41,8 +41,8 @@ export default function Error({
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
+              variant="brand"
               onClick={reset}
-              className="bg-[--ga-red] hover:bg-[--ga-dark-red]"
             >
               <RefreshCw className="mr-2 h-4 w-4" />
               Try Again

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -17,7 +16,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
 import { TesterAgreementModal } from "@/components/tester-agreement/TesterAgreementModal";
 
 export default function NewTestPage() {
@@ -29,12 +27,12 @@ export default function NewTestPage() {
   const [versions, setVersions] = useState<any[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [selectedVersion, setSelectedVersion] = useState<string>("");
-  const [systemPrompt, setSystemPrompt] = useState<string>("");
   const [costEstimate, setCostEstimate] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [agreementAccepted, setAgreementAccepted] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -48,19 +46,35 @@ export default function NewTestPage() {
 
   async function loadData() {
     setLoading(true);
+    setModelsError(null);
     try {
       const [modelsData, versionsData, profile] = await Promise.all([
-        apiClient.getModels({ limit: 100 }),
+        apiClient.getAvailableModels({ limit: 200 }).catch((err) => {
+          console.error("Failed to fetch models from OpenRouter:", err);
+          setModelsError("Unable to load models. Please check if the backend is running and OpenRouter is configured.");
+          return { items: [] };
+        }),
         apiClient.getVersions(),
         apiClient.getProfile().catch(() => null),
       ]);
       if (modelsData.items) {
         setModels(modelsData.items);
       }
-      if (versionsData.versions) {
-        setVersions(versionsData.versions);
-        if (versionsData.versions.length > 0) {
-          setSelectedVersion(versionsData.versions[0].version);
+      // Handle versions - backend returns versions array with semantic_version field
+      if (versionsData.versions && versionsData.versions.length > 0) {
+        // Transform versions to have a consistent 'version' field
+        const transformedVersions = versionsData.versions.map((v: any) => ({
+          ...v,
+          version: v.semantic_version || v.version,
+          is_current: v.status === "current" || v.is_current,
+        }));
+        setVersions(transformedVersions);
+        // Select the current version, or the first one if no current
+        const currentVersion = transformedVersions.find((v: any) => v.is_current);
+        if (currentVersion) {
+          setSelectedVersion(currentVersion.version);
+        } else if (transformedVersions.length > 0) {
+          setSelectedVersion(transformedVersions[0].version);
         }
       }
       // Check if tester agreement is accepted
@@ -90,7 +104,6 @@ export default function NewTestPage() {
       const test = await apiClient.createTest({
         model_id: selectedModel,
         version: selectedVersion,
-        system_prompt: systemPrompt || undefined,
       });
       router.push(`/tests/${test.id}/payment`);
     } catch (error) {
@@ -190,7 +203,7 @@ export default function NewTestPage() {
               <SelectTrigger id="model">
                 <SelectValue placeholder="Select a model" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-80">
                 {models.map((model) => (
                   <SelectItem
                     key={model.id || model.model_id}
@@ -206,6 +219,14 @@ export default function NewTestPage() {
                 ))}
               </SelectContent>
             </Select>
+            {modelsError && (
+              <p className="text-xs text-destructive mt-1">{modelsError}</p>
+            )}
+            {models.length === 0 && !modelsError && !loading && (
+              <p className="text-xs text-muted-foreground mt-1">
+                No models available. Please check your OpenRouter configuration.
+              </p>
+            )}
           </div>
 
           <div>
@@ -227,19 +248,11 @@ export default function NewTestPage() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="system-prompt">System Prompt (Optional)</Label>
-            <Input
-              id="system-prompt"
-              placeholder="Enter a custom system prompt..."
-              value={systemPrompt}
-              onChange={(e) => setSystemPrompt(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Optional: Provide a custom system prompt to test the model with specific instructions
-            </p>
+            {versions.length === 0 && !loading && (
+              <p className="text-xs text-muted-foreground mt-1">
+                No benchmark versions available. Please contact an administrator.
+              </p>
+            )}
           </div>
 
           {costEstimate && (
@@ -258,9 +271,9 @@ export default function NewTestPage() {
 
           <div className="flex gap-4">
             <Button
+              variant="brand"
               onClick={handleCreateTest}
               disabled={!selectedModel || !selectedVersion || creating}
-              className="bg-[--ga-red] hover:bg-[--ga-dark-red]"
             >
               {creating ? "Creating..." : "Continue to Payment →"}
             </Button>

@@ -80,7 +80,6 @@ def export_run(db: ResultsDB, run_id: int) -> str:
             "backend": run.backend,
             "benchmark_version": run.benchmark_version,
             "judge_model": run.judge_model,
-            "system_prompt": run.system_prompt,
             "completed_at": run.completed_at.isoformat() + "Z" if run.completed_at else None,
         },
         "summary": {

@@ -34,22 +34,15 @@ class OpenAIBackend:
         self,
         messages: list[dict[str, str]],
         model: str,
-        system_prompt: str | None = None,
     ) -> str:
         """Complete a chat conversation."""
         client = await self._get_client()
-        
-        # Build messages list
-        all_messages = []
-        if system_prompt:
-            all_messages.append({"role": "system", "content": system_prompt})
-        all_messages.extend(messages)
         
         response = await client.post(
             "/chat/completions",
             json={
                 "model": model,
-                "messages": all_messages,
+                "messages": messages,
             },
         )
         

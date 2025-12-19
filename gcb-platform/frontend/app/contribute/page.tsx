@@ -25,7 +25,7 @@ export default function ContributePage() {
               Run comprehensive benchmark tests on any AI model. Your results will be reviewed by
               moderators and added to the public leaderboard.
             </p>
-            <Button asChild className="bg-[--ga-red] hover:bg-[--ga-dark-red]">
+            <Button asChild variant="brand">
               <Link href="/tests/new">Run a Test →</Link>
             </Button>
           </CardContent>

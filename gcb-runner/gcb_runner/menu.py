@@ -300,9 +300,9 @@ def setup_wizard() -> MenuAction:
     console.print()
     
     judge_options = [
-        ("gpt-4o", "GPT-4o (recommended)"),
-        ("claude-3.5-sonnet", "Claude 3.5 Sonnet"),
-        ("gpt-4-turbo", "GPT-4 Turbo"),
+        ("openai/gpt-4o", "openai/gpt-4o (recommended)"),
+        ("anthropic/claude-3.5-sonnet", "anthropic/claude-3.5-sonnet"),
+        ("openai/gpt-4-turbo", "openai/gpt-4-turbo"),
         ("custom", "Custom model..."),
     ]
     
@@ -326,7 +326,7 @@ def setup_wizard() -> MenuAction:
         else:
             cfg.defaults.judge_model = judge_options[judge_idx][0]
     except (ValueError, IndexError):
-        cfg.defaults.judge_model = "gpt-4o"
+        cfg.defaults.judge_model = "openai/gpt-4o"
     
     console.print(f"[green]✓ Judge model set to: {cfg.defaults.judge_model}[/green]")
     
@@ -490,9 +490,9 @@ def configure_judge():
     cfg = Config.load()
     
     judge_models = [
-        ("gpt-4o", "GPT-4o (recommended)"),
-        ("claude-3.5-sonnet", "Claude 3.5 Sonnet"),
-        ("gpt-4-turbo", "GPT-4 Turbo"),
+        ("openai/gpt-4o", "openai/gpt-4o (recommended)"),
+        ("anthropic/claude-3.5-sonnet", "anthropic/claude-3.5-sonnet"),
+        ("openai/gpt-4-turbo", "openai/gpt-4-turbo"),
     ]
     
     table = Table(box=box.ROUNDED, show_header=False)
@@ -635,7 +635,7 @@ def run_test_menu() -> MenuAction:
     if use_specific_version:
         console.print()
         console.print("[dim]Fetching available versions...[/dim]")
-        versions = fetch_versions_sync(cfg)
+        versions, error = fetch_versions_sync(cfg)
         if versions:
             console.print()
             table = Table(box=box.ROUNDED, show_header=True)
@@ -666,12 +666,8 @@ def run_test_menu() -> MenuAction:
                 except (ValueError, IndexError):
                     console.print("[yellow]Invalid selection, using current version[/yellow]")
         else:
-            console.print("[yellow]Could not fetch versions, using current[/yellow]")
-    
-    use_system_prompt = Confirm.ask("Add a custom system prompt?", default=False)
-    system_prompt = None
-    if use_system_prompt:
-        system_prompt = Prompt.ask("Enter system prompt")
+            console.print(f"[yellow]Could not fetch versions: {error}[/yellow]")
+            console.print("[dim]Using current version[/dim]")
     
     console.print()
     console.print("[bold]Test Summary:[/bold]")
@@ -679,8 +675,6 @@ def run_test_menu() -> MenuAction:
     console.print(f"  Backend: [cyan]{backend}[/cyan]")
     console.print(f"  Version: [cyan]{benchmark_version or 'current'}[/cyan]")
     console.print(f"  Judge: [cyan]{cfg.defaults.judge_model}[/cyan]")
-    if system_prompt:
-        console.print(f"  System Prompt: [dim]{system_prompt[:50]}...[/dim]" if len(system_prompt) > 50 else f"  System Prompt: [dim]{system_prompt}[/dim]")
     console.print()
     
     if not Confirm.ask("Start the benchmark?", default=True):
@@ -690,8 +684,6 @@ def run_test_menu() -> MenuAction:
     cmd_parts = ["gcb-runner", "test", "--model", model, "--backend", backend]
     if benchmark_version:
         cmd_parts.extend(["--benchmark-version", benchmark_version])
-    if system_prompt:
-        cmd_parts.extend(["--system-prompt", f'"{system_prompt}"'])
     
     console.print()
     console.print("[dim]Running command:[/dim]")
@@ -707,7 +699,6 @@ def run_test_menu() -> MenuAction:
             model=model,
             backend=backend,
             benchmark_version=benchmark_version,
-            system_prompt=system_prompt,
             judge_model=cfg.defaults.judge_model,
             config=cfg,
             output_path=None,
@@ -723,18 +714,27 @@ def run_test_menu() -> MenuAction:
     return MenuAction.BACK
 
 
-def fetch_versions_sync(cfg: Config) -> list[dict]:
-    """Fetch available versions synchronously."""
+def fetch_versions_sync(cfg: Config) -> tuple[list[dict], str | None]:
+    """Fetch available versions synchronously.
+    
+    Returns:
+        Tuple of (versions list, error message or None)
+    """
     import asyncio
-    from gcb_runner.api.client import PlatformAPIClient
+    from gcb_runner.api.client import PlatformAPIClient, PlatformAPIError
     
     async def _fetch():
-        client = PlatformAPIClient(cfg.platform.api_key or "", cfg.platform.url)
+        if not cfg.platform.api_key:
+            return [], "Platform API key not configured"
+        
+        client = PlatformAPIClient(cfg.platform.api_key, cfg.platform.url)
         try:
             result = await client.list_versions()
-            return result.get("versions", [])
-        except Exception:
-            return []
+            return result.get("versions", []), None
+        except PlatformAPIError as e:
+            return [], str(e)
+        except Exception as e:
+            return [], f"Unexpected error: {e}"
         finally:
             await client.close()
     

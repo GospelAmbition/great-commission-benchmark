@@ -17,7 +17,6 @@ class LLMBackend(Protocol):
         self,
         messages: list[dict[str, str]],
         model: str,
-        system_prompt: str | None = None,
     ) -> str:
         """Complete a chat conversation and return the response text."""
         ...

@@ -417,7 +417,8 @@ export default function ModeratorReviewPage() {
                   </Label>
                 </div>
                 <Button
-                  className="w-full bg-[--ga-red] hover:bg-[--ga-dark-red]"
+                  variant="brand"
+                  className="w-full"
                   onClick={handleSubmitReview}
                   disabled={submitting}
                 >

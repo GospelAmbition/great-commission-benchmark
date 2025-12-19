@@ -70,7 +70,6 @@ class ResultsDB:
         backend: str,
         benchmark_version: str,
         judge_model: str,
-        system_prompt: str | None = None,
     ) -> TestRun:
         """Create a new test run."""
         session = self.Session()
@@ -80,7 +79,6 @@ class ResultsDB:
                 backend=backend,
                 benchmark_version=benchmark_version,
                 judge_model=judge_model,
-                system_prompt=system_prompt,
                 started_at=datetime.now(),
             )
             session.add(run)

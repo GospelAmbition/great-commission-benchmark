@@ -18,7 +18,7 @@ export default function NotFound() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild className="bg-[--ga-red] hover:bg-[--ga-dark-red]">
+            <Button asChild variant="brand">
               <Link href="/">
                 <Home className="mr-2 h-4 w-4" />
                 Go Home

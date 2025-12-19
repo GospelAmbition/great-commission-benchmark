@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
     
+    # Development Mode - bypasses actual payment processing
+    # Set to True for local development without Stripe
+    PAYMENT_DEV_MODE: bool = False
+    
     # Email (Resend)
     RESEND_API_KEY: str = ""
     EMAIL_FROM: str = "Great Commission Benchmark <noreply@greatcommissionbenchmark.ai>"

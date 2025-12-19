@@ -5,6 +5,7 @@ from uuid import UUID
 
 from app.core.auth import get_db
 from app.core.auth import require_auth
+from app.core.config import settings
 from app.db.models.user import User
 from app.db.models.test_run import TestRun
 from app.db.models.model import Model
@@ -15,10 +16,21 @@ from app.schemas.payments import (
     CreatePaymentIntentRequest,
     CreatePaymentIntentResponse,
     RefundRequest,
-    RefundResponse
+    RefundResponse,
+    DevPaymentCompleteRequest,
+    DevPaymentCompleteResponse
 )
 
 router = APIRouter()
+
+
+@router.get("/dev-mode")
+async def check_dev_mode():
+    """Check if payment dev mode is enabled"""
+    return {
+        "dev_mode": settings.PAYMENT_DEV_MODE,
+        "stripe_configured": bool(settings.STRIPE_SECRET_KEY)
+    }
 
 
 @router.post("/create-intent", response_model=CreatePaymentIntentResponse)
@@ -140,4 +152,70 @@ async def create_refund(
         refund_id=refund["id"],
         amount=refund["amount"],
         status=refund["status"]
+    )
+
+
+@router.post("/dev-complete", response_model=DevPaymentCompleteResponse)
+async def dev_complete_payment(
+    request: DevPaymentCompleteRequest,
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """
+    Development-only endpoint to bypass payment processing.
+    Only works when PAYMENT_DEV_MODE=True in environment.
+    Still calculates costs and requires user acceptance.
+    """
+    if not settings.PAYMENT_DEV_MODE:
+        raise HTTPException(
+            status_code=403,
+            detail="Payment dev mode is not enabled. Set PAYMENT_DEV_MODE=True in environment."
+        )
+    
+    # Get test run
+    test_run = db.query(TestRun).filter(
+        TestRun.id == request.test_id,
+        TestRun.user_id == current_user.id
+    ).first()
+    
+    if not test_run:
+        raise HTTPException(status_code=404, detail="Test not found")
+    
+    if test_run.status != "pending_payment":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot complete payment. Test status: {test_run.status}"
+        )
+    
+    # Get model and question count for cost calculation
+    model = db.query(Model).filter(Model.id == test_run.model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    
+    question_count = db.query(Question).filter(
+        Question.question_set_id == test_run.question_set_id
+    ).count()
+    
+    # Calculate pricing (still do this for realism)
+    pricing_breakdown = await PricingService.calculate_test_cost(
+        model.model_id,
+        question_count
+    )
+    
+    total_amount = pricing_breakdown["total"]
+    
+    # Update test run - mark as paid (dev mode)
+    test_run.total_cost = float(total_amount)
+    test_run.payment_id = f"dev_mode_{test_run.id}"  # Fake payment ID
+    test_run.payment_status = "succeeded"
+    test_run.status = "pending"  # Ready to start
+    db.commit()
+    db.refresh(test_run)
+    
+    return DevPaymentCompleteResponse(
+        test_id=test_run.id,
+        status=test_run.status,
+        payment_status=test_run.payment_status,
+        total_cost=float(total_amount),
+        message="Payment bypassed (dev mode). Test is ready to start."
     )

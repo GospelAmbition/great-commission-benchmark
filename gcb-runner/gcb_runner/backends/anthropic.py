@@ -36,13 +36,11 @@ class AnthropicBackend:
         self,
         messages: list[dict[str, str]],
         model: str,
-        system_prompt: str | None = None,
     ) -> str:
         """Complete a chat conversation."""
         client = await self._get_client()
         
         # Anthropic uses a different format
-        # Convert messages and extract system prompt
         anthropic_messages = []
         for msg in messages:
             anthropic_messages.append({
@@ -55,9 +53,6 @@ class AnthropicBackend:
             "messages": anthropic_messages,
             "max_tokens": 4096,
         }
-        
-        if system_prompt:
-            payload["system"] = system_prompt
         
         response = await client.post("/v1/messages", json=payload)
         

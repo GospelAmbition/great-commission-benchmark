@@ -186,7 +186,7 @@ export default function TestDetailPage() {
                 <Button variant="outline" onClick={handleRetest}>
                   Run Again
                 </Button>
-                <Button asChild className="bg-[--ga-red] hover:bg-[--ga-dark-red]">
+                <Button asChild variant="brand">
                   <Link href={`/research/models/${test.model_id}`}>
                     View on Leaderboard
                   </Link>

@@ -303,6 +303,19 @@ export class ApiClient {
     return this.request<ModelsResponse>(`/api/public/models${query ? `?${query}` : ''}`);
   }
 
+  async getAvailableModels(params?: { search?: string; limit?: number }): Promise<ModelsResponse> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const query = queryParams.toString();
+    return this.request<ModelsResponse>(`/api/public/available-models${query ? `?${query}` : ''}`);
+  }
+
   async getModel(id: string): Promise<ModelResponse> {
     return this.request<ModelResponse>(`/api/public/models/${id}`);
   }
@@ -510,6 +523,30 @@ export class ApiClient {
       body: JSON.stringify({
         test_id: testId,
         amount: amount,
+      }),
+    });
+  }
+
+  // Payment dev mode methods
+  async checkPaymentDevMode(): Promise<{
+    dev_mode: boolean;
+    stripe_configured: boolean;
+  }> {
+    return this.request(`/api/v1/payments/dev-mode`);
+  }
+
+  async devCompletePayment(testId: string): Promise<{
+    test_id: string;
+    status: string;
+    payment_status: string;
+    total_cost: number;
+    message: string;
+  }> {
+    return this.request(`/api/v1/payments/dev-complete`, {
+      method: 'POST',
+      body: JSON.stringify({
+        test_id: testId,
+        accepted_cost: true,
       }),
     });
   }

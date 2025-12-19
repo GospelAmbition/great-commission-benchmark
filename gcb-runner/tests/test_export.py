@@ -20,7 +20,6 @@ class TestValidation:
                 "backend": "openrouter",
                 "benchmark_version": "2.0",
                 "judge_model": "gpt-4o",
-                "system_prompt": None,
                 "completed_at": "2025-01-15T14:32:01Z"
             },
             "summary": {

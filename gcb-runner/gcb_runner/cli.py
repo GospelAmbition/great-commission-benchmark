@@ -101,7 +101,7 @@ def config():
     # Judge model selection
     console.print()
     console.print("[bold]Which model should judge responses?[/bold]")
-    judge_models = ["gpt-4o (recommended)", "claude-3.5-sonnet", "custom"]
+    judge_models = ["openai/gpt-4o (recommended)", "anthropic/claude-3.5-sonnet", "custom"]
     for i, m in enumerate(judge_models, 1):
         console.print(f"  {i}. {m}")
     
@@ -110,14 +110,14 @@ def config():
     try:
         judge_idx = int(judge_choice) - 1
         if judge_idx == 0:
-            cfg.defaults.judge_model = "gpt-4o"
+            cfg.defaults.judge_model = "openai/gpt-4o"
         elif judge_idx == 1:
-            cfg.defaults.judge_model = "claude-3.5-sonnet"
+            cfg.defaults.judge_model = "anthropic/claude-3.5-sonnet"
         else:
             custom_judge = Prompt.ask("Enter custom judge model name")
             cfg.defaults.judge_model = custom_judge
     except (ValueError, IndexError):
-        cfg.defaults.judge_model = "gpt-4o"
+        cfg.defaults.judge_model = "openai/gpt-4o"
     
     # Save configuration
     cfg.save()
@@ -183,7 +183,6 @@ def test(
     model: str = typer.Option(..., "--model", "-m", help="Model identifier (e.g., gpt-4o)"),
     backend: Optional[str] = typer.Option(None, "--backend", "-b", help="Backend: openrouter, lmstudio, ollama, openai, anthropic"),
     benchmark_version: Optional[str] = typer.Option(None, "--benchmark-version", help="Benchmark version to run"),
-    system_prompt: Optional[str] = typer.Option(None, "--system-prompt", help="Optional system prompt"),
     judge_model: Optional[str] = typer.Option(None, "--judge-model", help="Model for judging responses"),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Save results to JSON file"),
     resume: bool = typer.Option(False, "--resume", help="Resume interrupted test run"),
@@ -225,7 +224,6 @@ def test(
         model=model,
         backend=backend,
         benchmark_version=benchmark_version,
-        system_prompt=system_prompt,
         judge_model=judge_model,
         config=cfg,
         output_path=output,

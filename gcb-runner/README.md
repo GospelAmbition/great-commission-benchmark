@@ -126,9 +126,6 @@ gcb-runner test --model llama3.2 --backend ollama
 # Run a specific benchmark version
 gcb-runner test --model gpt-4o --benchmark-version 1.0.0
 
-# Add a custom system prompt
-gcb-runner test --model gpt-4o --system-prompt "You are a helpful Christian assistant."
-
 # Resume an interrupted test
 gcb-runner test --model gpt-4o --resume
 ```

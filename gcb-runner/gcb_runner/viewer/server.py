@@ -124,7 +124,6 @@ class ViewerHandler(BaseHTTPRequestHandler):
             "backend": row["backend"],
             "benchmark_version": row["benchmark_version"],
             "judge_model": row["judge_model"],
-            "system_prompt": row["system_prompt"],
             "score": row["score"],
             "tier1_score": row["tier1_score"],
             "tier2_score": row["tier2_score"],

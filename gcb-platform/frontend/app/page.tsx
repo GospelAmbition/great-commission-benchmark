@@ -197,7 +197,7 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild size="lg" className="bg-[--ga-red] hover:bg-[--ga-dark-red]">
+            <Button asChild size="lg" variant="brand">
               <Link href="/tests/new">Run a Test →</Link>
             </Button>
           </CardContent>

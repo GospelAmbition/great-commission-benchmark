@@ -23,7 +23,6 @@ async def run_benchmark(
     backend: str,
     config: Config,
     benchmark_version: str | None = None,
-    system_prompt: str | None = None,
     judge_model: str | None = None,
     output_path: Path | None = None,
     resume: bool = False,
@@ -136,7 +135,6 @@ async def run_benchmark(
                 backend=backend,
                 benchmark_version=actual_version,
                 judge_model=judge_model,
-                system_prompt=system_prompt,
             )
             run_id = run.id
         
@@ -182,7 +180,6 @@ async def run_benchmark(
                         response_text = await model_backend.complete(
                             messages=[{"role": "user", "content": question.get("content", "")}],
                             model=model,
-                            system_prompt=system_prompt,
                         )
                     except Exception as e:
                         console.print(f"[red]Error getting response for question {question_id}: {e}[/red]")

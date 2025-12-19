@@ -202,7 +202,7 @@ export default function ResultsPage() {
         <Button asChild variant="outline">
           <Link href="/tests/new">Run Another Test</Link>
         </Button>
-        <Button asChild className="bg-[--ga-red] hover:bg-[--ga-dark-red]">
+        <Button asChild variant="brand">
           <Link href="/research">View Leaderboard</Link>
         </Button>
       </div>

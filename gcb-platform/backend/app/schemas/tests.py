@@ -7,8 +7,9 @@ from uuid import UUID
 
 class CreateTestRequest(BaseModel):
     """Create test request"""
-    model_id: UUID
-    question_set_id: Optional[UUID] = None  # Defaults to current version
+    model_id: str  # OpenRouter model ID (e.g., "anthropic/claude-3-opus")
+    version: Optional[str] = None  # Semantic version (e.g., "1.0.0") - defaults to current
+    question_set_id: Optional[UUID] = None  # Defaults to current version (deprecated, use version)
     system_prompt: Optional[str] = None
 
 

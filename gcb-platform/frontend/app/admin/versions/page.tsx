@@ -341,7 +341,7 @@ export default function AdminVersionsPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Current Version</CardTitle>
-              <Badge className="bg-[--ga-red]">Active</Badge>
+              <Badge variant="brand">Active</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -413,7 +413,7 @@ export default function AdminVersionsPage() {
                     <TableCell className="font-medium">
                       {v.version}
                       {v.is_current && (
-                        <Badge className="ml-2 bg-[--ga-red]" variant="default">
+                        <Badge className="ml-2" variant="brand">
                           Current
                         </Badge>
                       )}
@@ -645,8 +645,8 @@ export default function AdminVersionsPage() {
               Cancel
             </Button>
             <Button
+              variant="brand"
               onClick={handlePublishVersion}
-              className="bg-[--ga-red] hover:bg-[--ga-dark-red]"
             >
               Publish Version
             </Button>
