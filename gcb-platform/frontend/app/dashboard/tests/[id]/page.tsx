@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useUser } from "@auth0/nextjs-auth0/client";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,9 @@ type TestResult = ApiTestResult;
 export default function TestDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { user, isLoading: userLoading } = useUser();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const userLoading = status === "loading";
   const testId = params.id as string;
   const [test, setTest] = useState<TestRun | null>(null);
   const [results, setResults] = useState<TestResult[]>([]);
@@ -47,7 +49,7 @@ export default function TestDetailPage() {
 
   useEffect(() => {
     if (!userLoading && !user) {
-      router.push("/api/auth/login");
+      router.push("/api/auth/signin");
       return;
     }
     if (user && testId) {

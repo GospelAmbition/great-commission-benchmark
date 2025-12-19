@@ -184,8 +184,17 @@ export class ApiClient {
   }
 
   private async getAuthToken(): Promise<string | null> {
-    // In a real implementation, get token from Auth0 session
-    // For now, return null (public endpoints)
+    // Get JWT token from NextAuth token endpoint
+    try {
+      const response = await fetch('/api/auth/token');
+      if (response.ok) {
+        const data = await response.json();
+        return data.token || null;
+      }
+    } catch (error) {
+      // Silently fail - user may not be authenticated
+      return null;
+    }
     return null;
   }
 
@@ -206,7 +215,12 @@ export class ApiClient {
       Object.entries(params).forEach(([key, value]) => {
         // Skip undefined and empty strings to avoid backend validation errors
         if (value !== undefined && value !== '') {
-          queryParams.append(key, String(value));
+          // Convert tier string (e.g., "tier1") to integer (e.g., "1") for backend
+          if (key === 'tier' && typeof value === 'string' && value.startsWith('tier')) {
+            queryParams.append(key, value.replace('tier', ''));
+          } else {
+            queryParams.append(key, String(value));
+          }
         }
       });
     }

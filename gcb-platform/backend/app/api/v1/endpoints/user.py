@@ -232,7 +232,7 @@ async def get_user_submissions(
     """Get user's community submissions"""
     submissions = db.query(CommunitySubmission).filter(
         CommunitySubmission.user_id == current_user.id
-    ).order_by(CommunitySubmission.created_at.desc()).offset(offset).limit(limit).all()
+    ).order_by(CommunitySubmission.submitted_at.desc()).offset(offset).limit(limit).all()
     
     total = db.query(CommunitySubmission).filter(
         CommunitySubmission.user_id == current_user.id

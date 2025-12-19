@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useUser } from "@auth0/nextjs-auth0/client";
+import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,7 +15,9 @@ import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export function Header() {
-  const { user, isLoading } = useUser();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const isLoading = status === "loading";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" role="banner">
@@ -88,15 +90,15 @@ export function Header() {
                     <Link href="/dashboard/settings">Account Settings</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <a href="/api/auth/logout">Logout</a>
+                  <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
+                    Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           ) : (
             <Button asChild>
-              <a href="/api/auth/login">Login</a>
+              <a href="/api/auth/signin">Login</a>
             </Button>
           )}
 

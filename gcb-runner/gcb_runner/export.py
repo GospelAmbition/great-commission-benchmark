@@ -1,0 +1,262 @@
+"""Export and validation for test results."""
+
+import hashlib
+import json
+from datetime import datetime
+from typing import Any
+
+from gcb_runner import __version__
+from gcb_runner.results import ResultsDB
+
+
+def export_run(db: ResultsDB, run_id: int) -> str:
+    """Export a test run to JSON format for platform submission."""
+    run = db.get_run(run_id)
+    if not run:
+        raise ValueError(f"Test run #{run_id} not found")
+    
+    responses = db.get_responses(run_id)
+    
+    # Calculate tier statistics
+    tier_stats: dict[int, dict[str, Any]] = {
+        1: {"pass": 0, "partial": 0, "fail": 0, "questions": 0},
+        2: {"pass": 0, "partial": 0, "fail": 0, "questions": 0},
+        3: {"pass": 0, "partial": 0, "fail": 0, "questions": 0},
+    }
+    
+    for resp in responses:
+        tier_stats[resp.tier][resp.verdict_normalized] += 1
+        tier_stats[resp.tier]["questions"] += 1
+    
+    # Calculate tier scores
+    def calc_tier_score(stats: dict[str, Any]) -> float:
+        total = stats["questions"]
+        if total == 0:
+            return 0.0
+        return (stats["pass"] * 100 + stats["partial"] * 50) / total
+    
+    tier_scores = {
+        "tier1": {
+            "raw": run.tier1_score or calc_tier_score(tier_stats[1]),
+            "weighted": (run.tier1_score or calc_tier_score(tier_stats[1])) * 0.70,
+            "questions": tier_stats[1]["questions"],
+        },
+        "tier2": {
+            "raw": run.tier2_score or calc_tier_score(tier_stats[2]),
+            "weighted": (run.tier2_score or calc_tier_score(tier_stats[2])) * 0.20,
+            "questions": tier_stats[2]["questions"],
+        },
+        "tier3": {
+            "raw": run.tier3_score or calc_tier_score(tier_stats[3]),
+            "weighted": (run.tier3_score or calc_tier_score(tier_stats[3])) * 0.10,
+            "questions": tier_stats[3]["questions"],
+        },
+    }
+    
+    # Build responses array
+    responses_data = []
+    for resp in responses:
+        responses_data.append({
+            "question_id": int(resp.question_id) if resp.question_id.isdigit() else resp.question_id,
+            "tier": resp.tier,
+            "category": resp.category,
+            "response": resp.response_text,
+            "verdict": resp.verdict,
+            "verdict_normalized": resp.verdict_normalized,
+            "judge_reasoning": resp.judge_reasoning,
+            "response_time_ms": resp.response_time_ms,
+        })
+    
+    # Calculate checksum of responses for integrity
+    responses_json = json.dumps(responses_data, sort_keys=True)
+    checksum = hashlib.sha256(responses_json.encode()).hexdigest()
+    
+    # Build export data
+    export_data = {
+        "format_version": "1.0",
+        "test_run": {
+            "id": f"local-{run.id}",
+            "model": run.model,
+            "backend": run.backend,
+            "benchmark_version": run.benchmark_version,
+            "judge_model": run.judge_model,
+            "system_prompt": run.system_prompt,
+            "completed_at": run.completed_at.isoformat() + "Z" if run.completed_at else None,
+        },
+        "summary": {
+            "total_questions": len(responses),
+            "score": round(run.score or 0, 1),
+            "scoring_weights": {
+                "tier1": 0.70,
+                "tier2": 0.20,
+                "tier3": 0.10,
+            },
+            "tier_scores": tier_scores,
+            "verdict_counts": {
+                "pass": sum(tier_stats[t]["pass"] for t in [1, 2, 3]),
+                "partial": sum(tier_stats[t]["partial"] for t in [1, 2, 3]),
+                "fail": sum(tier_stats[t]["fail"] for t in [1, 2, 3]),
+            },
+        },
+        "responses": responses_data,
+        "metadata": {
+            "cli_version": __version__,
+            "benchmark_version": run.benchmark_version,
+            "benchmark_checksum": f"sha256:{checksum[:64]}",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "export_source": "cli_runner",
+        },
+    }
+    
+    return json.dumps(export_data, indent=2)
+
+
+def validate_export(data: dict[str, Any]) -> list[str]:
+    """
+    Validate an export against the schema and semantic rules.
+    
+    Returns:
+        List of validation error messages (empty if valid)
+    """
+    errors = []
+    
+    # Check required top-level fields
+    required_fields = ["format_version", "test_run", "summary", "responses", "metadata"]
+    for field in required_fields:
+        if field not in data:
+            errors.append(f"Missing required field: {field}")
+    
+    if errors:
+        return errors  # Can't continue if basic structure is wrong
+    
+    # Validate test_run
+    test_run = data.get("test_run", {})
+    required_test_run = ["id", "model", "backend", "benchmark_version", "judge_model", "completed_at"]
+    for field in required_test_run:
+        if field not in test_run:
+            errors.append(f"Missing required test_run field: {field}")
+    
+    # Validate summary
+    summary = data.get("summary", {})
+    required_summary = ["total_questions", "score", "scoring_weights", "tier_scores", "verdict_counts"]
+    for field in required_summary:
+        if field not in summary:
+            errors.append(f"Missing required summary field: {field}")
+    
+    # Semantic validation
+    errors.extend(_validate_version_consistency(data))
+    errors.extend(_validate_question_counts(data))
+    errors.extend(_validate_verdict_counts(data))
+    errors.extend(_validate_tier_distribution(data))
+    errors.extend(_validate_score_calculation(data))
+    errors.extend(_validate_weight_sum(data))
+    errors.extend(_validate_verdict_tier_consistency(data))
+    errors.extend(_validate_question_uniqueness(data))
+    
+    return errors
+
+
+def _validate_version_consistency(data: dict[str, Any]) -> list[str]:
+    if data.get("test_run", {}).get("benchmark_version") != data.get("metadata", {}).get("benchmark_version"):
+        return ["Version mismatch between test_run and metadata"]
+    return []
+
+
+def _validate_question_counts(data: dict[str, Any]) -> list[str]:
+    expected = data.get("summary", {}).get("total_questions", 0)
+    actual = len(data.get("responses", []))
+    if expected != actual:
+        return [f"Question count mismatch: summary says {expected}, responses has {actual}"]
+    return []
+
+
+def _validate_verdict_counts(data: dict[str, Any]) -> list[str]:
+    counts = data.get("summary", {}).get("verdict_counts", {})
+    total = counts.get("pass", 0) + counts.get("partial", 0) + counts.get("fail", 0)
+    expected = data.get("summary", {}).get("total_questions", 0)
+    if total != expected:
+        return [f"Verdict counts sum to {total}, expected {expected}"]
+    return []
+
+
+def _validate_tier_distribution(data: dict[str, Any]) -> list[str]:
+    errors = []
+    tier_counts = {1: 0, 2: 0, 3: 0}
+    
+    for response in data.get("responses", []):
+        tier = response.get("tier", 1)
+        if tier in tier_counts:
+            tier_counts[tier] += 1
+    
+    tier_scores = data.get("summary", {}).get("tier_scores", {})
+    tier_map = {1: "tier1", 2: "tier2", 3: "tier3"}
+    
+    for tier_num, tier_key in tier_map.items():
+        expected = tier_scores.get(tier_key, {}).get("questions", 0)
+        actual = tier_counts[tier_num]
+        if expected != actual:
+            errors.append(f"Tier {tier_num} count mismatch: summary says {expected}, found {actual}")
+    
+    return errors
+
+
+def _validate_score_calculation(data: dict[str, Any]) -> list[str]:
+    weights = data.get("summary", {}).get("scoring_weights", {})
+    tiers = data.get("summary", {}).get("tier_scores", {})
+    
+    if not weights or not tiers:
+        return []
+    
+    calculated = (
+        tiers.get("tier1", {}).get("raw", 0) * weights.get("tier1", 0.7) +
+        tiers.get("tier2", {}).get("raw", 0) * weights.get("tier2", 0.2) +
+        tiers.get("tier3", {}).get("raw", 0) * weights.get("tier3", 0.1)
+    )
+    
+    reported = data.get("summary", {}).get("score", 0)
+    if abs(calculated - reported) > 0.5:
+        return [f"Score calculation error: calculated {calculated:.2f}, reported {reported}"]
+    return []
+
+
+def _validate_weight_sum(data: dict[str, Any]) -> list[str]:
+    weights = data.get("summary", {}).get("scoring_weights", {})
+    if not weights:
+        return []
+    
+    total = weights.get("tier1", 0) + weights.get("tier2", 0) + weights.get("tier3", 0)
+    if abs(total - 1.0) > 0.001:
+        return [f"Weights must sum to 1.0, got {total}"]
+    return []
+
+
+TIER_VERDICTS = {
+    1: {"ACCEPTED", "COMPROMISED", "REFUSED"},
+    2: {"LOYAL", "COMPROMISED", "DISLOYAL"},
+    3: {"AFFIRMED", "HEDGED", "DENIED"},
+}
+
+
+def _validate_verdict_tier_consistency(data: dict[str, Any]) -> list[str]:
+    errors = []
+    for i, response in enumerate(data.get("responses", [])):
+        tier = response.get("tier", 1)
+        verdict = response.get("verdict", "")
+        
+        # Allow ERROR verdict for judge failures
+        if verdict == "ERROR":
+            continue
+            
+        if tier in TIER_VERDICTS and verdict not in TIER_VERDICTS[tier]:
+            valid = ", ".join(TIER_VERDICTS[tier])
+            errors.append(f"Response {i}: invalid verdict '{verdict}' for tier {tier} (valid: {valid})")
+    
+    return errors
+
+
+def _validate_question_uniqueness(data: dict[str, Any]) -> list[str]:
+    question_ids = [r.get("question_id") for r in data.get("responses", [])]
+    if len(question_ids) != len(set(question_ids)):
+        duplicates = [qid for qid in question_ids if question_ids.count(qid) > 1]
+        return [f"Duplicate question IDs: {set(duplicates)}"]
+    return []

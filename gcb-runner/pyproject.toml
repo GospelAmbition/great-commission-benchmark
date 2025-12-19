@@ -1,0 +1,71 @@
+[project]
+name = "gcb-runner"
+version = "0.1.0"
+description = "Run Great Commission Benchmark tests against AI models"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Great Commission Benchmark", email = "team@greatcommissionbenchmark.ai"}
+]
+keywords = ["benchmark", "ai", "llm", "christian", "ministry"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "httpx>=0.27.0",
+    "rich>=13.0",
+    "typer>=0.12.0",
+    "pydantic>=2.0",
+    "sqlalchemy>=2.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "pip-audit>=2.7",
+]
+
+[project.scripts]
+gcb-runner = "gcb_runner.cli:main"
+
+[project.urls]
+Homepage = "https://greatcommissionbenchmark.ai"
+Documentation = "https://greatcommissionbenchmark.ai/docs/runner"
+Repository = "https://github.com/great-commission-benchmark/gcb-runner"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["gcb_runner"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

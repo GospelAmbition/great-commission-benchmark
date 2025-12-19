@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@auth0/nextjs-auth0/client";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,9 @@ interface AdminUser {
 }
 
 export default function AdminUsersPage() {
-  const { user, isLoading: userLoading } = useUser();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const userLoading = status === "loading";
   const router = useRouter();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +64,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     if (!userLoading && !user) {
-      router.push("/api/auth/login");
+      router.push("/api/auth/signin");
       return;
     }
     if (user) {

@@ -4,13 +4,13 @@
 import { render, screen } from '@testing-library/react';
 import { Header } from '@/components/layout/Header';
 
-// Mock Auth0
-jest.mock('@auth0/nextjs-auth0/client', () => ({
-  useUser: () => ({
-    user: null,
-    error: null,
-    isLoading: false,
+// Mock NextAuth
+jest.mock('next-auth/react', () => ({
+  useSession: () => ({
+    data: null,
+    status: 'unauthenticated',
   }),
+  signOut: jest.fn(),
 }));
 
 describe('Header Component', () => {

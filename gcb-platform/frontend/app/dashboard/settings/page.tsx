@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@auth0/nextjs-auth0/client";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,9 @@ interface NotificationPreferences {
 }
 
 export default function SettingsPage() {
-  const { user, isLoading: userLoading } = useUser();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const userLoading = status === "loading";
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [notifications, setNotifications] = useState<NotificationPreferences>({
@@ -44,7 +46,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!userLoading && !user) {
-      router.push("/api/auth/login");
+      router.push("/api/auth/signin");
       return;
     }
     if (user) {
@@ -163,7 +165,7 @@ export default function SettingsPage() {
               className="bg-muted"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Email is managed through your Auth0 account
+              Email is managed through your Google account
             </p>
           </div>
           <div>
@@ -285,13 +287,13 @@ export default function SettingsPage() {
         <CardContent>
           <div className="flex items-center justify-between py-2">
             <div>
-              <p className="font-medium">Auth0</p>
+              <p className="font-medium">Google</p>
               <p className="text-sm text-muted-foreground">
                 {user.email} • Connected
               </p>
             </div>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/api/auth/logout">Sign Out</Link>
+              <Link href="/api/auth/signout">Sign Out</Link>
             </Button>
           </div>
         </CardContent>

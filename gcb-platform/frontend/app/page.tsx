@@ -86,10 +86,10 @@ export default function Home() {
             </div>
           )}
           <div className="mt-10 flex items-center justify-center gap-4">
-            <Button asChild size="lg" className="bg-[--ga-red] hover:bg-[--ga-dark-red]">
+            <Button asChild size="lg" className="bg-[--ga-red] hover:bg-[--ga-dark-red] w-[220px]">
               <Link href="/research">View Rankings ↓</Link>
             </Button>
-            <Button asChild size="lg" variant="outline">
+            <Button asChild size="lg" variant="outline" className="w-[220px]">
               <Link href="/about">Learn Why This Matters →</Link>
             </Button>
           </div>
@@ -97,7 +97,7 @@ export default function Home() {
       </section>
 
       {/* Top Performers */}
-      <section className="container py-12">
+      <section className="container pt-12 pb-3">
         <div className="space-y-6">
           <div className="text-center">
             <h2 className="text-3xl font-bold">Top Performers</h2>
@@ -127,7 +127,7 @@ export default function Home() {
       </section>
 
       {/* Quick Rankings */}
-      <section className="container py-12">
+      <section className="container pt-3 pb-12">
         <Card>
           <CardHeader>
             <CardTitle>Quick Rankings (Top 10)</CardTitle>

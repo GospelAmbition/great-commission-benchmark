@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useUser } from "@auth0/nextjs-auth0/client";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
-  const { user, isLoading: userLoading } = useUser();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const userLoading = status === "loading";
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
   const [tests, setTests] = useState<any[]>([]);
@@ -29,7 +31,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!userLoading && !user) {
-      router.push("/api/auth/login");
+      router.push("/api/auth/signin");
       return;
     }
     if (user) {

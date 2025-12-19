@@ -1,11 +1,7 @@
 """Authentication and authorization utilities"""
-from typing import Optional
-import httpx
-from functools import lru_cache
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt, jwk
-from jose.utils import base64url_decode
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -13,9 +9,6 @@ from app.db.base import SessionLocal
 from app.db.models.user import User
 
 security = HTTPBearer()
-
-# Cache for JWKS keys
-_jwks_cache = {}
 
 
 def get_db():
@@ -27,101 +20,52 @@ def get_db():
         db.close()
 
 
-def get_jwks():
-    """Fetch JWKS from Auth0 for token verification"""
-    global _jwks_cache
-    if not _jwks_cache:
-        if not settings.AUTH0_DOMAIN:
-            return None
-        
-        jwks_url = f"https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json"
-        try:
-            response = httpx.get(jwks_url, timeout=10.0)
-            response.raise_for_status()
-            _jwks_cache = response.json()
-        except Exception:
-            return None
-    
-    return _jwks_cache
-
-
-def get_rsa_key(token: str):
-    """Get the RSA key for verifying the token"""
-    jwks = get_jwks()
-    if not jwks:
-        return None
-    
-    try:
-        unverified_header = jwt.get_unverified_header(token)
-    except JWTError:
-        return None
-    
-    for key in jwks.get("keys", []):
-        if key.get("kid") == unverified_header.get("kid"):
-            return {
-                "kty": key["kty"],
-                "kid": key["kid"],
-                "use": key["use"],
-                "n": key["n"],
-                "e": key["e"]
-            }
-    return None
-
-
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
     """
-    Get current authenticated user from JWT token
+    Get current authenticated user from NextAuth JWT token
     
     Raises:
         HTTPException: If token is invalid or user not found
     """
     token = credentials.credentials
     
+    if not settings.NEXTAUTH_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication not configured"
+        )
+    
     try:
-        # Get RSA key for verification
-        rsa_key = get_rsa_key(token)
+        # Verify NextAuth JWT token using HS256 algorithm
+        payload = jwt.decode(
+            token,
+            settings.NEXTAUTH_SECRET,
+            algorithms=["HS256"]
+        )
         
-        if rsa_key and settings.AUTH0_DOMAIN:
-            # Verify token with proper signature verification
-            payload = jwt.decode(
-                token,
-                rsa_key,
-                algorithms=["RS256"],
-                audience=settings.AUTH0_AUDIENCE,
-                issuer=f"https://{settings.AUTH0_DOMAIN}/"
-            )
-        else:
-            # Fallback for development/testing without Auth0 configured
-            # WARNING: This should not be used in production
-            payload = jwt.decode(
-                token,
-                options={"verify_signature": False}
-            )
-        
-        auth0_id = payload.get("sub")
-        if not auth0_id:
+        # Get provider account ID (Google user ID) from token
+        provider_id = payload.get("sub")
+        if not provider_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials"
             )
         
-        # Validate token expiration is handled by jose library
-        
         # Get or create user in database
-        user = db.query(User).filter(User.auth0_id == auth0_id).first()
+        user = db.query(User).filter(User.auth0_id == provider_id).first()
         
         if not user:
             # Create user if doesn't exist
             email = payload.get("email", "")
             name = payload.get("name", "")
-            # Get role from token (set in Auth0)
-            role = payload.get("https://gcb.app/role", "user")
+            # Default role is "user" - can be updated by admins
+            role = payload.get("role", "user")
             
             user = User(
-                auth0_id=auth0_id,
+                auth0_id=provider_id,  # Keep field name for now, stores Google ID
                 email=email,
                 name=name,
                 role=role
@@ -132,7 +76,7 @@ async def get_current_user(
         
         return user
         
-    except JWTError as e:
+    except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials"

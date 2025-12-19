@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@auth0/nextjs-auth0/client";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,9 @@ import { Progress } from "@/components/ui/progress";
 import { TesterAgreementModal } from "@/components/tester-agreement/TesterAgreementModal";
 
 export default function NewTestPage() {
-  const { user, isLoading: userLoading } = useUser();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const userLoading = status === "loading";
   const router = useRouter();
   const [models, setModels] = useState<any[]>([]);
   const [versions, setVersions] = useState<any[]>([]);
@@ -36,7 +38,7 @@ export default function NewTestPage() {
 
   useEffect(() => {
     if (!userLoading && !user) {
-      router.push("/api/auth/login");
+      router.push("/api/auth/signin");
       return;
     }
     if (user) {

@@ -3,7 +3,9 @@ Great Commission Benchmark Platform - FastAPI Backend
 """
 import logging
 import sys
-from fastapi import FastAPI
+import traceback
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
@@ -59,6 +61,18 @@ app.add_middleware(
 
 # Include API router
 app.include_router(api_router, prefix="/api")
+
+
+# Exception handler to log errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Log all unhandled exceptions with full traceback"""
+    logger.error(f"Unhandled exception on {request.method} {request.url.path}:")
+    logger.error(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
 
 
 @app.get("/health")
