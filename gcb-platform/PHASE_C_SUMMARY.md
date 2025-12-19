@@ -76,7 +76,7 @@
 ```
 gcb-platform/frontend/
 ├── app/
-│   ├── api/auth/              # Auth0 handlers
+│   ├── api/auth/              # NextAuth handlers
 │   ├── about/                 # About/Methodology page
 │   ├── admin/                 # Admin pages
 │   │   ├── page.tsx           # Admin dashboard
@@ -124,8 +124,7 @@ gcb-platform/frontend/
 │   └── ui/                    # shadcn/ui components
 ├── lib/
 │   ├── api.ts                 # API client with TypeScript types
-│   └── auth0.ts               # Auth0 client configuration
-├── proxy.ts                   # Auth0 middleware/proxy
+├── auth.ts                    # NextAuth configuration
 ├── __tests__/
 │   ├── components/
 │   ├── pages/
@@ -199,11 +198,11 @@ All pages are responsive with:
 - Tablet-optimized layouts
 - Desktop full-featured views
 
-## Auth0 Integration
+## NextAuth Integration
 
-- Auth0Provider wrapping the app
-- Proxy file for handling auth requests
-- useUser hook for client-side auth state
+- NextAuth configuration with Google OAuth
+- Session management with JWT tokens
+- useSession hook for client-side auth state
 
 ## Next Steps (Phase D)
 
@@ -245,10 +244,10 @@ npm test
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_UMAMI_SCRIPT_URL=your_umami_url
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=your_website_id
-AUTH0_DOMAIN=your_auth0_domain
-AUTH0_CLIENT_ID=your_client_id
-AUTH0_CLIENT_SECRET=your_client_secret
-AUTH0_SECRET=your_secret
+AUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_secret
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 APP_BASE_URL=http://localhost:3000
 ```
 

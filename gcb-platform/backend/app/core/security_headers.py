@@ -11,17 +11,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         
         # Content Security Policy
-        # Allow self, Auth0, Stripe, Umami, and common CDNs
+        # Allow self, Google OAuth, Stripe, Umami, and common CDNs
         csp = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
-            "https://*.auth0.com https://*.stripe.com https://*.umami.is; "
+            "https://accounts.google.com https://*.stripe.com https://*.umami.is; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com data:; "
             "img-src 'self' data: https: blob:; "
-            "connect-src 'self' https://*.auth0.com https://*.stripe.com "
+            "connect-src 'self' https://accounts.google.com https://*.stripe.com "
             "https://api.openrouter.ai https://*.umami.is; "
-            "frame-src 'self' https://*.stripe.com https://*.auth0.com; "
+            "frame-src 'self' https://*.stripe.com https://accounts.google.com; "
             "object-src 'none'; "
             "base-uri 'self'; "
             "form-action 'self'; "

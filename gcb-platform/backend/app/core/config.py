@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     
     # OpenRouter
     OPENROUTER_API_KEY: str = ""
-    OPENROUTER_REFERER: str = "https://gcb.app"
+    OPENROUTER_REFERER: str = "https://greatcommissionbenchmark.ai"
     
     # Runner API
     RUNNER_API_KEY: str = ""
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     
     # Email (Resend)
     RESEND_API_KEY: str = ""
-    EMAIL_FROM: str = "Great Commission Benchmark <noreply@gcb.app>"
+    EMAIL_FROM: str = "Great Commission Benchmark <noreply@greatcommissionbenchmark.ai>"
     
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -10,13 +10,13 @@ This guide covers deploying the GCB platform to production.
 | Frontend | https://frontend-production-8b79.up.railway.app |
 | Health Check | https://backend-production-ba51.up.railway.app/health |
 
-These are temporary Railway URLs for testing. Custom domains (gcb.app, api.gcb.app) will be configured later.
+These are temporary Railway URLs for testing. Production domain (greatcommissionbenchmark.ai) will be configured later.
 
 ## Prerequisites
 
 Before deploying, ensure you have:
 - [ ] Railway account (or alternative hosting)
-- [ ] Auth0 production tenant configured
+- [ ] Google OAuth credentials configured
 - [ ] Stripe live account (with webhook configured)
 - [ ] PostgreSQL database provisioned
 - [ ] Domain name configured
@@ -59,18 +59,12 @@ Before deploying, ensure you have:
 # Database
 DATABASE_URL=postgresql://user:pass@host:5432/dbname
 
-# Auth0
-AUTH0_DOMAIN=your-tenant.auth0.com
-AUTH0_CLIENT_ID=your-client-id
-AUTH0_CLIENT_SECRET=your-client-secret
-AUTH0_AUDIENCE=https://api.gcb.app
-
 # CORS
-CORS_ORIGINS_STR=https://gcb.app,https://www.gcb.app
+CORS_ORIGINS_STR=https://greatcommissionbenchmark.ai,https://www.greatcommissionbenchmark.ai
 
 # OpenRouter
 OPENROUTER_API_KEY=sk-or-xxxxxxxx
-OPENROUTER_REFERER=https://gcb.app
+OPENROUTER_REFERER=https://greatcommissionbenchmark.ai
 
 # Runner API
 RUNNER_API_KEY=your-secure-runner-key
@@ -81,27 +75,28 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxx
 
 # Email
 RESEND_API_KEY=re_xxxxxxxx
-EMAIL_FROM=Great Commission Benchmark <noreply@gcb.app>
+EMAIL_FROM=Great Commission Benchmark <noreply@greatcommissionbenchmark.ai>
 ```
 
 ### Frontend (Production)
 
 ```env
-# Auth0
-AUTH0_SECRET=your-32-byte-secret
-AUTH0_BASE_URL=https://gcb.app
-AUTH0_ISSUER_BASE_URL=https://your-tenant.auth0.com
-AUTH0_CLIENT_ID=your-client-id
-AUTH0_CLIENT_SECRET=your-client-secret
+# NextAuth
+AUTH_URL=https://greatcommissionbenchmark.ai
+NEXTAUTH_SECRET=your-32-byte-secret
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # API
-NEXT_PUBLIC_API_URL=https://api.gcb.app
+NEXT_PUBLIC_API_URL=https://api.greatcommissionbenchmark.ai
 
 # Stripe
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_xxxxxxxx
 
 # Analytics (optional)
-NEXT_PUBLIC_UMAMI_SCRIPT_URL=https://analytics.gcb.app/umami.js
+NEXT_PUBLIC_UMAMI_SCRIPT_URL=https://analytics.greatcommissionbenchmark.ai/umami.js
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=your-website-id
 ```
 
@@ -117,7 +112,10 @@ CORS_ORIGINS_STR=http://localhost:3000,https://frontend-production-8b79.up.railw
 **Frontend:**
 ```env
 NEXT_PUBLIC_API_URL=https://backend-production-ba51.up.railway.app
-AUTH0_BASE_URL=https://frontend-production-8b79.up.railway.app
+AUTH_URL=https://frontend-production-8b79.up.railway.app
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+NEXTAUTH_SECRET=your-32-byte-secret
 ```
 
 ## Database Migration
@@ -137,29 +135,29 @@ railway run alembic upgrade head
 ## Stripe Webhook Setup
 
 1. Go to Stripe Dashboard → Developers → Webhooks
-2. Add endpoint: `https://api.gcb.app/api/webhooks/stripe`
+2. Add endpoint: `https://api.greatcommissionbenchmark.ai/api/webhooks/stripe`
 3. Select events:
    - `payment_intent.succeeded`
    - `payment_intent.payment_failed`
    - `charge.refunded`
 4. Copy webhook signing secret to `STRIPE_WEBHOOK_SECRET`
 
-## Auth0 Production Setup
+## Google OAuth Setup
 
-1. Create production tenant (or use existing)
-2. Create "Regular Web Application"
-3. Configure URLs:
-   - **Allowed Callback URLs**: `https://gcb.app/api/auth/callback`
-   - **Allowed Logout URLs**: `https://gcb.app`
-   - **Allowed Web Origins**: `https://gcb.app`
-4. Create API:
-   - **Identifier**: `https://api.gcb.app`
-   - **Signing Algorithm**: RS256
-5. Set up roles in Auth0:
-   - `user` (default)
-   - `moderator`
-   - `admin`
-6. Create Rule/Action to add role to token
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create a new project or select an existing one
+3. Enable Google+ API
+4. Create OAuth 2.0 credentials:
+   - Go to **APIs & Services** → **Credentials**
+   - Click **Create Credentials** → **OAuth client ID**
+   - Application type: **Web application**
+   - Authorized redirect URIs: `https://greatcommissionbenchmark.ai/api/auth/callback`
+   - For Railway test: `https://frontend-production-8b79.up.railway.app/api/auth/callback`
+5. Copy the Client ID and Client Secret to your environment variables
+6. Generate `NEXTAUTH_SECRET`:
+   ```bash
+   openssl rand -base64 32
+   ```
 
 ## SSL/TLS
 
@@ -172,7 +170,7 @@ Railway provides automatic SSL. Ensure:
 
 ### Health Checks
 
-- Backend: `https://api.gcb.app/health`
+- Backend: `https://api.greatcommissionbenchmark.ai/health`
 - Frontend: Check Railway metrics
 
 ### Logging
@@ -242,7 +240,7 @@ Before going live:
 
 - [ ] All secrets are in environment variables (not code)
 - [ ] HTTPS enforced everywhere
-- [ ] Auth0 configured correctly
+- [ ] Google OAuth configured correctly
 - [ ] Stripe webhook secret configured
 - [ ] Rate limiting enabled
 - [ ] Security headers configured
@@ -266,12 +264,13 @@ Before going live:
 3. Ensure connection limit not exceeded
 4. Check network rules
 
-### Auth0 Issues
+### Authentication Issues
 
-1. Verify all URLs match exactly
-2. Check token audience matches
-3. Ensure secrets are current
-4. Review Auth0 logs for errors
+1. Verify `AUTH_URL` matches your frontend domain exactly
+2. Check Google OAuth callback URLs match
+3. Ensure `NEXTAUTH_SECRET` is set and valid
+4. Verify Google OAuth credentials are correct
+5. Check NextAuth logs for errors
 
 ### Payment Failures
 
@@ -314,7 +313,7 @@ To put the site in maintenance mode:
 - [ ] All environment variables set
 - [ ] Database migrated
 - [ ] Stripe webhook configured
-- [ ] Auth0 URLs updated
+- [ ] Google OAuth configured
 - [ ] DNS configured
 - [ ] SSL working
 - [ ] Health checks passing

@@ -96,7 +96,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 ```
 
 - Adds comprehensive security headers to all API responses
-- CSP configured to allow Auth0, Stripe, OpenRouter, Umami
+- CSP configured to allow Google OAuth, Stripe, OpenRouter, Umami
 - HSTS only applied for HTTPS connections
 
 ### Tester Agreement Flow

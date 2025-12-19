@@ -19,12 +19,12 @@
 - ✅ **A.2.8** Community & notification tables created
 - ✅ **A.2.9** Database indexes created
 
-### A.3 Authentication (Auth0) ✅
+### A.3 Authentication (NextAuth) ✅
 - ✅ **A.3.4** Backend JWT validation middleware implemented
 - ✅ **A.3.5** Backend role-based authorization implemented
-- ✅ **A.3.6** Frontend Auth0 integration completed
+- ✅ **A.3.6** Frontend NextAuth with Google OAuth integration completed
 
-**Note:** A.3.1-A.3.3 are manual Auth0 tenant setup tasks (documented in README)
+**Note:** A.3.1-A.3.3 are manual Google OAuth setup tasks (documented in README)
 
 ### A.4 Railway Infrastructure ✅
 - ✅ **A.4.2** Backend Dockerfile created
@@ -59,7 +59,7 @@ gcb-platform/
 │   └── README.md
 ├── frontend/
 │   ├── app/                  # Next.js app directory
-│   │   ├── api/auth/         # Auth0 handlers
+│   │   ├── api/auth/         # NextAuth handlers
 │   │   ├── layout.tsx        # Root layout
 │   │   └── page.tsx          # Homepage
 │   ├── components/ui/        # shadcn/ui components
@@ -86,7 +86,7 @@ gcb-platform/
    - TypeScript configuration
    - Tailwind CSS v4 with brand colors
    - shadcn/ui component library
-   - Auth0 integration
+   - NextAuth with Google OAuth integration
    - Inter font configuration
    - Basic homepage with auth flow
 
@@ -104,11 +104,11 @@ gcb-platform/
 
 To complete Phase A setup:
 
-1. **Set up Auth0:**
-   - Create Auth0 tenant
-   - Create Regular Web Application
+1. **Set up Google OAuth:**
+   - Create Google Cloud project
+   - Enable Google+ API
+   - Create OAuth 2.0 credentials
    - Configure callback URLs
-   - Set up roles (user, moderator, admin)
    - Update `.env` files with credentials
 
 2. **Set up PostgreSQL:**
@@ -150,4 +150,4 @@ npm test
 
 ## Status
 
-✅ **Phase A Complete** - All code implementation tasks completed. Manual setup tasks (Auth0, Railway) are documented and ready to be completed.
+✅ **Phase A Complete** - All code implementation tasks completed. Manual setup tasks (Google OAuth, Railway) are documented and ready to be completed.

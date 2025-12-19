@@ -21,7 +21,7 @@ def sample_token_payload():
         "sub": "auth0|123456",
         "email": "test@example.com",
         "name": "Test User",
-        "https://gcb.app/role": "user"
+        "https://greatcommissionbenchmark.ai/role": "user"
     }
 
 

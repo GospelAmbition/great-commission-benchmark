@@ -220,10 +220,13 @@ mypy gcb_runner/
 # API Configuration
 NEXT_PUBLIC_API_URL=http://localhost:8000
 
-# Auth0
-NEXT_PUBLIC_AUTH0_DOMAIN=your-dev-tenant.auth0.com
-NEXT_PUBLIC_AUTH0_CLIENT_ID=your-dev-client-id
-AUTH0_CLIENT_SECRET=your-dev-client-secret
+# NextAuth
+AUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-dev-secret-generate-with-openssl-rand-base64-32
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # Stripe (test mode)
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
@@ -240,11 +243,7 @@ STRIPE_SECRET_KEY=sk_test_xxx
 # Database
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/gcb_dev
 
-# Auth0
-AUTH0_DOMAIN=your-dev-tenant.auth0.com
-AUTH0_CLIENT_ID=your-dev-client-id
-AUTH0_CLIENT_SECRET=your-dev-client-secret
-AUTH0_AUDIENCE=https://api.dev.greatcommissionbenchmark.ai
+# Note: Backend authentication is handled via NextAuth JWT tokens from frontend
 
 # Stripe (test mode)
 STRIPE_SECRET_KEY=sk_test_xxx

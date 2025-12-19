@@ -62,7 +62,7 @@ class EmailService:
             <h1 style="color: #a11824;">Test Complete!</h1>
             <p>Your benchmark test for <strong>{model_name}</strong> has been completed.</p>
             <p><strong>Overall Score:</strong> {overall_score:.1f}%</p>
-            <p><a href="https://gcb.app/dashboard/tests/{test_id}" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Results</a></p>
+            <p><a href="https://greatcommissionbenchmark.ai/dashboard/tests/{test_id}" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Results</a></p>
             <hr>
             <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
         </body>
@@ -85,7 +85,7 @@ class EmailService:
             <p>Unfortunately, your benchmark test encountered an error:</p>
             <p style="background-color: #fee9e8; padding: 10px; border-radius: 5px;">{error_message}</p>
             <p>Please contact support if this issue persists.</p>
-            <p><a href="https://gcb.app/dashboard/tests/{test_id}" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Test Details</a></p>
+            <p><a href="https://greatcommissionbenchmark.ai/dashboard/tests/{test_id}" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Test Details</a></p>
             <hr>
             <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
         </body>
@@ -106,7 +106,7 @@ class EmailService:
             <h1 style="color: #a11824;">Payment Failed</h1>
             <p>Your payment for the benchmark test could not be processed.</p>
             <p>Please check your payment method and try again.</p>
-            <p><a href="https://gcb.app/tests/{test_id}/payment" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Retry Payment</a></p>
+            <p><a href="https://greatcommissionbenchmark.ai/tests/{test_id}/payment" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Retry Payment</a></p>
             <hr>
             <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
         </body>
@@ -128,7 +128,7 @@ class EmailService:
             <h1 style="color: #a11824;">Submission Approved</h1>
             <p>Great news! Your community submission for <strong>{model_name}</strong> has been reviewed and approved.</p>
             <p>It will now appear on the public leaderboard.</p>
-            <p><a href="https://gcb.app/research" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Leaderboard</a></p>
+            <p><a href="https://greatcommissionbenchmark.ai/research" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Leaderboard</a></p>
             <hr>
             <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
         </body>
@@ -152,7 +152,7 @@ class EmailService:
             <p>Your community submission for <strong>{model_name}</strong> was reviewed but needs revision.</p>
             {f'<p style="background-color: #fee9e8; padding: 10px; border-radius: 5px;">{reviewer_notes}</p>' if reviewer_notes else ''}
             <p>Please review the feedback and resubmit if needed.</p>
-            <p><a href="https://gcb.app/dashboard/submissions/{submission_id}" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Submission</a></p>
+            <p><a href="https://greatcommissionbenchmark.ai/dashboard/submissions/{submission_id}" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Submission</a></p>
             <hr>
             <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
         </body>
@@ -177,7 +177,7 @@ class EmailService:
                 <li>Submit community results</li>
                 <li>Contribute to the benchmark</li>
             </ul>
-            <p><a href="https://gcb.app/tests/new" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Run Your First Test</a></p>
+            <p><a href="https://greatcommissionbenchmark.ai/tests/new" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Run Your First Test</a></p>
             <hr>
             <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
         </body>

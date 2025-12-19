@@ -29,7 +29,7 @@ gcb-platform/
 - Node.js 18+ (for frontend)
 - Python 3.11+ (for backend)
 - PostgreSQL 15+ (or Docker)
-- Auth0 account (for authentication)
+- Google Cloud account (for OAuth, optional for development)
 - Stripe account (for payments, optional for development)
 
 ### Backend Setup
@@ -155,10 +155,6 @@ npm run lint:fix              # Fix auto-fixable issues
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `DATABASE_URL` | PostgreSQL connection string | Yes |
-| `AUTH0_DOMAIN` | Auth0 tenant domain | Yes |
-| `AUTH0_CLIENT_ID` | Auth0 client ID | Yes |
-| `AUTH0_CLIENT_SECRET` | Auth0 client secret | Yes |
-| `AUTH0_AUDIENCE` | Auth0 API audience | Yes |
 | `OPENROUTER_API_KEY` | OpenRouter API key for model access | Yes |
 | `STRIPE_SECRET_KEY` | Stripe secret key | Production |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | Production |
@@ -168,11 +164,10 @@ npm run lint:fix              # Fix auto-fixable issues
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `AUTH0_SECRET` | Session encryption secret | Yes |
-| `AUTH0_BASE_URL` | Base URL of your app | Yes |
-| `AUTH0_ISSUER_BASE_URL` | Auth0 tenant URL | Yes |
-| `AUTH0_CLIENT_ID` | Auth0 client ID | Yes |
-| `AUTH0_CLIENT_SECRET` | Auth0 client secret | Yes |
+| `AUTH_URL` | Base URL of your app (e.g., `http://localhost:3000`) | Yes |
+| `NEXTAUTH_SECRET` | Session encryption secret (generate with `openssl rand -base64 32`) | Yes |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | Yes |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Yes |
 | `NEXT_PUBLIC_API_URL` | Backend API URL | Yes |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | Production |
 
@@ -199,17 +194,17 @@ The backend provides comprehensive API documentation via:
 - **Framework**: FastAPI with Pydantic for validation
 - **Database**: PostgreSQL with SQLAlchemy ORM
 - **Migrations**: Alembic
-- **Authentication**: Auth0 JWT validation
+- **Authentication**: NextAuth JWT validation
 - **Payments**: Stripe integration
 
 ### Frontend (Next.js)
 - **Framework**: Next.js 14 with App Router
 - **UI Components**: shadcn/ui + Tailwind CSS
-- **Authentication**: Auth0 Next.js SDK
+- **Authentication**: NextAuth v5 with Google OAuth
 - **Charts**: Chart.js with react-chartjs-2
 
 ### Security Features
-- JWT token validation with JWKS
+- JWT token validation via NextAuth
 - Security headers (CSP, HSTS, X-Frame-Options, etc.)
 - Rate limiting on API endpoints
 - Input validation and sanitization

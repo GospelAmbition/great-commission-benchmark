@@ -81,7 +81,7 @@ Interactive API documentation is available at:
 ### Authentication
 
 - **Public endpoints**: No authentication required
-- **User endpoints**: JWT Bearer token (Auth0)
+- **User endpoints**: JWT Bearer token (NextAuth)
 - **Runner endpoints**: API key authentication
 - **Admin endpoints**: JWT with admin role
 
@@ -185,10 +185,6 @@ pytest tests/test_phase_e.py -v
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DATABASE_URL` | PostgreSQL connection string | Required |
-| `AUTH0_DOMAIN` | Auth0 tenant domain | Required |
-| `AUTH0_CLIENT_ID` | Auth0 client ID | Required |
-| `AUTH0_CLIENT_SECRET` | Auth0 client secret | Required |
-| `AUTH0_AUDIENCE` | Auth0 API audience | Required |
 | `CORS_ORIGINS_STR` | Allowed CORS origins | `localhost` |
 | `OPENROUTER_API_KEY` | OpenRouter API key | Required |
 | `RUNNER_API_KEY` | API key for runner access | Required |
@@ -217,7 +213,7 @@ The following security headers are added to all responses:
 
 ### Authentication
 
-- JWT tokens validated against Auth0 JWKS
+- JWT tokens validated via NextAuth
 - Role-based access control (user, moderator, admin)
 - API key authentication for runner endpoints
 
@@ -274,9 +270,9 @@ Application logs are output to stdout. In production, configure your hosting pro
 
 ### Authentication Failures
 
-- Verify Auth0 configuration
+- Verify NextAuth configuration
 - Check JWT token expiration
-- Ensure audience matches
+- Ensure token is valid and not expired
 
 ### Migration Errors
 

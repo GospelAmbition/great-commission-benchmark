@@ -58,7 +58,7 @@ export default function Error({
           <div className="mt-8 pt-8 border-t">
             <p className="text-sm text-muted-foreground text-center">
               If this problem persists, please{" "}
-              <a href="mailto:contact@gcb.app" className="text-[--ga-red] hover:underline">
+              <a href="mailto:contact@greatcommissionbenchmark.ai" className="text-[--ga-red] hover:underline">
                 contact support
               </a>
               .

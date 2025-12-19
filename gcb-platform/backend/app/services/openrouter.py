@@ -15,7 +15,7 @@ class OpenRouterClient:
             base_url=self.BASE_URL,
             headers={
                 "Authorization": f"Bearer {self.api_key}",
-                "HTTP-Referer": getattr(settings, "OPENROUTER_REFERER", "https://gcb.app"),
+                "HTTP-Referer": getattr(settings, "OPENROUTER_REFERER", "https://greatcommissionbenchmark.ai"),
                 "X-Title": "Great Commission Benchmark"
             },
             timeout=60.0

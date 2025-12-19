@@ -44,8 +44,8 @@ The frontend provides:
 ```
 frontend/
 ├── app/                      # Next.js app directory
-│   ├── api/                 # API routes (Auth0)
-│   │   └── auth/           # Auth0 handlers
+│   ├── api/                 # API routes
+│   │   └── auth/           # NextAuth handlers
 │   ├── about/              # About/methodology page
 │   ├── admin/              # Admin pages
 │   ├── contribute/         # Contribute page
@@ -121,25 +121,30 @@ Charts use Chart.js with react-chartjs-2.
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `AUTH0_SECRET` | Session encryption (generate with `openssl rand -hex 32`) | Yes |
-| `AUTH0_BASE_URL` | Base URL (e.g., `http://localhost:3000`) | Yes |
-| `AUTH0_ISSUER_BASE_URL` | Auth0 tenant URL | Yes |
-| `AUTH0_CLIENT_ID` | Auth0 client ID | Yes |
-| `AUTH0_CLIENT_SECRET` | Auth0 client secret | Yes |
+| `AUTH_URL` | Base URL of your app (e.g., `http://localhost:3000`) | Yes |
+| `NEXTAUTH_SECRET` | Session encryption secret (generate with `openssl rand -base64 32`) | Yes |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | Yes |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Yes |
 | `NEXT_PUBLIC_API_URL` | Backend API URL | Yes |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe key | Production |
 | `NEXT_PUBLIC_UMAMI_SCRIPT_URL` | Analytics URL | Optional |
 | `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Analytics ID | Optional |
 
-## Auth0 Setup
+## Google OAuth Setup
 
-1. Create an Auth0 tenant at https://auth0.com
-2. Create a "Regular Web Application"
-3. Configure:
-   - **Allowed Callback URLs**: `http://localhost:3000/api/auth/callback`
-   - **Allowed Logout URLs**: `http://localhost:3000`
-   - **Allowed Web Origins**: `http://localhost:3000`
-4. Copy credentials to `.env.local`
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create a new project or select an existing one
+3. Enable Google+ API
+4. Create OAuth 2.0 credentials:
+   - Go to **APIs & Services** → **Credentials**
+   - Click **Create Credentials** → **OAuth client ID**
+   - Application type: **Web application**
+   - Authorized redirect URIs: `http://localhost:3000/api/auth/callback`
+5. Copy the Client ID and Client Secret to `.env.local`
+6. Generate `NEXTAUTH_SECRET`:
+   ```bash
+   openssl rand -base64 32
+   ```
 
 ## Development
 
@@ -264,11 +269,12 @@ npx vercel
 
 ## Troubleshooting
 
-### Auth0 Callback Errors
+### Authentication Errors
 
-- Verify callback URLs match exactly
-- Check `AUTH0_BASE_URL` matches your domain
-- Ensure secrets are set correctly
+- Verify `AUTH_URL` matches your domain exactly
+- Check Google OAuth callback URLs match
+- Ensure `NEXTAUTH_SECRET` is set correctly
+- Verify Google OAuth credentials are correct
 
 ### API Connection Issues
 

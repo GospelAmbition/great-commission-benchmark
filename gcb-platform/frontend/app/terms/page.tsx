@@ -39,8 +39,8 @@ export default function TermsPage() {
             <h2>Contact</h2>
             <p>
               For questions about these Terms, please contact us at{" "}
-              <a href="mailto:contact@gcb.app" className="text-[--ga-red] hover:underline">
-                contact@gcb.app
+              <a href="mailto:contact@greatcommissionbenchmark.ai" className="text-[--ga-red] hover:underline">
+                contact@greatcommissionbenchmark.ai
               </a>
             </p>
           </div>

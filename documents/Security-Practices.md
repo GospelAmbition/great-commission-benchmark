@@ -50,13 +50,13 @@ This document defines the security practices, policies, and implementation stand
 
 ### Authentication Provider
 
-**Provider:** Auth0
+**Provider:** NextAuth v5 with Google OAuth
 
 **Rationale:**
-- Industry-standard OAuth 2.0 / OpenID Connect implementation
-- Managed security infrastructure (MFA, brute force protection, anomaly detection)
-- Social login support (Google, GitHub, etc.)
-- Free tier available for initial deployment
+- Industry-standard OAuth 2.0 implementation
+- Secure session management with JWT tokens
+- Google OAuth integration for user authentication
+- Open-source and self-hosted solution
 
 ### JWT Token Security
 
@@ -67,8 +67,8 @@ Authorization: Bearer <jwt_token>
 ```
 
 **Token Handling:**
-- Tokens issued by Auth0 with appropriate expiration (default: 24 hours)
-- Refresh tokens used for session continuation
+- Tokens issued by NextAuth with appropriate expiration (default: 24 hours)
+- Session tokens stored securely with encryption
 - Tokens validated on every API request
 - Invalid or expired tokens result in `401 Unauthorized`
 
@@ -239,7 +239,7 @@ All testers agree to:
 | **Email Address** | Registration | Encrypted at rest | Account lifetime |
 | **Name** | Optional profile | Encrypted at rest | Account lifetime |
 | **Organization** | Optional profile | Encrypted at rest | Account lifetime |
-| **Auth0 ID** | Authentication | Encrypted at rest | Account lifetime |
+| **User ID** | Authentication | Encrypted at rest | Account lifetime |
 | **Test Results** | Test execution | Encrypted at rest | Indefinite (user-owned) |
 
 ### Data Encryption
@@ -334,7 +334,7 @@ stripe.Webhook.construct_event(
 |-------------|------------------|--------|
 | **API Keys** | Railway environment variables | Runtime only |
 | **Database Credentials** | Railway managed | Automatic injection |
-| **Auth0 Secrets** | Railway environment variables | Runtime only |
+| **NextAuth Secrets** | Railway environment variables | Runtime only |
 | **Stripe Keys** | Railway environment variables | Runtime only |
 | **Webhook Secrets** | Railway environment variables | Runtime only |
 
@@ -470,7 +470,8 @@ stripe.Webhook.construct_event(
 ### Pre-Launch Security Checklist
 
 **Authentication & Authorization:**
-- [ ] Auth0 properly configured with secure defaults
+- [ ] NextAuth properly configured with secure defaults
+- [ ] Google OAuth credentials configured correctly
 - [ ] JWT validation implemented on all protected endpoints
 - [ ] Role-based access control implemented and tested
 - [ ] Session management secure (HTTPOnly, Secure, SameSite)

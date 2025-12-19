@@ -28,7 +28,7 @@ export default function PrivacyPage() {
             
             <h2>Data We Collect</h2>
             <ul className="list-disc pl-6 space-y-2">
-              <li>Account information (email, name) via Auth0</li>
+              <li>Account information (email, name) via Google OAuth</li>
               <li>Test results and model responses</li>
               <li>Usage data and analytics</li>
               <li>Payment information (processed by Stripe)</li>
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
             <h2>Third-Party Services</h2>
             <p>We use:</p>
             <ul className="list-disc pl-6 space-y-2">
-              <li><strong>Auth0:</strong> Authentication and user management</li>
+              <li><strong>Google OAuth:</strong> Authentication and user management</li>
               <li><strong>Stripe:</strong> Payment processing</li>
               <li><strong>OpenRouter:</strong> AI model API access</li>
               <li><strong>Umami:</strong> Privacy-respecting analytics</li>
@@ -58,8 +58,8 @@ export default function PrivacyPage() {
             <h2>Contact</h2>
             <p>
               For privacy questions, please contact us at{" "}
-              <a href="mailto:privacy@gcb.app" className="text-[--ga-red] hover:underline">
-                privacy@gcb.app
+              <a href="mailto:privacy@greatcommissionbenchmark.ai" className="text-[--ga-red] hover:underline">
+                privacy@greatcommissionbenchmark.ai
               </a>
             </p>
           </div>
