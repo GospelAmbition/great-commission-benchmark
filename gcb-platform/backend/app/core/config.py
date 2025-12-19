@@ -43,8 +43,8 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_REFERER: str = "https://greatcommissionbenchmark.ai"
     
-    # Runner API
-    RUNNER_API_KEY: str = ""
+    # Note: Runner API keys are now per-user and stored in the database
+    # See UserAPIKey model - users generate keys from their dashboard
     
     # Stripe
     STRIPE_SECRET_KEY: str = ""

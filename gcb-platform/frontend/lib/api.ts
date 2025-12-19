@@ -394,6 +394,45 @@ export class ApiClient {
     return this.request('/api/user/profile');
   }
 
+  // API Keys
+  async getAPIKeys(): Promise<{
+    api_keys: Array<{
+      id: string;
+      name: string;
+      key_prefix: string;
+      is_active: boolean;
+      last_used_at: string | null;
+      created_at: string;
+      expires_at: string | null;
+    }>;
+    total: number;
+  }> {
+    return this.request('/api/user/api-keys');
+  }
+
+  async createAPIKey(name: string): Promise<{
+    id: string;
+    name: string;
+    key: string;
+    key_prefix: string;
+    created_at: string;
+    message: string;
+  }> {
+    return this.request('/api/user/api-keys', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async revokeAPIKey(keyId: string): Promise<{
+    id: string;
+    message: string;
+  }> {
+    return this.request(`/api/user/api-keys/${keyId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Payments API
   async createPaymentIntent(testId: string, tipPercentage?: number): Promise<{
     payment_intent_id: string;

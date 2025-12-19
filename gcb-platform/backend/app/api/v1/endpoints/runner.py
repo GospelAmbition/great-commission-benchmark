@@ -1,30 +1,48 @@
 """Runner API endpoints (for CLI)"""
 from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, Tuple
 
 from app.core.auth import get_db
+from app.db.models.user import User
+from app.db.models.user_api_key import UserAPIKey
 from app.db.models.question_set import QuestionSet
 from app.db.models.question import Question
 from app.db.models.methodology_version import MethodologyVersion
 from app.core.rate_limit import RateLimitDependency
+from app.api.v1.endpoints.api_keys import validate_api_key
 
 router = APIRouter()
 
 
-async def verify_api_key(x_api_key: Optional[str] = Header(None)) -> str:
-    """Verify API key for runner endpoints"""
-    if not x_api_key:
-        raise HTTPException(status_code=401, detail="API key required")
+class APIKeyAuth:
+    """Dependency for API key authentication that returns the user"""
     
-    # Basic validation - must be at least 32 characters
-    if len(x_api_key) < 32:
-        raise HTTPException(status_code=401, detail="Invalid API key format")
-    
-    # TODO: Validate against database for production
-    # For now, accept any key that meets format requirements
-    return x_api_key
+    async def __call__(
+        self,
+        x_api_key: Optional[str] = Header(None),
+        db: Session = Depends(get_db)
+    ) -> Tuple[UserAPIKey, User]:
+        """Validate API key and return the key and user"""
+        if not x_api_key:
+            raise HTTPException(
+                status_code=401,
+                detail="API key required. Get one from your dashboard at https://greatcommissionbenchmark.ai/dashboard/settings"
+            )
+        
+        api_key_record, user = validate_api_key(db, x_api_key)
+        
+        if not api_key_record or not user:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired API key"
+            )
+        
+        return api_key_record, user
 
+
+# Dependency instance
+require_api_key = APIKeyAuth()
 
 # Rate limiter for runner endpoints: 50 requests per hour
 runner_rate_limit = RateLimitDependency("runner")
@@ -34,10 +52,11 @@ runner_rate_limit = RateLimitDependency("runner")
 async def get_runner_versions(
     request: Request,
     db: Session = Depends(get_db),
-    api_key: str = Depends(verify_api_key),
+    auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
     _rate_limit: bool = Depends(runner_rate_limit)
 ):
     """Get available benchmark versions for CLI"""
+    # auth contains (api_key_record, user) - available for logging/tracking
     question_sets = db.query(QuestionSet).filter(
         QuestionSet.status.in_(["active", "archived"])
     ).order_by(QuestionSet.created_at.desc()).all()
@@ -65,10 +84,11 @@ async def get_runner_questions(
     request: Request,
     version: Optional[str] = None,
     db: Session = Depends(get_db),
-    api_key: str = Depends(verify_api_key),
+    auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
     _rate_limit: bool = Depends(runner_rate_limit)
 ):
     """Get full question set for CLI"""
+    # auth contains (api_key_record, user) - available for logging/tracking
     # Get question set
     if version:
         question_set = db.query(QuestionSet).filter(QuestionSet.semantic_version == version).first()
@@ -116,10 +136,11 @@ async def get_judge_prompts(
     request: Request,
     version: Optional[str] = None,
     db: Session = Depends(get_db),
-    api_key: str = Depends(verify_api_key),
+    auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
     _rate_limit: bool = Depends(runner_rate_limit)
 ):
     """Get judge prompts for each tier"""
+    # auth contains (api_key_record, user) - available for logging/tracking
     # Get question set
     if version:
         question_set = db.query(QuestionSet).filter(QuestionSet.semantic_version == version).first()

@@ -5,6 +5,7 @@ from app.api.v1.endpoints import (
     health,
     public,
     user,
+    api_keys,
     tests,
     submissions,
     runner,
@@ -25,6 +26,9 @@ api_router.include_router(public.router, prefix="/public", tags=["public"])
 
 # User API
 api_router.include_router(user.router, prefix="/user", tags=["user"])
+
+# API Keys (under /user for organization)
+api_router.include_router(api_keys.router, prefix="/user/api-keys", tags=["api-keys"])
 
 # Tests API
 api_router.include_router(tests.router, prefix="/tests", tags=["tests"])

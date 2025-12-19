@@ -1,6 +1,7 @@
 """Database models"""
 # Import all models so Alembic can detect them
 from app.db.models.user import User
+from app.db.models.user_api_key import UserAPIKey
 from app.db.models.model import Model
 from app.db.models.question_set import QuestionSet
 from app.db.models.question import Question
@@ -15,6 +16,7 @@ from app.db.models.notification_preference import NotificationPreference
 
 __all__ = [
     "User",
+    "UserAPIKey",
     "Model",
     "QuestionSet",
     "Question",

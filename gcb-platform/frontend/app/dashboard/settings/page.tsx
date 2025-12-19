@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import Link from "next/link";
+import { Copy, Key, Trash2, Plus, Eye, EyeOff } from "lucide-react";
 
 interface UserProfile {
   name: string;
@@ -26,6 +28,16 @@ interface NotificationPreferences {
   submission_approved: boolean;
   submission_rejected: boolean;
   newsletter: boolean;
+}
+
+interface APIKey {
+  id: string;
+  name: string;
+  key_prefix: string;
+  is_active: boolean;
+  last_used_at: string | null;
+  created_at: string;
+  expires_at: string | null;
 }
 
 export default function SettingsPage() {
@@ -43,6 +55,14 @@ export default function SettingsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // API Key state
+  const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
+  const [apiKeysLoading, setApiKeysLoading] = useState(true);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [creatingKey, setCreatingKey] = useState(false);
+  const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
+  const [showNewKey, setShowNewKey] = useState(false);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -51,6 +71,7 @@ export default function SettingsPage() {
     }
     if (user) {
       loadSettings();
+      loadAPIKeys();
     }
   }, [user, userLoading, router]);
 
@@ -76,6 +97,69 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
+  }
+  
+  async function loadAPIKeys() {
+    setApiKeysLoading(true);
+    try {
+      const response = await apiClient.getAPIKeys();
+      setApiKeys(response.api_keys);
+    } catch (error) {
+      console.error("Failed to load API keys:", error);
+    } finally {
+      setApiKeysLoading(false);
+    }
+  }
+  
+  async function handleCreateAPIKey() {
+    if (!newKeyName.trim()) {
+      toast.error("Please enter a name for the API key");
+      return;
+    }
+    
+    setCreatingKey(true);
+    try {
+      const response = await apiClient.createAPIKey(newKeyName.trim());
+      setNewlyCreatedKey(response.key);
+      setShowNewKey(true);
+      setNewKeyName("");
+      await loadAPIKeys();
+      toast.success("API key created successfully");
+    } catch (error: any) {
+      console.error("Failed to create API key:", error);
+      toast.error(error.message || "Failed to create API key");
+    } finally {
+      setCreatingKey(false);
+    }
+  }
+  
+  async function handleRevokeAPIKey(keyId: string, keyName: string) {
+    if (!confirm(`Are you sure you want to revoke the API key "${keyName}"? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      await apiClient.revokeAPIKey(keyId);
+      await loadAPIKeys();
+      toast.success("API key revoked successfully");
+    } catch (error: any) {
+      console.error("Failed to revoke API key:", error);
+      toast.error(error.message || "Failed to revoke API key");
+    }
+  }
+  
+  function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
+  }
+  
+  function formatDate(dateString: string | null): string {
+    if (!dateString) return "Never";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   }
 
   async function handleSaveProfile() {
@@ -296,6 +380,142 @@ export default function SettingsPage() {
               <Link href="/api/auth/signout">Sign Out</Link>
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* API Keys */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Key className="h-5 w-5" />
+            API Keys
+          </CardTitle>
+          <CardDescription>
+            Manage API keys for the GCB Runner CLI. Use these keys to run benchmarks locally.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* New Key Created Alert */}
+          {newlyCreatedKey && (
+            <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-2">
+                🎉 API Key Created Successfully
+              </p>
+              <p className="text-xs text-green-700 dark:text-green-300 mb-3">
+                Copy this key now. It will not be shown again.
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 p-2 bg-white dark:bg-gray-900 rounded border text-sm font-mono overflow-x-auto">
+                  {showNewKey ? newlyCreatedKey : "••••••••••••••••••••••••••••••••"}
+                </code>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowNewKey(!showNewKey)}
+                >
+                  {showNewKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => copyToClipboard(newlyCreatedKey)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-3"
+                onClick={() => {
+                  setNewlyCreatedKey(null);
+                  setShowNewKey(false);
+                }}
+              >
+                Dismiss
+              </Button>
+            </div>
+          )}
+
+          {/* Create New Key */}
+          <div className="flex gap-2">
+            <Input
+              placeholder="Key name (e.g., My Laptop, CI Server)"
+              value={newKeyName}
+              onChange={(e) => setNewKeyName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateAPIKey()}
+              disabled={creatingKey}
+            />
+            <Button
+              onClick={handleCreateAPIKey}
+              disabled={creatingKey || !newKeyName.trim()}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {creatingKey ? "Creating..." : "Create Key"}
+            </Button>
+          </div>
+
+          <Separator />
+
+          {/* Existing Keys */}
+          {apiKeysLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+            </div>
+          ) : apiKeys.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No API keys yet. Create one to use the GCB Runner CLI.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {apiKeys.map((key) => (
+                <div
+                  key={key.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                    key.is_active
+                      ? "bg-background"
+                      : "bg-muted opacity-60"
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium truncate">{key.name}</p>
+                      {!key.is_active && (
+                        <Badge variant="secondary" className="text-xs">
+                          Revoked
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                      <code className="bg-muted px-1.5 py-0.5 rounded">
+                        {key.key_prefix}...
+                      </code>
+                      <span>Created {formatDate(key.created_at)}</span>
+                      {key.last_used_at && (
+                        <span>Last used {formatDate(key.last_used_at)}</span>
+                      )}
+                    </div>
+                  </div>
+                  {key.is_active && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleRevokeAPIKey(key.id, key.name)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground">
+            Use your API key with the GCB Runner CLI:{" "}
+            <code className="bg-muted px-1.5 py-0.5 rounded">gcb-runner config</code>
+          </p>
         </CardContent>
       </Card>
 
