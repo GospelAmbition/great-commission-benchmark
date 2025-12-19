@@ -118,3 +118,23 @@ def require_role(required_role: str):
 require_auth = get_current_user
 require_moderator = require_role("moderator")
 require_admin = require_role("admin")
+
+
+def is_fee_waived(user: User) -> bool:
+    """
+    Check if user has CLI submission fee waived.
+    
+    Fee is automatically waived for moderators and admins.
+    Regular users can have fee waived via the fee_waived flag.
+    
+    Args:
+        user: User instance to check
+        
+    Returns:
+        True if fee is waived, False otherwise
+    """
+    # Auto-waive for moderators and admins
+    if user.role in ("moderator", "admin"):
+        return True
+    # Manual waiver flag
+    return user.fee_waived

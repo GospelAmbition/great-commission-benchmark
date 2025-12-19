@@ -61,43 +61,8 @@ export default function Home() {
 
   return (
     <div className="flex flex-col">
-      {/* Hero Section */}
-      <section className="container py-16 md:py-24">
-        <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
-            The Great Commission Benchmark
-          </h1>
-          <p className="mt-6 text-xl text-muted-foreground">
-            Which AI models can actually help you make disciples?
-          </p>
-          <p className="mt-4 text-lg text-muted-foreground">
-            We test AI for real missionary work—evangelism, apologetics, discipleship tools, and
-            more. Not just knowledge, but obedience to the Great Commission.
-          </p>
-          {stats && (
-            <div className="mt-8 flex items-center justify-center gap-4 text-sm text-muted-foreground">
-              <span>
-                {stats.total_models || 0} models tested
-              </span>
-              <span>•</span>
-              <span>
-                Last updated: {stats.last_updated ? new Date(stats.last_updated).toLocaleDateString() : "N/A"}
-              </span>
-            </div>
-          )}
-          <div className="mt-10 flex items-center justify-center gap-4">
-            <Button asChild size="lg" className="bg-[--ga-red] hover:bg-[--ga-dark-red] w-[220px]">
-              <Link href="/research">View Rankings ↓</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="w-[220px]">
-              <Link href="/about">Learn Why This Matters →</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
       {/* Top Performers */}
-      <section className="container pt-12 pb-3">
+      <section className="container py-12">
         <div className="space-y-6">
           <div className="text-center">
             <h2 className="text-3xl font-bold">Top Performers</h2>

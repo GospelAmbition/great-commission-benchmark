@@ -25,6 +25,8 @@ class CommunitySubmission(Base):
     tier2_score = Column(Integer)
     tier3_score = Column(Integer)
     status = Column(String(50), default="pending", index=True)  # 'pending', 'reviewing', 'approved', 'rejected'
+    fee_waived = Column(Boolean, default=False, nullable=False)  # Whether submission fee was waived
+    payment_id = Column(String(255), nullable=True)  # Stripe payment intent ID if fee was paid
     reviewer_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     reviewer_notes = Column(Text)
     submitted_at = Column(DateTime(timezone=True), server_default=func.now())
