@@ -17,6 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TesterAgreementModal } from "@/components/tester-agreement/TesterAgreementModal";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
 
 export default function NewTestPage() {
   const { data: session, status } = useSession();
@@ -160,7 +162,7 @@ export default function NewTestPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[--ga-red] text-white flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-full bg-[var(--ga-red)] text-white flex items-center justify-center font-bold">
               1
             </div>
             <span className="font-medium">Select Model</span>
@@ -198,7 +200,29 @@ export default function NewTestPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <Label htmlFor="model">Model</Label>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Label htmlFor="model" className="mb-0">Model</Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                    <HelpCircle className="h-4 w-4" />
+                    <span className="sr-only">Model not listed?</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>
+                    Model not listed? Use the{" "}
+                    <a
+                      href="/runner"
+                      className="underline font-medium hover:text-[--ga-red]"
+                    >
+                      GCB Runner CLI
+                    </a>{" "}
+                    to run tests locally.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Select value={selectedModel} onValueChange={setSelectedModel}>
               <SelectTrigger id="model">
                 <SelectValue placeholder="Select a model" />

@@ -107,7 +107,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{submissions.length}</div>
+            <div className="text-3xl font-bold">{submissions?.length ?? 0}</div>
           </CardContent>
         </Card>
         <Card>
