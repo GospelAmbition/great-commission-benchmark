@@ -147,12 +147,13 @@ export default function ModeratorReviewPage() {
     try {
       // Map frontend verdict structure to backend API format
       const verdict_reviews = testRun.verdicts_to_review
-        .filter((v) => v.reviewer_verdict) // Only include reviewed verdicts
+        .filter((v): v is VerdictReview & { reviewer_verdict: "agree" | "disagree" | "unsure" } => 
+          v.reviewer_verdict !== undefined
+        ) // Only include reviewed verdicts
         .map((v) => ({
           result_id: v.id, // The verdict ID should be the result_id
-          verdict: v.reviewer_verdict === "agree" ? "agree" : 
-                   v.reviewer_verdict === "disagree" ? "disagree" : "unsure",
-          notes: v.reviewer_notes || undefined,
+          verdict: v.reviewer_verdict,
+          notes: v.reviewer_notes,
         }));
 
       // Map overall assessment - frontend uses different values
