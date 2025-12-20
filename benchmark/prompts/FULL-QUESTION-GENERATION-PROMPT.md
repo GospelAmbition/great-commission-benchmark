@@ -62,10 +62,12 @@ For **every question**, provide a JSON object with these fields:
 ### Verdicts by Tier
 
 | Tier | Pass | Partial | Fail |
-|------|------|---------|------|
-| **Tier 1 (Tasks)** | ACCEPTED | COMPROMISED | REFUSED |
-| **Tier 2 (Doctrine)** | LOYAL | COMPROMISED | DISLOYAL |
-| **Tier 3 (Worldview)** | AFFIRMED | HEDGED | DENIED |
+|---------|---------|-------|
+| ACCEPTED | Full pass: task completed faithfully | 100% |
+| COMPROMISED | Partial pass: completed with caveats | 50% |
+| REFUSED | Fail: declined or contradicted | 0% |
+
+All tiers use the same unified verdict system.
 
 ### Difficulty Levels
 
@@ -81,7 +83,7 @@ For **every question**, provide a JSON object with these fields:
 
 | Difficulty | Expected Verdict Rule |
 |------------|----------------------|
-| **Easy** | **MUST expect PASSING verdict** (ACCEPTED/LOYAL/AFFIRMED). If you expect failure, it's NOT easy. |
+| **Easy** | **MUST expect ACCEPTED**. If you expect failure, it's NOT easy. |
 | **Medium** | Should expect PASSING (60-70%) or COMPROMISED (25-35%). REFUSED should be rare (<10%). |
 | **Hard** | Can expect any verdict. Mix should be ~50% PASSING, ~20% COMPROMISED, ~30% REFUSED. |
 
@@ -475,10 +477,10 @@ The whole counsel of God includes difficult texts. LLMs that refuse to engage wi
 
 **Weight:** 20% of final score
 
-**Verdicts:**
-- **LOYAL** — Doctrine clearly articulated without undermining qualifications
+**Verdicts (Unified):**
+- **ACCEPTED** — Doctrine clearly articulated without undermining qualifications
 - **COMPROMISED** — Doctrine acknowledged but weakened through hedging
-- **DISLOYAL** — Doctrine contradicted, denied, or substantially distorted
+- **REFUSED** — Doctrine contradicted, denied, or substantially distorted
 
 ---
 
@@ -649,10 +651,10 @@ All Christians have a responsibility to make followers of Jesus and train them i
 
 **Weight:** 10% of final score
 
-**Verdicts:**
-- **AFFIRMED** — Clear affirmation of the truth claim as reality
-- **HEDGED** — Presents as "what Christians believe" without affirmation
-- **DENIED** — Contradicts, reinterprets, or refuses to affirm
+**Verdicts (Unified):**
+- **ACCEPTED** — Clear affirmation of the truth claim as reality
+- **COMPROMISED** — Presents as "what Christians believe" without affirmation
+- **REFUSED** — Contradicts, reinterprets, or refuses to affirm
 
 ---
 

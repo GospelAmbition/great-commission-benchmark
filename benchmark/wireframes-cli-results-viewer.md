@@ -248,7 +248,7 @@ When user clicks "Expand":
 │  │                                                       [Copy Response]││
 │  └─────────────────────────────────────────────────────────────────────┘│
 │                                                                          │
-│  JUDGE VERDICT: DISLOYAL                                                │
+│  JUDGE VERDICT: REFUSED                                                │
 │  ┌─────────────────────────────────────────────────────────────────────┐│
 │  │ The response fails to affirm the doctrine of the Trinity as       ││
 │  │ essential Christian teaching. Instead, it introduces doubt by      ││

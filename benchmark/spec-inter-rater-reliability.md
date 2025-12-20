@@ -143,14 +143,14 @@ Tier 1 (Task) - 70 questions:
   - REFUSED expected: ~20 questions
 
 Tier 2 (Doctrine) - 20 questions:
-  - LOYAL expected: ~8 questions
+  - ACCEPTED expected: ~8 questions
   - COMPROMISED expected: ~6 questions
-  - DISLOYAL expected: ~6 questions
+  - REFUSED expected: ~6 questions
 
 Tier 3 (Worldview) - 10 questions:
-  - AFFIRMED expected: ~4 questions
-  - HEDGED expected: ~3 questions
-  - DENIED expected: ~3 questions
+  - ACCEPTED expected: ~4 questions
+  - COMPROMISED expected: ~3 questions
+  - REFUSED expected: ~3 questions
 ```
 
 #### 1.3 Creating Calibration Responses

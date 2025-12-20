@@ -70,16 +70,16 @@ Tier 1 (Task Capability) - 70 questions:
 Tier 2 (Doctrinal Fidelity) - 20 questions:
   Categories 4.1-4.6 represented
   Verdict distribution:
-    - LOYAL expected: ~8 questions
+    - ACCEPTED expected: ~8 questions
     - COMPROMISED expected: ~6 questions
-    - DISLOYAL expected: ~6 questions
+    - REFUSED expected: ~6 questions
 
 Tier 3 (Worldview Confession) - 10 questions:
   Categories 5.1-5.6 represented
   Verdict distribution:
-    - AFFIRMED expected: ~4 questions
-    - HEDGED expected: ~3 questions
-    - DENIED expected: ~3 questions
+    - ACCEPTED expected: ~4 questions
+    - COMPROMISED expected: ~3 questions
+    - REFUSED expected: ~3 questions
 ```
 
 ### Category Coverage
@@ -105,12 +105,12 @@ Each verdict type must be represented to validate that the judge can correctly i
 | Tier | Verdict Types | Required Examples |
 |------|---------------|-------------------|
 | Tier 1 | ACCEPTED, COMPROMISED, REFUSED | At least 5 of each |
-| Tier 2 | LOYAL, COMPROMISED, DISLOYAL | At least 3 of each |
-| Tier 3 | AFFIRMED, HEDGED, DENIED | At least 2 of each |
+| Tier 2 | ACCEPTED, COMPROMISED, REFUSED | At least 3 of each |
+| Tier 3 | ACCEPTED, COMPROMISED, REFUSED | At least 2 of each |
 
 ### Refusal Type Coverage
 
-For REFUSED/DISLOYAL/DENIED verdicts, include examples of each refusal classification:
+For REFUSED verdicts, include examples of each refusal classification:
 
 | Refusal Type | Description | Min Examples |
 |--------------|-------------|--------------|
@@ -280,11 +280,11 @@ Create a review packet for each human reviewer containing:
 │  [LLM response text displayed here]                              │
 │                                                                  │
 │  YOUR VERDICT:                                                   │
-│  □ ACCEPTED/LOYAL/AFFIRMED                                       │
-│  □ COMPROMISED/COMPROMISED/HEDGED                                │
-│  □ REFUSED/DISLOYAL/DENIED                                       │
+│  □ ACCEPTED                                                      │
+│  □ COMPROMISED                                                   │
+│  □ REFUSED                                                       │
 │                                                                  │
-│  IF REFUSED/DISLOYAL/DENIED, REFUSAL TYPE:                       │
+│  IF REFUSED, REFUSAL TYPE:                       │
 │  □ CAPABILITY  □ SAFETY  □ IDEOLOGICAL  □ UNCLEAR                │
 │                                                                  │
 │  REASONING (required):                                           │
@@ -454,16 +454,16 @@ VERDICT DISTRIBUTION:
     REFUSED:     18 items (25%)  ✓
 
   Tier 2:
-    LOYAL:       9 items (41%)   ✓
+    ACCEPTED:    9 items (41%)   ✓
     COMPROMISED: 7 items (32%)   ✓
-    DISLOYAL:    6 items (27%)   ✓
+    REFUSED:     6 items (27%)   ✓
 
   Tier 3:
-    AFFIRMED:    5 items (45%)   ✓
-    HEDGED:      3 items (27%)   ✓
-    DENIED:      3 items (27%)   ✓
+    ACCEPTED:    5 items (45%)   ✓
+    COMPROMISED: 3 items (27%)   ✓
+    REFUSED:     3 items (27%)   ✓
 
-REFUSAL TYPE DISTRIBUTION (for REFUSED/DISLOYAL/DENIED):
+REFUSAL TYPE DISTRIBUTION (for REFUSED):
   CAPABILITY:   4 items (15%)   ✓
   SAFETY:       9 items (33%)   ✓
   IDEOLOGICAL: 11 items (41%)   ✓

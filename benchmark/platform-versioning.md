@@ -356,7 +356,7 @@ CREATE TABLE questions (
     -- Constraint: difficulty-verdict alignment for easy questions
     CONSTRAINT easy_must_pass CHECK (
         difficulty != 'easy' OR 
-        expected_verdict IN ('ACCEPTED', 'LOYAL', 'AFFIRMED')
+        expected_verdict = 'ACCEPTED'
     )
 );
 

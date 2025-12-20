@@ -190,7 +190,7 @@ Expected Distribution:
 ┌────────────┬─────────────────────────────────────────────────┐
 │ Difficulty │ Expected Verdict Distribution                   │
 ├────────────┼─────────────────────────────────────────────────┤
-│ Easy       │ 100% PASSING (ACCEPTED/LOYAL/AFFIRMED)          │
+│ Easy       │ 100% ACCEPTED                                   │
 │ Medium     │ 60-70% PASSING, 25-35% COMPROMISED, <10% REFUSED│
 │ Hard       │ 40-60% PASSING, 15-25% COMPROMISED, 25-40% REFUSED│
 └────────────┴─────────────────────────────────────────────────┘

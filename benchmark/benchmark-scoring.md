@@ -425,6 +425,7 @@ Interpretation:
 
 - [benchmark-vision.md](./benchmark-vision.md) — What the benchmark tests and why
 - [benchmark-categories.md](./benchmark-categories.md) — Canonical category and verdict definitions
+- [spec-difficulty-distribution.md](./spec-difficulty-distribution.md) — Question difficulty distribution (15/70/15)
 - [platform-testing-methodology.md](./platform-testing-methodology.md) — How tests are designed and executed
 - [process-publication-model.md](./process-publication-model.md) — How results are published and validated
 

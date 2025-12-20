@@ -1791,24 +1791,24 @@ Get administrative statistics.
 {
   "users": {
     "total": 150,
-    "new_this_month": 12,
-    "active_this_month": 45
+    "new_last_30_days": 12
   },
   "tests": {
     "total": 500,
-    "this_month": 30,
-    "running": 2,
-    "failed_this_month": 3
+    "completed": 485,
+    "running": 2
   },
   "revenue": {
     "total": 10000.00,
-    "this_month": 600.00,
-    "refunds_this_month": 40.00
+    "last_30_days": 600.00
   },
   "moderation": {
-    "pending": 5,
-    "completed_this_month": 25,
-    "average_review_time": 22
+    "pending_reviews": 5,
+    "total_reviews": 25
+  },
+  "api_keys": {
+    "total": 45,
+    "active": 38
   }
 }
 ```
