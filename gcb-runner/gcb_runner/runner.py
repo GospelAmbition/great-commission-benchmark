@@ -1,6 +1,7 @@
 """Test runner for executing benchmarks."""
 
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -142,6 +143,11 @@ async def run_benchmark(
         console.print(f"[bold]Judge: {judge_model}[/bold]")
         console.print()
         
+        # Record test start time
+        test_start_time = datetime.now()
+        console.print(f"[dim]Test started: {test_start_time.strftime('%Y-%m-%d %H:%M:%S')}[/dim]")
+        console.print()
+        
         # Initialize judge
         judge = Judge(judge_backend, judge_model, judge_prompts)
         
@@ -243,9 +249,17 @@ async def run_benchmark(
             tier3_score=tier_scores[3],
         )
         
+        # Record test end time
+        test_end_time = datetime.now()
+        test_duration = test_end_time - test_start_time
+        
         # Display results
         console.print()
         console.print("═" * 60)
+        console.print()
+        console.print(f"[dim]Test started:  {test_start_time.strftime('%Y-%m-%d %H:%M:%S')}[/dim]")
+        console.print(f"[dim]Test ended:    {test_end_time.strftime('%Y-%m-%d %H:%M:%S')}[/dim]")
+        console.print(f"[dim]Duration:      {test_duration}[/dim]")
         console.print()
         console.print("[bold]RESULTS SUMMARY[/bold]")
         console.print()

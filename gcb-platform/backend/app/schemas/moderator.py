@@ -49,9 +49,11 @@ class ReviewSubmissionResponse(BaseModel):
 class ModeratorActivityItem(BaseModel):
     """Moderator activity item"""
     review_id: UUID
-    test_id: UUID
+    test_id: Optional[UUID] = None  # None for CLI submissions
+    submission_id: Optional[UUID] = None  # None for platform tests
     model_name: str
     action: str
+    review_type: str  # 'platform_test' or 'cli_submission'
     duration_seconds: Optional[int]
     created_at: datetime
 
@@ -70,7 +72,6 @@ class ModeratorStatsResponse(BaseModel):
 
 class CommunitySubmissionReviewRequest(BaseModel):
     """Community submission review request"""
-    submission_id: UUID
     action: str  # 'approve' or 'reject'
     notes: Optional[str] = None
 

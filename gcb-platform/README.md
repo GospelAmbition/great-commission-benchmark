@@ -17,6 +17,7 @@ gcb-platform/
 - **Benchmark Testing**: Run comprehensive tests on any AI model via OpenRouter
 - **Public Leaderboard**: Browse and compare model performance
 - **User Dashboard**: Track your tests, view results, manage submissions
+- **CLI Submission Upload**: Upload test results from gcb-runner via web dashboard
 - **Moderator Interface**: Review test results for quality assurance
 - **Admin Panel**: Manage users, questions, and benchmark versions
 - **Payment Integration**: Stripe-powered test payments with transparent pricing

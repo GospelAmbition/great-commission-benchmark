@@ -172,7 +172,7 @@ export default function CategoryPage() {
                 Overall: {model.overall_score.toFixed(1)}
               </p>
               <Button asChild variant="outline" className="w-full mt-4">
-                <Link href={`/research/models/${model.model_id}`}>View Details</Link>
+                <Link href={`/research/models/${encodeURIComponent(model.model_id)}`}>View Details</Link>
               </Button>
             </CardContent>
           </Card>
@@ -218,7 +218,7 @@ export default function CategoryPage() {
                   <TableCell className="font-medium">{index + 1}</TableCell>
                   <TableCell>
                     <Link
-                      href={`/research/models/${model.model_id}`}
+                      href={`/research/models/${encodeURIComponent(model.model_id)}`}
                       className="hover:underline font-medium"
                     >
                       {model.model_name}
@@ -236,7 +236,7 @@ export default function CategoryPage() {
                   </TableCell>
                   <TableCell>
                     <Button asChild variant="ghost" size="sm">
-                      <Link href={`/research/models/${model.model_id}`}>View</Link>
+                      <Link href={`/research/models/${encodeURIComponent(model.model_id)}`}>View</Link>
                     </Button>
                   </TableCell>
                 </TableRow>

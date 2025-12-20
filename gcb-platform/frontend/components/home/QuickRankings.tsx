@@ -42,7 +42,7 @@ export function QuickRankings({ rankings }: QuickRankingsProps) {
               <TableCell className="font-medium">{ranking.rank}</TableCell>
               <TableCell>
                 <Link
-                  href={`/research/models/${ranking.model_id}`}
+                  href={`/research/models/${encodeURIComponent(ranking.model_id)}`}
                   className="hover:underline font-medium"
                 >
                   {ranking.model_name}

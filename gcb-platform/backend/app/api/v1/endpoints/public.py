@@ -328,12 +328,103 @@ async def list_available_models(
     }
 
 
+@router.get("/models/by-id")
+async def get_model_by_model_id(
+    model_id: str = Query(..., description="Model identifier string (e.g., 'qwen/qwen3-coder-30b')"),
+    db: Session = Depends(get_db)
+):
+    """Get detailed model information by model_id string"""
+    model = db.query(Model).filter(Model.model_id == model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    
+    # Get best result
+    best_test = db.query(TestRun).filter(
+        TestRun.model_id == model.id,
+        TestRun.status == "completed"
+    ).order_by(TestRun.completed_at.desc()).first()
+    
+    if best_test:
+        scores = ScoringService.calculate_scores(db, str(best_test.id))
+        best_result = {
+            "test_run_id": str(best_test.id),
+            "scores": scores,
+            "trust_tier": best_test.trust_tier,
+            "completed_at": best_test.completed_at.isoformat() if best_test.completed_at else None,
+            "benchmark_version": best_test.question_set.semantic_version
+        }
+    else:
+        best_result = None
+    
+    # Get test history
+    test_history = []
+    tests = db.query(TestRun).filter(
+        TestRun.model_id == model.id,
+        TestRun.status == "completed"
+    ).order_by(TestRun.completed_at.desc()).limit(10).all()
+    
+    for test in tests:
+        scores = ScoringService.calculate_scores(db, str(test.id))
+        test_history.append({
+            "test_run_id": str(test.id),
+            "overall_score": scores["overall"],
+            "benchmark_version": test.question_set.semantic_version,
+            "completed_at": test.completed_at.isoformat() if test.completed_at else None,
+            "trust_tier": test.trust_tier
+        })
+    
+    # Calculate category breakdown
+    if best_test:
+        results = db.query(Result).filter(Result.test_run_id == best_test.id).all()
+        category_breakdown = {}
+        # Pass verdicts: ACCEPTED (Tier 1), LOYAL (Tier 2), AFFIRMED (Tier 3)
+        pass_verdicts = {"ACCEPTED", "LOYAL", "AFFIRMED"}
+        for result in results:
+            cat = result.question.category
+            if cat not in category_breakdown:
+                category_breakdown[cat] = {"total": 0, "passed": 0}
+            category_breakdown[cat]["total"] += 1
+            if result.verdict in pass_verdicts:
+                category_breakdown[cat]["passed"] += 1
+        
+        # Calculate percentages
+        category_scores = {}
+        for cat, data in category_breakdown.items():
+            category_scores[cat] = round((data["passed"] / data["total"]) * 100, 1) if data["total"] > 0 else 0
+    else:
+        category_scores = {}
+    
+    return {
+        "id": str(model.id),
+        "model_id": model.model_id,
+        "model_name": model.name,
+        "name": model.name,
+        "provider": model.provider,
+        "overall_score": best_result["scores"]["overall"] if best_result else None,
+        "score": best_result["scores"]["overall"] if best_result else None,
+        "tier1_score": best_result["scores"]["tier1"] if best_result else None,
+        "tier2_score": best_result["scores"]["tier2"] if best_result else None,
+        "tier3_score": best_result["scores"]["tier3"] if best_result else None,
+        "trust_tier": best_result["trust_tier"] if best_result else None,
+        "test_count": len(test_history),
+        "category_scores": category_scores,
+        "version_history": [
+            {
+                "version": t["benchmark_version"],
+                "score": t["overall_score"],
+                "date": t["completed_at"]
+            }
+            for t in test_history
+        ]
+    }
+
+
 @router.get("/models/{model_id}")
 async def get_model_detail(
     model_id: UUID,
     db: Session = Depends(get_db)
 ):
-    """Get detailed model information"""
+    """Get detailed model information by UUID"""
     model = db.query(Model).filter(Model.id == model_id).first()
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
@@ -377,12 +468,14 @@ async def get_model_detail(
     if best_test:
         results = db.query(Result).filter(Result.test_run_id == best_test.id).all()
         category_breakdown = {}
+        # Pass verdicts: ACCEPTED (Tier 1), LOYAL (Tier 2), AFFIRMED (Tier 3)
+        pass_verdicts = {"ACCEPTED", "LOYAL", "AFFIRMED"}
         for result in results:
             cat = result.question.category
             if cat not in category_breakdown:
                 category_breakdown[cat] = {"total": 0, "passed": 0}
             category_breakdown[cat]["total"] += 1
-            if result.verdict == "ACCEPTED":
+            if result.verdict in pass_verdicts:
                 category_breakdown[cat]["passed"] += 1
         
         # Calculate scores

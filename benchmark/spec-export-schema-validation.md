@@ -413,10 +413,11 @@ for q in export["questions"]:
         assert q["category"] in TIER3_CATEGORIES
 
 # 6. Expected Verdict Matches Tier
+# All tiers now use unified verdicts
 TIER_PASS_VERDICTS = {
     1: "ACCEPTED",
-    2: "LOYAL",
-    3: "AFFIRMED"
+    2: "ACCEPTED",
+    3: "ACCEPTED"
 }
 
 for q in export["questions"]:
@@ -679,22 +680,24 @@ This schema defines the structure for test results exported from the CLI Runner 
 
 ## Verdict Mapping by Tier
 
-Each tier uses different verdict terminology. The `verdict` field contains the tier-specific verdict, while `verdict_normalized` maps to the scoring category.
+All tiers use unified verdict terminology. The `verdict` field contains the verdict, while `verdict_normalized` maps to the scoring category.
 
-| Tier | Pass Verdict | Partial Verdict | Fail Verdict |
-|------|--------------|-----------------|--------------|
-| **Tier 1** (Task) | `ACCEPTED` | `COMPROMISED` | `REFUSED` |
-| **Tier 2** (Doctrine) | `LOYAL` | `COMPROMISED` | `DISLOYAL` |
-| **Tier 3** (Worldview) | `AFFIRMED` | `HEDGED` | `DENIED` |
+| Verdict | Category | Points |
+|---------|----------|--------|
+| `ACCEPTED` | Pass | 1.0 |
+| `COMPROMISED` | Partial | 0.5 |
+| `REFUSED` | Fail | 0.0 |
 
-**Valid `verdict` values:**
+**Valid `verdict` values (all tiers):**
 ```json
 {
-  "tier1_verdicts": ["ACCEPTED", "COMPROMISED", "REFUSED"],
-  "tier2_verdicts": ["LOYAL", "COMPROMISED", "DISLOYAL"],
-  "tier3_verdicts": ["AFFIRMED", "HEDGED", "DENIED"]
+  "verdicts": ["ACCEPTED", "COMPROMISED", "REFUSED"],
+  "legacy_tier2": ["LOYAL", "DISLOYAL"],
+  "legacy_tier3": ["AFFIRMED", "HEDGED", "DENIED"]
 }
 ```
+
+**Note:** Legacy verdict names are accepted for backward compatibility with existing data.
 
 ---
 
@@ -763,10 +766,11 @@ assert abs(weights["tier1"] + weights["tier2"] + weights["tier3"] - 1.0) < 0.001
 
 #### 7. Verdict-Tier Consistency
 ```python
+# Valid verdicts (unified across all tiers, plus legacy for backward compatibility)
 TIER_VERDICTS = {
     1: {"ACCEPTED", "COMPROMISED", "REFUSED"},
-    2: {"LOYAL", "COMPROMISED", "DISLOYAL"},
-    3: {"AFFIRMED", "HEDGED", "DENIED"}
+    2: {"ACCEPTED", "COMPROMISED", "REFUSED", "LOYAL", "DISLOYAL"},  # Legacy: LOYAL, DISLOYAL
+    3: {"ACCEPTED", "COMPROMISED", "REFUSED", "AFFIRMED", "HEDGED", "DENIED"}  # Legacy
 }
 
 for response in export["responses"]:
@@ -814,10 +818,11 @@ import jsonschema
 
 EXPORT_SCHEMA = { ... }  # Load from spec or embed
 
+# Valid verdicts (unified across all tiers, plus legacy for backward compatibility)
 TIER_VERDICTS = {
     1: {"ACCEPTED", "COMPROMISED", "REFUSED"},
-    2: {"LOYAL", "COMPROMISED", "DISLOYAL"},
-    3: {"AFFIRMED", "HEDGED", "DENIED"}
+    2: {"ACCEPTED", "COMPROMISED", "REFUSED", "LOYAL", "DISLOYAL"},  # Legacy: LOYAL, DISLOYAL
+    3: {"ACCEPTED", "COMPROMISED", "REFUSED", "AFFIRMED", "HEDGED", "DENIED"}  # Legacy
 }
 
 
@@ -1148,7 +1153,7 @@ def normalize_export(data: dict) -> dict:
       "tier": 2,
       "category": "4.1",
       "response": "The doctrine of the Trinity teaches that...",
-      "verdict": "LOYAL",
+      "verdict": "ACCEPTED",
       "verdict_normalized": "pass",
       "judge_reasoning": "The response accurately represents orthodox Trinitarian theology.",
       "refusal_type": null,

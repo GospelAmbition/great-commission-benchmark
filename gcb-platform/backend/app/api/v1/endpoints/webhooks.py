@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.auth import get_db
 from app.services.payment import PaymentService
 from app.db.models.test_run import TestRun
+from app.db.models.community_submission import CommunitySubmission
 from app.services.executor import BenchmarkExecutor
 from app.services.openrouter import OpenRouterClient
 from app.services.email import EmailService
@@ -37,50 +38,89 @@ async def stripe_webhook(
     event_data = event["data"]["object"]
     
     if event_type == "payment_intent.succeeded":
-        # Payment succeeded - start the test
+        # Payment succeeded
         payment_intent_id = event_data["id"]
         metadata = event_data.get("metadata", {})
-        test_id = metadata.get("test_id")
+        payment_type = metadata.get("type")
         
-        if test_id:
-            test_run = db.query(TestRun).filter(TestRun.id == test_id).first()
-            if test_run:
-                # Update payment status
-                test_run.payment_status = "succeeded"
-                test_run.status = "running"
-                from datetime import datetime
-                test_run.started_at = datetime.utcnow()
+        # Handle CLI submission payments
+        if payment_type == "cli_submission":
+            submission = db.query(CommunitySubmission).filter(
+                CommunitySubmission.payment_id == payment_intent_id
+            ).first()
+            
+            if submission and submission.status == "pending_payment":
+                # Update submission status to pending for moderation
+                submission.status = "pending"
                 db.commit()
                 
-                # Start test execution in background
-                async def run_test():
-                    try:
-                        openrouter_client = OpenRouterClient()
-                        executor = BenchmarkExecutor(db, openrouter_client)
-                        await executor.execute(test_id)
-                        await openrouter_client.close()
-                    except Exception as e:
-                        # Update test run with error
-                        test_run = db.query(TestRun).filter(TestRun.id == test_id).first()
-                        if test_run:
-                            test_run.status = "failed"
-                            test_run.last_error = str(e)
-                            db.commit()
-                            # Send failure email
-                            try:
-                                await EmailService.send_test_failed_email(
-                                    test_run.user.email,
-                                    test_run.id,
-                                    str(e)
-                                )
-                            except:
-                                pass
-                
-                background_tasks.add_task(run_test)
+                # Send confirmation email
+                try:
+                    await EmailService.send_submission_payment_confirmed_email(
+                        submission.user.email,
+                        str(submission.id),
+                        submission.model_name
+                    )
+                except:
+                    pass
+        
+        # Handle platform test payments
+        elif payment_type != "cli_submission":
+            test_id = metadata.get("test_id")
+            
+            if test_id:
+                test_run = db.query(TestRun).filter(TestRun.id == test_id).first()
+                if test_run:
+                    # Update payment status
+                    test_run.payment_status = "succeeded"
+                    test_run.status = "running"
+                    from datetime import datetime
+                    test_run.started_at = datetime.utcnow()
+                    db.commit()
+                    
+                    # Start test execution in background
+                    async def run_test():
+                        try:
+                            openrouter_client = OpenRouterClient()
+                            executor = BenchmarkExecutor(db, openrouter_client)
+                            await executor.execute(test_id)
+                            await openrouter_client.close()
+                        except Exception as e:
+                            # Update test run with error
+                            test_run = db.query(TestRun).filter(TestRun.id == test_id).first()
+                            if test_run:
+                                test_run.status = "failed"
+                                test_run.last_error = str(e)
+                                db.commit()
+                                # Send failure email
+                                try:
+                                    await EmailService.send_test_failed_email(
+                                        test_run.user.email,
+                                        test_run.id,
+                                        str(e)
+                                    )
+                                except:
+                                    pass
+                    
+                    background_tasks.add_task(run_test)
     
     elif event_type == "payment_intent.payment_failed":
-        # Payment failed - update test status
+        # Payment failed - update status
         payment_intent_id = event_data["id"]
+        
+        # Handle CLI submission payment failures
+        submission = db.query(CommunitySubmission).filter(
+            CommunitySubmission.payment_id == payment_intent_id
+        ).first()
+        
+        if submission:
+            submission.status = "payment_failed"
+            db.commit()
+            # Note: send_payment_failed_email is designed for test runs
+            # For submissions, we could add a specific method or use a generic notification
+            # For now, skip email to avoid errors
+        
+        # Handle platform test payment failures
         test_runs = db.query(TestRun).filter(TestRun.payment_id == payment_intent_id).all()
         
         for test_run in test_runs:

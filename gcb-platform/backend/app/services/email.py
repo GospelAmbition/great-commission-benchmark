@@ -137,6 +137,28 @@ class EmailService:
         return await EmailService.send_email(user_email, subject, html)
     
     @staticmethod
+    async def send_submission_payment_confirmed_email(
+        user_email: str,
+        submission_id: str,
+        model_name: str
+    ) -> bool:
+        """Send submission payment confirmation notification"""
+        subject = f"Payment confirmed for {model_name} submission"
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #a11824;">Payment Confirmed</h1>
+            <p>Your payment for the submission of <strong>{model_name}</strong> has been confirmed.</p>
+            <p>Your submission is now queued for moderator review. You'll receive an email once the review is complete.</p>
+            <p><a href="https://greatcommissionbenchmark.ai/dashboard" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Dashboard</a></p>
+            <hr>
+            <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
+        </body>
+        </html>
+        """
+        return await EmailService.send_email(user_email, subject, html)
+    
+    @staticmethod
     async def send_submission_rejected_email(
         user_email: str,
         submission_id: str,

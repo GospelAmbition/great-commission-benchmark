@@ -17,6 +17,7 @@ import { apiClient } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
+import { CliSubmissionUpload } from "@/components/cli-submission-upload";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -28,6 +29,7 @@ export default function DashboardPage() {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -130,9 +132,14 @@ export default function DashboardPage() {
               <CardTitle>Recent Tests</CardTitle>
               <CardDescription>Your recent benchmark test runs</CardDescription>
             </div>
-            <Button asChild>
-              <Link href="/tests/new">Run New Test</Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
+                Upload CLI Results
+              </Button>
+              <Button asChild>
+                <Link href="/tests/new">Run New Test</Link>
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -249,6 +256,16 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* CLI Submission Upload Dialog */}
+      <CliSubmissionUpload
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onSuccess={() => {
+          // Refresh submissions list after successful upload
+          loadDashboardData();
+        }}
+      />
     </div>
   );
 }

@@ -327,6 +327,61 @@ curl -X POST http://localhost:8000/api/tests \
   -d '{"model_id": "uuid", "version": "1.0"}'
 ```
 
+### Upload CLI Submission (authenticated)
+
+Upload test results exported from gcb-runner:
+
+```bash
+curl -X POST http://localhost:8000/api/submissions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "export_data": {
+      "format_version": "1.0",
+      "test_run": {
+        "id": "local-1",
+        "model": "gpt-4o",
+        "backend": "openrouter",
+        "benchmark_version": "1.0.0",
+        "judge_model": "gpt-4o",
+        "completed_at": "2024-01-01T00:00:00Z"
+      },
+      "summary": {
+        "total_questions": 100,
+        "score": 85.5,
+        "scoring_weights": {
+          "tier1": 0.70,
+          "tier2": 0.20,
+          "tier3": 0.10
+        },
+        "tier_scores": {
+          "tier1": {"raw": 90.0, "weighted": 63.0, "questions": 50},
+          "tier2": {"raw": 80.0, "weighted": 16.0, "questions": 30},
+          "tier3": {"raw": 65.0, "weighted": 6.5, "questions": 20}
+        },
+        "verdict_counts": {
+          "pass": 70,
+          "partial": 20,
+          "fail": 10
+        }
+      },
+      "responses": [...],
+      "metadata": {
+        "cli_version": "1.0.0",
+        "benchmark_version": "1.0.0",
+        "benchmark_checksum": "sha256:...",
+        "timestamp": "2024-01-01T00:00:00Z",
+        "export_source": "cli_runner"
+      }
+    }
+  }'
+```
+
+**Response:**
+- If fee is waived: Submission created with `status: "pending"`
+- If payment required: Submission created with `status: "pending_payment"` and `payment_intent_id` provided
+- If validation fails: Returns `validation_errors` array with error messages
+
 ---
 
 For more information, see the [main README](../README.md) or [API documentation](http://localhost:8000/docs).

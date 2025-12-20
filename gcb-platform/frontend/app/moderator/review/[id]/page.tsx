@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { toast } from "sonner";
+import { apiClient } from "@/lib/api";
 
 interface VerdictReview {
   id: string;
@@ -90,8 +91,8 @@ export default function ModeratorReviewPage() {
             question_tier: i < 14 ? "tier1" : i < 18 ? "tier2" : "tier3",
             question_category: ["scripture", "theology", "ethics", "apologetics"][i % 4],
             model_response: `This is the model's response to question ${i + 1}. It provides an answer that may or may not align with Christian doctrine...`,
-            judge_verdict: ["ACCEPTED", "COMPROMISED", "HEDGED", "REFUSED"][i % 4],
-            judge_reasoning: `The judge determined this response to be ${["ACCEPTED", "COMPROMISED", "HEDGED", "REFUSED"][i % 4]} because...`,
+            judge_verdict: ["ACCEPTED", "COMPROMISED", "REFUSED", "ACCEPTED"][i % 4],
+            judge_reasoning: `The judge determined this response to be ${["ACCEPTED", "COMPROMISED", "REFUSED", "ACCEPTED"][i % 4]} because...`,
           })),
         });
       }
@@ -144,31 +145,36 @@ export default function ModeratorReviewPage() {
 
     setSubmitting(true);
     try {
-      // In a real implementation, this would call the review submission API
-      const response = await fetch("/api/moderator/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          test_run_id: testId,
-          verdict_reviews: testRun.verdicts_to_review.map((v) => ({
-            verdict_id: v.id,
-            reviewer_verdict: v.reviewer_verdict,
-            reviewer_notes: v.reviewer_notes,
-          })),
-          overall_assessment: overallAssessment,
-          has_concerns: hasConcerns,
-        }),
+      // Map frontend verdict structure to backend API format
+      const verdict_reviews = testRun.verdicts_to_review
+        .filter((v) => v.reviewer_verdict) // Only include reviewed verdicts
+        .map((v) => ({
+          result_id: v.id, // The verdict ID should be the result_id
+          verdict: v.reviewer_verdict === "agree" ? "agree" : 
+                   v.reviewer_verdict === "disagree" ? "disagree" : "unsure",
+          notes: v.reviewer_notes || undefined,
+        }));
+
+      // Map overall assessment - frontend uses different values
+      let overall_assessment: "verified" | "concerns" | "escalated" = "verified";
+      if (overallAssessment === "concerns" || hasConcerns) {
+        overall_assessment = "concerns";
+      } else if (overallAssessment === "escalated") {
+        overall_assessment = "escalated";
+      }
+
+      await apiClient.submitModerationReview({
+        test_id: testId,
+        verdict_reviews,
+        overall_assessment,
+        notes: overallAssessment === "concerns" || hasConcerns ? "Reviewer has concerns" : undefined,
       });
 
-      if (response.ok) {
-        toast.success("Review submitted successfully");
-        router.push("/moderator");
-      } else {
-        throw new Error("Failed to submit review");
-      }
-    } catch (error) {
+      toast.success("Review submitted successfully");
+      router.push("/moderator");
+    } catch (error: any) {
       console.error("Failed to submit review:", error);
-      toast.error("Failed to submit review");
+      toast.error(error.message || "Failed to submit review");
     } finally {
       setSubmitting(false);
     }

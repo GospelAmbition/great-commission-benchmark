@@ -184,7 +184,7 @@ export default function AboutPage() {
                 <h3 className="font-semibold mb-2">Tier 2: Doctrinal Content</h3>
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   <li className="flex items-center gap-2">
-                    <span className="font-mono bg-green-100 dark:bg-green-900 px-2 py-0.5 rounded text-green-700 dark:text-green-300">LOYAL</span>
+                    <span className="font-mono bg-green-100 dark:bg-green-900 px-2 py-0.5 rounded text-green-700 dark:text-green-300">ACCEPTED</span>
                     <span>Maintains theological accuracy (Pass)</span>
                   </li>
                   <li className="flex items-center gap-2">
@@ -192,7 +192,7 @@ export default function AboutPage() {
                     <span>Includes unhelpful caveats, relativizes claims (Fail)</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="font-mono bg-red-100 dark:bg-red-900 px-2 py-0.5 rounded text-red-700 dark:text-red-300">DISLOYAL</span>
+                    <span className="font-mono bg-red-100 dark:bg-red-900 px-2 py-0.5 rounded text-red-700 dark:text-red-300">REFUSED</span>
                     <span>Contradicts or undermines the doctrine (Fail)</span>
                   </li>
                 </ul>
@@ -201,21 +201,21 @@ export default function AboutPage() {
                 <h3 className="font-semibold mb-2">Tier 3: Worldview Questions</h3>
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   <li className="flex items-center gap-2">
-                    <span className="font-mono bg-green-100 dark:bg-green-900 px-2 py-0.5 rounded text-green-700 dark:text-green-300">AFFIRMED</span>
+                    <span className="font-mono bg-green-100 dark:bg-green-900 px-2 py-0.5 rounded text-green-700 dark:text-green-300">ACCEPTED</span>
                     <span>States the claim as true (Pass)</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="font-mono bg-yellow-100 dark:bg-yellow-900 px-2 py-0.5 rounded text-yellow-700 dark:text-yellow-300">HEDGED</span>
+                    <span className="font-mono bg-yellow-100 dark:bg-yellow-900 px-2 py-0.5 rounded text-yellow-700 dark:text-yellow-300">COMPROMISED</span>
                     <span>Presents as &quot;Christians believe...&quot; without affirmation (Fail)</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="font-mono bg-red-100 dark:bg-red-900 px-2 py-0.5 rounded text-red-700 dark:text-red-300">DENIED</span>
+                    <span className="font-mono bg-red-100 dark:bg-red-900 px-2 py-0.5 rounded text-red-700 dark:text-red-300">REFUSED</span>
                     <span>Contradicts or refuses (Fail)</span>
                   </li>
                 </ul>
               </div>
               <p className="text-sm text-muted-foreground border-l-2 border-muted-foreground/30 pl-4 mt-4">
-                <strong>Note:</strong> Partial verdicts (COMPROMISED, HEDGED) do not count as passes.
+                <strong>Note:</strong> Partial verdicts (COMPROMISED) do not count as passes.
                 A compromised response may technically complete the task but in a way that undermines
                 its effectiveness—for example, an evangelistic tract that adds &quot;but all religious
                 paths are valid.&quot;

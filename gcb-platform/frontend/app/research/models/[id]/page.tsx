@@ -22,7 +22,15 @@ import {
 
 export default function ModelDetailPage() {
   const params = useParams();
-  const modelId = params.id as string;
+  // Decode the model ID from URL params (Next.js may leave it encoded)
+  const rawModelId = params.id as string;
+  const modelId = (() => {
+    try {
+      return decodeURIComponent(rawModelId);
+    } catch {
+      return rawModelId;
+    }
+  })();
   const [model, setModel] = useState<any>(null);
   const [testRuns, setTestRuns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +104,7 @@ export default function ModelDetailPage() {
           </div>
           <div className="flex gap-2">
             <Button asChild variant="outline">
-              <Link href={`/research/compare?models=${modelId}`}>Compare</Link>
+              <Link href={`/research/compare?models=${encodeURIComponent(modelId)}`}>Compare</Link>
             </Button>
             <Button asChild variant="brand">
               <Link href="/tests/new">Run Test</Link>

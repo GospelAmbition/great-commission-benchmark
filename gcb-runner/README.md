@@ -187,6 +187,29 @@ gcb-runner export --run 3 --output results.json
 gcb-runner upload --run 3
 ```
 
+#### Web Dashboard Upload
+
+Alternatively, you can upload your exported results via the web dashboard:
+
+1. **Export your results:**
+   ```bash
+   gcb-runner export --run 3 --output results.json
+   ```
+
+2. **Upload via dashboard:**
+   - Sign in to [greatcommissionbenchmark.ai/dashboard](https://greatcommissionbenchmark.ai/dashboard)
+   - Click "Upload CLI Results" button
+   - Either upload the JSON file or paste the JSON content
+   - Review the preview (model, version, score)
+   - Submit for review
+
+3. **Payment & Moderation:**
+   - If payment is required ($20 submission fee), complete payment via Stripe
+   - Your submission will be queued for moderator review
+   - You'll receive notifications when your submission is approved or rejected
+
+The web upload provides the same functionality as `gcb-runner upload` but with a visual interface and immediate validation feedback.
+
 ### Listing Benchmark Versions
 
 ```bash

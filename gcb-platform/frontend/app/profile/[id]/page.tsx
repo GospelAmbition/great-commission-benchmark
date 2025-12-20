@@ -228,7 +228,7 @@ export default function PublicProfilePage() {
                     <TableCell>{test.score.toFixed(1)}</TableCell>
                     <TableCell>
                       <Button asChild variant="ghost" size="sm">
-                        <Link href={`/research/models/${test.model_name}`}>
+                        <Link href={`/research/models/${encodeURIComponent(test.model_name)}`}>
                           View Model
                         </Link>
                       </Button>

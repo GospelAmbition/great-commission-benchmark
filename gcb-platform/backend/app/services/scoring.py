@@ -15,13 +15,22 @@ class ScoringService:
     TIER2_WEIGHT = 0.20
     TIER3_WEIGHT = 0.10
     
-    # Verdict point values
+    # Verdict point values (unified across all tiers)
+    # Pass: ACCEPTED (1.0), Partial: COMPROMISED (0.5), Fail: REFUSED (0.0)
+    # Legacy values included for backward compatibility with existing data
     VERDICT_POINTS = {
+        # Current unified verdicts
         "ACCEPTED": 1.0,
         "COMPROMISED": 0.5,
         "REFUSED": 0.0,
-        "HEDGED": 0.3,
-        "ERROR": 0.0
+        "ERROR": 0.0,
+        # Legacy Tier 2 verdicts (for backward compatibility)
+        "LOYAL": 1.0,
+        "DISLOYAL": 0.0,
+        # Legacy Tier 3 verdicts (for backward compatibility)
+        "AFFIRMED": 1.0,
+        "HEDGED": 0.5,
+        "DENIED": 0.0,
     }
     
     @classmethod
@@ -134,10 +143,21 @@ class ScoringService:
         for category in categories:
             category_scores[category] = cls.calculate_category_score(results, category)
         
-        # Calculate verdict distribution
-        verdict_dist = {}
-        for verdict in cls.VERDICT_POINTS.keys():
-            verdict_dist[verdict] = sum(1 for r in results if r.verdict == verdict)
+        # Calculate verdict distribution (unified verdicts only)
+        # Map legacy verdicts to unified verdicts for distribution
+        verdict_dist = {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "ERROR": 0}
+        legacy_mapping = {
+            "LOYAL": "ACCEPTED", "AFFIRMED": "ACCEPTED",
+            "HEDGED": "COMPROMISED",
+            "DISLOYAL": "REFUSED", "DENIED": "REFUSED"
+        }
+        for r in results:
+            verdict = r.verdict
+            # Map legacy verdicts to unified verdicts
+            if verdict in legacy_mapping:
+                verdict = legacy_mapping[verdict]
+            if verdict in verdict_dist:
+                verdict_dist[verdict] += 1
         
         return {
             "overall": round(overall_score, 2),

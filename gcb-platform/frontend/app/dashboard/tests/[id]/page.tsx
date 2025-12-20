@@ -187,7 +187,7 @@ export default function TestDetailPage() {
                   Run Again
                 </Button>
                 <Button asChild variant="brand">
-                  <Link href={`/research/models/${test.model_id}`}>
+                  <Link href={`/research/models/${encodeURIComponent(test.model_id)}`}>
                     View on Leaderboard
                   </Link>
                 </Button>
@@ -320,8 +320,8 @@ export default function TestDetailPage() {
                 <CardTitle>Verdict Distribution</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-5 gap-4">
-                  {["ACCEPTED", "COMPROMISED", "HEDGED", "REFUSED", "ERROR"].map((verdict) => (
+                <div className="grid grid-cols-4 gap-4">
+                  {["ACCEPTED", "COMPROMISED", "REFUSED", "ERROR"].map((verdict) => (
                     <div key={verdict} className="text-center">
                       <div className="text-2xl font-bold">
                         {verdictCounts[verdict] || 0}
@@ -377,7 +377,6 @@ export default function TestDetailPage() {
                   {[
                     { verdict: "ACCEPTED", points: 1.0 },
                     { verdict: "COMPROMISED", points: 0.5 },
-                    { verdict: "HEDGED", points: 0.3 },
                     { verdict: "REFUSED", points: 0.0 },
                     { verdict: "ERROR", points: 0.0 },
                   ].map(({ verdict, points }) => {
@@ -417,7 +416,6 @@ export default function TestDetailPage() {
                       <SelectItem value="all">All Verdicts</SelectItem>
                       <SelectItem value="ACCEPTED">Accepted</SelectItem>
                       <SelectItem value="COMPROMISED">Compromised</SelectItem>
-                      <SelectItem value="HEDGED">Hedged</SelectItem>
                       <SelectItem value="REFUSED">Refused</SelectItem>
                       <SelectItem value="ERROR">Error</SelectItem>
                     </SelectContent>

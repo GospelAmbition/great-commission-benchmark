@@ -15,6 +15,9 @@ from app.db.models.model import Model
 from app.db.models.result import Result
 from app.db.models.moderation_log import ModerationLog
 from app.db.models.community_submission import CommunitySubmission
+from app.db.models.question_set import QuestionSet
+from app.db.models.methodology_version import MethodologyVersion
+from app.db.models.question import Question
 from app.services.scoring import ScoringService
 from app.schemas.moderator import (
     QueueItem,
@@ -227,41 +230,94 @@ async def submit_review(
 async def get_moderator_activity(
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
+    moderator_id: Optional[UUID] = Query(None, description="Filter by specific moderator ID (default: all moderators)"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     current_user: User = Depends(require_moderator),
     db: Session = Depends(get_db)
 ):
-    """Get moderator activity history"""
-    query = db.query(ModerationLog).filter(
-        ModerationLog.moderator_id == current_user.id
-    )
+    """Get moderator activity history (all moderators by default, or filter by moderator_id)
     
-    if start_date:
-        query = query.filter(ModerationLog.created_at >= start_date)
-    if end_date:
-        query = query.filter(ModerationLog.created_at <= end_date)
-    
-    query = query.order_by(desc(ModerationLog.created_at))
-    
-    total = query.count()
-    logs = query.offset(offset).limit(limit).all()
+    Returns both platform test reviews (ModerationLog) and CLI submission reviews (CommunitySubmission)
+    """
+    from sqlalchemy.orm import joinedload
+    from sqlalchemy import or_
     
     items = []
-    for log in logs:
-        # Calculate duration (simplified - would need start time tracking)
-        duration_seconds = None
+    
+    # Get platform test reviews (ModerationLog)
+    test_review_query = db.query(ModerationLog).options(
+        joinedload(ModerationLog.test_run).joinedload(TestRun.model),
+        joinedload(ModerationLog.moderator)
+    )
+    
+    if moderator_id:
+        test_review_query = test_review_query.filter(ModerationLog.moderator_id == moderator_id)
+    
+    if start_date:
+        test_review_query = test_review_query.filter(ModerationLog.created_at >= start_date)
+    if end_date:
+        test_review_query = test_review_query.filter(ModerationLog.created_at <= end_date)
+    
+    test_logs = test_review_query.order_by(desc(ModerationLog.created_at)).all()
+    
+    for log in test_logs:
+        model_name = "Unknown"
+        if log.test_run and log.test_run.model:
+            model_name = log.test_run.model.name
         
         items.append(ModeratorActivityItem(
             review_id=log.id,
             test_id=log.test_run_id,
-            model_name=log.test_run.model.name,
+            submission_id=None,
+            model_name=model_name,
             action=log.action,
-            duration_seconds=duration_seconds,
+            review_type="platform_test",
+            duration_seconds=None,
             created_at=log.created_at
         ))
     
-    return ModeratorActivityResponse(items=items, total=total)
+    # Get CLI submission reviews (CommunitySubmission with reviewer_id set)
+    submission_query = db.query(CommunitySubmission).options(
+        joinedload(CommunitySubmission.reviewer)
+    ).filter(
+        CommunitySubmission.reviewer_id.isnot(None),
+        CommunitySubmission.reviewed_at.isnot(None)
+    )
+    
+    if moderator_id:
+        submission_query = submission_query.filter(CommunitySubmission.reviewer_id == moderator_id)
+    
+    if start_date:
+        submission_query = submission_query.filter(CommunitySubmission.reviewed_at >= start_date)
+    if end_date:
+        submission_query = submission_query.filter(CommunitySubmission.reviewed_at <= end_date)
+    
+    submissions = submission_query.order_by(desc(CommunitySubmission.reviewed_at)).all()
+    
+    for submission in submissions:
+        # Map submission status to action
+        action = submission.status  # 'approved' or 'rejected'
+        
+        items.append(ModeratorActivityItem(
+            review_id=submission.id,  # Use submission ID as review_id for CLI submissions
+            test_id=None,
+            submission_id=submission.id,
+            model_name=submission.model_name,
+            action=action,
+            review_type="cli_submission",
+            duration_seconds=None,
+            created_at=submission.reviewed_at  # Use reviewed_at as the activity timestamp
+        ))
+    
+    # Sort all items by created_at/reviewed_at descending
+    items.sort(key=lambda x: x.created_at, reverse=True)
+    
+    # Apply pagination
+    total = len(items)
+    paginated_items = items[offset:offset + limit]
+    
+    return ModeratorActivityResponse(items=paginated_items, total=total)
 
 
 @router.get("/stats", response_model=ModeratorStatsResponse)
@@ -298,6 +354,13 @@ async def get_moderator_stats(
     system_total = system_agreements + system_disagreements
     system_agreement_rate = (system_agreements / system_total * 100) if system_total > 0 else 0
     
+    # Calculate completed reviews this month (current calendar month)
+    now = datetime.utcnow()
+    month_start = datetime(now.year, now.month, 1)
+    completed_this_month = db.query(ModerationLog).filter(
+        ModerationLog.created_at >= month_start
+    ).count()
+    
     return ModeratorStatsResponse(
         personal={
             "total_reviews": personal_reviews,
@@ -310,7 +373,8 @@ async def get_moderator_stats(
             "pending_tests": total_pending,
             "agreement_rate": round(system_agreement_rate, 2),
             "agreements": system_agreements,
-            "disagreements": system_disagreements
+            "disagreements": system_disagreements,
+            "completed_this_month": completed_this_month
         }
     )
 
@@ -352,6 +416,123 @@ async def get_community_submission_queue(
     }
 
 
+@router.get("/community/all")
+async def get_all_community_submissions(
+    status: Optional[str] = Query(None, description="Filter by status (pending, reviewing, approved, rejected)"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db)
+):
+    """Get all community submissions (including approved/rejected) for verification"""
+    query = db.query(CommunitySubmission)
+    
+    if status:
+        query = query.filter(CommunitySubmission.status == status)
+    
+    query = query.order_by(CommunitySubmission.submitted_at.desc())
+    
+    total = query.count()
+    submissions = query.offset(offset).limit(limit).all()
+    
+    return {
+        "items": [
+            {
+                "submission_id": str(s.id),
+                "model_name": s.model_name,
+                "user_name": s.user.name or s.user.email,
+                "user_email": s.user.email,
+                "overall_score": s.overall_score,
+                "status": s.status,
+                "reviewer_id": str(s.reviewer_id) if s.reviewer_id else None,
+                "reviewer_name": s.reviewer.name if s.reviewer else None,
+                "reviewer_notes": s.reviewer_notes,
+                "submitted_at": s.submitted_at.isoformat() if s.submitted_at else None,
+                "reviewed_at": s.reviewed_at.isoformat() if s.reviewed_at else None,
+            }
+            for s in submissions
+        ],
+        "total": total
+    }
+
+
+@router.get("/community/{submission_id}")
+async def get_community_submission_detail(
+    submission_id: UUID,
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db)
+):
+    """Get community submission details for review"""
+    submission = db.query(CommunitySubmission).filter(
+        CommunitySubmission.id == submission_id
+    ).first()
+    
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    # Extract data from results_package (JSONB)
+    results_package = submission.results_package or {}
+    test_run = results_package.get("test_run", {})
+    summary = results_package.get("summary", {})
+    responses = results_package.get("responses", [])
+    
+    # Build response with sample responses for review
+    # For CLI submissions, moderators review a sample of responses
+    sample_size = min(20, len(responses))  # Review up to 20 responses
+    
+    import random
+    if len(responses) <= sample_size:
+        sample_responses = responses
+    else:
+        # Sample responses, ensuring we get some from each tier
+        tier_responses = {1: [], 2: [], 3: []}
+        for resp in responses:
+            tier = resp.get("tier", 1)
+            if tier in tier_responses:
+                tier_responses[tier].append(resp)
+        
+        sample_responses = []
+        responses_per_tier = max(1, sample_size // 3)  # Distribute across 3 tiers
+        
+        for tier in [1, 2, 3]:
+            tier_list = tier_responses[tier]
+            if tier_list:
+                if len(tier_list) <= responses_per_tier:
+                    sample_responses.extend(tier_list)
+                else:
+                    sample_responses.extend(random.sample(tier_list, responses_per_tier))
+        
+        # Fill remaining slots randomly if needed
+        if len(sample_responses) < sample_size:
+            remaining = [r for r in responses if r not in sample_responses]
+            needed = sample_size - len(sample_responses)
+            if remaining and needed > 0:
+                additional = random.sample(remaining, min(needed, len(remaining)))
+                sample_responses.extend(additional)
+        
+        # Trim to exact sample size if we oversampled
+        sample_responses = sample_responses[:sample_size]
+    
+    return {
+        "submission_id": submission.id,
+        "model_name": submission.model_name,
+        "user_name": submission.user.name or submission.user.email,
+        "user_email": submission.user.email,
+        "cli_version": submission.cli_version,
+        "question_set_version": submission.question_set_version,
+        "overall_score": summary.get("score", 0),
+        "tier1_score": summary.get("tier_scores", {}).get("tier1", {}).get("raw", 0),
+        "tier2_score": summary.get("tier_scores", {}).get("tier2", {}).get("raw", 0),
+        "tier3_score": summary.get("tier_scores", {}).get("tier3", {}).get("raw", 0),
+        "total_questions": summary.get("total_questions", 0),
+        "status": submission.status,
+        "submitted_at": submission.submitted_at.isoformat(),
+        "results_package": results_package,
+        "sample_responses": sample_responses,
+        "sample_size": sample_size,
+    }
+
+
 @router.post("/community/{submission_id}/review", response_model=CommunitySubmissionReviewResponse)
 async def review_community_submission(
     submission_id: UUID,
@@ -381,8 +562,134 @@ async def review_community_submission(
         submission.reviewer_notes = request.notes
         submission.reviewed_at = datetime.utcnow()
         
-        # TODO: Create test run from submission and add to leaderboard
-        # For now, just mark as approved
+        # Create test run from submission and add to leaderboard
+        results_package = submission.results_package
+        
+        # Get or create the Model
+        model_name = submission.model_name
+        # Try to extract model_id from results package
+        test_run_data = results_package.get("test_run", {})
+        model_id_str = test_run_data.get("model", model_name)
+        
+        # Look for existing model by model_id
+        model = db.query(Model).filter(Model.model_id == model_id_str).first()
+        if not model:
+            # Create new model - extract provider from model_id if possible
+            provider = "Unknown"
+            if "/" in model_id_str:
+                provider = model_id_str.split("/")[0]
+            model = Model(
+                model_id=model_id_str,
+                name=model_name,
+                provider=provider,
+                is_active=True
+            )
+            db.add(model)
+            db.flush()
+        
+        # Get the QuestionSet matching the version
+        question_set = db.query(QuestionSet).filter(
+            QuestionSet.semantic_version == submission.question_set_version
+        ).first()
+        if not question_set:
+            # Fall back to active question set
+            question_set = db.query(QuestionSet).filter(
+                QuestionSet.status == "active"
+            ).order_by(QuestionSet.created_at.desc()).first()
+        
+        if not question_set:
+            raise HTTPException(status_code=400, detail="No question set found for this submission")
+        
+        # Get or create a methodology version for this question set
+        methodology_version = db.query(MethodologyVersion).filter(
+            MethodologyVersion.question_set_id == question_set.id
+        ).first()
+        if not methodology_version:
+            # Create a default methodology version for this question set
+            methodology_version = MethodologyVersion(
+                question_set_id=question_set.id,
+                judge_prompt="Default judge prompt",
+                scoring_config={"tier1": 0.7, "tier2": 0.2, "tier3": 0.1},
+                active_from=datetime.utcnow()
+            )
+            db.add(methodology_version)
+            db.flush()
+        
+        # Create the TestRun
+        completed_at = datetime.utcnow()
+        if test_run_data.get("completed_at"):
+            try:
+                completed_at = datetime.fromisoformat(test_run_data["completed_at"].replace("Z", "+00:00"))
+            except:
+                pass
+        
+        test_run = TestRun(
+            user_id=submission.user_id,
+            model_id=model.id,
+            question_set_id=question_set.id,
+            methodology_version_id=methodology_version.id,
+            status="completed",
+            trust_tier="community",  # Mark as community submission
+            completed_at=completed_at,
+            started_at=completed_at,  # Approximate
+        )
+        db.add(test_run)
+        db.flush()
+        
+        # Create Result records from responses
+        # Build a tier+category lookup for matching questions when IDs don't match
+        db_questions = db.query(Question).filter(
+            Question.question_set_id == question_set.id
+        ).all()
+        
+        tier_cat_to_questions = {}
+        for q in db_questions:
+            key = (q.tier, q.category)
+            if key not in tier_cat_to_questions:
+                tier_cat_to_questions[key] = []
+            tier_cat_to_questions[key].append(q)
+        
+        responses = results_package.get("responses", [])
+        used_question_ids = set()
+        
+        for response_data in responses:
+            question_id_str = response_data.get("question_id")
+            question = None
+            
+            # Try to find question by ID first
+            if question_id_str:
+                try:
+                    question = db.query(Question).filter(
+                        Question.id == question_id_str,
+                        Question.question_set_id == question_set.id
+                    ).first()
+                except:
+                    pass
+            
+            # If not found by ID, match by tier+category
+            if not question:
+                tier = response_data.get("tier")
+                category = response_data.get("category")
+                if tier and category:
+                    candidates = tier_cat_to_questions.get((tier, category), [])
+                    for candidate in candidates:
+                        if candidate.id not in used_question_ids:
+                            question = candidate
+                            break
+            
+            if not question:
+                continue
+            
+            used_question_ids.add(question.id)
+            
+            result = Result(
+                test_run_id=test_run.id,
+                question_id=question.id,
+                response=response_data.get("response", ""),
+                verdict=response_data.get("verdict", "UNKNOWN"),
+                reasoning=response_data.get("judge_reasoning", ""),
+            )
+            db.add(result)
         
         db.commit()
         
@@ -425,3 +732,176 @@ async def review_community_submission(
     
     else:
         raise HTTPException(status_code=400, detail="Invalid action. Must be 'approve' or 'reject'")
+
+
+@router.post("/community/{submission_id}/reprocess")
+async def reprocess_community_submission(
+    submission_id: UUID,
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db)
+):
+    """Reprocess an approved community submission to create TestRun records (for fixing missing leaderboard entries)"""
+    submission = db.query(CommunitySubmission).filter(
+        CommunitySubmission.id == submission_id
+    ).first()
+    
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    if submission.status != "approved":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Can only reprocess approved submissions. Current status: {submission.status}"
+        )
+    
+    # Check if TestRun already exists for this user/model combo around submission time
+    results_package = submission.results_package
+    test_run_data = results_package.get("test_run", {})
+    model_id_str = test_run_data.get("model", submission.model_name)
+    
+    existing_model = db.query(Model).filter(Model.model_id == model_id_str).first()
+    if existing_model:
+        # Check for existing test run
+        existing_test_run = db.query(TestRun).filter(
+            TestRun.model_id == existing_model.id,
+            TestRun.user_id == submission.user_id,
+            TestRun.status == "completed"
+        ).first()
+        if existing_test_run:
+            return {
+                "submission_id": str(submission.id),
+                "status": "already_processed",
+                "test_run_id": str(existing_test_run.id),
+                "message": "TestRun already exists for this submission"
+            }
+    
+    # Create test run from submission (same logic as approve)
+    # Get or create the Model
+    model_name = submission.model_name
+    
+    model = db.query(Model).filter(Model.model_id == model_id_str).first()
+    if not model:
+        provider = "Unknown"
+        if "/" in model_id_str:
+            provider = model_id_str.split("/")[0]
+        model = Model(
+            model_id=model_id_str,
+            name=model_name,
+            provider=provider,
+            is_active=True
+        )
+        db.add(model)
+        db.flush()
+    
+    # Get the QuestionSet
+    question_set = db.query(QuestionSet).filter(
+        QuestionSet.semantic_version == submission.question_set_version
+    ).first()
+    if not question_set:
+        question_set = db.query(QuestionSet).filter(
+            QuestionSet.status == "active"
+        ).order_by(QuestionSet.created_at.desc()).first()
+    
+    if not question_set:
+        raise HTTPException(status_code=400, detail="No question set found for this submission")
+    
+    # Get methodology version for this question set
+    methodology_version = db.query(MethodologyVersion).filter(
+        MethodologyVersion.question_set_id == question_set.id
+    ).first()
+    if not methodology_version:
+        methodology_version = MethodologyVersion(
+            question_set_id=question_set.id,
+            judge_prompt="Default judge prompt",
+            scoring_config={"tier1": 0.7, "tier2": 0.2, "tier3": 0.1},
+            active_from=datetime.utcnow()
+        )
+        db.add(methodology_version)
+        db.flush()
+    
+    # Create the TestRun
+    completed_at = datetime.utcnow()
+    if test_run_data.get("completed_at"):
+        try:
+            completed_at = datetime.fromisoformat(test_run_data["completed_at"].replace("Z", "+00:00"))
+        except:
+            pass
+    
+    test_run = TestRun(
+        user_id=submission.user_id,
+        model_id=model.id,
+        question_set_id=question_set.id,
+        methodology_version_id=methodology_version.id,
+        status="completed",
+        trust_tier="community",
+        completed_at=completed_at,
+        started_at=completed_at,
+    )
+    db.add(test_run)
+    db.flush()
+    
+    # Create Result records - build a tier+category lookup for matching
+    db_questions = db.query(Question).filter(
+        Question.question_set_id == question_set.id
+    ).all()
+    
+    tier_cat_to_questions = {}
+    for q in db_questions:
+        key = (q.tier, q.category)
+        if key not in tier_cat_to_questions:
+            tier_cat_to_questions[key] = []
+        tier_cat_to_questions[key].append(q)
+    
+    responses = results_package.get("responses", [])
+    results_created = 0
+    used_question_ids = set()
+    
+    for response_data in responses:
+        question_id_str = response_data.get("question_id")
+        question = None
+        
+        # Try to find question by ID first
+        if question_id_str:
+            try:
+                question = db.query(Question).filter(
+                    Question.id == question_id_str,
+                    Question.question_set_id == question_set.id
+                ).first()
+            except:
+                pass
+        
+        # If not found by ID, match by tier+category
+        if not question:
+            tier = response_data.get("tier")
+            category = response_data.get("category")
+            if tier and category:
+                candidates = tier_cat_to_questions.get((tier, category), [])
+                for candidate in candidates:
+                    if candidate.id not in used_question_ids:
+                        question = candidate
+                        break
+        
+        if not question:
+            continue
+        
+        used_question_ids.add(question.id)
+        
+        result = Result(
+            test_run_id=test_run.id,
+            question_id=question.id,
+            response=response_data.get("response", ""),
+            verdict=response_data.get("verdict", "UNKNOWN"),
+            reasoning=response_data.get("judge_reasoning", ""),
+        )
+        db.add(result)
+        results_created += 1
+    
+    db.commit()
+    
+    return {
+        "submission_id": str(submission.id),
+        "status": "processed",
+        "test_run_id": str(test_run.id),
+        "results_created": results_created,
+        "message": f"Created TestRun with {results_created} results"
+    }

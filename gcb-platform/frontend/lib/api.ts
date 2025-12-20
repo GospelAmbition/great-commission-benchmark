@@ -76,8 +76,12 @@ export interface VersionsResponse {
 }
 
 export interface StatsResponse {
-  total_models: number;
-  average_score?: number;
+  total_models_tested: number;
+  total_test_runs: number;
+  current_benchmark_version: string;
+  top_score: number;
+  average_score: number;
+  providers_represented: number;
   last_updated: string;
 }
 
@@ -183,10 +187,22 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({
-        detail: `HTTP ${response.status}: ${response.statusText}`,
-      }));
-      throw new Error(error.detail || 'API request failed');
+      let errorDetail = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.detail) {
+          errorDetail = typeof errorData.detail === 'string' 
+            ? errorData.detail 
+            : JSON.stringify(errorData.detail);
+        } else if (errorData.message) {
+          errorDetail = errorData.message;
+        } else {
+          errorDetail = JSON.stringify(errorData);
+        }
+      } catch {
+        // If JSON parsing fails, use the default error message
+      }
+      throw new Error(errorDetail);
     }
 
     return response.json();
@@ -317,7 +333,10 @@ export class ApiClient {
   }
 
   async getModel(id: string): Promise<ModelResponse> {
-    return this.request<ModelResponse>(`/api/public/models/${id}`);
+    // Model IDs with slashes (e.g., "qwen/qwen3-coder-30b") need special handling
+    // Use query parameter instead of path parameter to avoid URL encoding issues
+    const params = new URLSearchParams({ model_id: id });
+    return this.request<ModelResponse>(`/api/public/models/by-id?${params.toString()}`);
   }
 
   async getVersions(): Promise<VersionsResponse> {
@@ -419,6 +438,22 @@ export class ApiClient {
     created_at: string;
   }>> {
     return this.request('/api/user/submissions');
+  }
+
+  async uploadCliSubmission(exportData: object): Promise<{
+    submission_id: string;
+    status: string;
+    validation_errors?: string[] | null;
+    message: string;
+    fee_waived?: boolean;
+    payment_required?: boolean;
+    payment_intent_id?: string;
+    payment_url?: string;
+  }> {
+    return this.request('/api/submissions', {
+      method: 'POST',
+      body: JSON.stringify({ export_data: exportData }),
+    });
   }
 
   async getUserActivity(params?: { limit?: number }): Promise<Array<{
@@ -548,6 +583,173 @@ export class ApiClient {
         test_id: testId,
         accepted_cost: true,
       }),
+    });
+  }
+
+  // Moderator API endpoints
+  async getModerationQueue(params?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    items: Array<{
+      test_id: string;
+      model_name: string;
+      user_name: string;
+      overall_score?: number;
+      status: string;
+      trust_tier: string;
+      created_at: string;
+      priority: number;
+    }>;
+    total: number;
+  }> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const query = queryParams.toString();
+    return this.request(`/api/moderator/queue${query ? `?${query}` : ''}`);
+  }
+
+  async getCommunitySubmissionQueue(params?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    items: Array<{
+      submission_id: string;
+      model_name: string;
+      user_name: string;
+      overall_score?: number;
+      status: string;
+      submitted_at: string;
+    }>;
+    total: number;
+  }> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const query = queryParams.toString();
+    return this.request(`/api/moderator/community${query ? `?${query}` : ''}`);
+  }
+
+  async getCommunitySubmissionDetail(submissionId: string): Promise<{
+    submission_id: string;
+    model_name: string;
+    user_name: string;
+    user_email: string;
+    cli_version: string;
+    question_set_version: string;
+    overall_score: number;
+    tier1_score: number;
+    tier2_score: number;
+    tier3_score: number;
+    total_questions: number;
+    status: string;
+    submitted_at: string;
+    results_package: any;
+    sample_responses: Array<{
+      question_id: string | number;
+      tier: number;
+      category: string;
+      response: string;
+      verdict: string;
+      verdict_normalized: string;
+      judge_reasoning?: string;
+    }>;
+    sample_size: number;
+  }> {
+    return this.request(`/api/moderator/community/${submissionId}`);
+  }
+
+  async reviewCommunitySubmission(submissionId: string, action: "approve" | "reject", notes?: string): Promise<{
+    submission_id: string;
+    status: string;
+    message: string;
+  }> {
+    return this.request(`/api/moderator/community/${submissionId}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ action, notes }),
+    });
+  }
+
+  async getModeratorActivity(params?: {
+    start_date?: string;
+    end_date?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    items: Array<{
+      review_id: string;
+      test_id?: string | null;
+      submission_id?: string | null;
+      model_name: string;
+      action: string;
+      review_type: 'platform_test' | 'cli_submission';
+      duration_seconds?: number | null;
+      created_at: string;
+    }>;
+    total: number;
+  }> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const query = queryParams.toString();
+    return this.request(`/api/moderator/activity${query ? `?${query}` : ''}`);
+  }
+
+  async getModeratorStats(): Promise<{
+    personal: {
+      total_reviews: number;
+      agreement_rate: number;
+      agreements: number;
+      disagreements: number;
+    };
+    system_wide: {
+      total_reviews: number;
+      pending_tests: number;
+      agreement_rate: number;
+      agreements: number;
+      disagreements: number;
+      completed_this_month?: number;
+    };
+  }> {
+    return this.request('/api/moderator/stats');
+  }
+
+  async submitModerationReview(data: {
+    test_id: string;
+    verdict_reviews: Array<{
+      result_id: string;
+      verdict: 'agree' | 'disagree' | 'unsure';
+      notes?: string;
+    }>;
+    overall_assessment: 'verified' | 'concerns' | 'escalated';
+    notes?: string;
+  }): Promise<{
+    review_id: string;
+    test_id: string;
+    trust_tier: string;
+    requires_second_review: boolean;
+  }> {
+    return this.request('/api/moderator/reviews', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   }
 }

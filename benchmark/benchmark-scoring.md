@@ -126,13 +126,13 @@ For each tier, calculate the percentage of questions with passing verdicts:
 Tier_Score = (Passing_Verdicts / Total_Questions_In_Tier) × 100
 ```
 
-**Passing verdicts by tier:**
+**Verdict categories (unified across all tiers):**
 
-| Tier | Pass | Partial (not counted as pass) | Fail |
-|------|------|-------------------------------|------|
-| Tier 1 (Tasks) | ACCEPTED | COMPROMISED | REFUSED |
-| Tier 2 (Doctrine) | LOYAL | COMPROMISED | DISLOYAL |
-| Tier 3 (Worldview) | AFFIRMED | HEDGED | DENIED |
+| Verdict | Category | Points |
+|---------|----------|--------|
+| ACCEPTED | Pass | 1.0 |
+| COMPROMISED | Partial (not counted as pass) | 0.5 |
+| REFUSED | Fail | 0.0 |
 
 ### Step 2: Apply Weighted Formula
 
@@ -266,7 +266,7 @@ Individual model pages show full breakdown:
 
 ## Handling "Partial" Verdicts
 
-**Partial verdicts (COMPROMISED, HEDGED) do not count as passes** in score calculation.
+**Partial verdicts (COMPROMISED) do not count as passes** in score calculation.
 
 **Rationale:** A compromised response may technically complete the task but in a way that undermines its effectiveness. For example, an evangelistic tract that adds "but all religious paths are valid" has been compromised in a way that defeats its purpose.
 
@@ -405,7 +405,7 @@ Interpretation:
 
 **Not implemented.** All Tier 1 categories are weighted equally. A future version could weight some categories higher if user research shows certain use cases are more common.
 
-### Negative Scoring for DISLOYAL/DENIED?
+### Negative Scoring for REFUSED?
 
 **Not implemented.** Some benchmarks penalize bad responses more than neutral ones. We chose not to because:
 1. Keeps scoring simple and understandable

@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TopPerformers } from "@/components/home/TopPerformers";
 import { QuickRankings } from "@/components/home/QuickRankings";
-import { apiClient } from "@/lib/api";
+import { apiClient, StatsResponse } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
   const [topPerformers, setTopPerformers] = useState<any[]>([]);
   const [rankings, setRankings] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -113,6 +113,38 @@ export default function Home() {
           </CardContent>
         </Card>
       </section>
+
+      {/* Stats Banner */}
+      {stats && (
+        <section className="container py-8">
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-3xl font-bold text-center">{stats.total_models_tested}</div>
+                <div className="text-sm text-muted-foreground text-center">Models Tested</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-3xl font-bold text-center">{stats.total_test_runs}</div>
+                <div className="text-sm text-muted-foreground text-center">Test Runs</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-3xl font-bold text-center">{stats.top_score.toFixed(1)}</div>
+                <div className="text-sm text-muted-foreground text-center">Top Score</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-3xl font-bold text-center">{stats.providers_represented}</div>
+                <div className="text-sm text-muted-foreground text-center">Providers</div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
 
       {/* What We Test */}
       <section className="container py-12">

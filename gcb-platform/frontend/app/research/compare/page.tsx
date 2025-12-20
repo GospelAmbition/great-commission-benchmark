@@ -26,7 +26,8 @@ function ComparePageContent() {
 
   useEffect(() => {
     if (modelIdsParam) {
-      const ids = modelIdsParam.split(",").slice(0, 5);
+      // Decode URL-encoded model IDs (e.g., qwen%2Fqwen3-coder becomes qwen/qwen3-coder)
+      const ids = modelIdsParam.split(",").map(id => decodeURIComponent(id)).slice(0, 5);
       loadComparison(ids);
     } else {
       setLoading(false);
@@ -126,7 +127,7 @@ function ComparePageContent() {
                 </div>
               </div>
               <Button asChild variant="outline" className="w-full">
-                <Link href={`/research/models/${model.model_id}`}>View Details</Link>
+                <Link href={`/research/models/${encodeURIComponent(model.model_id)}`}>View Details</Link>
               </Button>
             </CardContent>
           </Card>

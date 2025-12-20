@@ -24,7 +24,6 @@ interface VerdictDistributionChartProps {
   data: {
     ACCEPTED?: number;
     COMPROMISED?: number;
-    HEDGED?: number;
     REFUSED?: number;
     ERROR?: number;
   };
@@ -37,11 +36,10 @@ export function VerdictDistributionChart({
   stacked = false,
   showPercentages = true,
 }: VerdictDistributionChartProps) {
-  const verdicts = ["ACCEPTED", "COMPROMISED", "HEDGED", "REFUSED", "ERROR"];
+  const verdicts = ["ACCEPTED", "COMPROMISED", "REFUSED", "ERROR"];
   const colors = {
     ACCEPTED: { bg: "rgba(34, 197, 94, 0.8)", border: "#22c55e" },
     COMPROMISED: { bg: "rgba(234, 179, 8, 0.8)", border: "#eab308" },
-    HEDGED: { bg: "rgba(249, 115, 22, 0.8)", border: "#f97316" },
     REFUSED: { bg: "rgba(239, 68, 68, 0.8)", border: "#ef4444" },
     ERROR: { bg: "rgba(107, 114, 128, 0.8)", border: "#6b7280" },
   };
@@ -117,7 +115,6 @@ interface StackedVerdictChartProps {
     verdicts: {
       ACCEPTED?: number;
       COMPROMISED?: number;
-      HEDGED?: number;
       REFUSED?: number;
       ERROR?: number;
     };
@@ -125,11 +122,10 @@ interface StackedVerdictChartProps {
 }
 
 export function StackedVerdictChart({ models }: StackedVerdictChartProps) {
-  const verdicts = ["ACCEPTED", "COMPROMISED", "HEDGED", "REFUSED", "ERROR"];
+  const verdicts = ["ACCEPTED", "COMPROMISED", "REFUSED", "ERROR"];
   const colors = {
     ACCEPTED: { bg: "rgba(34, 197, 94, 0.8)", border: "#22c55e" },
     COMPROMISED: { bg: "rgba(234, 179, 8, 0.8)", border: "#eab308" },
-    HEDGED: { bg: "rgba(249, 115, 22, 0.8)", border: "#f97316" },
     REFUSED: { bg: "rgba(239, 68, 68, 0.8)", border: "#ef4444" },
     ERROR: { bg: "rgba(107, 114, 128, 0.8)", border: "#6b7280" },
   };

@@ -201,7 +201,7 @@ export default function ResearchPage() {
       {selectedModels.size > 0 && (
         <div className="mb-4">
           <Button asChild>
-            <Link href={`/research/compare?models=${Array.from(selectedModels).join(",")}`}>
+            <Link href={`/research/compare?models=${Array.from(selectedModels).map(id => encodeURIComponent(id)).join(",")}`}>
               Compare {selectedModels.size} Model{selectedModels.size > 1 ? "s" : ""}
             </Link>
           </Button>
@@ -296,7 +296,7 @@ export default function ResearchPage() {
                       </TableCell>
                       <TableCell>
                         <Link
-                          href={`/research/models/${item.model_id}`}
+                          href={`/research/models/${encodeURIComponent(item.model_id)}`}
                           className="hover:underline font-medium"
                         >
                           {item.model_name}
@@ -316,7 +316,7 @@ export default function ResearchPage() {
                       </TableCell>
                       <TableCell>
                         <Button asChild variant="ghost" size="sm">
-                          <Link href={`/research/models/${item.model_id}`}>View</Link>
+                          <Link href={`/research/models/${encodeURIComponent(item.model_id)}`}>View</Link>
                         </Button>
                       </TableCell>
                     </TableRow>
