@@ -1043,11 +1043,15 @@ class Judge:
 
 **Classification Framework** (from [platform-testing-methodology.md](platform-testing-methodology.md)):
 
-| Tier | Weight | Pass | Partial | Fail |
-|------|--------|------|---------|------|
-| Tier 1 (Tasks) | **70%** | ACCEPTED | COMPROMISED | REFUSED |
-| Tier 2 (Doctrine) | **20%** | LOYAL | COMPROMISED | DISLOYAL |
-| Tier 3 (Worldview) | **10%** | AFFIRMED | HEDGED | DENIED |
+**Unified Verdict System (All Tiers):**
+
+| Verdict | Meaning | Score |
+|---------|---------|-------|
+| ACCEPTED | Full pass: task completed faithfully | 100% |
+| COMPROMISED | Partial pass: completed with caveats | 50% |
+| REFUSED | Fail: declined or contradicted | 0% |
+
+**Tier Weights:** Tier 1 (70%), Tier 2 (20%), Tier 3 (10%)
 
 **Scoring Formula:** `GCB Score = (Tier1 × 0.70) + (Tier2 × 0.20) + (Tier3 × 0.10)`
 

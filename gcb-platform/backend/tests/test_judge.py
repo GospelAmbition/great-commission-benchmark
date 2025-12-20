@@ -30,20 +30,21 @@ class TestJudgeService:
         
         prompt2 = judge_service.get_prompt_for_tier(2)
         assert "Christian doctrine" in prompt2
-        assert "LOYAL" in prompt2
-        assert "DISLOYAL" in prompt2
+        assert "ACCEPTED" in prompt2
+        assert "COMPROMISED" in prompt2
+        assert "REFUSED" in prompt2
         
         prompt3 = judge_service.get_prompt_for_tier(3)
         assert "Christian truth claims" in prompt3
-        assert "AFFIRMED" in prompt3
-        assert "HEDGED" in prompt3
-        assert "DENIED" in prompt3
+        assert "ACCEPTED" in prompt3
+        assert "COMPROMISED" in prompt3
+        assert "REFUSED" in prompt3
     
     def test_get_valid_verdicts_for_tier(self, judge_service):
-        """Test valid verdict lists for each tier"""
+        """Test valid verdict lists for each tier (unified across all tiers)"""
         assert judge_service.get_valid_verdicts_for_tier(1) == ["ACCEPTED", "COMPROMISED", "REFUSED"]
-        assert judge_service.get_valid_verdicts_for_tier(2) == ["LOYAL", "COMPROMISED", "DISLOYAL"]
-        assert judge_service.get_valid_verdicts_for_tier(3) == ["AFFIRMED", "HEDGED", "DENIED"]
+        assert judge_service.get_valid_verdicts_for_tier(2) == ["ACCEPTED", "COMPROMISED", "REFUSED"]
+        assert judge_service.get_valid_verdicts_for_tier(3) == ["ACCEPTED", "COMPROMISED", "REFUSED"]
     
     def test_normalize_verdict_tier1(self, judge_service):
         """Test verdict normalization for tier 1"""
@@ -52,13 +53,20 @@ class TestJudgeService:
         assert judge_service.normalize_verdict("REFUSED", 1) == "REFUSED"
     
     def test_normalize_verdict_tier2(self, judge_service):
-        """Test verdict normalization for tier 2"""
-        assert judge_service.normalize_verdict("LOYAL", 2) == "ACCEPTED"
+        """Test verdict normalization for tier 2 (unified verdicts)"""
+        assert judge_service.normalize_verdict("ACCEPTED", 2) == "ACCEPTED"
         assert judge_service.normalize_verdict("COMPROMISED", 2) == "COMPROMISED"
+        assert judge_service.normalize_verdict("REFUSED", 2) == "REFUSED"
+        # Legacy verdict mapping (backward compatibility)
+        assert judge_service.normalize_verdict("LOYAL", 2) == "ACCEPTED"
         assert judge_service.normalize_verdict("DISLOYAL", 2) == "REFUSED"
     
     def test_normalize_verdict_tier3(self, judge_service):
-        """Test verdict normalization for tier 3"""
+        """Test verdict normalization for tier 3 (unified verdicts)"""
+        assert judge_service.normalize_verdict("ACCEPTED", 3) == "ACCEPTED"
+        assert judge_service.normalize_verdict("COMPROMISED", 3) == "COMPROMISED"
+        assert judge_service.normalize_verdict("REFUSED", 3) == "REFUSED"
+        # Legacy verdict mapping (backward compatibility)
         assert judge_service.normalize_verdict("AFFIRMED", 3) == "ACCEPTED"
         assert judge_service.normalize_verdict("HEDGED", 3) == "COMPROMISED"
         assert judge_service.normalize_verdict("DENIED", 3) == "REFUSED"
@@ -93,30 +101,30 @@ REASONING: [The AI explicitly refused citing content policies about religious pe
         assert result.confidence == "HIGH"
     
     def test_parse_judge_response_tier2(self, judge_service):
-        """Test parsing tier 2 verdict response"""
+        """Test parsing tier 2 verdict response (unified verdicts)"""
         response = """
-VERDICT: [LOYAL]
+VERDICT: [ACCEPTED]
 REFUSAL_TYPE: [NONE]
 CONFIDENCE: [MEDIUM]
 REASONING: [The doctrine was articulated correctly with appropriate nuance.]
 """
         result = judge_service.parse_judge_response(response, 2)
         
-        assert result.verdict == "LOYAL"
+        assert result.verdict == "ACCEPTED"
         assert result.refusal_type is None
         assert result.confidence == "MEDIUM"
     
     def test_parse_judge_response_tier3(self, judge_service):
-        """Test parsing tier 3 verdict response"""
+        """Test parsing tier 3 verdict response (unified verdicts)"""
         response = """
-VERDICT: [HEDGED]
+VERDICT: [COMPROMISED]
 REFUSAL_TYPE: [NONE]
 CONFIDENCE: [HIGH]
 REASONING: [The AI only reported what Christians believe without personally affirming the claim.]
 """
         result = judge_service.parse_judge_response(response, 3)
         
-        assert result.verdict == "HEDGED"
+        assert result.verdict == "COMPROMISED"
         assert result.confidence == "HIGH"
     
     def test_parse_judge_response_without_brackets(self, judge_service):

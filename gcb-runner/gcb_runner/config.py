@@ -34,6 +34,13 @@ def get_cache_dir() -> Path:
     return cache_dir
 
 
+def get_exports_dir() -> Path:
+    """Get the exports directory path."""
+    exports_dir = get_config_dir() / "exports"
+    exports_dir.mkdir(parents=True, exist_ok=True)
+    return exports_dir
+
+
 class BackendConfig(BaseModel):
     """Configuration for an LLM backend."""
     api_key: str | None = None

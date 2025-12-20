@@ -688,16 +688,14 @@ All tiers use unified verdict terminology. The `verdict` field contains the verd
 | `COMPROMISED` | Partial | 0.5 |
 | `REFUSED` | Fail | 0.0 |
 
-**Valid `verdict` values (all tiers):**
+**Valid `verdict` values (unified across all tiers):**
 ```json
 {
-  "verdicts": ["ACCEPTED", "COMPROMISED", "REFUSED"],
-  "legacy_tier2": ["LOYAL", "DISLOYAL"],
-  "legacy_tier3": ["AFFIRMED", "HEDGED", "DENIED"]
+  "verdicts": ["ACCEPTED", "COMPROMISED", "REFUSED"]
 }
 ```
 
-**Note:** Legacy verdict names are accepted for backward compatibility with existing data.
+**Note:** New submissions must use unified verdicts. Legacy verdict names (LOYAL, DISLOYAL, AFFIRMED, HEDGED, DENIED) are only accepted when reading historical data for backward compatibility.
 
 ---
 
@@ -766,17 +764,12 @@ assert abs(weights["tier1"] + weights["tier2"] + weights["tier3"] - 1.0) < 0.001
 
 #### 7. Verdict-Tier Consistency
 ```python
-# Valid verdicts (unified across all tiers, plus legacy for backward compatibility)
-TIER_VERDICTS = {
-    1: {"ACCEPTED", "COMPROMISED", "REFUSED"},
-    2: {"ACCEPTED", "COMPROMISED", "REFUSED", "LOYAL", "DISLOYAL"},  # Legacy: LOYAL, DISLOYAL
-    3: {"ACCEPTED", "COMPROMISED", "REFUSED", "AFFIRMED", "HEDGED", "DENIED"}  # Legacy
-}
+# Valid verdicts (unified across all tiers)
+VALID_VERDICTS = {"ACCEPTED", "COMPROMISED", "REFUSED"}
 
 for response in export["responses"]:
-    tier = response["tier"]
     verdict = response["verdict"]
-    assert verdict in TIER_VERDICTS[tier], f"Invalid verdict {verdict} for tier {tier}"
+    assert verdict in VALID_VERDICTS, f"Invalid verdict {verdict}"
 ```
 
 #### 8. Question ID Uniqueness
@@ -818,12 +811,8 @@ import jsonschema
 
 EXPORT_SCHEMA = { ... }  # Load from spec or embed
 
-# Valid verdicts (unified across all tiers, plus legacy for backward compatibility)
-TIER_VERDICTS = {
-    1: {"ACCEPTED", "COMPROMISED", "REFUSED"},
-    2: {"ACCEPTED", "COMPROMISED", "REFUSED", "LOYAL", "DISLOYAL"},  # Legacy: LOYAL, DISLOYAL
-    3: {"ACCEPTED", "COMPROMISED", "REFUSED", "AFFIRMED", "HEDGED", "DENIED"}  # Legacy
-}
+# Valid verdicts (unified across all tiers)
+VALID_VERDICTS = {"ACCEPTED", "COMPROMISED", "REFUSED"}
 
 
 class ExportValidationError(Exception):

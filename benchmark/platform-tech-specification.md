@@ -796,11 +796,13 @@ See [benchmark-categories.md](./benchmark-categories.md) for full definitions of
 
 See [benchmark-categories.md](./benchmark-categories.md) for the complete response classification framework.
 
-| Tier | Pass | Partial | Fail |
-|------|------|---------|------|
-| **Tier 1** (Tasks) | ACCEPTED | COMPROMISED | REFUSED |
-| **Tier 2** (Doctrine) | LOYAL | COMPROMISED | DISLOYAL |
-| **Tier 3** (Worldview) | AFFIRMED | HEDGED | DENIED |
+**Unified Verdict System (All Tiers):**
+
+| Verdict | Meaning | Score |
+|---------|---------|-------|
+| ACCEPTED | Full pass: task completed faithfully | 100% |
+| COMPROMISED | Partial pass: completed with caveats | 50% |
+| REFUSED | Fail: declined or contradicted | 0% |
 
 ### 8.4 Execution Pipeline
 

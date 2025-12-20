@@ -14,7 +14,7 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
 from gcb_runner import __version__
-from gcb_runner.config import Config, BackendConfig, get_config_dir
+from gcb_runner.config import Config, BackendConfig, get_config_dir, get_exports_dir
 
 app = typer.Typer(
     name="gcb-runner",
@@ -348,7 +348,7 @@ def results(
 @app.command(name="export")
 def export_results(
     run_id: Optional[int] = typer.Option(None, "--run", "-r", help="Test run ID to export"),
-    output: Path = typer.Option("results.json", "--output", "-o", help="Output filename"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output path (defaults to ~/.gcb-runner/exports/<model>.json)"),
 ):
     """Export results to JSON for platform submission."""
     print_header()
@@ -375,6 +375,11 @@ def export_results(
     if not run.completed_at:
         console.print(f"[red]Test run #{run_id} is not complete.[/red]")
         raise typer.Exit(1)
+    
+    # Generate output path from model name if not specified
+    if output is None:
+        model_name = run.model.replace("/", "-").replace(":", "-")
+        output = get_exports_dir() / f"{model_name}.json"
     
     console.print(f"Exporting test run #{run_id}...")
     

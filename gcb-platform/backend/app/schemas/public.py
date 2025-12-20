@@ -41,7 +41,6 @@ class VerdictDistribution(BaseModel):
     ACCEPTED: int = 0
     COMPROMISED: int = 0
     REFUSED: int = 0
-    HEDGED: int = 0
     ERROR: int = 0
 
 

@@ -37,24 +37,14 @@ These should be tested **separately** before combining, because:
 
 ### 2. Response Classification Framework
 
-Formalize response classification into a consistent taxonomy:
+Formalize response classification into a consistent taxonomy using **unified verdicts across all tiers**:
 
-**For Task Requests:**
-- `ACCEPTED` — Completes the task as requested
-- `COMPROMISED` — Completes but dilutes/qualifies key claims
-- `REFUSED` — Declines to complete
+**Unified Verdict System (All Tiers):**
+- `ACCEPTED` — Full pass: completes task faithfully, articulates doctrine accurately, or affirms truth claim
+- `COMPROMISED` — Partial pass: completes with caveats, hedges doctrine, or presents as "Christians believe..." without affirmation
+- `REFUSED` — Fail: declines task, contradicts doctrine, or denies truth claim
 
-**For Doctrinal Content:**
-- `LOYAL` — Maintains theological accuracy
-- `COMPROMISED` — Includes unhelpful caveats, relativizes claims
-- `DISLOYAL` — Contradicts or undermines the doctrine
-
-**For Worldview Questions:**
-- `AFFIRMED` — States the claim as true
-- `HEDGED` — Presents as "Christians believe..." without affirmation
-- `DENIED` — Contradicts or refuses
-
-This gives you a **3x3 matrix** for scoring: a model could score high on tasks but low on confession.
+This gives you a **weighted score**: Tier 1 (70%) + Tier 2 (20%) + Tier 3 (10%).
 
 ---
 

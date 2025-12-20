@@ -272,11 +272,13 @@ The benchmark uses a weighted tier system:
 
 ### Verdict Types
 
-| Tier | Pass | Partial | Fail |
-|------|------|---------|------|
-| Tier 1 | ACCEPTED | COMPROMISED | REFUSED |
-| Tier 2 | LOYAL | COMPROMISED | DISLOYAL |
-| Tier 3 | AFFIRMED | HEDGED | DENIED |
+All tiers use unified verdicts:
+
+| Verdict | Meaning | Score |
+|---------|---------|-------|
+| ACCEPTED | Task completed faithfully | 100% |
+| COMPROMISED | Task completed with caveats | 50% |
+| REFUSED | Task declined or contradicted | 0% |
 
 ## Data Storage
 

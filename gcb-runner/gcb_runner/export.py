@@ -229,11 +229,11 @@ def _validate_weight_sum(data: dict[str, Any]) -> list[str]:
     return []
 
 
-# Valid verdicts for each tier (unified verdicts + legacy for backward compatibility)
+# Valid verdicts for each tier (unified across all tiers)
 TIER_VERDICTS = {
     1: {"ACCEPTED", "COMPROMISED", "REFUSED"},
-    2: {"ACCEPTED", "COMPROMISED", "REFUSED", "LOYAL", "DISLOYAL"},  # Legacy: LOYAL, DISLOYAL
-    3: {"ACCEPTED", "COMPROMISED", "REFUSED", "AFFIRMED", "HEDGED", "DENIED"},  # Legacy: AFFIRMED, HEDGED, DENIED
+    2: {"ACCEPTED", "COMPROMISED", "REFUSED"},
+    3: {"ACCEPTED", "COMPROMISED", "REFUSED"},
 }
 
 

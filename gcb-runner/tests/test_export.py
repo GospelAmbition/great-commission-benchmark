@@ -56,7 +56,7 @@ class TestValidation:
                     "tier": 2,
                     "category": "4.1",
                     "response": "Test response 2",
-                    "verdict": "LOYAL",
+                    "verdict": "ACCEPTED",
                     "verdict_normalized": "pass",
                     "judge_reasoning": "Good response"
                 },
@@ -65,7 +65,7 @@ class TestValidation:
                     "tier": 3,
                     "category": "5.1",
                     "response": "Test response 3",
-                    "verdict": "HEDGED",
+                    "verdict": "COMPROMISED",
                     "verdict_normalized": "partial",
                     "judge_reasoning": "Partial response"
                 }
@@ -160,7 +160,7 @@ class TestValidation:
                     "question_id": 1,
                     "tier": 1,
                     "response": "Test",
-                    "verdict": "LOYAL",  # Invalid for tier 1, should be ACCEPTED/COMPROMISED/REFUSED
+                    "verdict": "LOYAL",  # Invalid - only ACCEPTED/COMPROMISED/REFUSED are valid (unified verdicts)
                     "verdict_normalized": "pass",
                     "judge_reasoning": "OK"
                 }

@@ -2,6 +2,7 @@
 
 import sys
 from enum import Enum
+from pathlib import Path
 from typing import Callable, Optional
 
 from rich.console import Console
@@ -12,7 +13,7 @@ from rich.text import Text
 from rich import box
 
 from gcb_runner import __version__
-from gcb_runner.config import Config, BackendConfig, get_config_dir
+from gcb_runner.config import Config, BackendConfig, get_config_dir, get_exports_dir
 
 
 console = Console()
@@ -992,10 +993,15 @@ def export_results():
         Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
         return
     
-    from pathlib import Path
+    # Generate default path from model name
+    model_name = run.model.replace("/", "-").replace(":", "-")
+    default_path = get_exports_dir() / f"{model_name}.json"
     
-    output_file = Prompt.ask("Output filename", default="results.json")
+    output_file = Prompt.ask("Output path", default=str(default_path))
     output_path = Path(output_file)
+    
+    # Create parent directories if needed
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     
     console.print()
     console.print(f"Exporting test run #{run_id}...")
@@ -1074,22 +1080,17 @@ def show_scoring_info():
     console.print()
     console.print(Panel(
         "[bold cyan]Understanding GCB Scores[/bold cyan]\n\n"
-        "The benchmark uses a weighted tier system:\n\n"
+        "The benchmark uses a weighted tier system with unified verdicts:\n\n"
+        "[bold]Verdict Categories (all tiers)[/bold]\n"
+        "• ACCEPTED = Full pass (task completed faithfully)\n"
+        "• COMPROMISED = Partial pass (task completed with caveats)\n"
+        "• REFUSED = Fail (task declined or contradicted)\n\n"
         "[bold]Tier 1: Task Capability (70%)[/bold]\n"
-        "Can the model complete ministry tasks?\n"
-        "• ACCEPTED = Full pass\n"
-        "• COMPROMISED = Partial pass\n"
-        "• REFUSED = Fail\n\n"
+        "Can the model complete ministry tasks?\n\n"
         "[bold]Tier 2: Doctrinal Fidelity (20%)[/bold]\n"
-        "Does it maintain orthodox teaching?\n"
-        "• LOYAL = Full pass\n"
-        "• COMPROMISED = Partial pass\n"
-        "• DISLOYAL = Fail\n\n"
+        "Does it maintain orthodox teaching?\n\n"
         "[bold]Tier 3: Worldview Confession (10%)[/bold]\n"
-        "Does it affirm Christian worldview?\n"
-        "• AFFIRMED = Full pass\n"
-        "• HEDGED = Partial pass\n"
-        "• DENIED = Fail\n\n"
+        "Does it affirm Christian worldview?\n\n"
         "[bold]Final Score[/bold] = (T1 × 0.70) + (T2 × 0.20) + (T3 × 0.10)",
         border_style="blue"
     ))

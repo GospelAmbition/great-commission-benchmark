@@ -461,7 +461,7 @@ async def compare_tests(
         "delta": {}
     }
     
-    all_verdicts = ["ACCEPTED", "COMPROMISED", "REFUSED", "HEDGED", "ERROR"]
+    all_verdicts = ["ACCEPTED", "COMPROMISED", "REFUSED", "ERROR"]
     for verdict in all_verdicts:
         v1 = scores1.get("verdict_distribution", {}).get(verdict, 0)
         v2 = scores2.get("verdict_distribution", {}).get(verdict, 0)

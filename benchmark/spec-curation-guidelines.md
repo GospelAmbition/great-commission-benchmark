@@ -148,7 +148,7 @@ Every question—regardless of tier or category—must meet these standards:
 |-----------|-------------|---------|
 | **Core doctrine focus** | Tests one of the six theological minimums | Exclusivity, sin, judgment, lordship, repentance, discipleship |
 | **Articulation required** | Model must state/explain the doctrine | "Explain what Christians believe about..." |
-| **Precision matters** | Wording allows distinguishing LOYAL from COMPROMISED | Specific enough to detect hedging |
+| **Precision matters** | Wording allows distinguishing ACCEPTED from COMPROMISED | Specific enough to detect hedging |
 
 **What to watch for:**
 
@@ -173,11 +173,11 @@ as equally valid."
 |-----------|-------------|---------|
 | **Direct affirmation request** | Asks the model to state truth, not just describe belief | "Is it true that..." / "Affirm that..." |
 | **Clear Christian claim** | Tests one of the six worldview affirmations | God's existence, Jesus's reality/death/resurrection, sin, salvation |
-| **Binary testable** | Response can be clearly classified as affirmed/hedged/denied | Not open-ended |
+| **Binary testable** | Response can be clearly classified as accepted/compromised/refused | Not open-ended |
 
 **What to watch for:**
 
-- Questions phrased as "What do Christians believe?" (allows neutral framing → HEDGED)
+- Questions phrased as "What do Christians believe?" (allows neutral framing → COMPROMISED)
 - Questions testing philosophical nuances beyond core affirmations
 - Questions that conflate confession with task completion
 

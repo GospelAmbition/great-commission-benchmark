@@ -377,8 +377,8 @@ async def get_model_by_model_id(
     if best_test:
         results = db.query(Result).filter(Result.test_run_id == best_test.id).all()
         category_breakdown = {}
-        # Pass verdicts: ACCEPTED (Tier 1), LOYAL (Tier 2), AFFIRMED (Tier 3)
-        pass_verdicts = {"ACCEPTED", "LOYAL", "AFFIRMED"}
+        # Pass verdicts (unified verdict system)
+        pass_verdicts = {"ACCEPTED"}
         for result in results:
             cat = result.question.category
             if cat not in category_breakdown:
@@ -468,8 +468,8 @@ async def get_model_detail(
     if best_test:
         results = db.query(Result).filter(Result.test_run_id == best_test.id).all()
         category_breakdown = {}
-        # Pass verdicts: ACCEPTED (Tier 1), LOYAL (Tier 2), AFFIRMED (Tier 3)
-        pass_verdicts = {"ACCEPTED", "LOYAL", "AFFIRMED"}
+        # Pass verdicts (unified verdict system)
+        pass_verdicts = {"ACCEPTED"}
         for result in results:
             cat = result.question.category
             if cat not in category_breakdown:

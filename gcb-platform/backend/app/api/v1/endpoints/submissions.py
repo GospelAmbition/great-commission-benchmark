@@ -257,8 +257,8 @@ def _validate_weight_sum(data: dict) -> List[str]:
 
 TIER_VERDICTS = {
     1: {"ACCEPTED", "COMPROMISED", "REFUSED"},
-    2: {"LOYAL", "COMPROMISED", "DISLOYAL"},
-    3: {"AFFIRMED", "HEDGED", "DENIED"},
+    2: {"ACCEPTED", "COMPROMISED", "REFUSED"},
+    3: {"ACCEPTED", "COMPROMISED", "REFUSED"},
 }
 
 
