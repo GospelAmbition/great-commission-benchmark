@@ -272,25 +272,20 @@ def results(
         console.print("[bold]Tier Breakdown:[/bold]")
         
         responses = db.get_responses(run_id)
-        tier_stats = {1: {"pass": 0, "partial": 0, "fail": 0}, 
-                      2: {"pass": 0, "partial": 0, "fail": 0}, 
-                      3: {"pass": 0, "partial": 0, "fail": 0}}
-        
-        verdict_map = {
-            "ACCEPTED": "pass", "LOYAL": "pass", "AFFIRMED": "pass",
-            "COMPROMISED": "partial", "HEDGED": "partial",
-            "REFUSED": "fail", "DISLOYAL": "fail", "DENIED": "fail"
-        }
+        tier_stats = {1: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0}, 
+                      2: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0}, 
+                      3: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0}}
         
         for resp in responses:
-            normalized = verdict_map.get(resp.verdict, "fail")
-            tier_stats[resp.tier][normalized] += 1
+            # Map verdict (handle legacy/ERROR verdicts as REFUSED)
+            verdict = resp.verdict if resp.verdict in tier_stats[resp.tier] else "REFUSED"
+            tier_stats[resp.tier][verdict] += 1
         
         tier_table = Table()
         tier_table.add_column("Tier", style="cyan")
-        tier_table.add_column("Pass", style="green")
-        tier_table.add_column("Partial", style="yellow")
-        tier_table.add_column("Fail", style="red")
+        tier_table.add_column("Accepted", style="green")
+        tier_table.add_column("Compromised", style="yellow")
+        tier_table.add_column("Refused", style="red")
         tier_table.add_column("Weight")
         
         tier_names = {1: "Tier 1: Use Cases", 2: "Tier 2: Theology", 3: "Tier 3: Worldview"}
@@ -298,13 +293,13 @@ def results(
         
         for tier in [1, 2, 3]:
             stats = tier_stats[tier]
-            total = stats["pass"] + stats["partial"] + stats["fail"]
+            total = stats["ACCEPTED"] + stats["COMPROMISED"] + stats["REFUSED"]
             if total > 0:
                 tier_table.add_row(
                     tier_names[tier],
-                    f"{stats['pass']} ({stats['pass']*100//total}%)",
-                    f"{stats['partial']} ({stats['partial']*100//total}%)",
-                    f"{stats['fail']} ({stats['fail']*100//total}%)",
+                    f"{stats['ACCEPTED']} ({stats['ACCEPTED']*100//total}%)",
+                    f"{stats['COMPROMISED']} ({stats['COMPROMISED']*100//total}%)",
+                    f"{stats['REFUSED']} ({stats['REFUSED']*100//total}%)",
                     tier_weights[tier]
                 )
         
@@ -456,6 +451,67 @@ def view(
     start_viewer(db_path, port=port, open_browser=False)
 
 
+@app.command(name="reset-db")
+def reset_database(
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),
+):
+    """Delete and reinitialize the results database.
+    
+    Use this when you want to start testing from scratch. All test runs
+    and results will be permanently deleted.
+    """
+    print_header()
+    console.print()
+    
+    from gcb_runner.config import get_data_dir
+    
+    db_path = get_data_dir() / "results.db"
+    
+    if not db_path.exists():
+        console.print("[yellow]No results database found. Nothing to reset.[/yellow]")
+        return
+    
+    # Show what will be deleted
+    from gcb_runner.results import ResultsDB
+    
+    try:
+        db = ResultsDB()
+        runs = db.list_runs(limit=100)
+        total_runs = len(runs)
+        completed_runs = len([r for r in runs if r.completed_at])
+        
+        console.print(Panel(
+            f"[bold red]⚠️  Database Reset Warning[/bold red]\n\n"
+            f"This will permanently delete:\n"
+            f"  • {total_runs} test run(s) ({completed_runs} completed)\n"
+            f"  • All response data and verdicts\n"
+            f"  • All score history\n\n"
+            f"Database location:\n"
+            f"  {db_path}\n\n"
+            "[dim]This action cannot be undone.[/dim]",
+            border_style="red"
+        ))
+        console.print()
+    except Exception:
+        console.print(f"[dim]Database location: {db_path}[/dim]")
+        console.print()
+    
+    if not force:
+        if not Confirm.ask("[red]Are you sure you want to delete all test data?[/red]", default=False):
+            console.print("[yellow]Reset cancelled.[/yellow]")
+            return
+    
+    # Delete the database file
+    try:
+        db_path.unlink()
+        console.print("[green]✓ Database deleted successfully.[/green]")
+        console.print()
+        console.print("[dim]A new database will be created automatically when you run your next test.[/dim]")
+    except Exception as e:
+        console.print(f"[red]Error deleting database: {e}[/red]")
+        raise typer.Exit(1)
+
+
 @app.command()
 def report(
     run_id: Optional[int] = typer.Option(None, "--run", "-r", help="Test run ID"),
@@ -521,6 +577,7 @@ def show_help(ctx: typer.Context):
         ("gcb-runner export", "Export results to JSON"),
         ("gcb-runner upload", "Upload results to platform"),
         ("gcb-runner versions", "List benchmark versions"),
+        ("gcb-runner reset-db", "Delete and reinitialize results database"),
     ]
     
     table = Table(box=None, show_header=False, padding=(0, 2))

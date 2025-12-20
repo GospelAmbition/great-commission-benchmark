@@ -243,7 +243,6 @@ See [spec-export-schema-validation.md](./spec-export-schema-validation.md) for c
       "category": "3.1",
       "response": "Based on the missiological research...",
       "verdict": "ACCEPTED",
-      "verdict_normalized": "pass",
       "judge_reasoning": "The response accurately addresses...",
       "refusal_type": null,
       "response_time_ms": 2341
@@ -360,8 +359,7 @@ See [spec-export-schema-validation.md](./spec-export-schema-validation.md) for c
 │   │                                                                     │   │
 │   │   Stage 4: Integrity Validation                                     │   │
 │   │   ──────────────────────────────                                    │   │
-│   │   ✓ Verdicts are valid for their tier                              │   │
-│   │   ✓ verdict_normalized matches verdict                              │   │
+│   │   ✓ Verdicts are valid (ACCEPTED/COMPROMISED/REFUSED)              │   │
 │   │   ✓ Tier assignments match benchmark                                │   │
 │   │   ✓ Category assignments match benchmark                            │   │
 │   │                                                                     │   │

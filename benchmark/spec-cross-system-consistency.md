@@ -75,7 +75,6 @@ This format is used when the CLI Runner exports test results for upload to the P
       "category": "3.1",
       "response": "Based on missiological research...",
       "verdict": "ACCEPTED",
-      "verdict_normalized": "pass",
       "judge_reasoning": "The response provides accurate information...",
       "refusal_type": null,
       "response_time_ms": 1234

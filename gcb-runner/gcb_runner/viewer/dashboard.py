@@ -414,9 +414,9 @@ def get_dashboard_html() -> str:
                         <div class="filters">
                             <select id="verdict-filter" onchange="App.filterChanged()">
                                 <option value="">All Verdicts</option>
-                                <option value="pass" ${this.state.verdictFilter === 'pass' ? 'selected' : ''}>Pass</option>
-                                <option value="partial" ${this.state.verdictFilter === 'partial' ? 'selected' : ''}>Partial</option>
-                                <option value="fail" ${this.state.verdictFilter === 'fail' ? 'selected' : ''}>Fail</option>
+                                <option value="ACCEPTED" ${this.state.verdictFilter === 'ACCEPTED' ? 'selected' : ''}>Accepted</option>
+                                <option value="COMPROMISED" ${this.state.verdictFilter === 'COMPROMISED' ? 'selected' : ''}>Compromised</option>
+                                <option value="REFUSED" ${this.state.verdictFilter === 'REFUSED' ? 'selected' : ''}>Refused</option>
                             </select>
                             <select id="tier-filter" onchange="App.filterChanged()">
                                 <option value="">All Tiers</option>
@@ -438,7 +438,7 @@ def get_dashboard_html() -> str:
                                             Tier ${r.tier}${r.category ? ' • ' + r.category : ''}
                                         </span>
                                     </div>
-                                    <span class="badge badge-${r.verdict_normalized}">${r.verdict}</span>
+                                    <span class="badge ${r.verdict === 'ACCEPTED' ? 'badge-pass' : r.verdict === 'COMPROMISED' ? 'badge-partial' : 'badge-fail'}">${r.verdict}</span>
                                 </div>
                                 <div class="response-text">${this.escapeHtml(r.response_text)}</div>
                                 ${r.judge_reasoning ? `
@@ -476,9 +476,9 @@ def get_dashboard_html() -> str:
                 new Chart(document.getElementById('verdictChart'), {
                     type: 'doughnut',
                     data: {
-                        labels: ['Pass', 'Partial', 'Fail'],
+                        labels: ['Accepted', 'Compromised', 'Refused'],
                         datasets: [{
-                            data: [run.pass_count, run.partial_count, run.fail_count],
+                            data: [run.accepted_count, run.compromised_count, run.refused_count],
                             backgroundColor: ['#16a34a', '#d97706', '#dc2626']
                         }]
                     },

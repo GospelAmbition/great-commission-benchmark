@@ -664,7 +664,6 @@ export class ApiClient {
       category: string;
       response: string;
       verdict: string;
-      verdict_normalized: string;
       judge_reasoning?: string;
     }>;
     sample_size: number;

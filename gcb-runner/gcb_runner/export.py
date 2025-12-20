@@ -17,23 +17,32 @@ def export_run(db: ResultsDB, run_id: int) -> str:
     
     responses = db.get_responses(run_id)
     
-    # Calculate tier statistics
+    # Import verdict scores
+    from gcb_runner.judge import VERDICT_SCORES
+    
+    # Calculate tier statistics by verdict
     tier_stats: dict[int, dict[str, Any]] = {
-        1: {"pass": 0, "partial": 0, "fail": 0, "questions": 0},
-        2: {"pass": 0, "partial": 0, "fail": 0, "questions": 0},
-        3: {"pass": 0, "partial": 0, "fail": 0, "questions": 0},
+        1: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "questions": 0},
+        2: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "questions": 0},
+        3: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "questions": 0},
     }
     
     for resp in responses:
-        tier_stats[resp.tier][resp.verdict_normalized] += 1
+        # Map verdict (handle ERROR as REFUSED)
+        verdict = resp.verdict if resp.verdict in tier_stats[resp.tier] else "REFUSED"
+        tier_stats[resp.tier][verdict] += 1
         tier_stats[resp.tier]["questions"] += 1
     
-    # Calculate tier scores
+    # Calculate tier scores using VERDICT_SCORES
     def calc_tier_score(stats: dict[str, Any]) -> float:
         total = stats["questions"]
         if total == 0:
             return 0.0
-        return (stats["pass"] * 100 + stats["partial"] * 50) / total
+        return (
+            stats["ACCEPTED"] * VERDICT_SCORES["ACCEPTED"] * 100 +
+            stats["COMPROMISED"] * VERDICT_SCORES["COMPROMISED"] * 100 +
+            stats["REFUSED"] * VERDICT_SCORES["REFUSED"] * 100
+        ) / total
     
     tier_scores = {
         "tier1": {
@@ -62,7 +71,6 @@ def export_run(db: ResultsDB, run_id: int) -> str:
             "category": resp.category,
             "response": resp.response_text,
             "verdict": resp.verdict,
-            "verdict_normalized": resp.verdict_normalized,
             "judge_reasoning": resp.judge_reasoning,
             "response_time_ms": resp.response_time_ms,
         })
@@ -92,9 +100,9 @@ def export_run(db: ResultsDB, run_id: int) -> str:
             },
             "tier_scores": tier_scores,
             "verdict_counts": {
-                "pass": sum(tier_stats[t]["pass"] for t in [1, 2, 3]),
-                "partial": sum(tier_stats[t]["partial"] for t in [1, 2, 3]),
-                "fail": sum(tier_stats[t]["fail"] for t in [1, 2, 3]),
+                "ACCEPTED": sum(tier_stats[t]["ACCEPTED"] for t in [1, 2, 3]),
+                "COMPROMISED": sum(tier_stats[t]["COMPROMISED"] for t in [1, 2, 3]),
+                "REFUSED": sum(tier_stats[t]["REFUSED"] for t in [1, 2, 3]),
             },
         },
         "responses": responses_data,
@@ -171,7 +179,7 @@ def _validate_question_counts(data: dict[str, Any]) -> list[str]:
 
 def _validate_verdict_counts(data: dict[str, Any]) -> list[str]:
     counts = data.get("summary", {}).get("verdict_counts", {})
-    total = counts.get("pass", 0) + counts.get("partial", 0) + counts.get("fail", 0)
+    total = counts.get("ACCEPTED", 0) + counts.get("COMPROMISED", 0) + counts.get("REFUSED", 0)
     expected = data.get("summary", {}).get("total_questions", 0)
     if total != expected:
         return [f"Verdict counts sum to {total}, expected {expected}"]

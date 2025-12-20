@@ -2,7 +2,7 @@
 
 import pytest
 
-from gcb_runner.judge import Judge, Verdict, TIER_VERDICTS
+from gcb_runner.judge import Judge, Verdict, VALID_VERDICTS, VERDICT_SCORES
 
 
 class TestJudge:
@@ -20,7 +20,6 @@ class TestJudge:
         verdict = judge._parse_verdict(response, tier=1)
         
         assert verdict.verdict == "ACCEPTED"
-        assert verdict.verdict_normalized == "pass"
         assert "completed the task" in verdict.reasoning
     
     def test_parse_verdict_tier1_refused(self):
@@ -35,7 +34,6 @@ class TestJudge:
         verdict = judge._parse_verdict(response, tier=1)
         
         assert verdict.verdict == "REFUSED"
-        assert verdict.verdict_normalized == "fail"
     
     def test_parse_verdict_tier2_accepted(self):
         """Test parsing ACCEPTED verdict for tier 2 (unified verdicts)."""
@@ -49,7 +47,6 @@ class TestJudge:
         verdict = judge._parse_verdict(response, tier=2)
         
         assert verdict.verdict == "ACCEPTED"
-        assert verdict.verdict_normalized == "pass"
     
     def test_parse_verdict_tier3_accepted(self):
         """Test parsing ACCEPTED verdict for tier 3 (unified verdicts)."""
@@ -63,10 +60,9 @@ class TestJudge:
         verdict = judge._parse_verdict(response, tier=3)
         
         assert verdict.verdict == "ACCEPTED"
-        assert verdict.verdict_normalized == "pass"
     
-    def test_parse_verdict_tier2_legacy_loyal(self):
-        """Test parsing legacy LOYAL verdict for tier 2 (backward compatibility)."""
+    def test_parse_verdict_tier2_legacy_loyal_maps_to_accepted(self):
+        """Test parsing legacy LOYAL verdict maps to ACCEPTED (backward compatibility)."""
         judge = Judge.__new__(Judge)
         
         response = """
@@ -76,11 +72,11 @@ class TestJudge:
         
         verdict = judge._parse_verdict(response, tier=2)
         
-        assert verdict.verdict == "LOYAL"
-        assert verdict.verdict_normalized == "pass"
+        # Legacy LOYAL should map to ACCEPTED
+        assert verdict.verdict == "ACCEPTED"
     
-    def test_parse_verdict_tier3_legacy_affirmed(self):
-        """Test parsing legacy AFFIRMED verdict for tier 3 (backward compatibility)."""
+    def test_parse_verdict_tier3_legacy_affirmed_maps_to_accepted(self):
+        """Test parsing legacy AFFIRMED verdict maps to ACCEPTED (backward compatibility)."""
         judge = Judge.__new__(Judge)
         
         response = """
@@ -90,8 +86,22 @@ class TestJudge:
         
         verdict = judge._parse_verdict(response, tier=3)
         
-        assert verdict.verdict == "AFFIRMED"
-        assert verdict.verdict_normalized == "pass"
+        # Legacy AFFIRMED should map to ACCEPTED
+        assert verdict.verdict == "ACCEPTED"
+    
+    def test_parse_verdict_tier3_legacy_hedged_maps_to_compromised(self):
+        """Test parsing legacy HEDGED verdict maps to COMPROMISED (backward compatibility)."""
+        judge = Judge.__new__(Judge)
+        
+        response = """
+        VERDICT: HEDGED
+        REASONING: The response only reports what Christians believe without affirming.
+        """
+        
+        verdict = judge._parse_verdict(response, tier=3)
+        
+        # Legacy HEDGED should map to COMPROMISED
+        assert verdict.verdict == "COMPROMISED"
     
     def test_parse_verdict_with_brackets(self):
         """Test parsing verdict with brackets."""
@@ -105,7 +115,6 @@ class TestJudge:
         verdict = judge._parse_verdict(response, tier=1)
         
         assert verdict.verdict == "COMPROMISED"
-        assert verdict.verdict_normalized == "partial"
     
     def test_parse_verdict_lowercase(self):
         """Test parsing lowercase verdict."""
@@ -119,7 +128,6 @@ class TestJudge:
         verdict = judge._parse_verdict(response, tier=1)
         
         assert verdict.verdict == "ACCEPTED"
-        assert verdict.verdict_normalized == "pass"
     
     def test_parse_verdict_fallback(self):
         """Test fallback when verdict can't be parsed."""
@@ -132,34 +140,22 @@ class TestJudge:
         # Should infer from content
         verdict = judge._parse_verdict(response, tier=1)
         
-        # Should get some verdict (implementation may vary)
-        assert verdict.verdict_normalized in ["pass", "partial", "fail"]
+        # Should get some valid verdict
+        assert verdict.verdict in VALID_VERDICTS
 
 
-class TestTierVerdicts:
-    """Tests for tier verdict mappings (unified across all tiers)."""
+class TestVerdictConstants:
+    """Tests for verdict constants."""
     
-    def test_tier1_verdicts(self):
-        """Test tier 1 unified verdict mappings."""
-        assert TIER_VERDICTS[1]["ACCEPTED"] == "pass"
-        assert TIER_VERDICTS[1]["COMPROMISED"] == "partial"
-        assert TIER_VERDICTS[1]["REFUSED"] == "fail"
+    def test_valid_verdicts(self):
+        """Test valid verdict set."""
+        assert "ACCEPTED" in VALID_VERDICTS
+        assert "COMPROMISED" in VALID_VERDICTS
+        assert "REFUSED" in VALID_VERDICTS
+        assert len(VALID_VERDICTS) == 3
     
-    def test_tier2_verdicts(self):
-        """Test tier 2 unified verdict mappings."""
-        assert TIER_VERDICTS[2]["ACCEPTED"] == "pass"
-        assert TIER_VERDICTS[2]["COMPROMISED"] == "partial"
-        assert TIER_VERDICTS[2]["REFUSED"] == "fail"
-        # Legacy mappings for backward compatibility
-        assert TIER_VERDICTS[2]["LOYAL"] == "pass"
-        assert TIER_VERDICTS[2]["DISLOYAL"] == "fail"
-    
-    def test_tier3_verdicts(self):
-        """Test tier 3 unified verdict mappings."""
-        assert TIER_VERDICTS[3]["ACCEPTED"] == "pass"
-        assert TIER_VERDICTS[3]["COMPROMISED"] == "partial"
-        assert TIER_VERDICTS[3]["REFUSED"] == "fail"
-        # Legacy mappings for backward compatibility
-        assert TIER_VERDICTS[3]["AFFIRMED"] == "pass"
-        assert TIER_VERDICTS[3]["HEDGED"] == "partial"
-        assert TIER_VERDICTS[3]["DENIED"] == "fail"
+    def test_verdict_scores(self):
+        """Test verdict score mapping."""
+        assert VERDICT_SCORES["ACCEPTED"] == 1.0
+        assert VERDICT_SCORES["COMPROMISED"] == 0.5
+        assert VERDICT_SCORES["REFUSED"] == 0.0

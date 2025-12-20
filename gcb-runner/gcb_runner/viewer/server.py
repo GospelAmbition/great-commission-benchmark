@@ -108,15 +108,17 @@ class ViewerHandler(BaseHTTPRequestHandler):
         
         # Get verdict counts
         verdict_cursor = conn.execute("""
-            SELECT verdict_normalized, COUNT(*) as count
+            SELECT verdict, COUNT(*) as count
             FROM responses
             WHERE test_run_id = ?
-            GROUP BY verdict_normalized
+            GROUP BY verdict
         """, (run_id,))
         
-        verdict_counts = {"pass": 0, "partial": 0, "fail": 0}
+        verdict_counts = {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0}
         for vrow in verdict_cursor:
-            verdict_counts[vrow["verdict_normalized"]] = vrow["count"]
+            # Map legacy/ERROR verdicts to REFUSED
+            verdict = vrow["verdict"] if vrow["verdict"] in verdict_counts else "REFUSED"
+            verdict_counts[verdict] += vrow["count"]
         
         return {
             "id": row["id"],
@@ -130,9 +132,9 @@ class ViewerHandler(BaseHTTPRequestHandler):
             "tier3_score": row["tier3_score"],
             "started_at": row["started_at"],
             "completed_at": row["completed_at"],
-            "pass_count": verdict_counts["pass"],
-            "partial_count": verdict_counts["partial"],
-            "fail_count": verdict_counts["fail"],
+            "accepted_count": verdict_counts["ACCEPTED"],
+            "compromised_count": verdict_counts["COMPROMISED"],
+            "refused_count": verdict_counts["REFUSED"],
         }
     
     def _get_responses(self, conn, run_id, params):
@@ -147,7 +149,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
         query_params = [run_id]
         
         if verdict_filter:
-            query += " AND verdict_normalized = ?"
+            query += " AND verdict = ?"
             query_params.append(verdict_filter)
         
         if tier_filter:
@@ -172,7 +174,6 @@ class ViewerHandler(BaseHTTPRequestHandler):
                 "category": row["category"],
                 "response_text": row["response_text"][:500] + "..." if len(row["response_text"]) > 500 else row["response_text"],
                 "verdict": row["verdict"],
-                "verdict_normalized": row["verdict_normalized"],
                 "judge_reasoning": row["judge_reasoning"],
                 "response_time_ms": row["response_time_ms"],
             })

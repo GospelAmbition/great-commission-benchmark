@@ -194,7 +194,11 @@ def _validate_question_counts(data: dict) -> List[str]:
 def _validate_verdict_counts(data: dict) -> List[str]:
     """Validate verdict counts sum to total questions"""
     counts = data.get("summary", {}).get("verdict_counts", {})
-    total = counts.get("pass", 0) + counts.get("partial", 0) + counts.get("fail", 0)
+    # Support both new format (ACCEPTED/COMPROMISED/REFUSED) and legacy (pass/partial/fail)
+    total = (
+        counts.get("ACCEPTED", 0) + counts.get("COMPROMISED", 0) + counts.get("REFUSED", 0) +
+        counts.get("pass", 0) + counts.get("partial", 0) + counts.get("fail", 0)
+    )
     expected = data.get("summary", {}).get("total_questions", 0)
     if total != expected:
         return [f"Verdict counts sum to {total}, expected {expected}"]

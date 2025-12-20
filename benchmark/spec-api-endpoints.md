@@ -667,7 +667,6 @@ Get detailed results for a test run (individual responses).
       "question_preview": "Provide missiological research on...",
       "response_preview": "Based on the research...",
       "verdict": "ACCEPTED",
-      "verdict_normalized": "pass",
       "judge_reasoning": "The response provides accurate...",
       "refusal_type": null
     }

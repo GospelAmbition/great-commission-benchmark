@@ -151,11 +151,11 @@ async def run_benchmark(
         # Initialize judge
         judge = Judge(judge_backend, judge_model, judge_prompts)
         
-        # Run tests by tier
+        # Run tests by tier - track by verdict
         tier_results: dict[int, dict[str, int]] = {
-            1: {"pass": 0, "partial": 0, "fail": 0},
-            2: {"pass": 0, "partial": 0, "fail": 0},
-            3: {"pass": 0, "partial": 0, "fail": 0},
+            1: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0},
+            2: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0},
+            3: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0},
         }
         
         tier_names = {1: "Tier 1 - Use Cases (70%)", 2: "Tier 2 - Theology (20%)", 3: "Tier 3 - Worldview (10%)"}
@@ -198,11 +198,10 @@ async def run_benchmark(
                         verdict = await judge.evaluate(question, response_text)
                     except Exception as e:
                         console.print(f"[red]Error judging question {question_id}: {e}[/red]")
-                        # Default to fail on judge error
+                        # Default to REFUSED on judge error
                         from gcb_runner.judge import Verdict
                         verdict = Verdict(
-                            verdict="ERROR",
-                            verdict_normalized="fail",
+                            verdict="REFUSED",
                             reasoning=f"Judge error: {e}",
                         )
                     
@@ -214,21 +213,27 @@ async def run_benchmark(
                         category=question.get("category"),
                         response_text=response_text,
                         verdict=verdict.verdict,
-                        verdict_normalized=verdict.verdict_normalized,
                         judge_reasoning=verdict.reasoning,
                         response_time_ms=response_time_ms,
                     )
                     
-                    tier_results[tier][verdict.verdict_normalized] += 1
+                    # Track verdict (treat ERROR as REFUSED for counting)
+                    count_verdict = verdict.verdict if verdict.verdict in tier_results[tier] else "REFUSED"
+                    tier_results[tier][count_verdict] += 1
                     progress.update(task, advance=1)
         
-        # Calculate scores
+        # Calculate scores using VERDICT_SCORES
+        from gcb_runner.judge import VERDICT_SCORES
         tier_scores = {}
         for tier in [1, 2, 3]:
-            total = tier_results[tier]["pass"] + tier_results[tier]["partial"] + tier_results[tier]["fail"]
+            total = tier_results[tier]["ACCEPTED"] + tier_results[tier]["COMPROMISED"] + tier_results[tier]["REFUSED"]
             if total > 0:
-                # Pass = 1.0, Partial = 0.5, Fail = 0.0
-                score = (tier_results[tier]["pass"] * 1.0 + tier_results[tier]["partial"] * 0.5) / total * 100
+                # ACCEPTED = 1.0, COMPROMISED = 0.5, REFUSED = 0.0
+                score = (
+                    tier_results[tier]["ACCEPTED"] * VERDICT_SCORES["ACCEPTED"] +
+                    tier_results[tier]["COMPROMISED"] * VERDICT_SCORES["COMPROMISED"] +
+                    tier_results[tier]["REFUSED"] * VERDICT_SCORES["REFUSED"]
+                ) / total * 100
             else:
                 score = 0
             tier_scores[tier] = score
@@ -269,9 +274,9 @@ async def run_benchmark(
         
         table = Table()
         table.add_column("Tier", style="cyan")
-        table.add_column("Pass", style="green", justify="right")
-        table.add_column("Partial", style="yellow", justify="right")
-        table.add_column("Fail", style="red", justify="right")
+        table.add_column("Accepted", style="green", justify="right")
+        table.add_column("Compromised", style="yellow", justify="right")
+        table.add_column("Refused", style="red", justify="right")
         table.add_column("Weight", justify="right")
         
         tier_display_names = {
@@ -283,28 +288,28 @@ async def run_benchmark(
         
         for tier in [1, 2, 3]:
             stats = tier_results[tier]
-            total = stats["pass"] + stats["partial"] + stats["fail"]
+            total = stats["ACCEPTED"] + stats["COMPROMISED"] + stats["REFUSED"]
             if total > 0:
                 table.add_row(
                     tier_display_names[tier],
-                    f"{stats['pass']} ({stats['pass']*100//total}%)",
-                    f"{stats['partial']} ({stats['partial']*100//total}%)",
-                    f"{stats['fail']} ({stats['fail']*100//total}%)",
+                    f"{stats['ACCEPTED']} ({stats['ACCEPTED']*100//total}%)",
+                    f"{stats['COMPROMISED']} ({stats['COMPROMISED']*100//total}%)",
+                    f"{stats['REFUSED']} ({stats['REFUSED']*100//total}%)",
                     tier_weights[tier],
                 )
         
         # Add total row
-        total_pass = sum(tier_results[t]["pass"] for t in [1, 2, 3])
-        total_partial = sum(tier_results[t]["partial"] for t in [1, 2, 3])
-        total_fail = sum(tier_results[t]["fail"] for t in [1, 2, 3])
-        total_all = total_pass + total_partial + total_fail
+        total_accepted = sum(tier_results[t]["ACCEPTED"] for t in [1, 2, 3])
+        total_compromised = sum(tier_results[t]["COMPROMISED"] for t in [1, 2, 3])
+        total_refused = sum(tier_results[t]["REFUSED"] for t in [1, 2, 3])
+        total_all = total_accepted + total_compromised + total_refused
         
         if total_all > 0:
             table.add_row(
                 "[bold]OVERALL (weighted)[/bold]",
-                f"[bold]{total_pass} ({total_pass*100//total_all}%)[/bold]",
-                f"[bold]{total_partial} ({total_partial*100//total_all}%)[/bold]",
-                f"[bold]{total_fail} ({total_fail*100//total_all}%)[/bold]",
+                f"[bold]{total_accepted} ({total_accepted*100//total_all}%)[/bold]",
+                f"[bold]{total_compromised} ({total_compromised*100//total_all}%)[/bold]",
+                f"[bold]{total_refused} ({total_refused*100//total_all}%)[/bold]",
                 "[bold]100%[/bold]",
             )
         

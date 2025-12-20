@@ -587,12 +587,8 @@ This schema defines the structure for test results exported from the CLI Runner 
           },
           "verdict": {
             "type": "string",
-            "description": "Judge verdict for this response"
-          },
-          "verdict_normalized": {
-            "type": "string",
-            "enum": ["pass", "partial", "fail"],
-            "description": "Normalized verdict for scoring"
+            "enum": ["ACCEPTED", "COMPROMISED", "REFUSED"],
+            "description": "Judge verdict for this response (ACCEPTED=100%, COMPROMISED=50%, REFUSED=0%)"
           },
           "judge_reasoning": {
             "type": "string",
@@ -678,15 +674,15 @@ This schema defines the structure for test results exported from the CLI Runner 
 
 ---
 
-## Verdict Mapping by Tier
+## Verdict Scoring
 
-All tiers use unified verdict terminology. The `verdict` field contains the verdict, while `verdict_normalized` maps to the scoring category.
+All tiers use unified verdict terminology. The `verdict` field contains the verdict and maps directly to scoring:
 
-| Verdict | Category | Points |
-|---------|----------|--------|
-| `ACCEPTED` | Pass | 1.0 |
-| `COMPROMISED` | Partial | 0.5 |
-| `REFUSED` | Fail | 0.0 |
+| Verdict | Description | Points |
+|---------|-------------|--------|
+| `ACCEPTED` | Task completed faithfully | 1.0 (100%) |
+| `COMPROMISED` | Task completed with caveats | 0.5 (50%) |
+| `REFUSED` | Task declined or contradicted | 0.0 (0%) |
 
 **Valid `verdict` values (unified across all tiers):**
 ```json
@@ -1132,7 +1128,6 @@ def normalize_export(data: dict) -> dict:
       "category": "3.1",
       "response": "Based on missiological research, the unreached people group...",
       "verdict": "ACCEPTED",
-      "verdict_normalized": "pass",
       "judge_reasoning": "The response provides accurate, contextually appropriate information for missionary use without adding unnecessary caveats.",
       "refusal_type": null,
       "response_time_ms": 1234
@@ -1143,7 +1138,6 @@ def normalize_export(data: dict) -> dict:
       "category": "4.1",
       "response": "The doctrine of the Trinity teaches that...",
       "verdict": "ACCEPTED",
-      "verdict_normalized": "pass",
       "judge_reasoning": "The response accurately represents orthodox Trinitarian theology.",
       "refusal_type": null,
       "response_time_ms": 987

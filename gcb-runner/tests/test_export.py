@@ -36,9 +36,9 @@ class TestValidation:
                     "tier3": {"raw": 87.0, "weighted": 8.7, "questions": 1}
                 },
                 "verdict_counts": {
-                    "pass": 2,
-                    "partial": 1,
-                    "fail": 0
+                    "ACCEPTED": 2,
+                    "COMPROMISED": 1,
+                    "REFUSED": 0
                 }
             },
             "responses": [
@@ -48,7 +48,6 @@ class TestValidation:
                     "category": "3.1",
                     "response": "Test response",
                     "verdict": "ACCEPTED",
-                    "verdict_normalized": "pass",
                     "judge_reasoning": "Good response"
                 },
                 {
@@ -57,7 +56,6 @@ class TestValidation:
                     "category": "4.1",
                     "response": "Test response 2",
                     "verdict": "ACCEPTED",
-                    "verdict_normalized": "pass",
                     "judge_reasoning": "Good response"
                 },
                 {
@@ -66,7 +64,6 @@ class TestValidation:
                     "category": "5.1",
                     "response": "Test response 3",
                     "verdict": "COMPROMISED",
-                    "verdict_normalized": "partial",
                     "judge_reasoning": "Partial response"
                 }
             ],
@@ -116,10 +113,10 @@ class TestValidation:
                     "tier2": {"raw": 0, "weighted": 0, "questions": 0},
                     "tier3": {"raw": 0, "weighted": 0, "questions": 0}
                 },
-                "verdict_counts": {"pass": 1, "partial": 0, "fail": 0}
+                "verdict_counts": {"ACCEPTED": 1, "COMPROMISED": 0, "REFUSED": 0}
             },
             "responses": [
-                {"question_id": 1, "tier": 1, "response": "Test", "verdict": "ACCEPTED", "verdict_normalized": "pass", "judge_reasoning": "OK"}
+                {"question_id": 1, "tier": 1, "response": "Test", "verdict": "ACCEPTED", "judge_reasoning": "OK"}
             ],
             "metadata": {
                 "cli_version": "0.1.0",
@@ -133,7 +130,7 @@ class TestValidation:
         assert any("count mismatch" in e.lower() for e in errors)
     
     def test_invalid_verdict_for_tier(self):
-        """Test validation with invalid verdict for tier."""
+        """Test validation with invalid verdict."""
         export_data = {
             "format_version": "1.0",
             "test_run": {
@@ -153,15 +150,14 @@ class TestValidation:
                     "tier2": {"raw": 0, "weighted": 0, "questions": 0},
                     "tier3": {"raw": 0, "weighted": 0, "questions": 0}
                 },
-                "verdict_counts": {"pass": 1, "partial": 0, "fail": 0}
+                "verdict_counts": {"ACCEPTED": 1, "COMPROMISED": 0, "REFUSED": 0}
             },
             "responses": [
                 {
                     "question_id": 1,
                     "tier": 1,
                     "response": "Test",
-                    "verdict": "LOYAL",  # Invalid - only ACCEPTED/COMPROMISED/REFUSED are valid (unified verdicts)
-                    "verdict_normalized": "pass",
+                    "verdict": "LOYAL",  # Invalid - only ACCEPTED/COMPROMISED/REFUSED are valid
                     "judge_reasoning": "OK"
                 }
             ],
@@ -201,10 +197,10 @@ class TestValidation:
                     "tier2": {"raw": 0, "weighted": 0, "questions": 0},
                     "tier3": {"raw": 0, "weighted": 0, "questions": 0}
                 },
-                "verdict_counts": {"pass": 1, "partial": 0, "fail": 0}
+                "verdict_counts": {"ACCEPTED": 1, "COMPROMISED": 0, "REFUSED": 0}
             },
             "responses": [
-                {"question_id": 1, "tier": 1, "response": "Test", "verdict": "ACCEPTED", "verdict_normalized": "pass", "judge_reasoning": "OK"}
+                {"question_id": 1, "tier": 1, "response": "Test", "verdict": "ACCEPTED", "judge_reasoning": "OK"}
             ],
             "metadata": {
                 "cli_version": "0.1.0",

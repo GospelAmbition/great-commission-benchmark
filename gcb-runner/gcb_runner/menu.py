@@ -378,9 +378,10 @@ def config_menu() -> MenuAction:
             ("3", "Set Judge Model"),
             ("4", "View Current Config"),
             ("5", "Reset All Settings"),
+            ("6", "Reset Results Database"),
         ])
         
-        choice = get_choice(["0", "1", "2", "3", "4", "5"])
+        choice = get_choice(["0", "1", "2", "3", "4", "5", "6"])
         
         if choice == "0":
             return MenuAction.BACK
@@ -394,6 +395,8 @@ def config_menu() -> MenuAction:
             view_config()
         elif choice == "5":
             reset_config()
+        elif choice == "6":
+            reset_database()
 
 
 def configure_platform_key():
@@ -564,6 +567,64 @@ def reset_config():
         console.print("[green]✓ Configuration reset to defaults[/green]")
     else:
         console.print("[yellow]Reset cancelled[/yellow]")
+    
+    console.print()
+    Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
+
+
+def reset_database():
+    """Reset the results database."""
+    console.print()
+    
+    from gcb_runner.config import get_data_dir
+    
+    db_path = get_data_dir() / "results.db"
+    
+    if not db_path.exists():
+        console.print("[yellow]No results database found. Nothing to reset.[/yellow]")
+        console.print()
+        Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
+        return
+    
+    # Show what will be deleted
+    from gcb_runner.results import ResultsDB
+    
+    try:
+        db = ResultsDB()
+        runs = db.list_runs(limit=100)
+        total_runs = len(runs)
+        completed_runs = len([r for r in runs if r.completed_at])
+        
+        console.print(Panel(
+            f"[bold red]⚠️  Database Reset Warning[/bold red]\n\n"
+            f"This will permanently delete:\n"
+            f"  • {total_runs} test run(s) ({completed_runs} completed)\n"
+            f"  • All response data and verdicts\n"
+            f"  • All score history\n\n"
+            f"Database location:\n"
+            f"  {db_path}\n\n"
+            "[dim]This action cannot be undone.[/dim]",
+            border_style="red"
+        ))
+        console.print()
+    except Exception:
+        console.print(f"[dim]Database location: {db_path}[/dim]")
+        console.print()
+    
+    if not Confirm.ask("[red]Are you sure you want to delete all test data?[/red]", default=False):
+        console.print("[yellow]Reset cancelled.[/yellow]")
+        console.print()
+        Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
+        return
+    
+    # Delete the database file
+    try:
+        db_path.unlink()
+        console.print("[green]✓ Database deleted successfully.[/green]")
+        console.print()
+        console.print("[dim]A new database will be created automatically when you run your next test.[/dim]")
+    except Exception as e:
+        console.print(f"[red]Error deleting database: {e}[/red]")
     
     console.print()
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")

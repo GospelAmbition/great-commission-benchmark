@@ -53,15 +53,17 @@ def _get_run_detail(conn, run_id: int) -> dict[str, Any]:
     
     # Get verdict counts
     verdict_cursor = conn.execute("""
-        SELECT verdict_normalized, COUNT(*) as count
+        SELECT verdict, COUNT(*) as count
         FROM responses
         WHERE test_run_id = ?
-        GROUP BY verdict_normalized
+        GROUP BY verdict
     """, (run_id,))
     
-    verdict_counts = {"pass": 0, "partial": 0, "fail": 0}
+    verdict_counts = {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0}
     for vrow in verdict_cursor:
-        verdict_counts[vrow["verdict_normalized"]] = vrow["count"]
+        # Map legacy/ERROR verdicts to REFUSED
+        verdict = vrow["verdict"] if vrow["verdict"] in verdict_counts else "REFUSED"
+        verdict_counts[verdict] += vrow["count"]
     
     return {
         "id": row["id"],
@@ -75,9 +77,9 @@ def _get_run_detail(conn, run_id: int) -> dict[str, Any]:
         "tier3_score": row["tier3_score"],
         "started_at": row["started_at"],
         "completed_at": row["completed_at"],
-        "pass_count": verdict_counts["pass"],
-        "partial_count": verdict_counts["partial"],
-        "fail_count": verdict_counts["fail"],
+        "accepted_count": verdict_counts["ACCEPTED"],
+        "compromised_count": verdict_counts["COMPROMISED"],
+        "refused_count": verdict_counts["REFUSED"],
     }
 
 
@@ -85,7 +87,7 @@ def _get_all_responses(conn, run_id: int) -> list[dict[str, Any]]:
     """Get all responses for a run."""
     cursor = conn.execute("""
         SELECT id, question_id, tier, category, response_text,
-               verdict, verdict_normalized, judge_reasoning, response_time_ms
+               verdict, judge_reasoning, response_time_ms
         FROM responses
         WHERE test_run_id = ?
         ORDER BY tier, id
@@ -100,7 +102,6 @@ def _get_all_responses(conn, run_id: int) -> list[dict[str, Any]]:
             "category": row["category"],
             "response_text": row["response_text"],
             "verdict": row["verdict"],
-            "verdict_normalized": row["verdict_normalized"],
             "judge_reasoning": row["judge_reasoning"],
             "response_time_ms": row["response_time_ms"],
         })
@@ -242,9 +243,39 @@ def _get_report_template(
             padding: 0.75rem;
             border-radius: 4px;
             font-size: 0.875rem;
-            max-height: 150px;
-            overflow-y: auto;
             white-space: pre-wrap;
+        }}
+        
+        .response-text.collapsed {{
+            max-height: 100px;
+            overflow: hidden;
+            position: relative;
+        }}
+        
+        .response-text.collapsed::after {{
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(transparent, var(--bg));
+            pointer-events: none;
+        }}
+        
+        .toggle-btn {{
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }}
+        
+        .toggle-btn:hover {{
+            opacity: 0.9;
         }}
         
         .chart-container {{
@@ -318,16 +349,16 @@ def _get_report_template(
             <h2>Test Details</h2>
             <div class="grid">
                 <div class="stat-box">
-                    <div class="stat-value">{run["pass_count"]}</div>
-                    <div class="stat-label">Passed</div>
+                    <div class="stat-value">{run["accepted_count"]}</div>
+                    <div class="stat-label">Accepted</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value">{run["partial_count"]}</div>
-                    <div class="stat-label">Partial</div>
+                    <div class="stat-value">{run["compromised_count"]}</div>
+                    <div class="stat-label">Compromised</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value">{run["fail_count"]}</div>
-                    <div class="stat-label">Failed</div>
+                    <div class="stat-value">{run["refused_count"]}</div>
+                    <div class="stat-label">Refused</div>
                 </div>
             </div>
             <table style="margin-top: 1rem;">
@@ -344,9 +375,9 @@ def _get_report_template(
             <div class="filters">
                 <select id="verdict-filter" onchange="filterResponses()">
                     <option value="">All Verdicts</option>
-                    <option value="pass">Pass</option>
-                    <option value="partial">Partial</option>
-                    <option value="fail">Fail</option>
+                    <option value="ACCEPTED">Accepted</option>
+                    <option value="COMPROMISED">Compromised</option>
+                    <option value="REFUSED">Refused</option>
                 </select>
                 <select id="tier-filter" onchange="filterResponses()">
                     <option value="">All Tiers</option>
@@ -371,9 +402,9 @@ def _get_report_template(
         new Chart(document.getElementById('verdictChart'), {{
             type: 'doughnut',
             data: {{
-                labels: ['Pass', 'Partial', 'Fail'],
+                labels: ['Accepted', 'Compromised', 'Refused'],
                 datasets: [{{
-                    data: [RUN.pass_count, RUN.partial_count, RUN.fail_count],
+                    data: [RUN.accepted_count, RUN.compromised_count, RUN.refused_count],
                     backgroundColor: ['#16a34a', '#d97706', '#dc2626']
                 }}]
             }},
@@ -414,7 +445,7 @@ def _get_report_template(
             const tier = document.getElementById('tier-filter').value;
             
             let filtered = RESPONSES;
-            if (verdict) filtered = filtered.filter(r => r.verdict_normalized === verdict);
+            if (verdict) filtered = filtered.filter(r => r.verdict === verdict);
             if (tier) filtered = filtered.filter(r => r.tier === parseInt(tier));
             
             renderResponses(filtered);
@@ -428,23 +459,40 @@ def _get_report_template(
                 return;
             }}
             
-            let html = '<table><thead><tr><th>Q#</th><th>Tier</th><th>Verdict</th><th>Response (truncated)</th></tr></thead><tbody>';
+            let html = '<table><thead><tr><th>Q#</th><th>Tier</th><th>Verdict</th><th>Response</th></tr></thead><tbody>';
             
-            responses.forEach(r => {{
-                const badgeClass = r.verdict_normalized === 'pass' ? 'badge-pass' : 
-                                   r.verdict_normalized === 'partial' ? 'badge-partial' : 'badge-fail';
-                const truncated = r.response_text.length > 200 ? r.response_text.substring(0, 200) + '...' : r.response_text;
+            responses.forEach((r, idx) => {{
+                const badgeClass = r.verdict === 'ACCEPTED' ? 'badge-pass' : 
+                                   r.verdict === 'COMPROMISED' ? 'badge-partial' : 'badge-fail';
+                const isLong = r.response_text.length > 200;
+                const collapsedClass = isLong ? 'collapsed' : '';
+                const toggleBtn = isLong ? `<button class="toggle-btn" onclick="toggleResponse(${{idx}})">Show more</button>` : '';
                 
                 html += `<tr>
                     <td>Q${{r.question_id}}</td>
                     <td>${{r.tier}}</td>
                     <td><span class="badge ${{badgeClass}}">${{r.verdict}}</span></td>
-                    <td><div class="response-text">${{escapeHtml(truncated)}}</div></td>
+                    <td>
+                        <div class="response-text ${{collapsedClass}}" id="response-${{idx}}">${{escapeHtml(r.response_text)}}</div>
+                        ${{toggleBtn}}
+                    </td>
                 </tr>`;
             }});
             
             html += '</tbody></table>';
             container.innerHTML = html;
+        }}
+        
+        function toggleResponse(idx) {{
+            const el = document.getElementById('response-' + idx);
+            const btn = el.nextElementSibling;
+            if (el.classList.contains('collapsed')) {{
+                el.classList.remove('collapsed');
+                btn.textContent = 'Show less';
+            }} else {{
+                el.classList.add('collapsed');
+                btn.textContent = 'Show more';
+            }}
         }}
         
         // Initial render

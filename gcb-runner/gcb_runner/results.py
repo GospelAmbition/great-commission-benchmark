@@ -44,8 +44,7 @@ class Response(Base):
     tier = Column(Integer, nullable=False)
     category = Column(String(32), nullable=True)
     response_text = Column(Text, nullable=False)
-    verdict = Column(String(32), nullable=False)
-    verdict_normalized = Column(String(16), nullable=False)  # pass, partial, fail
+    verdict = Column(String(32), nullable=False)  # ACCEPTED, COMPROMISED, REFUSED
     judge_reasoning = Column(Text, nullable=True)
     response_time_ms = Column(Integer, nullable=True)
     
@@ -95,7 +94,6 @@ class ResultsDB:
         tier: int,
         response_text: str,
         verdict: str,
-        verdict_normalized: str,
         category: str | None = None,
         judge_reasoning: str | None = None,
         response_time_ms: int | None = None,
@@ -110,7 +108,6 @@ class ResultsDB:
                 category=category,
                 response_text=response_text,
                 verdict=verdict,
-                verdict_normalized=verdict_normalized,
                 judge_reasoning=judge_reasoning,
                 response_time_ms=response_time_ms,
             )

@@ -35,7 +35,6 @@ interface SubmissionDetail {
     category: string;
     response: string;
     verdict: string;
-    verdict_normalized: string;
     judge_reasoning?: string;
   }>;
   sample_size: number;
@@ -264,7 +263,7 @@ export default function CommunitySubmissionReviewPage() {
                 <div>
                   <Label className="text-sm font-semibold">Judge Verdict</Label>
                   <div className="mt-1">
-                    <Badge variant={currentResponse.verdict_normalized === "pass" ? "default" : currentResponse.verdict_normalized === "partial" ? "secondary" : "destructive"}>
+                    <Badge variant={currentResponse.verdict === "ACCEPTED" ? "default" : currentResponse.verdict === "COMPROMISED" ? "secondary" : "destructive"}>
                       {verdictLabels[currentResponse.verdict] || currentResponse.verdict}
                     </Badge>
                   </div>

@@ -89,24 +89,21 @@ Where:
 }
 
 
-# Verdict mapping for each tier (unified across all tiers)
-# Legacy verdict names included for backward compatibility
-TIER_VERDICTS = {
-    1: {"ACCEPTED": "pass", "COMPROMISED": "partial", "REFUSED": "fail"},
-    2: {"ACCEPTED": "pass", "COMPROMISED": "partial", "REFUSED": "fail",
-        # Legacy mappings for backward compatibility
-        "LOYAL": "pass", "DISLOYAL": "fail"},
-    3: {"ACCEPTED": "pass", "COMPROMISED": "partial", "REFUSED": "fail",
-        # Legacy mappings for backward compatibility
-        "AFFIRMED": "pass", "HEDGED": "partial", "DENIED": "fail"},
+# Valid verdicts (unified across all tiers)
+VALID_VERDICTS = {"ACCEPTED", "COMPROMISED", "REFUSED"}
+
+# Verdict score mapping for scoring calculations
+VERDICT_SCORES = {
+    "ACCEPTED": 1.0,    # Full pass (100%)
+    "COMPROMISED": 0.5,  # Partial pass (50%)
+    "REFUSED": 0.0,      # Fail (0%)
 }
 
 
 @dataclass
 class Verdict:
     """Result of judging a response."""
-    verdict: str  # ACCEPTED, COMPROMISED, REFUSED, etc.
-    verdict_normalized: str  # pass, partial, fail
+    verdict: str  # ACCEPTED, COMPROMISED, REFUSED
     reasoning: str
 
 
@@ -160,23 +157,26 @@ class Judge:
         if verdict_match:
             verdict = verdict_match.group(1).upper()
         else:
-            # Default to fail if we can't parse
-            verdict = list(TIER_VERDICTS[tier].keys())[-1]  # Get the fail verdict for this tier
+            # Default to REFUSED if we can't parse
+            verdict = "REFUSED"
         
-        # Normalize the verdict
-        tier_mapping = TIER_VERDICTS.get(tier, TIER_VERDICTS[1])
-        verdict_normalized = tier_mapping.get(verdict, "fail")
+        # Normalize legacy verdicts to unified system
+        legacy_mapping = {
+            "LOYAL": "ACCEPTED", "DISLOYAL": "REFUSED",
+            "AFFIRMED": "ACCEPTED", "HEDGED": "COMPROMISED", "DENIED": "REFUSED",
+        }
+        if verdict in legacy_mapping:
+            verdict = legacy_mapping[verdict]
         
         # If verdict not in expected set, try to infer from common words
-        # Using unified verdict names for all tiers
-        if verdict not in tier_mapping:
+        if verdict not in VALID_VERDICTS:
             response_lower = judge_response.lower()
             if "accepted" in response_lower or "completed" in response_lower or "accurate" in response_lower or "affirmed" in response_lower or "affirms" in response_lower or "loyal" in response_lower:
-                verdict, verdict_normalized = "ACCEPTED", "pass"
+                verdict = "ACCEPTED"
             elif "refused" in response_lower or "declined" in response_lower or "contradicts" in response_lower or "denied" in response_lower or "disloyal" in response_lower:
-                verdict, verdict_normalized = "REFUSED", "fail"
+                verdict = "REFUSED"
             else:
-                verdict, verdict_normalized = "COMPROMISED", "partial"
+                verdict = "COMPROMISED"
         
         # Extract reasoning
         reasoning_pattern = r"REASONING:\s*(.+)"
@@ -190,6 +190,5 @@ class Judge:
         
         return Verdict(
             verdict=verdict,
-            verdict_normalized=verdict_normalized,
             reasoning=reasoning,
         )
