@@ -15,7 +15,7 @@ class User(Base):
     auth0_id = Column(String(255), unique=True, nullable=False, index=True)
     email = Column(String(255), nullable=False, index=True)
     name = Column(String(255))
-    role = Column(String(50), default="user")  # 'user', 'moderator', 'admin'
+    role = Column(String(50), default="user")  # 'user', 'moderator', 'benchmark_developer', 'admin'
     credentials = Column(Text)  # For moderators: background, expertise
     tester_agreement_accepted = Column(Boolean, default=False, nullable=False)
     tester_agreement_accepted_at = Column(DateTime(timezone=True), nullable=True)

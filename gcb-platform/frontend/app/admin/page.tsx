@@ -140,13 +140,24 @@ export default function AdminDashboardPage() {
             </Button>
           </CardContent>
         </Card>
+        <Card className="border-[--ga-red]">
+          <CardHeader>
+            <CardTitle>Benchmark Development</CardTitle>
+            <CardDescription>Unified version and question management</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="brand">
+              <Link href="/benchmark">Open Dashboard</Link>
+            </Button>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle>Question Management</CardTitle>
-            <CardDescription>Manage benchmark questions</CardDescription>
+            <CardDescription>Manage benchmark questions (legacy)</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild>
+            <Button asChild variant="outline">
               <Link href="/admin/questions">Manage Questions</Link>
             </Button>
           </CardContent>
@@ -154,10 +165,10 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Version Management</CardTitle>
-            <CardDescription>Manage benchmark versions</CardDescription>
+            <CardDescription>Manage benchmark versions (legacy)</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild>
+            <Button asChild variant="outline">
               <Link href="/admin/versions">Manage Versions</Link>
             </Button>
           </CardContent>

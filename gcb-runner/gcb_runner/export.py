@@ -63,14 +63,27 @@ def export_run(db: ResultsDB, run_id: int) -> str:
     }
     
     # Build responses array
+    # Normalize verdict: ACCEPTED -> pass, COMPROMISED -> partial, REFUSED -> fail
+    verdict_map = {
+        "ACCEPTED": "pass",
+        "COMPROMISED": "partial",
+        "REFUSED": "fail",
+    }
+    
     responses_data = []
     for resp in responses:
+        # Get normalized verdict from DB if available, otherwise compute it
+        verdict_normalized = getattr(resp, 'verdict_normalized', None)
+        if not verdict_normalized:
+            verdict_normalized = verdict_map.get(resp.verdict.upper(), "fail")
+        
         responses_data.append({
             "question_id": int(resp.question_id) if resp.question_id.isdigit() else resp.question_id,
             "tier": resp.tier,
             "category": resp.category,
             "response": resp.response_text,
             "verdict": resp.verdict,
+            "verdict_normalized": verdict_normalized,
             "judge_reasoning": resp.judge_reasoning,
             "response_time_ms": resp.response_time_ms,
         })

@@ -95,7 +95,7 @@ async def update_user_role(
     db: Session = Depends(get_db)
 ):
     """Update user role"""
-    if request.role not in ["user", "moderator", "admin"]:
+    if request.role not in ["user", "moderator", "benchmark_developer", "admin"]:
         raise HTTPException(status_code=400, detail="Invalid role")
     
     user = db.query(User).filter(User.id == user_id).first()

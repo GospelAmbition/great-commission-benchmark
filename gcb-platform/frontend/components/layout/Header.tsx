@@ -18,7 +18,7 @@ import { useUserProfile } from "@/lib/useUserProfile";
 
 export function Header() {
   const { data: session, status } = useSession();
-  const { isAdmin, isModerator } = useUserProfile();
+  const { isAdmin, isModerator, isBenchmarkDeveloper } = useUserProfile();
   const pathname = usePathname();
   const user = session?.user;
   const isLoading = status === "loading";
@@ -122,6 +122,11 @@ export function Header() {
                       </DropdownMenuItem>
                     </>
                   )}
+                  {isBenchmarkDeveloper && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/benchmark">Benchmark Development</Link>
+                    </DropdownMenuItem>
+                  )}
                   {isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin">Admin Dashboard</Link>
@@ -202,6 +207,14 @@ export function Header() {
                         className="text-lg font-medium transition-colors hover:text-foreground/80"
                       >
                         Moderator Panel
+                      </Link>
+                    )}
+                    {isBenchmarkDeveloper && (
+                      <Link
+                        href="/benchmark"
+                        className="text-lg font-medium transition-colors hover:text-foreground/80"
+                      >
+                        Benchmark Development
                       </Link>
                     )}
                     {isAdmin && (

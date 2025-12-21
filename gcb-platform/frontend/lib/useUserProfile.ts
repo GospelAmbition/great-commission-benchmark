@@ -45,5 +45,6 @@ export function useUserProfile() {
     error,
     isAdmin: profile?.role === "admin",
     isModerator: profile?.role === "moderator" || profile?.role === "admin",
+    isBenchmarkDeveloper: profile?.role === "benchmark_developer" || profile?.role === "admin",
   };
 }

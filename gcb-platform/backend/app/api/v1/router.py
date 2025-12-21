@@ -13,7 +13,8 @@ from app.api.v1.endpoints import (
     payments,
     webhooks,
     moderator,
-    admin
+    admin,
+    benchmark
 )
 
 api_router = APIRouter()
@@ -53,3 +54,6 @@ api_router.include_router(moderator.router, prefix="/moderator", tags=["moderato
 
 # Admin API
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+
+# Benchmark Development API (for benchmark_developer and admin roles)
+api_router.include_router(benchmark.router, prefix="/benchmark", tags=["benchmark"])
