@@ -13,7 +13,7 @@ from rich.text import Text
 from rich import box
 
 from gcb_runner import __version__
-from gcb_runner.config import Config, BackendConfig, get_config_dir, get_exports_dir
+from gcb_runner.config import Config, BackendConfig, get_config_dir
 
 
 console = Console()
@@ -1054,9 +1054,9 @@ def export_results():
         Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
         return
     
-    # Generate default path from model name
+    # Generate default path from model name (exports to current directory)
     model_name = run.model.replace("/", "-").replace(":", "-")
-    default_path = get_exports_dir() / f"{model_name}.json"
+    default_path = Path(f"{model_name}.json")
     
     output_file = Prompt.ask("Output path", default=str(default_path))
     output_path = Path(output_file)
