@@ -355,8 +355,14 @@ export class ApiClient {
   }
 
   // User API endpoints (require auth)
-  async getUserProfile(): Promise<UserProfile> {
-    return this.request<UserProfile>('/api/user/profile');
+  async getUserProfile(): Promise<UserProfile & { test_count?: number; contribution_count?: number }> {
+    // Backend returns { user: {...}, stats: {...} }, transform to flat structure
+    const response = await this.request<{ user: UserProfile; stats: { total_tests: number; total_submissions: number; total_contribution: number } }>('/api/user/profile');
+    return {
+      ...response.user,
+      test_count: response.stats?.total_tests || 0,
+      contribution_count: response.stats?.total_submissions || 0,
+    };
   }
 
   async updateUserProfile(data: { name?: string; organization?: string }): Promise<UserProfile> {
@@ -383,7 +389,26 @@ export class ApiClient {
       });
     }
     const query = queryParams.toString();
-    return this.request<TestsResponse>(`/api/user/tests${query ? `?${query}` : ''}`);
+    // Backend returns { tests: [...], pagination: {...} }, transform to { items: [...], total: ... }
+    const response = await this.request<{ tests: any[]; pagination: { total: number } }>(`/api/user/tests${query ? `?${query}` : ''}`);
+    return {
+      items: (response.tests || []).map((test) => ({
+        id: test.id,
+        model_id: test.model?.model_id || test.model?.id || '',
+        model_name: test.model?.name || '',
+        version: test.benchmark_version || '',
+        status: test.status || 'pending',
+        overall_score: test.scores?.overall,
+        tier1_score: test.scores?.tier1,
+        tier2_score: test.scores?.tier2,
+        tier3_score: test.scores?.tier3,
+        created_at: test.created_at,
+        started_at: test.started_at,
+        completed_at: test.completed_at,
+        trust_tier: test.trust_tier,
+      })),
+      total: response.pagination?.total || 0,
+    };
   }
 
   async getTest(id: string): Promise<TestRun> {
@@ -437,7 +462,14 @@ export class ApiClient {
     status: string;
     created_at: string;
   }>> {
-    return this.request('/api/user/submissions');
+    // Backend returns { submissions: [...], pagination: {...} }, extract the array
+    const response = await this.request<{ submissions: Array<{ id: string; model_name: string; status: string; submitted_at: string }> }>('/api/user/submissions');
+    return (response.submissions || []).map((sub) => ({
+      id: sub.id,
+      model_name: sub.model_name,
+      status: sub.status,
+      created_at: sub.submitted_at, // Map submitted_at to created_at for frontend compatibility
+    }));
   }
 
   async uploadCliSubmission(exportData: object): Promise<{
@@ -472,7 +504,14 @@ export class ApiClient {
       });
     }
     const query = queryParams.toString();
-    return this.request(`/api/user/activity${query ? `?${query}` : ''}`);
+    // Backend returns { activities: [...] }, extract the array
+    const response = await this.request<{ activities: Array<{ type: string; title: string; description: string; timestamp: string; link?: string }> }>(`/api/user/activity${query ? `?${query}` : ''}`);
+    return (response.activities || []).map((activity) => ({
+      type: activity.type,
+      description: activity.description || activity.title,
+      created_at: activity.timestamp,
+      link: activity.link,
+    }));
   }
 
   // Tester Agreement
