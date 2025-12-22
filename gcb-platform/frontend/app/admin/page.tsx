@@ -153,23 +153,12 @@ export default function AdminDashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Question Management</CardTitle>
-            <CardDescription>Manage benchmark questions (legacy)</CardDescription>
+            <CardTitle>Data Management</CardTitle>
+            <CardDescription>Delete test runs, submissions, and clean up data</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline">
-              <Link href="/admin/questions">Manage Questions</Link>
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Version Management</CardTitle>
-            <CardDescription>Manage benchmark versions (legacy)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline">
-              <Link href="/admin/versions">Manage Versions</Link>
+              <Link href="/admin/data">Manage Data</Link>
             </Button>
           </CardContent>
         </Card>

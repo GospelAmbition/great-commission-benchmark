@@ -18,13 +18,16 @@ import { apiClient } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TesterAgreementModal } from "@/components/tester-agreement/TesterAgreementModal";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, ShieldAlert } from "lucide-react";
+import { useUserProfile } from "@/lib/useUserProfile";
+import { toast } from "sonner";
 
 export default function NewTestPage() {
   const { data: session, status } = useSession();
   const user = session?.user;
   const userLoading = status === "loading";
   const router = useRouter();
+  const { isAdmin, loading: profileLoading } = useUserProfile();
   const [models, setModels] = useState<any[]>([]);
   const [versions, setVersions] = useState<any[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
@@ -41,10 +44,18 @@ export default function NewTestPage() {
       router.push("/api/auth/signin");
       return;
     }
-    if (user) {
+    
+    // Check admin access after profile loads
+    if (!profileLoading && user && !isAdmin) {
+      toast.error("Platform tests are restricted to administrators. Please use the CLI tool to run tests.");
+      router.push("/dashboard");
+      return;
+    }
+    
+    if (user && isAdmin) {
       loadData();
     }
-  }, [user, userLoading, router]);
+  }, [user, userLoading, router, isAdmin, profileLoading]);
 
   async function loadData() {
     setLoading(true);
@@ -131,7 +142,8 @@ export default function NewTestPage() {
     }
   }, [selectedModel, models]);
 
-  if (userLoading || loading) {
+  // Show loading while checking permissions
+  if (userLoading || profileLoading) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -140,8 +152,47 @@ export default function NewTestPage() {
     );
   }
 
-  if (!user) {
-    return null;
+  // Don't render if not admin (will redirect)
+  if (!user || !isAdmin) {
+    return (
+      <div className="container py-8 max-w-3xl">
+        <Card className="border-destructive">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <ShieldAlert className="h-6 w-6 text-destructive" />
+              <div>
+                <CardTitle>Access Restricted</CardTitle>
+                <CardDescription>
+                  Platform tests are only available to administrators.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              To run benchmark tests, please use the GCB Runner CLI tool. You can install it and upload your results from your dashboard.
+            </p>
+            <div className="flex gap-4">
+              <Button asChild variant="brand">
+                <a href="/dashboard">Go to Dashboard</a>
+              </Button>
+              <Button asChild variant="outline">
+                <a href="/runner">Learn About CLI Tool</a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="container py-8">
+        <Skeleton className="h-12 w-64 mb-8" />
+        <Skeleton className="h-96" />
+      </div>
+    );
   }
 
   return (
@@ -151,10 +202,21 @@ export default function NewTestPage() {
         onAccept={handleAgreementAccepted}
       />
       
+      {/* Admin Notice */}
+      <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+        <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+          <ShieldAlert className="h-5 w-5" />
+          <span className="font-medium">Admin-Only Feature</span>
+        </div>
+        <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+          Platform tests are restricted to administrators. Regular users should use the CLI tool.
+        </p>
+      </div>
+      
       <div className="mb-8">
-        <h1 className="text-4xl font-bold">Run a Benchmark Test</h1>
+        <h1 className="text-4xl font-bold">Run a Platform Test</h1>
         <p className="mt-2 text-muted-foreground">
-          Select a model and version to test
+          Select a model and version to test directly on the platform
         </p>
       </div>
 
@@ -302,7 +364,7 @@ export default function NewTestPage() {
               {creating ? "Creating..." : "Continue to Payment →"}
             </Button>
             <Button asChild variant="outline">
-              <a href="/research">Cancel</a>
+              <a href="/dashboard">Cancel</a>
             </Button>
           </div>
         </CardContent>

@@ -1,4 +1,5 @@
 """Runner API endpoints (for CLI)"""
+import os
 from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from sqlalchemy.orm import Session
 from typing import Optional, Tuple
@@ -13,6 +14,33 @@ from app.core.rate_limit import RateLimitDependency
 from app.api.v1.endpoints.api_keys import validate_api_key
 
 router = APIRouter()
+
+
+# CLI version info - updated when new builds are published
+# This can also be read from a database table or config file
+CLI_VERSION_INFO = {
+    "version": os.getenv("GCB_RUNNER_VERSION", "0.1.0"),
+    "minimum_version": "0.1.0",
+    "release_notes": "Initial release",
+    "downloads": {
+        "macos-arm64": {
+            "filename": "gcb-runner-macos-arm64",
+            "sha256": os.getenv("GCB_RUNNER_SHA256_MACOS_ARM64", ""),
+        },
+        "macos-x64": {
+            "filename": "gcb-runner-macos-x64",
+            "sha256": os.getenv("GCB_RUNNER_SHA256_MACOS_X64", ""),
+        },
+        "linux-x64": {
+            "filename": "gcb-runner-linux-x64",
+            "sha256": os.getenv("GCB_RUNNER_SHA256_LINUX_X64", ""),
+        },
+        "windows-x64": {
+            "filename": "gcb-runner.exe",
+            "sha256": os.getenv("GCB_RUNNER_SHA256_WINDOWS", ""),
+        },
+    }
+}
 
 
 class APIKeyAuth:
@@ -46,6 +74,37 @@ require_api_key = APIKeyAuth()
 
 # Rate limiter for runner endpoints: 50 requests per hour
 runner_rate_limit = RateLimitDependency("runner")
+
+
+@router.get("/latest")
+async def get_runner_latest(request: Request):
+    """
+    Get the latest CLI version info for auto-updates.
+    
+    This endpoint is public (no auth required) so the CLI can check
+    for updates without requiring an API key.
+    
+    Returns version info, download URLs, and SHA256 hashes for verification.
+    """
+    # Build download URLs based on the frontend URL
+    frontend_url = os.getenv("FRONTEND_URL", "https://greatcommissionbenchmark.ai")
+    base_download_url = f"{frontend_url}/downloads"
+    
+    downloads = {}
+    for platform, info in CLI_VERSION_INFO["downloads"].items():
+        if info.get("sha256"):  # Only include platforms with hashes set
+            downloads[platform] = {
+                "url": f"{base_download_url}/{info['filename']}",
+                "filename": info["filename"],
+                "sha256": info["sha256"],
+            }
+    
+    return {
+        "version": CLI_VERSION_INFO["version"],
+        "minimum_version": CLI_VERSION_INFO["minimum_version"],
+        "release_notes": CLI_VERSION_INFO["release_notes"],
+        "downloads": downloads,
+    }
 
 
 @router.get("/versions")

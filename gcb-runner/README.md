@@ -4,10 +4,33 @@ A lightweight CLI tool for running the Great Commission Benchmark against AI mod
 
 ## Quick Start
 
-```bash
-# Install
-pip install gcb-runner
+### Download Standalone Executable (Recommended)
 
+Download the standalone executable from the [GCB Runner page](https://greatcommissionbenchmark.ai/runner) - no Python required!
+
+**macOS:**
+```bash
+# Download from https://greatcommissionbenchmark.ai/runner
+chmod +x gcb-runner-macos-arm64  # or gcb-runner-macos-x64 for Intel
+./gcb-runner-macos-arm64
+```
+
+**Linux:**
+```bash
+# Download from https://greatcommissionbenchmark.ai/runner
+chmod +x gcb-runner-linux-x64
+./gcb-runner-linux-x64
+```
+
+**Windows:**
+```powershell
+# Download gcb-runner.exe from https://greatcommissionbenchmark.ai/runner
+.\gcb-runner.exe
+```
+
+### Basic Usage
+
+```bash
 # Launch the interactive menu (default behavior)
 gcb-runner
 
@@ -20,18 +43,31 @@ gcb-runner test --model gpt-4o --backend openrouter  # Run benchmark
 gcb-runner results                                   # View results
 gcb-runner report                                    # Generate HTML report
 gcb-runner export                                    # Export for submission
+gcb-runner update                                    # Check for updates
+```
+
+## Auto-Updates
+
+The standalone executable includes auto-update functionality. When a new version is available, you'll see a notification at startup. Run `gcb-runner update` to download and install the latest version.
+
+```bash
+# Check for updates
+gcb-runner update --check
+
+# Download and install updates
+gcb-runner update
 ```
 
 ## Interactive Menu
 
 Running `gcb-runner` launches an interactive menu (this is the default behavior). The menu provides:
 
-- **🚀 Setup Wizard** - Guided 4-step configuration for first-time users
-- **🧪 Run Benchmark Test** - Interactive test runner with model and version selection
-- **📊 View Results** - Browse test runs, launch dashboard, generate reports
-- **⚙️ Configuration** - Manage API keys, backends, and preferences
-- **🔧 Diagnostics** - Test connections, verify API access, troubleshoot issues
-- **❓ Help & Documentation** - Quick start guide, scoring info, and more
+- **Setup Wizard** - Guided 4-step configuration for first-time users
+- **Run Benchmark Test** - Interactive test runner with model and version selection
+- **View Results** - Browse test runs, launch dashboard, generate reports
+- **Configuration** - Manage API keys, backends, and preferences
+- **Diagnostics** - Test connections, verify API access, troubleshoot issues
+- **Help & Documentation** - Quick start guide, scoring info, and more
 
 The menu is perfect for users who prefer a guided experience over command-line flags.
 
@@ -41,7 +77,7 @@ The diagnostics menu helps verify your setup is working correctly:
 
 ```bash
 gcb-runner
-# Select [5] 🔧 Diagnostics & Connection Test
+# Select [5] Diagnostics & Connection Test
 ```
 
 Available diagnostics:
@@ -74,18 +110,31 @@ The GCB Runner is the official CLI tool for running the [Great Commission Benchm
 
 ## Installation
 
-### From PyPI (Recommended)
+### Standalone Executable (Recommended)
+
+Download from [greatcommissionbenchmark.ai/runner](https://greatcommissionbenchmark.ai/runner)
+
+- **macOS Apple Silicon**: `gcb-runner-macos-arm64`
+- **macOS Intel**: `gcb-runner-macos-x64`
+- **Linux x64**: `gcb-runner-linux-x64`
+- **Windows x64**: `gcb-runner.exe`
+
+Verify downloads using SHA256 hashes from the [manifest.json](https://greatcommissionbenchmark.ai/downloads/manifest.json).
+
+### For Developers: Install via pip
+
+Requires Python 3.10+:
 
 ```bash
 pip install gcb-runner
 ```
 
-### From Source
+### For Developers: Install from Source
 
 ```bash
 git clone https://github.com/great-commission-benchmark/gcb-runner
 cd gcb-runner
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 ## Configuration
@@ -133,7 +182,7 @@ gcb-runner test --model gpt-4o --resume
 **Tip:** Use the interactive menu for guided version selection:
 ```bash
 gcb-runner
-# Select [2] 🧪 Run Benchmark Test
+# Select [2] Run Benchmark Test
 # Choose "Use a specific benchmark version?" → Yes
 # Select from the list of available versions
 ```
@@ -218,7 +267,7 @@ gcb-runner versions
 
 # Or use the interactive menu for more details
 gcb-runner
-# Select [5] 🔧 Diagnostics → [4] List Available Versions
+# Select [5] Diagnostics → [4] List Available Versions
 ```
 
 This shows available versions with their status, question counts, and release dates.
@@ -297,7 +346,7 @@ This error when running tests usually means:
 **Solution:** Run diagnostics to check available versions:
 ```bash
 gcb-runner
-# Select [5] 🔧 Diagnostics → [1] Run Full Diagnostics
+# Select [5] Diagnostics → [1] Run Full Diagnostics
 ```
 
 ### Connection Issues
@@ -315,6 +364,22 @@ For LM Studio or Ollama issues:
 1. Ensure the server is running
 2. Check the URL is correct (default: `localhost:1234` for LM Studio, `localhost:11434` for Ollama)
 3. Run backend test: Diagnostics → Test Backend Connection
+
+## Building Standalone Executables
+
+To build standalone executables for distribution:
+
+```bash
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Build for current platform
+python scripts/build.py
+
+# Output will be in dist/release/ with a manifest.json containing SHA256 hashes
+```
+
+The build script uses PyInstaller to create single-file executables that bundle Python and all dependencies.
 
 ## Development
 
@@ -343,5 +408,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## Links
 
 - [Great Commission Benchmark](https://greatcommissionbenchmark.ai)
+- [Download GCB Runner](https://greatcommissionbenchmark.ai/runner)
 - [Documentation](https://greatcommissionbenchmark.ai/docs/runner)
 - [GitHub Issues](https://github.com/great-commission-benchmark/gcb-runner/issues)

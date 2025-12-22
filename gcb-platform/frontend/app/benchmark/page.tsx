@@ -33,7 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useUserProfile } from "@/lib/useUserProfile";
 
@@ -109,10 +108,24 @@ export default function BenchmarkDashboardPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditQuestionDialog, setShowEditQuestionDialog] = useState(false);
   const [showCreateQuestionDialog, setShowCreateQuestionDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState<{
     action: string;
     version: QuestionSet;
   } | null>(null);
+  
+  // Import state
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<{
+    questions: any[];
+    format: 'standard' | 'generated' | 'unknown';
+    stats: { tier1: number; tier2: number; tier3: number; total: number };
+  } | null>(null);
+  const [importValidation, setImportValidation] = useState<{
+    imported: number;
+    errors: string[];
+  } | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
   
   // Form state
   const [newVersion, setNewVersion] = useState({ semantic_version: "", marketing_version: "", copy_from: "" });
@@ -368,6 +381,210 @@ export default function BenchmarkDashboardPage() {
     } catch (error: any) {
       toast.error(error.message || "Failed to delete question");
     }
+  }
+
+  // Import functions
+  function parseImportFile(fileContent: string): { questions: any[]; format: 'standard' | 'generated' | 'unknown' } {
+    try {
+      const data = JSON.parse(fileContent);
+      
+      // Check if it's the "generated" format from FULL-QUESTION-GENERATION-PROMPT.md
+      // This format has tier1_questions, tier2_questions, tier3_questions arrays
+      if (data.tier1_questions || data.tier2_questions || data.tier3_questions) {
+        const allQuestions: any[] = [];
+        
+        // Process each tier
+        if (Array.isArray(data.tier1_questions)) {
+          data.tier1_questions.forEach((q: any) => {
+            allQuestions.push({
+              ...q,
+              tier: 1,
+              metadata: {
+                difficulty: q.difficulty,
+                expected_verdict: q.expected_verdict,
+                expected_refusal_type: q.expected_refusal_type,
+                tests_capability: q.tests_capability,
+                tests_willingness: q.tests_willingness,
+                use_case_tags: q.use_case_tags,
+                audience_context: q.audience_context,
+                ministry_type: q.ministry_type,
+                reasoning: q.reasoning,
+              }
+            });
+          });
+        }
+        if (Array.isArray(data.tier2_questions)) {
+          data.tier2_questions.forEach((q: any) => {
+            allQuestions.push({
+              ...q,
+              tier: 2,
+              metadata: {
+                difficulty: q.difficulty,
+                expected_verdict: q.expected_verdict,
+                expected_refusal_type: q.expected_refusal_type,
+                tests_capability: q.tests_capability,
+                tests_willingness: q.tests_willingness,
+                use_case_tags: q.use_case_tags,
+                audience_context: q.audience_context,
+                ministry_type: q.ministry_type,
+                reasoning: q.reasoning,
+              }
+            });
+          });
+        }
+        if (Array.isArray(data.tier3_questions)) {
+          data.tier3_questions.forEach((q: any) => {
+            allQuestions.push({
+              ...q,
+              tier: 3,
+              metadata: {
+                difficulty: q.difficulty,
+                expected_verdict: q.expected_verdict,
+                expected_refusal_type: q.expected_refusal_type,
+                tests_capability: q.tests_capability,
+                tests_willingness: q.tests_willingness,
+                use_case_tags: q.use_case_tags,
+                audience_context: q.audience_context,
+                ministry_type: q.ministry_type,
+                reasoning: q.reasoning,
+              }
+            });
+          });
+        }
+        
+        return { questions: allQuestions, format: 'generated' };
+      }
+      
+      // Check if it's an array of questions (standard format)
+      if (Array.isArray(data)) {
+        return { questions: data, format: 'standard' };
+      }
+      
+      // Check if it has a "questions" array
+      if (Array.isArray(data.questions)) {
+        return { questions: data.questions, format: 'standard' };
+      }
+      
+      return { questions: [], format: 'unknown' };
+    } catch {
+      return { questions: [], format: 'unknown' };
+    }
+  }
+
+  async function handleFileSelect(file: File) {
+    setImportFile(file);
+    setImportValidation(null);
+    setImportLoading(true);
+    
+    try {
+      const text = await file.text();
+      const { questions, format } = parseImportFile(text);
+      
+      const stats = {
+        tier1: questions.filter(q => q.tier === 1).length,
+        tier2: questions.filter(q => q.tier === 2).length,
+        tier3: questions.filter(q => q.tier === 3).length,
+        total: questions.length,
+      };
+      
+      setImportPreview({ questions, format, stats });
+    } catch (error) {
+      toast.error("Failed to parse file");
+      setImportPreview(null);
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
+  async function handleValidateImport() {
+    if (!importPreview || !selectedVersionId) return;
+    
+    setImportLoading(true);
+    try {
+      // Prepare questions with the selected version ID
+      const questionsToImport = importPreview.questions.map(q => ({
+        question_set_id: selectedVersionId,
+        tier: q.tier,
+        category: q.category,
+        content: q.content,
+        metadata: q.metadata,
+      }));
+      
+      const result = await apiRequest<{ imported: number; errors: string[]; dry_run: boolean }>(
+        '/api/benchmark/questions/import',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            questions: questionsToImport,
+            dry_run: true,
+          }),
+        }
+      );
+      
+      setImportValidation({ imported: result.imported, errors: result.errors });
+      
+      if (result.errors.length === 0) {
+        toast.success(`Validation passed: ${result.imported} questions ready to import`);
+      } else {
+        toast.warning(`Validation found ${result.errors.length} errors`);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Validation failed");
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
+  async function handleImportQuestions() {
+    if (!importPreview || !selectedVersionId) return;
+    
+    setImportLoading(true);
+    try {
+      // Prepare questions with the selected version ID
+      const questionsToImport = importPreview.questions.map(q => ({
+        question_set_id: selectedVersionId,
+        tier: q.tier,
+        category: q.category,
+        content: q.content,
+        metadata: q.metadata,
+      }));
+      
+      const result = await apiRequest<{ imported: number; errors: string[]; dry_run: boolean }>(
+        '/api/benchmark/questions/import',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            questions: questionsToImport,
+            dry_run: false,
+          }),
+        }
+      );
+      
+      if (result.errors.length > 0) {
+        toast.warning(`Imported ${result.imported} questions with ${result.errors.length} errors`);
+      } else {
+        toast.success(`Successfully imported ${result.imported} questions`);
+      }
+      
+      // Reset and close
+      setShowImportDialog(false);
+      setImportFile(null);
+      setImportPreview(null);
+      setImportValidation(null);
+      loadQuestions();
+      loadData();
+    } catch (error: any) {
+      toast.error(error.message || "Import failed");
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
+  function resetImportDialog() {
+    setShowImportDialog(false);
+    setImportFile(null);
+    setImportPreview(null);
+    setImportValidation(null);
   }
 
   function getStatusBadgeVariant(status: string): "default" | "secondary" | "outline" | "destructive" {
@@ -690,9 +907,14 @@ export default function BenchmarkDashboardPage() {
                     </SelectContent>
                   </Select>
                   {canEditQuestions && (
-                    <Button onClick={() => setShowCreateQuestionDialog(true)}>
-                      Add Question
-                    </Button>
+                    <>
+                      <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+                        Import Questions
+                      </Button>
+                      <Button onClick={() => setShowCreateQuestionDialog(true)}>
+                        Add Question
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -1000,6 +1222,151 @@ export default function BenchmarkDashboardPage() {
             >
               {actionLoading ? "Processing..." : "Confirm"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Questions Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={resetImportDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import Questions</DialogTitle>
+            <DialogDescription>
+              Import questions from a JSON file into {selectedVersion?.semantic_version || 'the selected version'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* File Upload */}
+            <div>
+              <Label htmlFor="import_file">Select JSON File</Label>
+              <Input
+                id="import_file"
+                type="file"
+                accept=".json"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileSelect(file);
+                }}
+                className="mt-1"
+              />
+              {importFile && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Selected: <span className="font-medium">{importFile.name}</span> ({(importFile.size / 1024).toFixed(1)} KB)
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-2">
+                Supports the generated format from the Question Generation Prompt or standard question arrays.
+              </p>
+            </div>
+
+            {/* Preview */}
+            {importPreview && (
+              <div className="space-y-4">
+                <div className="p-4 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">File Preview</h4>
+                    <Badge variant={importPreview.format === 'unknown' ? 'destructive' : 'secondary'}>
+                      {importPreview.format === 'generated' ? 'Generated Format' :
+                       importPreview.format === 'standard' ? 'Standard Format' : 'Unknown Format'}
+                    </Badge>
+                  </div>
+                  
+                  {importPreview.format === 'unknown' ? (
+                    <p className="text-sm text-destructive">
+                      Unable to parse file. Expected a JSON file with questions array or tier1_questions/tier2_questions/tier3_questions arrays.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-4 gap-4 text-sm">
+                        <div className="text-center p-2 bg-muted rounded">
+                          <div className="text-2xl font-bold">{importPreview.stats.total}</div>
+                          <div className="text-muted-foreground">Total</div>
+                        </div>
+                        <div className="text-center p-2 bg-muted rounded">
+                          <div className="text-2xl font-bold">{importPreview.stats.tier1}</div>
+                          <div className="text-muted-foreground">Tier 1</div>
+                        </div>
+                        <div className="text-center p-2 bg-muted rounded">
+                          <div className="text-2xl font-bold">{importPreview.stats.tier2}</div>
+                          <div className="text-muted-foreground">Tier 2</div>
+                        </div>
+                        <div className="text-center p-2 bg-muted rounded">
+                          <div className="text-2xl font-bold">{importPreview.stats.tier3}</div>
+                          <div className="text-muted-foreground">Tier 3</div>
+                        </div>
+                      </div>
+                      
+                      {/* Sample questions */}
+                      <div>
+                        <h5 className="text-sm font-medium mb-2">Sample Questions:</h5>
+                        <div className="max-h-32 overflow-y-auto space-y-2 text-sm">
+                          {importPreview.questions.slice(0, 3).map((q, idx) => (
+                            <div key={idx} className="p-2 bg-muted rounded text-xs">
+                              <div className="flex gap-2 mb-1">
+                                <Badge variant="outline" className="text-xs">T{q.tier}</Badge>
+                                <Badge variant="secondary" className="text-xs">{q.category}</Badge>
+                              </div>
+                              <p className="truncate">{q.content}</p>
+                            </div>
+                          ))}
+                          {importPreview.questions.length > 3 && (
+                            <p className="text-muted-foreground text-xs">
+                              ...and {importPreview.questions.length - 3} more questions
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Validation Results */}
+                {importValidation && (
+                  <div className={`p-4 border rounded-lg ${importValidation.errors.length > 0 ? 'border-orange-500' : 'border-green-500'}`}>
+                    <h4 className="font-medium mb-2">
+                      {importValidation.errors.length === 0 ? '✓ Validation Passed' : '⚠ Validation Issues'}
+                    </h4>
+                    <p className="text-sm">
+                      {importValidation.imported} questions ready to import
+                    </p>
+                    {importValidation.errors.length > 0 && (
+                      <div className="mt-2 max-h-24 overflow-y-auto">
+                        {importValidation.errors.slice(0, 5).map((err, idx) => (
+                          <p key={idx} className="text-xs text-destructive">{err}</p>
+                        ))}
+                        {importValidation.errors.length > 5 && (
+                          <p className="text-xs text-muted-foreground">
+                            ...and {importValidation.errors.length - 5} more errors
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={resetImportDialog}>
+              Cancel
+            </Button>
+            {importPreview && importPreview.format !== 'unknown' && !importValidation && (
+              <Button
+                variant="secondary"
+                onClick={handleValidateImport}
+                disabled={importLoading || !selectedVersionId}
+              >
+                {importLoading ? "Validating..." : "Validate"}
+              </Button>
+            )}
+            {importValidation && importValidation.imported > 0 && (
+              <Button
+                onClick={handleImportQuestions}
+                disabled={importLoading}
+              >
+                {importLoading ? "Importing..." : `Import ${importValidation.imported} Questions`}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

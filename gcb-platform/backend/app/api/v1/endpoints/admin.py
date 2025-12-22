@@ -16,6 +16,8 @@ from app.db.models.question import Question
 from app.db.models.question_set import QuestionSet
 from app.db.models.moderation_log import ModerationLog
 from app.db.models.user_api_key import UserAPIKey
+from app.db.models.result import Result
+from app.db.models.community_submission import CommunitySubmission
 from app.schemas.admin import (
     UserListItem,
     UserListResponse,
@@ -1077,3 +1079,271 @@ async def get_admin_stats(
             "active": active_api_keys
         }
     )
+
+
+# =============================================================================
+# Data Management Endpoints (for cleanup/deletion)
+# =============================================================================
+
+@router.delete("/test-runs/{test_run_id}")
+async def delete_test_run(
+    test_run_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a test run and all its results (cascade)"""
+    test_run = db.query(TestRun).filter(TestRun.id == test_run_id).first()
+    
+    if not test_run:
+        raise HTTPException(status_code=404, detail="Test run not found")
+    
+    # Delete all results for this test run first
+    deleted_results = db.query(Result).filter(
+        Result.test_run_id == test_run_id
+    ).delete(synchronize_session=False)
+    
+    # Delete the test run
+    db.delete(test_run)
+    db.commit()
+    
+    return {
+        "message": f"Test run deleted",
+        "test_run_id": str(test_run_id),
+        "deleted_results": deleted_results
+    }
+
+
+@router.delete("/community-submissions/{submission_id}")
+async def delete_community_submission(
+    submission_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a community submission"""
+    submission = db.query(CommunitySubmission).filter(
+        CommunitySubmission.id == submission_id
+    ).first()
+    
+    if not submission:
+        raise HTTPException(status_code=404, detail="Community submission not found")
+    
+    db.delete(submission)
+    db.commit()
+    
+    return {
+        "message": "Community submission deleted",
+        "submission_id": str(submission_id)
+    }
+
+
+@router.delete("/results/{result_id}")
+async def delete_result(
+    result_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete an individual result"""
+    result = db.query(Result).filter(Result.id == result_id).first()
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Result not found")
+    
+    db.delete(result)
+    db.commit()
+    
+    return {
+        "message": "Result deleted",
+        "result_id": str(result_id)
+    }
+
+
+@router.delete("/models/{model_id}")
+async def delete_model(
+    model_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a model (only if no test runs reference it)"""
+    model = db.query(Model).filter(Model.id == model_id).first()
+    
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    
+    # Check if any test runs reference this model
+    test_run_count = db.query(TestRun).filter(TestRun.model_id == model_id).count()
+    if test_run_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete model. {test_run_count} test run(s) reference this model. Delete those test runs first."
+        )
+    
+    db.delete(model)
+    db.commit()
+    
+    return {
+        "message": "Model deleted",
+        "model_id": str(model_id),
+        "model_name": model.name
+    }
+
+
+@router.get("/test-runs")
+async def list_test_runs(
+    status: Optional[str] = Query(None, description="Filter by status"),
+    user_id: Optional[UUID] = Query(None, description="Filter by user ID"),
+    model_id: Optional[UUID] = Query(None, description="Filter by model ID"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List test runs with filters"""
+    query = db.query(TestRun).options(
+        joinedload(TestRun.user),
+        joinedload(TestRun.model),
+        joinedload(TestRun.question_set)
+    )
+    
+    if status:
+        query = query.filter(TestRun.status == status)
+    if user_id:
+        query = query.filter(TestRun.user_id == user_id)
+    if model_id:
+        query = query.filter(TestRun.model_id == model_id)
+    
+    query = query.order_by(desc(TestRun.created_at))
+    
+    total = db.query(TestRun).filter(
+        *([TestRun.status == status] if status else []),
+        *([TestRun.user_id == user_id] if user_id else []),
+        *([TestRun.model_id == model_id] if model_id else [])
+    ).count()
+    
+    test_runs = query.offset(offset).limit(limit).all()
+    
+    # Get result counts for each test run
+    items = []
+    for tr in test_runs:
+        result_count = db.query(Result).filter(Result.test_run_id == tr.id).count()
+        items.append({
+            "id": str(tr.id),
+            "user_id": str(tr.user_id),
+            "user_email": tr.user.email if tr.user else None,
+            "model_id": str(tr.model_id),
+            "model_name": tr.model.name if tr.model else None,
+            "question_set_id": str(tr.question_set_id) if tr.question_set_id else None,
+            "question_set_version": tr.question_set.semantic_version if tr.question_set else None,
+            "status": tr.status,
+            "result_count": result_count,
+            "created_at": tr.created_at.isoformat() if tr.created_at else None,
+            "completed_at": tr.completed_at.isoformat() if tr.completed_at else None,
+        })
+    
+    return {
+        "items": items,
+        "total": total
+    }
+
+
+@router.get("/community-submissions")
+async def list_community_submissions(
+    status: Optional[str] = Query(None, description="Filter by status"),
+    user_id: Optional[UUID] = Query(None, description="Filter by user ID"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List community submissions with filters"""
+    query = db.query(CommunitySubmission).options(
+        joinedload(CommunitySubmission.user)
+    )
+    
+    if status:
+        query = query.filter(CommunitySubmission.status == status)
+    if user_id:
+        query = query.filter(CommunitySubmission.user_id == user_id)
+    
+    query = query.order_by(desc(CommunitySubmission.submitted_at))
+    
+    total = db.query(CommunitySubmission).filter(
+        *([CommunitySubmission.status == status] if status else []),
+        *([CommunitySubmission.user_id == user_id] if user_id else [])
+    ).count()
+    
+    submissions = query.offset(offset).limit(limit).all()
+    
+    items = []
+    for sub in submissions:
+        items.append({
+            "id": str(sub.id),
+            "user_id": str(sub.user_id),
+            "user_email": sub.user.email if sub.user else None,
+            "model_name": sub.model_name,
+            "organization": sub.organization,
+            "status": sub.status,
+            "overall_score": sub.overall_score,
+            "question_set_version": sub.question_set_version,
+            "submitted_at": sub.submitted_at.isoformat() if sub.submitted_at else None,
+            "reviewed_at": sub.reviewed_at.isoformat() if sub.reviewed_at else None,
+        })
+    
+    return {
+        "items": items,
+        "total": total
+    }
+
+
+@router.get("/models")
+async def list_models(
+    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    search: Optional[str] = Query(None, description="Search by name or provider"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List models with filters"""
+    query = db.query(Model)
+    
+    if is_active is not None:
+        query = query.filter(Model.is_active == is_active)
+    if search:
+        query = query.filter(
+            (Model.name.ilike(f"%{search}%")) |
+            (Model.provider.ilike(f"%{search}%"))
+        )
+    
+    query = query.order_by(Model.name)
+    
+    # Build count query with same filters
+    count_query = db.query(Model)
+    if is_active is not None:
+        count_query = count_query.filter(Model.is_active == is_active)
+    if search:
+        count_query = count_query.filter(
+            (Model.name.ilike(f"%{search}%")) |
+            (Model.provider.ilike(f"%{search}%"))
+        )
+    total = count_query.count()
+    
+    models = query.offset(offset).limit(limit).all()
+    
+    # Get test run counts for each model
+    items = []
+    for model in models:
+        test_run_count = db.query(TestRun).filter(TestRun.model_id == model.id).count()
+        items.append({
+            "id": str(model.id),
+            "model_id": model.model_id,
+            "name": model.name,
+            "provider": model.provider,
+            "is_active": model.is_active,
+            "test_run_count": test_run_count,
+            "created_at": model.created_at.isoformat() if model.created_at else None,
+        })
+    
+    return {
+        "items": items,
+        "total": total
+    }

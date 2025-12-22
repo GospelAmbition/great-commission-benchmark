@@ -15,6 +15,14 @@ from rich.table import Table
 
 from gcb_runner import __version__
 from gcb_runner.config import Config, BackendConfig, get_config_dir
+from gcb_runner.updater import (
+    check_for_updates_sync,
+    download_update_sync,
+    apply_update,
+    cleanup_old_executable,
+    is_frozen,
+    format_size,
+)
 
 app = typer.Typer(
     name="gcb-runner",
@@ -22,6 +30,31 @@ app = typer.Typer(
     no_args_is_help=False,  # We handle no-args case in callback to launch menu
 )
 console = Console()
+
+
+def check_for_updates_notification() -> None:
+    """Check for updates and show a notification if available (non-blocking)."""
+    if not is_frozen():
+        return  # Don't check when running from source
+    
+    # Clean up any old executables from previous updates (Windows)
+    cleanup_old_executable()
+    
+    try:
+        update_info = check_for_updates_sync()
+        if update_info:
+            console.print()
+            console.print(Panel(
+                f"[bold yellow]Update Available![/bold yellow]\n\n"
+                f"Current version: {update_info['current_version']}\n"
+                f"Latest version: {update_info['latest_version']}\n\n"
+                f"Run [cyan]gcb-runner update[/cyan] to update.",
+                border_style="yellow",
+                title="New Version"
+            ))
+            console.print()
+    except Exception:
+        pass  # Silently ignore update check failures
 
 
 def print_header():
@@ -558,6 +591,97 @@ def report(
         webbrowser.open(f"file://{output.absolute()}")
 
 
+@app.command()
+def update(
+    check_only: bool = typer.Option(False, "--check", "-c", help="Only check for updates, don't install"),
+    force: bool = typer.Option(False, "--force", "-f", help="Force update even if already on latest version"),
+):
+    """Check for and install updates."""
+    print_header()
+    console.print()
+    
+    if not is_frozen():
+        console.print("[yellow]Update command is only available for standalone executables.[/yellow]")
+        console.print()
+        console.print("You're running from source. Update using:")
+        console.print("  [cyan]git pull[/cyan]")
+        console.print("  [cyan]pip install -e .[/cyan]")
+        return
+    
+    console.print("Checking for updates...")
+    console.print()
+    
+    update_info = check_for_updates_sync()
+    
+    if not update_info and not force:
+        console.print(f"[green]✓ You're running the latest version ({__version__})[/green]")
+        return
+    
+    if update_info:
+        console.print(f"[bold]Update available![/bold]")
+        console.print(f"  Current version: {update_info['current_version']}")
+        console.print(f"  Latest version:  [green]{update_info['latest_version']}[/green]")
+        if update_info.get('release_notes'):
+            console.print(f"  Release notes:   {update_info['release_notes']}")
+        if update_info.get('size'):
+            console.print(f"  Download size:   {format_size(update_info['size'])}")
+        console.print()
+    
+    if check_only:
+        return
+    
+    if not update_info:
+        console.print(f"[yellow]No update info available. Cannot force update.[/yellow]")
+        return
+    
+    if not Confirm.ask("Download and install update?"):
+        console.print("Update cancelled.")
+        return
+    
+    # Download with progress
+    console.print()
+    console.print("Downloading update...")
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Downloading...", total=update_info.get('size', 0) or None)
+        
+        def update_progress(downloaded: int, total: int) -> None:
+            if total > 0:
+                progress.update(task, completed=downloaded, total=total)
+        
+        new_exe = download_update_sync(
+            update_info['download_url'],
+            update_info['sha256'],
+            progress_callback=update_progress
+        )
+    
+    if not new_exe:
+        console.print("[red]Download failed or hash verification failed.[/red]")
+        console.print("Please try again or download manually from:")
+        console.print("  https://greatcommissionbenchmark.ai/runner")
+        raise typer.Exit(1)
+    
+    console.print("[green]✓ Download complete and verified[/green]")
+    console.print()
+    console.print("Installing update...")
+    
+    if apply_update(new_exe):
+        console.print("[green]✓ Update installed successfully![/green]")
+        console.print()
+        console.print("Please restart gcb-runner to use the new version.")
+    else:
+        console.print("[red]Failed to install update.[/red]")
+        console.print("Please download manually from:")
+        console.print("  https://greatcommissionbenchmark.ai/runner")
+        raise typer.Exit(1)
+
+
 @app.command(name="help")
 def show_help(ctx: typer.Context):
     """Show CLI command reference."""
@@ -577,6 +701,7 @@ def show_help(ctx: typer.Context):
         ("gcb-runner export", "Export results to JSON"),
         ("gcb-runner upload", "Upload results to platform"),
         ("gcb-runner versions", "List benchmark versions"),
+        ("gcb-runner update", "Check for and install updates"),
         ("gcb-runner reset-db", "Delete and reinitialize results database"),
     ]
     
@@ -616,13 +741,21 @@ def version_callback(value: bool):
 def callback(
     ctx: typer.Context,
     version: bool = typer.Option(False, "--version", "-v", help="Show version", callback=version_callback, is_eager=True),
+    no_update_check: bool = typer.Option(False, "--no-update-check", help="Skip automatic update check", hidden=True),
 ):
     """GCB Runner - Great Commission Benchmark CLI
     
     Run without arguments to launch the interactive menu.
     Use 'gcb-runner help' for command reference.
     """
+    # Check for updates on startup (non-blocking notification)
+    if not no_update_check and ctx.invoked_subcommand not in ("update", None):
+        check_for_updates_notification()
+    
     if ctx.invoked_subcommand is None and not version:
+        # Check for updates before launching menu
+        if not no_update_check:
+            check_for_updates_notification()
         # Launch the interactive menu when no command is specified
         from gcb_runner.menu import run_menu
         run_menu()

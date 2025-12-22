@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Terminal, Download, Settings, BarChart3, Upload, Server, Laptop } from "lucide-react";
+import { Terminal, Download, Settings, BarChart3, Upload, Server, Laptop, Apple, Monitor, Code2, RefreshCw } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function RunnerPage() {
   return (
@@ -34,25 +35,162 @@ export default function RunnerPage() {
                 <Badge variant="secondary">LM Studio</Badge>
                 <Badge variant="secondary">Ollama</Badge>
               </div>
-              <div className="flex flex-wrap gap-3">
-                <Button variant="brand" size="lg" asChild>
-                  <a href="https://pypi.org/project/gcb-runner/" target="_blank" rel="noopener noreferrer">
-                    <Download className="h-4 w-4" />
-                    Install from PyPI
-                  </a>
-                </Button>
-                <Button variant="outline" size="lg" asChild>
-                  <a href="https://github.com/great-commission-benchmark/gcb-runner" target="_blank" rel="noopener noreferrer">
-                    View on GitHub
-                  </a>
-                </Button>
-              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Quick Install */}
+      {/* Download Section */}
+      <Card className="mb-8 border-[--ga-red]/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Download
+          </CardTitle>
+          <CardDescription>
+            Download the standalone executable - no Python required
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="macos" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="macos" className="flex items-center gap-2">
+                <Apple className="h-4 w-4" />
+                macOS
+              </TabsTrigger>
+              <TabsTrigger value="linux" className="flex items-center gap-2">
+                <Monitor className="h-4 w-4" />
+                Linux
+              </TabsTrigger>
+              <TabsTrigger value="windows" className="flex items-center gap-2">
+                <Monitor className="h-4 w-4" />
+                Windows
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="macos" className="mt-4 space-y-4">
+              <div className="grid gap-3">
+                <Button variant="brand" size="lg" className="w-full justify-start" asChild>
+                  <a href="/downloads/gcb-runner-macos-arm64" download>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download for Apple Silicon (M1/M2/M3)
+                  </a>
+                </Button>
+                <Button variant="outline" size="lg" className="w-full justify-start" asChild>
+                  <a href="/downloads/gcb-runner-macos-x64" download>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download for Intel Mac
+                  </a>
+                </Button>
+              </div>
+              <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
+                <p className="font-medium">After downloading:</p>
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                  <li>Open Terminal and navigate to your Downloads folder</li>
+                  <li>Run: <code className="bg-background px-1 rounded">chmod +x gcb-runner-macos-*</code></li>
+                  <li>Run: <code className="bg-background px-1 rounded">./gcb-runner-macos-arm64</code> (or -x64)</li>
+                </ol>
+                <p className="text-muted-foreground mt-2">
+                  <strong>Note:</strong> You may need to allow the app in System Settings → Privacy & Security.
+                </p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="linux" className="mt-4 space-y-4">
+              <Button variant="brand" size="lg" className="w-full justify-start" asChild>
+                <a href="/downloads/gcb-runner-linux-x64" download>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download for Linux (x64)
+                </a>
+              </Button>
+              <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
+                <p className="font-medium">After downloading:</p>
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                  <li>Open a terminal and navigate to your Downloads folder</li>
+                  <li>Run: <code className="bg-background px-1 rounded">chmod +x gcb-runner-linux-x64</code></li>
+                  <li>Run: <code className="bg-background px-1 rounded">./gcb-runner-linux-x64</code></li>
+                </ol>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="windows" className="mt-4 space-y-4">
+              <Button variant="brand" size="lg" className="w-full justify-start" asChild>
+                <a href="/downloads/gcb-runner.exe" download>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download for Windows (x64)
+                </a>
+              </Button>
+              <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
+                <p className="font-medium">After downloading:</p>
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                  <li>Open Command Prompt or PowerShell</li>
+                  <li>Navigate to your Downloads folder</li>
+                  <li>Run: <code className="bg-background px-1 rounded">.\gcb-runner.exe</code></li>
+                </ol>
+                <p className="text-muted-foreground mt-2">
+                  <strong>Note:</strong> Windows SmartScreen may warn about the file. Click &quot;More info&quot; then &quot;Run anyway&quot;.
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="mt-6 pt-6 border-t">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+              <RefreshCw className="h-4 w-4" />
+              <span>Auto-updates included - the CLI will notify you when updates are available</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Verify downloads using SHA256 hashes from{" "}
+              <a href="/downloads/manifest.json" className="text-[--ga-red] hover:underline">
+                manifest.json
+              </a>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Developer Installation */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Code2 className="h-5 w-5" />
+            For Developers
+          </CardTitle>
+          <CardDescription>
+            Alternative installation methods for development or customization
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <h3 className="font-medium mb-2">Install via pip (requires Python 3.10+)</h3>
+            <div className="bg-muted p-4 rounded-lg font-mono text-sm">
+              pip install gcb-runner
+            </div>
+          </div>
+          <div>
+            <h3 className="font-medium mb-2">Install from source</h3>
+            <div className="bg-muted p-4 rounded-lg font-mono text-sm space-y-1">
+              <div>git clone https://github.com/great-commission-benchmark/gcb-runner</div>
+              <div>cd gcb-runner</div>
+              <div>pip install -e &quot;.[dev]&quot;</div>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" size="sm" asChild>
+              <a href="https://pypi.org/project/gcb-runner/" target="_blank" rel="noopener noreferrer">
+                PyPI Package
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a href="https://github.com/great-commission-benchmark/gcb-runner" target="_blank" rel="noopener noreferrer">
+                GitHub Repository
+              </a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Start */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Quick Start</CardTitle>
@@ -60,13 +198,7 @@ export default function RunnerPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h3 className="font-medium mb-2">1. Install</h3>
-            <div className="bg-muted p-4 rounded-lg font-mono text-sm">
-              pip install gcb-runner
-            </div>
-          </div>
-          <div>
-            <h3 className="font-medium mb-2">2. Configure</h3>
+            <h3 className="font-medium mb-2">1. Configure</h3>
             <div className="bg-muted p-4 rounded-lg font-mono text-sm">
               gcb-runner config
             </div>
@@ -78,7 +210,7 @@ export default function RunnerPage() {
             </p>
           </div>
           <div>
-            <h3 className="font-medium mb-2">3. Run</h3>
+            <h3 className="font-medium mb-2">2. Run</h3>
             <div className="bg-muted p-4 rounded-lg font-mono text-sm">
               gcb-runner
             </div>
@@ -225,6 +357,10 @@ export default function RunnerPage() {
                 <span className="text-sm text-muted-foreground">Open local web dashboard</span>
               </div>
               <div className="flex items-start gap-4">
+                <code className="bg-muted px-2 py-1 rounded text-sm font-mono shrink-0">gcb-runner update</code>
+                <span className="text-sm text-muted-foreground">Check for and install updates</span>
+              </div>
+              <div className="flex items-start gap-4">
                 <code className="bg-muted px-2 py-1 rounded text-sm font-mono shrink-0">gcb-runner upload --run 3</code>
                 <span className="text-sm text-muted-foreground">Submit results to platform</span>
               </div>
@@ -247,7 +383,7 @@ export default function RunnerPage() {
               </div>
             </div>
             <Button variant="brand" asChild>
-              <a href="/dashboard/settings">Get API Key →</a>
+              <a href="/dashboard/settings">Get API Key</a>
             </Button>
           </div>
         </CardContent>

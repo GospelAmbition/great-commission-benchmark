@@ -14,7 +14,8 @@ from app.api.v1.endpoints import (
     webhooks,
     moderator,
     admin,
-    benchmark
+    benchmark,
+    sponsorship
 )
 
 api_router = APIRouter()
@@ -30,6 +31,9 @@ api_router.include_router(user.router, prefix="/user", tags=["user"])
 
 # API Keys (under /user for organization)
 api_router.include_router(api_keys.router, prefix="/user/api-keys", tags=["api-keys"])
+
+# Sponsorship (user endpoints)
+api_router.include_router(sponsorship.user_router, prefix="/user/sponsorship", tags=["sponsorship"])
 
 # Tests API
 api_router.include_router(tests.router, prefix="/tests", tags=["tests"])
@@ -51,6 +55,9 @@ api_router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"]
 
 # Moderator API
 api_router.include_router(moderator.router, prefix="/moderator", tags=["moderator"])
+
+# Moderator Sponsorship API
+api_router.include_router(sponsorship.moderator_router, prefix="/moderator/sponsorship", tags=["moderator-sponsorship"])
 
 # Admin API
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])

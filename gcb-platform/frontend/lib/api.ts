@@ -790,6 +790,118 @@ export class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Sponsorship API endpoints
+  async createSponsorship(data: {
+    request_type: 'sponsorship' | 'request';
+    openrouter_model_id?: string;
+    custom_model_name?: string;
+    message?: string;
+  }): Promise<{
+    id: string;
+    request_type: string;
+    model_name: string;
+    status: string;
+    payment_required: boolean;
+    payment_intent_id?: string;
+    client_secret?: string;
+    message: string;
+  }> {
+    return this.request('/api/user/sponsorship', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getUserSponsorships(params?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    items: Array<{
+      id: string;
+      request_type: string;
+      model_name: string;
+      status: string;
+      payment_status?: string;
+      created_at: string;
+      reviewed_at?: string;
+      reviewer_notes?: string;
+    }>;
+    total: number;
+  }> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const query = queryParams.toString();
+    return this.request(`/api/user/sponsorship${query ? `?${query}` : ''}`);
+  }
+
+  async getSponsorshipQueue(params?: {
+    status?: string;
+    request_type?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    items: Array<{
+      id: string;
+      request_type: string;
+      model_name: string;
+      user_name: string;
+      user_email: string;
+      message?: string;
+      status: string;
+      payment_status?: string;
+      created_at: string;
+    }>;
+    total: number;
+  }> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const query = queryParams.toString();
+    return this.request(`/api/moderator/sponsorship${query ? `?${query}` : ''}`);
+  }
+
+  async getSponsorshipDetail(id: string): Promise<{
+    id: string;
+    request_type: string;
+    openrouter_model_id?: string;
+    custom_model_name?: string;
+    model_name: string;
+    user_id: string;
+    user_name: string;
+    user_email: string;
+    message?: string;
+    status: string;
+    payment_id?: string;
+    payment_status?: string;
+    created_at: string;
+    reviewed_at?: string;
+    reviewer_notes?: string;
+  }> {
+    return this.request(`/api/moderator/sponsorship/${id}`);
+  }
+
+  async reviewSponsorship(id: string, action: 'approve' | 'reject', notes?: string): Promise<{
+    id: string;
+    status: string;
+    message: string;
+  }> {
+    return this.request(`/api/moderator/sponsorship/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ action, notes }),
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

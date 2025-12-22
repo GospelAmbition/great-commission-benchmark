@@ -18,16 +18,30 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { CliSubmissionUpload } from "@/components/cli-submission-upload";
+import { SponsorModelCard } from "@/components/sponsor-model-card";
+import { useUserProfile } from "@/lib/useUserProfile";
+import { 
+  Terminal, 
+  Key, 
+  Upload, 
+  Heart, 
+  Users, 
+  Mail, 
+  CheckCircle2,
+  Copy,
+  ExternalLink
+} from "lucide-react";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const user = session?.user;
   const userLoading = status === "loading";
   const router = useRouter();
+  const { isAdmin, loading: profileLoading } = useUserProfile();
   const [profile, setProfile] = useState<any>(null);
   const [tests, setTests] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
-  const [activity, setActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
@@ -44,11 +58,10 @@ export default function DashboardPage() {
   async function loadDashboardData() {
     setLoading(true);
     try {
-      const [profileData, testsData, submissionsData, activityData] = await Promise.all([
+      const [profileData, testsData, submissionsData] = await Promise.all([
         apiClient.getUserProfile().catch(() => null),
         apiClient.getUserTests({ limit: 10 }).catch(() => ({ items: [] })),
         apiClient.getUserSubmissions().catch(() => []),
-        apiClient.getUserActivity().catch(() => []),
       ]);
 
       setProfile(profileData);
@@ -56,7 +69,6 @@ export default function DashboardPage() {
         setTests(testsData.items);
       }
       setSubmissions(submissionsData || []);
-      setActivity(activityData || []);
     } catch (error) {
       console.error("Failed to load dashboard:", error);
     } finally {
@@ -64,7 +76,12 @@ export default function DashboardPage() {
     }
   }
 
-  if (userLoading || loading) {
+  function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
+  }
+
+  if (userLoading || loading || profileLoading) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -81,188 +98,420 @@ export default function DashboardPage() {
     return null;
   }
 
+  const hasApiKey = profile?.has_api_key;
+  const hasSubmissions = submissions.length > 0;
+
   return (
-    <div className="container py-8">
+    <div className="container py-8 max-w-7xl">
+      {/* Welcome Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold">Dashboard</h1>
+        <h1 className="text-4xl font-bold">Welcome, {profile?.name || user.name || "Tester"}!</h1>
         <p className="mt-2 text-muted-foreground">
-          Welcome back, {profile?.name || user.name || "User"}!
+          Help us measure which AI models best serve the Great Commission
         </p>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Tests Run
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{profile?.test_count || tests.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Submissions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{submissions?.length ?? 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Contributions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{profile?.contribution_count || 0}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Test History */}
-      <Card className="mb-8">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Recent Tests</CardTitle>
-              <CardDescription>Your recent benchmark test runs</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
-                Upload CLI Results
-              </Button>
-              <Button asChild>
-                <Link href="/tests/new">Run New Test</Link>
-              </Button>
-            </div>
+      {/* Two-column layout: Main content + Side column */}
+      <div className="grid gap-8 lg:grid-cols-3">
+        {/* Main Content Column */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Stats Summary */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  CLI Submissions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{submissions?.length ?? 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Approved
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {submissions?.filter((s: any) => s.status === "approved").length ?? 0}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Contributions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{profile?.contribution_count || 0}</div>
+              </CardContent>
+            </Card>
           </div>
-        </CardHeader>
-        <CardContent>
-          {tests.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Model</TableHead>
-                  <TableHead>Version</TableHead>
-                  <TableHead>Score</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tests.map((test) => (
-                  <TableRow key={test.id}>
-                    <TableCell>
-                      {new Date(test.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>{test.model_name || test.model_id}</TableCell>
-                    <TableCell>{test.version}</TableCell>
-                    <TableCell>
-                      {test.overall_score ? test.overall_score.toFixed(1) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{test.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button asChild variant="ghost" size="sm">
-                        <Link href={`/dashboard/tests/${test.id}`}>View</Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">No tests yet</p>
-              <Button asChild>
-                <Link href="/tests/new">Run Your First Test</Link>
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Community Submissions */}
-      {submissions.length > 0 && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Community Submissions</CardTitle>
-            <CardDescription>Your submitted test results</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Model</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {submissions.map((submission) => (
-                  <TableRow key={submission.id}>
-                    <TableCell>
-                      {new Date(submission.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>{submission.model_name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{submission.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button asChild variant="ghost" size="sm">
-                        <Link href={`/dashboard/submissions/${submission.id}`}>View</Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Activity Feed */}
-      {activity.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {activity.map((item, index) => (
-                <div key={index} className="flex items-start gap-4 border-b pb-4 last:border-0">
-                  <div className="flex-1">
-                    <p className="text-sm">{item.description || item.type}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(item.created_at).toLocaleString()}
-                    </p>
+          {/* Get Started as a Tester */}
+          <Card className="border-[--ga-red]/20 bg-gradient-to-br from-background to-muted/30">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Terminal className="h-6 w-6 text-[--ga-red]" />
+                <div>
+                  <CardTitle>Get Started as a Tester</CardTitle>
+                  <CardDescription>
+                    Run the benchmark locally and submit your results to the leaderboard
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Step 1: API Key */}
+                <div className="flex items-start gap-4">
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${hasApiKey ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' : 'bg-muted text-muted-foreground'}`}>
+                    {hasApiKey ? <CheckCircle2 className="h-5 w-5" /> : <span className="font-bold">1</span>}
                   </div>
-                  {item.link && (
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={item.link}>View</Link>
+                  <div className="flex-1">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Key className="h-4 w-4" />
+                      Generate an API Key
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Create an API key to authenticate the CLI tool with your account.
+                    </p>
+                    <Button asChild variant="outline" size="sm" className="mt-2">
+                      <Link href="/dashboard/settings">
+                        {hasApiKey ? "Manage API Keys" : "Create API Key"} →
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Step 2: Install */}
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
+                    <span className="font-bold">2</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">Install the GCB Runner</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Install the CLI tool from PyPI using pip.
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <code className="bg-muted px-3 py-2 rounded-md text-sm font-mono flex-1">
+                        pip install gcb-runner
+                      </code>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => copyToClipboard("pip install gcb-runner")}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3: Configure */}
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
+                    <span className="font-bold">3</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">Configure Your API Key</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Run the config command and enter your API key when prompted.
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <code className="bg-muted px-3 py-2 rounded-md text-sm font-mono flex-1">
+                        gcb-runner config
+                      </code>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => copyToClipboard("gcb-runner config")}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 4: Run */}
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
+                    <span className="font-bold">4</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">Run the Benchmark</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Launch the interactive menu to select a model and run the benchmark.
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <code className="bg-muted px-3 py-2 rounded-md text-sm font-mono flex-1">
+                        gcb-runner
+                      </code>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => copyToClipboard("gcb-runner")}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 5: Upload */}
+                <div className="flex items-start gap-4">
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${hasSubmissions ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' : 'bg-muted text-muted-foreground'}`}>
+                    {hasSubmissions ? <CheckCircle2 className="h-5 w-5" /> : <span className="font-bold">5</span>}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Upload className="h-4 w-4" />
+                      Upload Your Results
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Export your results and upload them here for moderator review and leaderboard inclusion.
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <code className="bg-muted px-3 py-2 rounded-md text-sm font-mono">
+                        gcb-runner export --run N
+                      </code>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => copyToClipboard("gcb-runner export --run N")}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Button 
+                      variant="brand" 
+                      size="sm" 
+                      className="mt-3"
+                      onClick={() => setUploadDialogOpen(true)}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload CLI Results
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Learn More */}
+                <div className="pt-4 border-t">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/runner">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Full CLI Documentation
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Engagement Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Heart className="h-5 w-5 text-[--ga-red]" />
+                  <CardTitle className="text-lg">Support the Project</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Help keep the benchmark running and accessible to everyone.
+                </p>
+                <Button asChild variant="outline" size="sm" className="w-full">
+                  <Link href="/contribute">Donate →</Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-[--ga-red]" />
+                  <CardTitle className="text-lg">Volunteer</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Help review submissions, develop features, or spread the word.
+                </p>
+                <Button asChild variant="outline" size="sm" className="w-full">
+                  <Link href="/contribute">Get Involved →</Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-[--ga-red]" />
+                  <CardTitle className="text-lg">Newsletter</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Get updates on new features, benchmark results, and more.
+                </p>
+                <Button asChild variant="outline" size="sm" className="w-full">
+                  <Link href="/dashboard/settings">Subscribe →</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Your Submissions */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Your Submissions</CardTitle>
+                  <CardDescription>CLI test results you&apos;ve submitted for review</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Results
+                  </Button>
+                  {isAdmin && (
+                    <Button asChild>
+                      <Link href="/tests/new">Run Platform Test</Link>
                     </Button>
                   )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {submissions.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Model</TableHead>
+                      <TableHead>Score</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {submissions.map((submission: any) => (
+                      <TableRow key={submission.id}>
+                        <TableCell>
+                          {new Date(submission.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{submission.model_name}</TableCell>
+                        <TableCell>
+                          {submission.overall_score ? submission.overall_score.toFixed(1) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              submission.status === "approved" ? "default" :
+                              submission.status === "rejected" ? "destructive" :
+                              "outline"
+                            }
+                          >
+                            {submission.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button asChild variant="ghost" size="sm">
+                            <Link href={`/dashboard/submissions/${submission.id}`}>View</Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8">
+                  <Terminal className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground mb-2">No submissions yet</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Run the CLI tool and upload your first test results
+                  </p>
+                  <Button onClick={() => setUploadDialogOpen(true)}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Your First Results
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Admin: Platform Tests (only shown to admins) */}
+          {isAdmin && tests.length > 0 && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Platform Tests (Admin)</CardTitle>
+                    <CardDescription>Tests run directly on the platform</CardDescription>
+                  </div>
+                  <Button asChild size="sm">
+                    <Link href="/tests/new">Run New Test</Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Model</TableHead>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Score</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tests.map((test) => (
+                      <TableRow key={test.id}>
+                        <TableCell>
+                          {new Date(test.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{test.model_name || test.model_id}</TableCell>
+                        <TableCell>{test.version}</TableCell>
+                        <TableCell>
+                          {test.overall_score ? test.overall_score.toFixed(1) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{test.status}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button asChild variant="ghost" size="sm">
+                            <Link href={`/dashboard/tests/${test.id}`}>View</Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Side Column - Sponsor Model Card */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-8">
+            <SponsorModelCard />
+          </div>
+        </div>
+      </div>
 
       {/* CLI Submission Upload Dialog */}
       <CliSubmissionUpload
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
         onSuccess={() => {
-          // Refresh submissions list after successful upload
           loadDashboardData();
         }}
       />

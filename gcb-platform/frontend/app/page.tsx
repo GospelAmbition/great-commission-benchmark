@@ -222,15 +222,18 @@ export default function Home() {
       <section className="container py-12">
         <Card className="bg-[--ga-accent-red] border-[--ga-light-red]">
           <CardHeader>
-            <CardTitle>Ready to Test a Model?</CardTitle>
+            <CardTitle>Become a Tester</CardTitle>
             <CardDescription>
-              Contribute to the benchmark by running a test on any AI model. Results are verified
-              by moderators and added to the leaderboard.
+              Help measure AI models for Great Commission work. Use our CLI tool to run tests on any model—including 
+              local and fine-tuned models. Results are verified by moderators and added to the leaderboard.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-wrap gap-3">
             <Button asChild size="lg" variant="brand">
-              <Link href="/tests/new">Run a Test →</Link>
+              <Link href="/dashboard">Get Started →</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/runner">Learn About CLI Tool</Link>
             </Button>
           </CardContent>
         </Card>

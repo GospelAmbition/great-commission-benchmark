@@ -7,6 +7,7 @@ from app.core.auth import get_db
 from app.services.payment import PaymentService
 from app.db.models.test_run import TestRun
 from app.db.models.community_submission import CommunitySubmission
+from app.db.models.sponsorship_request import SponsorshipRequest
 from app.services.executor import BenchmarkExecutor
 from app.services.openrouter import OpenRouterClient
 from app.services.email import EmailService
@@ -64,8 +65,33 @@ async def stripe_webhook(
                 except:
                     pass
         
+        # Handle sponsorship payments
+        elif payment_type == "sponsorship":
+            sponsorship_id = metadata.get("sponsorship_id")
+            
+            if sponsorship_id:
+                sponsorship = db.query(SponsorshipRequest).filter(
+                    SponsorshipRequest.id == sponsorship_id
+                ).first()
+                
+                if sponsorship and sponsorship.status == "pending_payment":
+                    # Update sponsorship status to pending for moderation
+                    sponsorship.payment_status = "succeeded"
+                    sponsorship.status = "pending"
+                    db.commit()
+                    
+                    # TODO: Send confirmation email to user
+                    # try:
+                    #     await EmailService.send_sponsorship_payment_confirmed_email(
+                    #         sponsorship.user.email,
+                    #         str(sponsorship.id),
+                    #         sponsorship.openrouter_model_id or sponsorship.custom_model_name
+                    #     )
+                    # except:
+                    #     pass
+        
         # Handle platform test payments
-        elif payment_type != "cli_submission":
+        elif payment_type not in ["cli_submission", "sponsorship"]:
             test_id = metadata.get("test_id")
             
             if test_id:
@@ -119,6 +145,17 @@ async def stripe_webhook(
             # Note: send_payment_failed_email is designed for test runs
             # For submissions, we could add a specific method or use a generic notification
             # For now, skip email to avoid errors
+        
+        # Handle sponsorship payment failures
+        sponsorship = db.query(SponsorshipRequest).filter(
+            SponsorshipRequest.payment_id == payment_intent_id
+        ).first()
+        
+        if sponsorship:
+            sponsorship.payment_status = "failed"
+            sponsorship.status = "payment_failed"
+            db.commit()
+            # TODO: Send failure email notification
         
         # Handle platform test payment failures
         test_runs = db.query(TestRun).filter(TestRun.payment_id == payment_intent_id).all()
