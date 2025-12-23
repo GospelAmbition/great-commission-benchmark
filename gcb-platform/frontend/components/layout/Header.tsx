@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Menu, Terminal } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useUserProfile } from "@/lib/useUserProfile";
 
@@ -109,12 +109,6 @@ export function Header() {
                     <Link href="/dashboard">My Dashboard</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/runner" className="flex items-center gap-2">
-                      <Terminal className="h-4 w-4" />
-                      CLI Runner
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
                     <Link href="/dashboard/settings">Account Settings</Link>
                   </DropdownMenuItem>
                   {isModerator && (
@@ -133,9 +127,6 @@ export function Header() {
                   {isAdmin && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href="/tests/new">Run Platform Test</Link>
-                      </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href="/admin">Admin Dashboard</Link>
                       </DropdownMenuItem>
@@ -204,13 +195,6 @@ export function Header() {
                     >
                       Dashboard
                     </Link>
-                    <Link
-                      href="/runner"
-                      className="text-lg font-medium transition-colors hover:text-foreground/80 flex items-center gap-2"
-                    >
-                      <Terminal className="h-4 w-4" />
-                      CLI Runner
-                    </Link>
                     {isModerator && (
                       <Link
                         href="/moderator"
@@ -228,20 +212,12 @@ export function Header() {
                       </Link>
                     )}
                     {isAdmin && (
-                      <>
-                        <Link
-                          href="/tests/new"
-                          className="text-lg font-medium transition-colors hover:text-foreground/80"
-                        >
-                          Run Platform Test
-                        </Link>
-                        <Link
-                          href="/admin"
-                          className="text-lg font-medium transition-colors hover:text-foreground/80"
-                        >
-                          Admin Dashboard
-                        </Link>
-                      </>
+                      <Link
+                        href="/admin"
+                        className="text-lg font-medium transition-colors hover:text-foreground/80"
+                      >
+                        Admin Dashboard
+                      </Link>
                     )}
                   </>
                 )}

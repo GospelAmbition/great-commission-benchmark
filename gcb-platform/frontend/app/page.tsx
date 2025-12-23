@@ -224,7 +224,7 @@ export default function Home() {
           <CardHeader>
             <CardTitle>Become a Tester</CardTitle>
             <CardDescription>
-              Help measure AI models for Great Commission work. Use our CLI tool to run tests on any model—including 
+              Help measure AI models for Great Commission work. Use our GCB Runner to run tests on any model—including 
               local and fine-tuned models. Results are verified by moderators and added to the leaderboard.
             </CardDescription>
           </CardHeader>
@@ -233,7 +233,7 @@ export default function Home() {
               <Link href="/dashboard">Get Started →</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/runner">Learn About CLI Tool</Link>
+              <Link href="/runner">Learn About GCB Runner</Link>
             </Button>
           </CardContent>
         </Card>

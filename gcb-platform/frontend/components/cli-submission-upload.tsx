@@ -194,7 +194,7 @@ export function CliSubmissionUpload({ open, onOpenChange, onSuccess }: CliSubmis
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Upload CLI Test Results</DialogTitle>
+          <DialogTitle>Upload GCB Runner Test Results</DialogTitle>
           <DialogDescription>
             Upload test results exported from gcb-runner. Export your results using{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded">gcb-runner export --run N</code>

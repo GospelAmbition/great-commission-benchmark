@@ -391,7 +391,7 @@ export default function SettingsPage() {
             API Keys
           </CardTitle>
           <CardDescription>
-            Manage API keys for the GCB Runner CLI. Use these keys to run benchmarks locally.
+            Manage API keys for the GCB Runner. Use these keys to run benchmarks locally.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -465,7 +465,7 @@ export default function SettingsPage() {
             </div>
           ) : apiKeys.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              No API keys yet. Create one to use the GCB Runner CLI.
+              No API keys yet. Create one to use the GCB Runner.
             </p>
           ) : (
             <div className="space-y-3">
@@ -513,7 +513,7 @@ export default function SettingsPage() {
           )}
 
           <p className="text-xs text-muted-foreground">
-            Use your API key with the GCB Runner CLI:{" "}
+            Use your API key with the GCB Runner:{" "}
             <code className="bg-muted px-1.5 py-0.5 rounded">gcb-runner config</code>
           </p>
         </CardContent>

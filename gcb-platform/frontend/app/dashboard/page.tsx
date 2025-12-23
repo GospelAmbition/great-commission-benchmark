@@ -19,7 +19,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { CliSubmissionUpload } from "@/components/cli-submission-upload";
 import { SponsorModelCard } from "@/components/sponsor-model-card";
-import { useUserProfile } from "@/lib/useUserProfile";
 import { 
   Terminal, 
   Key, 
@@ -38,9 +37,7 @@ export default function DashboardPage() {
   const user = session?.user;
   const userLoading = status === "loading";
   const router = useRouter();
-  const { isAdmin, loading: profileLoading } = useUserProfile();
   const [profile, setProfile] = useState<any>(null);
-  const [tests, setTests] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -58,16 +55,12 @@ export default function DashboardPage() {
   async function loadDashboardData() {
     setLoading(true);
     try {
-      const [profileData, testsData, submissionsData] = await Promise.all([
+      const [profileData, submissionsData] = await Promise.all([
         apiClient.getUserProfile().catch(() => null),
-        apiClient.getUserTests({ limit: 10 }).catch(() => ({ items: [] })),
         apiClient.getUserSubmissions().catch(() => []),
       ]);
 
       setProfile(profileData);
-      if (testsData?.items) {
-        setTests(testsData.items);
-      }
       setSubmissions(submissionsData || []);
     } catch (error) {
       console.error("Failed to load dashboard:", error);
@@ -81,7 +74,7 @@ export default function DashboardPage() {
     toast.success("Copied to clipboard");
   }
 
-  if (userLoading || loading || profileLoading) {
+  if (userLoading || loading) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -120,7 +113,7 @@ export default function DashboardPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  CLI Submissions
+                  GCB Runner Submissions
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -177,7 +170,7 @@ export default function DashboardPage() {
                       Generate an API Key
                     </h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Create an API key to authenticate the CLI tool with your account.
+                      Create an API key to authenticate the GCB Runner with your account.
                     </p>
                     <Button asChild variant="outline" size="sm" className="mt-2">
                       <Link href="/dashboard/settings">
@@ -195,7 +188,7 @@ export default function DashboardPage() {
                   <div className="flex-1">
                     <h3 className="font-semibold">Install the GCB Runner</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Install the CLI tool from PyPI using pip.
+                      Install the GCB Runner from PyPI using pip.
                     </p>
                     <div className="mt-2 flex items-center gap-2">
                       <code className="bg-muted px-3 py-2 rounded-md text-sm font-mono flex-1">
@@ -294,7 +287,7 @@ export default function DashboardPage() {
                       onClick={() => setUploadDialogOpen(true)}
                     >
                       <Upload className="h-4 w-4 mr-2" />
-                      Upload CLI Results
+                      Upload GCB Runner Results
                     </Button>
                   </div>
                 </div>
@@ -304,7 +297,7 @@ export default function DashboardPage() {
                   <Button asChild variant="outline" size="sm">
                     <Link href="/runner">
                       <ExternalLink className="h-4 w-4 mr-2" />
-                      Full CLI Documentation
+                      Full GCB Runner Documentation
                     </Link>
                   </Button>
                 </div>
@@ -369,23 +362,8 @@ export default function DashboardPage() {
           {/* Your Submissions */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Your Submissions</CardTitle>
-                  <CardDescription>CLI test results you&apos;ve submitted for review</CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Results
-                  </Button>
-                  {isAdmin && (
-                    <Button asChild>
-                      <Link href="/tests/new">Run Platform Test</Link>
-                    </Button>
-                  )}
-                </div>
-              </div>
+              <CardTitle>Your Submissions</CardTitle>
+              <CardDescription>GCB Runner test results you&apos;ve submitted for review</CardDescription>
             </CardHeader>
             <CardContent>
               {submissions.length > 0 ? (
@@ -434,7 +412,7 @@ export default function DashboardPage() {
                   <Terminal className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground mb-2">No submissions yet</p>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Run the CLI tool and upload your first test results
+                    Run the GCB Runner and upload your first test results
                   </p>
                   <Button onClick={() => setUploadDialogOpen(true)}>
                     <Upload className="h-4 w-4 mr-2" />
@@ -445,64 +423,35 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Admin: Platform Tests (only shown to admins) */}
-          {isAdmin && tests.length > 0 && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Platform Tests (Admin)</CardTitle>
-                    <CardDescription>Tests run directly on the platform</CardDescription>
-                  </div>
-                  <Button asChild size="sm">
-                    <Link href="/tests/new">Run New Test</Link>
-                  </Button>
+        </div>
+
+        {/* Side Column - Sponsor Model Card + Upload Results */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-8 space-y-6">
+            <SponsorModelCard />
+            
+            {/* Upload Results Card */}
+            <Card className="border-[--ga-red]/20">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-[--ga-red]" />
+                  <CardTitle className="text-lg">Upload Test Results</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Model</TableHead>
-                      <TableHead>Version</TableHead>
-                      <TableHead>Score</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tests.map((test) => (
-                      <TableRow key={test.id}>
-                        <TableCell>
-                          {new Date(test.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>{test.model_name || test.model_id}</TableCell>
-                        <TableCell>{test.version}</TableCell>
-                        <TableCell>
-                          {test.overall_score ? test.overall_score.toFixed(1) : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{test.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button asChild variant="ghost" size="sm">
-                            <Link href={`/dashboard/tests/${test.id}`}>View</Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Ran the gcb-runner? Upload your exported results for moderator review and leaderboard inclusion.
+                </p>
+                <Button 
+                  variant="brand" 
+                  className="w-full"
+                  onClick={() => setUploadDialogOpen(true)}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload GCB Runner Results
+                </Button>
               </CardContent>
             </Card>
-          )}
-        </div>
-
-        {/* Side Column - Sponsor Model Card */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-8">
-            <SponsorModelCard />
           </div>
         </div>
       </div>

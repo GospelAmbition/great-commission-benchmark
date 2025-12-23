@@ -275,7 +275,7 @@ export default function AboutPage() {
               <div>
                 <h3 className="font-semibold mb-2">Can I submit my own test results?</h3>
                 <p className="text-sm text-muted-foreground">
-                  Yes! You can run tests through the platform or submit results via the CLI tool.
+                  Yes! You can run tests through the platform or submit results via the GCB Runner.
                   All submissions are reviewed by moderators before being added to the leaderboard.
                 </p>
               </div>

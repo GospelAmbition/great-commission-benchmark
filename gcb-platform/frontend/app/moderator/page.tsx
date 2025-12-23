@@ -141,7 +141,7 @@ export default function ModeratorDashboardPage() {
           <Tabs defaultValue="community" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="community">
-                CLI Submissions ({communityQueue.length})
+                GCB Runner Submissions ({communityQueue.length})
               </TabsTrigger>
               <TabsTrigger value="platform">
                 Platform Tests ({platformQueue.length})
@@ -191,7 +191,7 @@ export default function ModeratorDashboardPage() {
                 </Table>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">No CLI submissions in queue</p>
+                  <p className="text-muted-foreground">No GCB Runner submissions in queue</p>
                 </div>
               )}
             </TabsContent>
@@ -319,7 +319,7 @@ export default function ModeratorDashboardPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
-                        {item.review_type === "cli_submission" ? "CLI" : "Platform"}
+                        {item.review_type === "cli_submission" ? "Runner" : "Platform"}
                       </Badge>
                     </TableCell>
                     <TableCell>{item.model_name}</TableCell>

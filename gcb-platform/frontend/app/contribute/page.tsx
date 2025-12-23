@@ -28,7 +28,7 @@ export default function ContributePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Use our CLI tool to run benchmark tests on any AI model—including local models, 
+            Use our GCB Runner to run benchmark tests on any AI model—including local models, 
             fine-tuned models, or cloud APIs. Your results will be reviewed by moderators 
             and added to the public leaderboard.
           </p>
@@ -41,7 +41,7 @@ export default function ContributePage() {
             </Button>
             <Button asChild variant="outline">
               <Link href="/runner">
-                Learn About CLI Tool →
+                Learn About GCB Runner →
               </Link>
             </Button>
           </div>
@@ -61,7 +61,7 @@ export default function ContributePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Have you run tests with the CLI tool? Upload your results for moderator review.
+              Have you run tests with the GCB Runner? Upload your results for moderator review.
               Approved results are added to the public leaderboard.
             </p>
             <Button asChild variant="outline">
@@ -154,7 +154,7 @@ export default function ContributePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Join our Discord server to discuss results, share insights, get help with the CLI tool, 
+            Join our Discord server to discuss results, share insights, get help with the GCB Runner, 
             and collaborate with others in the community.
           </p>
           <Button asChild variant="outline">

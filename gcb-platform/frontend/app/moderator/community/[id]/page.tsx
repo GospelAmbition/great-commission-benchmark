@@ -168,7 +168,7 @@ export default function CommunitySubmissionReviewPage() {
           <div>
             <h1 className="text-4xl font-bold">Review: {submission.model_name}</h1>
             <p className="text-muted-foreground mt-2">
-              CLI Submission • Version {submission.question_set_version} • Score: {submission.overall_score.toFixed(1)}
+              GCB Runner Submission • Version {submission.question_set_version} • Score: {submission.overall_score.toFixed(1)}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               Submitted by {submission.user_name} • {new Date(submission.submitted_at).toLocaleString()}

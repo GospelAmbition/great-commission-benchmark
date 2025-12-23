@@ -24,7 +24,7 @@ export default function RunnerPage() {
             <div className="flex-1">
               <h2 className="text-2xl font-semibold mb-3">Test Any Model, Anywhere</h2>
               <p className="text-muted-foreground mb-4">
-                The GCB Runner is the official CLI tool for running the Great Commission Benchmark 
+                The GCB Runner is the official command-line tool for running the Great Commission Benchmark 
                 on your own infrastructure. Perfect for testing local models, fine-tuned models, 
                 or models not available through the platform.
               </p>
@@ -137,7 +137,7 @@ export default function RunnerPage() {
           <div className="mt-6 pt-6 border-t">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
               <RefreshCw className="h-4 w-4" />
-              <span>Auto-updates included - the CLI will notify you when updates are available</span>
+              <span>Auto-updates included - gcb-runner will notify you when updates are available</span>
             </div>
             <p className="text-xs text-muted-foreground">
               Verify downloads using SHA256 hashes from{" "}
@@ -287,7 +287,7 @@ export default function RunnerPage() {
       {/* Platform vs CLI */}
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Platform Tests vs CLI Submissions</CardTitle>
+          <CardTitle>Platform Tests vs GCB Runner Submissions</CardTitle>
           <CardDescription>Choose the right approach for your needs</CardDescription>
         </CardHeader>
         <CardContent>
@@ -297,14 +297,14 @@ export default function RunnerPage() {
                 <tr className="border-b">
                   <th className="text-left py-3 px-2 font-medium">Aspect</th>
                   <th className="text-left py-3 px-2 font-medium">Platform Tests</th>
-                  <th className="text-left py-3 px-2 font-medium">CLI Submissions</th>
+                  <th className="text-left py-3 px-2 font-medium">GCB Runner Submissions</th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="border-b">
                   <td className="py-3 px-2 text-muted-foreground">Where run</td>
                   <td className="py-3 px-2">On the platform</td>
-                  <td className="py-3 px-2">Locally via CLI</td>
+                  <td className="py-3 px-2">Locally via GCB Runner</td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-3 px-2 text-muted-foreground">Publishing</td>

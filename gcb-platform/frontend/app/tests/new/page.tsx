@@ -47,7 +47,7 @@ export default function NewTestPage() {
     
     // Check admin access after profile loads
     if (!profileLoading && user && !isAdmin) {
-      toast.error("Platform tests are restricted to administrators. Please use the CLI tool to run tests.");
+      toast.error("Platform tests are restricted to administrators. Please use the GCB Runner to run tests.");
       router.push("/dashboard");
       return;
     }
@@ -170,14 +170,14 @@ export default function NewTestPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              To run benchmark tests, please use the GCB Runner CLI tool. You can install it and upload your results from your dashboard.
+              To run benchmark tests, please use the GCB Runner GCB Runner. You can install it and upload your results from your dashboard.
             </p>
             <div className="flex gap-4">
               <Button asChild variant="brand">
                 <a href="/dashboard">Go to Dashboard</a>
               </Button>
               <Button asChild variant="outline">
-                <a href="/runner">Learn About CLI Tool</a>
+                <a href="/runner">Learn About GCB Runner</a>
               </Button>
             </div>
           </CardContent>
@@ -209,7 +209,7 @@ export default function NewTestPage() {
           <span className="font-medium">Admin-Only Feature</span>
         </div>
         <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-          Platform tests are restricted to administrators. Regular users should use the CLI tool.
+          Platform tests are restricted to administrators. Regular users should use the GCB Runner.
         </p>
       </div>
       
@@ -278,7 +278,7 @@ export default function NewTestPage() {
                       href="/runner"
                       className="underline font-medium hover:text-[--ga-red]"
                     >
-                      GCB Runner CLI
+                      GCB Runner
                     </a>{" "}
                     to run tests locally.
                   </p>

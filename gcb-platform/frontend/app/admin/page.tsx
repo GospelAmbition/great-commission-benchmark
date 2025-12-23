@@ -162,6 +162,17 @@ export default function AdminDashboardPage() {
             </Button>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Platform Testing</CardTitle>
+            <CardDescription>Run tests to verify platform functionality</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/tests/new">Run Platform Test</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -409,7 +409,7 @@ export default function AdminUsersPage() {
             <DialogDescription>
               {feeWaiverUser?.fee_waived 
                 ? `Revoke fee waiver for ${feeWaiverUser?.name} (${feeWaiverUser?.email})`
-                : `Grant fee waiver for ${feeWaiverUser?.name} (${feeWaiverUser?.email}). This waives all fees for both platform test requests and CLI submission uploads.`}
+                : `Grant fee waiver for ${feeWaiverUser?.name} (${feeWaiverUser?.email}). This waives all fees for both platform test requests and GCB Runner submission uploads.`}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
