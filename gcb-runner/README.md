@@ -41,6 +41,7 @@ gcb-runner help
 gcb-runner config                                    # Configure API keys
 gcb-runner test --model gpt-4o --backend openrouter  # Run benchmark
 gcb-runner results                                   # View results
+gcb-runner view                                      # Launch web dashboard
 gcb-runner report                                    # Generate HTML report
 gcb-runner export                                    # Export for submission
 gcb-runner update                                    # Check for updates
@@ -51,7 +52,7 @@ gcb-runner update                                    # Check for updates
 The standalone executable includes auto-update functionality. When a new version is available, you'll see a notification at startup. Run `gcb-runner update` to download and install the latest version.
 
 ```bash
-# Check for updates
+# Check for updates without installing
 gcb-runner update --check
 
 # Download and install updates
@@ -60,7 +61,7 @@ gcb-runner update
 
 ## Interactive Menu
 
-Running `gcb-runner` launches an interactive menu (this is the default behavior). The menu provides:
+Running `gcb-runner` without arguments launches an interactive menu. The menu provides:
 
 - **Setup Wizard** - Guided 4-step configuration for first-time users
 - **Run Benchmark Test** - Interactive test runner with model and version selection
@@ -121,14 +122,6 @@ Download from [greatcommissionbenchmark.ai/runner](https://greatcommissionbenchm
 
 Verify downloads using SHA256 hashes from the [manifest.json](https://greatcommissionbenchmark.ai/downloads/manifest.json).
 
-### For Developers: Install via pip
-
-Requires Python 3.10+:
-
-```bash
-pip install gcb-runner
-```
-
 ### For Developers: Install from Source
 
 ```bash
@@ -177,6 +170,9 @@ gcb-runner test --model gpt-4o --benchmark-version 1.0.0
 
 # Resume an interrupted test
 gcb-runner test --model gpt-4o --resume
+
+# Validate configuration without running (dry run)
+gcb-runner test --model gpt-4o --dry-run
 ```
 
 **Tip:** Use the interactive menu for guided version selection:
@@ -208,6 +204,9 @@ gcb-runner view --run 3
 
 # Use a custom port
 gcb-runner view --port 9000
+
+# Don't open browser automatically
+gcb-runner view --no-browser
 ```
 
 ### Generating Reports
@@ -224,21 +223,36 @@ gcb-runner report --run 3 --compare 2
 
 # Save to a specific file
 gcb-runner report --run 3 --output my-report.html
+
+# Don't open browser automatically
+gcb-runner report --no-browser
 ```
 
-### Exporting & Uploading
+### Exporting Results
 
 ```bash
-# Export results to JSON
-gcb-runner export --run 3 --output results.json
+# Export latest completed run to JSON (saves to current directory)
+gcb-runner export
 
-# Upload to the platform (requires moderator verification)
+# Export a specific run
+gcb-runner export --run 3
+
+# Save to a specific file
+gcb-runner export --run 3 --output results.json
+```
+
+### Uploading Results
+
+```bash
+# Upload results to platform (requires moderator verification)
 gcb-runner upload --run 3
 ```
 
+> **Note:** Direct upload via CLI is coming soon. For now, export your results and upload via the web dashboard.
+
 #### Web Dashboard Upload
 
-Alternatively, you can upload your exported results via the web dashboard:
+Upload your exported results via the web dashboard:
 
 1. **Export your results:**
    ```bash
@@ -257,8 +271,6 @@ Alternatively, you can upload your exported results via the web dashboard:
    - Your submission will be queued for moderator review
    - You'll receive notifications when your submission is approved or rejected
 
-The web upload provides the same functionality as `gcb-runner upload` but with a visual interface and immediate validation feedback.
-
 ### Listing Benchmark Versions
 
 ```bash
@@ -271,6 +283,36 @@ gcb-runner
 ```
 
 This shows available versions with their status, question counts, and release dates.
+
+### Resetting the Database
+
+```bash
+# Delete all test runs and start fresh
+gcb-runner reset-db
+
+# Skip confirmation prompt
+gcb-runner reset-db --force
+```
+
+## Command Reference
+
+| Command | Description |
+|---------|-------------|
+| `gcb-runner` | Launch interactive menu (default) |
+| `gcb-runner help` | Show command reference |
+| `gcb-runner config` | Configure API keys and preferences |
+| `gcb-runner test` | Run benchmark against a model |
+| `gcb-runner results` | View past test results |
+| `gcb-runner view` | Launch web dashboard |
+| `gcb-runner report` | Generate HTML report |
+| `gcb-runner export` | Export results to JSON |
+| `gcb-runner upload` | Upload results to platform |
+| `gcb-runner versions` | List benchmark versions |
+| `gcb-runner update` | Check for and install updates |
+| `gcb-runner reset-db` | Delete and reinitialize results database |
+| `gcb-runner --version` | Show version number |
+
+Use `gcb-runner <command> --help` for detailed options on any command.
 
 ## Supported Backends
 
@@ -334,6 +376,7 @@ All tiers use unified verdicts:
 - **Configuration**: `~/.gcb-runner/config.json`
 - **Results database**: `~/.gcb-runner/data/results.db`
 - **Question cache**: `~/.gcb-runner/cache/`
+- **Exports**: `~/.gcb-runner/exports/`
 
 ## Troubleshooting
 
@@ -364,6 +407,16 @@ For LM Studio or Ollama issues:
 1. Ensure the server is running
 2. Check the URL is correct (default: `localhost:1234` for LM Studio, `localhost:11434` for Ollama)
 3. Run backend test: Diagnostics → Test Backend Connection
+
+### Starting Fresh
+
+If you encounter database issues or want to clear all test data:
+
+```bash
+gcb-runner reset-db
+```
+
+This removes all test runs and results. A new database will be created on your next test.
 
 ## Building Standalone Executables
 
@@ -399,6 +452,9 @@ ruff check gcb_runner/
 
 # Run type checking
 mypy gcb_runner/
+
+# Run security audit
+pip-audit
 ```
 
 ## License

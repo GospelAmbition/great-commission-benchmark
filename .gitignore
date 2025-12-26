@@ -102,3 +102,15 @@ documents/Founding-Committee.md
 # Deployment monitoring
 .deployment-errors.md
 .build-errors.md
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pyre_configuration.local.json
+.pyre_configuration.global.json
+.pyre_configuration.local.json
+.venv-clean/
+.venv-test/

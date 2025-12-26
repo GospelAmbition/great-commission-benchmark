@@ -1,6 +1,6 @@
 # GCB Runner Deployment Checklist
 
-Complete checklist for releasing the `gcb-runner` CLI tool to PyPI.
+Complete checklist for releasing the `gcb-runner` CLI tool as standalone executables distributed via the GCB website.
 
 ---
 
@@ -9,9 +9,10 @@ Complete checklist for releasing the `gcb-runner` CLI tool to PyPI.
 | Attribute | Value |
 |-----------|-------|
 | **Package Name** | `gcb-runner` |
-| **Distribution** | PyPI |
-| **Language** | Python 3.10+ |
-| **Source** | `gcb-runner/` directory |
+| **Distribution** | Private (website download) |
+| **Format** | Standalone executables (PyInstaller) |
+| **Download URL** | `https://greatcommissionbenchmark.ai/runner` |
+| **Manifest** | `https://greatcommissionbenchmark.ai/downloads/manifest.json` |
 
 ---
 
@@ -81,9 +82,6 @@ Complete checklist for releasing the `gcb-runner` CLI tool to PyPI.
   - Bug fix description
   ```
 
-- [ ] Installation instructions are current
-- [ ] Configuration examples are accurate
-
 ### 4. Benchmark Version Compatibility
 
 - [ ] Platform API compatibility verified
@@ -138,181 +136,254 @@ Test all CLI commands:
 - [ ] `gcb-runner report` - HTML report generates
 - [ ] `gcb-runner export` - JSON export works
 - [ ] `gcb-runner upload` - Upload flow works (test with staging)
-
-### 7. Cross-Platform Testing
-
-- [ ] Tested on **macOS**
-- [ ] Tested on **Linux** (Ubuntu/Debian)
-- [ ] Tested on **Windows** (if possible)
-
-### 8. Dependencies
-
-- [ ] All dependencies pinned to minimum compatible versions
-- [ ] No unnecessary dependencies included
-- [ ] Dependencies use latest secure versions
-  ```bash
-  pip list --outdated
-  ```
+- [ ] `gcb-runner update` - Auto-update check works
 
 ---
 
 ## Build Checklist
 
-### 1. Clean Build Environment
+### 1. Prepare Build Environment
 
-- [ ] Remove previous build artifacts
+- [ ] Clean previous build artifacts
   ```bash
+  cd gcb-runner
   rm -rf dist/ build/ *.egg-info gcb_runner.egg-info/
   ```
 
-- [ ] Create fresh virtual environment for testing
+- [ ] Create fresh virtual environment
   ```bash
-  python -m venv test-env
-  source test-env/bin/activate
-  pip install --upgrade pip build twine
+  python -m venv build-env
+  source build-env/bin/activate  # Linux/macOS
+  # build-env\Scripts\activate   # Windows
+  pip install --upgrade pip
+  pip install -e ".[dev]"
   ```
 
-### 2. Build Package
-
-- [ ] Build source distribution and wheel
+- [ ] Verify PyInstaller is installed
   ```bash
-  python -m build
+  python -m PyInstaller --version
+  ```
+
+### 2. Build Standalone Executable
+
+- [ ] Build for current platform
+  ```bash
+  python scripts/build.py
   ```
 
 - [ ] Verify build output
   ```bash
-  ls -la dist/
+  ls -la dist/release/
   # Should show:
-  # gcb_runner-X.Y.Z.tar.gz
-  # gcb_runner-X.Y.Z-py3-none-any.whl
+  # gcb-runner-macos-arm64    (Apple Silicon)
+  # gcb-runner-macos-x64      (Intel Mac)
+  # gcb-runner-linux-x64      (Linux)
+  # gcb-runner.exe            (Windows)
+  # manifest.json             (always generated)
   ```
 
-- [ ] Check package contents
+- [ ] Check executable size (typically 20-40 MB)
   ```bash
-  tar -tzf dist/gcb_runner-X.Y.Z.tar.gz | head -20
+  du -h dist/release/gcb-runner-*
   ```
 
-### 3. Local Installation Test
+### 3. Test Built Executable
 
-- [ ] Install from built wheel
+- [ ] Test execution (on current platform)
   ```bash
-  pip install dist/gcb_runner-X.Y.Z-py3-none-any.whl
-  ```
-
-- [ ] Verify installation
-  ```bash
-  gcb-runner --version
+  ./dist/release/gcb-runner-macos-arm64 --version
   # Should output: gcb-runner X.Y.Z
   ```
 
-- [ ] Run smoke test
+- [ ] Run smoke tests
   ```bash
-  gcb-runner versions
+  ./dist/release/gcb-runner-macos-arm64 --help
+  ./dist/release/gcb-runner-macos-arm64 versions
+  ```
+
+- [ ] Test interactive menu launches
+  ```bash
+  ./dist/release/gcb-runner-macos-arm64
+  # Should show interactive menu
+  ```
+
+- [ ] Test configuration wizard
+  ```bash
+  ./dist/release/gcb-runner-macos-arm64 config --help
   ```
 
 ---
 
-## TestPyPI Release (Staging)
+## Multi-Platform Builds
 
-### 1. Upload to TestPyPI
+Each platform must be built on native hardware or via CI:
 
-- [ ] Configure TestPyPI credentials (if not done)
+### macOS (Apple Silicon)
+```bash
+# On M1/M2/M3 Mac
+python scripts/build.py
+# Output: dist/release/gcb-runner-macos-arm64
+```
+
+### macOS (Intel)
+```bash
+# On Intel Mac
+python scripts/build.py
+# Output: dist/release/gcb-runner-macos-x64
+```
+
+### Linux x64
+```bash
+# On Linux x64 or via Docker/CI
+python scripts/build.py
+# Output: dist/release/gcb-runner-linux-x64
+```
+
+### Windows x64
+```powershell
+# On Windows
+python scripts\build.py
+# Output: dist\release\gcb-runner.exe
+```
+
+### GitHub Actions (Recommended for All Platforms)
+
+For consistent multi-platform builds, use GitHub Actions:
+
+```yaml
+# .github/workflows/build.yml
+name: Build Executables
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [macos-14, macos-13, ubuntu-latest, windows-latest]
+        # macos-14 = ARM64, macos-13 = Intel
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -e ".[dev]"
+      - run: python scripts/build.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gcb-runner-${{ matrix.os }}
+          path: dist/release/gcb-runner*
+```
+
+---
+
+## Generate Final Manifest
+
+After all platform builds are complete:
+
+- [ ] Collect all executables into `dist/release/`
   ```bash
-  # Create ~/.pypirc or use environment variables
-  # TWINE_USERNAME=__token__
-  # TWINE_PASSWORD=pypi-xxx
+  ls dist/release/
+  # gcb-runner-macos-arm64
+  # gcb-runner-macos-x64
+  # gcb-runner-linux-x64
+  # gcb-runner.exe
   ```
 
-- [ ] Upload to TestPyPI
+- [ ] Generate manifest with all platforms
   ```bash
-  python -m twine upload --repository testpypi dist/*
+  python scripts/build.py --manifest-only
   ```
 
-- [ ] Verify upload successful
-  - Check: `https://test.pypi.org/project/gcb-runner/`
-
-### 2. TestPyPI Installation Test
-
-- [ ] Create clean test environment
+- [ ] Verify manifest.json
   ```bash
-  deactivate
-  rm -rf test-env
-  python -m venv test-env
-  source test-env/bin/activate
+  cat dist/release/manifest.json
   ```
 
-- [ ] Install from TestPyPI
-  ```bash
-  pip install --index-url https://test.pypi.org/simple/ \
-    --extra-index-url https://pypi.org/simple/ \
-    gcb-runner==X.Y.Z
-  ```
-  
-  > Note: `--extra-index-url` needed because dependencies are on real PyPI
-
-- [ ] Verify installation works
-  ```bash
-  gcb-runner --version
-  gcb-runner --help
-  ```
-
-- [ ] Run basic smoke tests
-  ```bash
-  gcb-runner versions
-  gcb-runner config --help
+  Expected structure:
+  ```json
+  {
+    "version": "X.Y.Z",
+    "released_at": "2024-12-26T12:00:00+00:00",
+    "downloads": {
+      "macos-arm64": {
+        "filename": "gcb-runner-macos-arm64",
+        "sha256": "abc123...",
+        "size": 31457280
+      },
+      "macos-x64": { ... },
+      "linux-x64": { ... },
+      "windows-x64": { ... }
+    },
+    "release_notes": "GCB Runner vX.Y.Z",
+    "minimum_version": "0.1.0"
+  }
   ```
 
 ---
 
-## Production PyPI Release
+## Website Deployment
 
-### 1. Final Verification
+### 1. Upload Files
 
-- [ ] TestPyPI testing completed successfully
-- [ ] All checklist items above are complete
-- [ ] Release has been approved by project maintainer
+Upload the built executables and manifest to the website:
 
-### 2. Upload to PyPI
-
-- [ ] Upload to production PyPI
+- [ ] Copy files to frontend public directory
   ```bash
-  python -m twine upload dist/*
+  cp dist/release/gcb-runner-* ../gcb-platform/frontend/public/downloads/
+  cp dist/release/manifest.json ../gcb-platform/frontend/public/downloads/
   ```
 
-- [ ] Verify upload successful
-  - Check: `https://pypi.org/project/gcb-runner/`
-
-### 3. Production Installation Test
-
-- [ ] Create clean test environment
+- [ ] Verify all files present
   ```bash
-  deactivate
-  rm -rf test-env
-  python -m venv test-env
-  source test-env/bin/activate
+  ls -la ../gcb-platform/frontend/public/downloads/
+  # gcb-runner-macos-arm64
+  # gcb-runner-macos-x64
+  # gcb-runner-linux-x64
+  # gcb-runner.exe
+  # manifest.json
   ```
 
-- [ ] Install from PyPI
+### 2. Deploy Frontend
+
+- [ ] Commit and push changes
   ```bash
-  pip install gcb-runner
+  cd ../gcb-platform/frontend
+  git add public/downloads/
+  git commit -m "Release GCB Runner vX.Y.Z"
+  git push
   ```
 
-- [ ] Verify version
+- [ ] Deploy to production
   ```bash
-  gcb-runner --version
-  # Should output: gcb-runner X.Y.Z
+  # Follow platform deployment procedures
   ```
 
-- [ ] Full smoke test
+### 3. Verify Downloads
+
+- [ ] Test manifest URL
   ```bash
-  # Test help
-  gcb-runner --help
-  
-  # Test version listing
-  gcb-runner versions
-  
-  # Test config (interactive - manual verification)
-  gcb-runner config --help
+  curl https://greatcommissionbenchmark.ai/downloads/manifest.json
+  ```
+
+- [ ] Test download URLs
+  ```bash
+  # Verify each platform download link works
+  curl -I https://greatcommissionbenchmark.ai/downloads/gcb-runner-macos-arm64
+  ```
+
+- [ ] Verify SHA256 hashes match
+  ```bash
+  # Download and verify
+  curl -O https://greatcommissionbenchmark.ai/downloads/gcb-runner-macos-arm64
+  shasum -a 256 gcb-runner-macos-arm64
+  # Compare with manifest.json
   ```
 
 ---
@@ -331,43 +402,28 @@ Test all CLI commands:
   git push origin vX.Y.Z
   ```
 
-### 2. GitHub Release
+### 2. GitHub Release (Optional)
 
 - [ ] Create GitHub release from tag
   ```bash
   gh release create vX.Y.Z \
     --title "GCB Runner vX.Y.Z" \
-    --notes-file RELEASE_NOTES.md
+    --notes-file CHANGELOG.md \
+    dist/release/gcb-runner-* \
+    dist/release/manifest.json
   ```
-  
-  Or via GitHub web UI:
-  - Go to Releases → Draft a new release
-  - Select tag `vX.Y.Z`
-  - Title: `GCB Runner vX.Y.Z`
-  - Description: Copy from CHANGELOG
 
-- [ ] Attach release artifacts (optional)
-  - Built wheel file
-  - Source tarball
+### 3. Test Auto-Update
 
-### 3. Communication
+- [ ] Install previous version
+- [ ] Run `gcb-runner update --check`
+- [ ] Verify new version is detected
+- [ ] Run `gcb-runner update` and confirm upgrade works
+
+### 4. Communication
 
 - [ ] Update project documentation if needed
-- [ ] Notify community of release (if applicable)
-  - Discord/Slack announcement
-  - Email newsletter
-  - Social media
-
-### 4. Monitoring
-
-- [ ] Monitor PyPI download stats
-  - Check: `https://pypistats.org/packages/gcb-runner`
-
-- [ ] Monitor for issue reports
-  - Check GitHub Issues for new bug reports
-
-- [ ] Verify no regression in platform integration
-  - Check platform logs for runner API errors
+- [ ] Notify testers of new version (if applicable)
 
 ---
 
@@ -375,21 +431,17 @@ Test all CLI commands:
 
 If critical issues are discovered after release:
 
-### 1. Yank the Release (Soft Removal)
+### 1. Restore Previous Version
 
-- [ ] Yank from PyPI (prevents new installs but allows existing pins)
-  ```bash
-  # Via PyPI web interface or:
-  pip install --upgrade twine
-  # Note: PyPI yank is typically done via web UI
-  ```
+- [ ] Retrieve previous version executables from backup or git tag
+- [ ] Update manifest.json with previous version info
+- [ ] Redeploy to website
 
-### 2. Users Can Downgrade
+### 2. Communication
 
-Communicate to users:
-```bash
-pip install gcb-runner==X.Y.Z-1  # Previous version
-```
+Notify users:
+- Update /runner page with notice
+- Send notification to active testers if possible
 
 ### 3. Quick Fix Release
 
@@ -410,45 +462,41 @@ pip install gcb-runner==X.Y.Z-1  # Previous version
 
 ---
 
-## Environment Setup Reference
+## Build Environment Reference
 
 ### Required Tools
 
 ```bash
-# Install build tools
-pip install --upgrade pip build twine
+# Install development dependencies
+pip install -e ".[dev]"
 
-# Install testing tools  
-pip install pytest pytest-cov ruff mypy pip-audit
-
-# Install GitHub CLI (for releases)
-brew install gh  # macOS
-# or: sudo apt install gh  # Linux
+# This includes:
+# - pytest (testing)
+# - pyinstaller (building executables)
+# - ruff (linting)
+# - mypy (type checking)
+# - pip-audit (security audit)
 ```
 
-### PyPI Configuration
+### Project Structure
 
-Create `~/.pypirc`:
-```ini
-[distutils]
-index-servers =
-    pypi
-    testpypi
-
-[pypi]
-username = __token__
-password = pypi-xxx  # Your PyPI API token
-
-[testpypi]
-repository = https://test.pypi.org/legacy/
-username = __token__
-password = pypi-xxx  # Your TestPyPI API token
 ```
-
-Or use environment variables:
-```bash
-export TWINE_USERNAME=__token__
-export TWINE_PASSWORD=pypi-xxx
+gcb-runner/
+├── gcb_runner/           # Source code
+├── scripts/
+│   ├── build.py          # Build script
+│   └── generate_hashes.py  # Hash generation utility
+├── gcb-runner.spec       # PyInstaller configuration
+├── pyproject.toml        # Project configuration
+├── README.md             # User documentation
+├── CHANGELOG.md          # Version history
+└── dist/
+    └── release/          # Built executables (generated)
+        ├── gcb-runner-macos-arm64
+        ├── gcb-runner-macos-x64
+        ├── gcb-runner-linux-x64
+        ├── gcb-runner.exe
+        └── manifest.json
 ```
 
 ---
@@ -457,28 +505,36 @@ export TWINE_PASSWORD=pypi-xxx
 
 ### Pre-Release (Do First)
 - [ ] Tests pass
-- [ ] Version updated
+- [ ] Version updated in `pyproject.toml` and `__init__.py`
 - [ ] Documentation updated
 - [ ] Changelog updated
 - [ ] All backends tested
-- [ ] Cross-platform tested
+- [ ] All CLI commands verified
 
 ### Build & Test
-- [ ] Clean build
-- [ ] Package built
-- [ ] Local install works
-- [ ] TestPyPI upload
-- [ ] TestPyPI install works
+- [ ] Clean build environment
+- [ ] PyInstaller build succeeds
+- [ ] Executable runs correctly
+- [ ] Smoke tests pass
+- [ ] Interactive menu works
 
-### Production Release
-- [ ] PyPI upload
-- [ ] PyPI install works
-- [ ] Git tag created
-- [ ] GitHub release created
+### Multi-Platform (For Full Release)
+- [ ] macOS ARM64 built
+- [ ] macOS x64 built
+- [ ] Linux x64 built
+- [ ] Windows x64 built
+- [ ] Final manifest.json generated
+
+### Website Deployment
+- [ ] Files uploaded to frontend/public/downloads/
+- [ ] Frontend deployed
+- [ ] Download links verified
+- [ ] SHA256 hashes verified
 
 ### Post-Release
-- [ ] Announcement posted
-- [ ] Monitoring in place
+- [ ] Git tag created and pushed
+- [ ] Auto-update tested
+- [ ] Announcement posted (if applicable)
 
 ---
 

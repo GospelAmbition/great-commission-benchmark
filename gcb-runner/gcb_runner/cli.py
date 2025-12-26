@@ -4,7 +4,6 @@ import asyncio
 import webbrowser
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import typer
 from rich.console import Console
