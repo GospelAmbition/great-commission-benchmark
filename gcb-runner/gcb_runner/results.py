@@ -2,14 +2,20 @@
 
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, ForeignKey
-from sqlalchemy.orm import sessionmaker, relationship, declarative_base
+from sqlalchemy import ForeignKey, String, Text, create_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
 from gcb_runner.config import get_data_dir
 
-Base = declarative_base()
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
+
+class Base(DeclarativeBase):
+    """Base class for SQLAlchemy models."""
+    pass
 
 
 class TestRun(Base):
@@ -17,20 +23,22 @@ class TestRun(Base):
     
     __tablename__ = "test_runs"
     
-    id = Column(Integer, primary_key=True)
-    model = Column(String(128), nullable=False)
-    backend = Column(String(64), nullable=False)
-    benchmark_version = Column(String(32), nullable=False)
-    judge_model = Column(String(128), nullable=False)
-    system_prompt = Column(Text, nullable=True)
-    score = Column(Float, nullable=True)
-    tier1_score = Column(Float, nullable=True)
-    tier2_score = Column(Float, nullable=True)
-    tier3_score = Column(Float, nullable=True)
-    started_at = Column(DateTime, nullable=False)
-    completed_at = Column(DateTime, nullable=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    model: Mapped[str] = mapped_column(String(128))
+    backend: Mapped[str] = mapped_column(String(64))
+    benchmark_version: Mapped[str] = mapped_column(String(32))
+    judge_model: Mapped[str] = mapped_column(String(128))
+    system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    score: Mapped[float | None] = mapped_column(nullable=True)
+    tier1_score: Mapped[float | None] = mapped_column(nullable=True)
+    tier2_score: Mapped[float | None] = mapped_column(nullable=True)
+    tier3_score: Mapped[float | None] = mapped_column(nullable=True)
+    started_at: Mapped[datetime] = mapped_column()
+    completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
     
-    responses = relationship("Response", back_populates="test_run", cascade="all, delete-orphan")
+    responses: Mapped[list["Response"]] = relationship(
+        "Response", back_populates="test_run", cascade="all, delete-orphan"
+    )
 
 
 class Response(Base):
@@ -38,18 +46,18 @@ class Response(Base):
     
     __tablename__ = "responses"
     
-    id = Column(Integer, primary_key=True)
-    test_run_id = Column(Integer, ForeignKey("test_runs.id"), nullable=False)
-    question_id = Column(String(64), nullable=False)
-    tier = Column(Integer, nullable=False)
-    category = Column(String(32), nullable=True)
-    response_text = Column(Text, nullable=False)
-    verdict = Column(String(32), nullable=False)  # ACCEPTED, COMPROMISED, REFUSED
-    verdict_normalized = Column(String(16), nullable=False)  # pass, partial, fail
-    judge_reasoning = Column(Text, nullable=True)
-    response_time_ms = Column(Integer, nullable=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    test_run_id: Mapped[int] = mapped_column(ForeignKey("test_runs.id"))
+    question_id: Mapped[str] = mapped_column(String(64))
+    tier: Mapped[int] = mapped_column()
+    category: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    response_text: Mapped[str] = mapped_column(Text)
+    verdict: Mapped[str] = mapped_column(String(32))  # ACCEPTED, COMPROMISED, REFUSED
+    verdict_normalized: Mapped[str] = mapped_column(String(16))  # pass, partial, fail
+    judge_reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+    response_time_ms: Mapped[int | None] = mapped_column(nullable=True)
     
-    test_run = relationship("TestRun", back_populates="responses")
+    test_run: Mapped["TestRun"] = relationship("TestRun", back_populates="responses")
 
 
 class ResultsDB:
@@ -72,7 +80,7 @@ class ResultsDB:
         judge_model: str,
     ) -> TestRun:
         """Create a new test run."""
-        session = self.Session()
+        session: Session = self.Session()
         try:
             run = TestRun(
                 model=model,
@@ -108,7 +116,7 @@ class ResultsDB:
         }
         verdict_normalized = verdict_map.get(verdict.upper(), "fail")
         
-        session = self.Session()
+        session: Session = self.Session()
         try:
             response = Response(
                 test_run_id=run_id,
@@ -128,9 +136,11 @@ class ResultsDB:
         finally:
             session.close()
     
-    def complete_run(self, run_id: int, score: float, tier1_score: float, tier2_score: float, tier3_score: float) -> None:
+    def complete_run(
+        self, run_id: int, score: float, tier1_score: float, tier2_score: float, tier3_score: float
+    ) -> None:
         """Mark a test run as complete with final scores."""
-        session = self.Session()
+        session: Session = self.Session()
         try:
             run = session.query(TestRun).filter(TestRun.id == run_id).first()
             if run:
@@ -145,7 +155,7 @@ class ResultsDB:
     
     def get_run(self, run_id: int) -> TestRun | None:
         """Get a test run by ID."""
-        session = self.Session()
+        session: Session = self.Session()
         try:
             return session.query(TestRun).filter(TestRun.id == run_id).first()
         finally:
@@ -153,7 +163,7 @@ class ResultsDB:
     
     def list_runs(self, limit: int = 10) -> list[TestRun]:
         """List recent test runs."""
-        session = self.Session()
+        session: Session = self.Session()
         try:
             return session.query(TestRun).order_by(TestRun.started_at.desc()).limit(limit).all()
         finally:
@@ -161,15 +171,20 @@ class ResultsDB:
     
     def get_responses(self, run_id: int) -> list[Response]:
         """Get all responses for a test run."""
-        session = self.Session()
+        session: Session = self.Session()
         try:
-            return session.query(Response).filter(Response.test_run_id == run_id).order_by(Response.tier, Response.id).all()
+            return (
+                session.query(Response)
+                .filter(Response.test_run_id == run_id)
+                .order_by(Response.tier, Response.id)
+                .all()
+            )
         finally:
             session.close()
     
     def get_incomplete_run(self, model: str, benchmark_version: str) -> TestRun | None:
         """Get an incomplete run for resuming."""
-        session = self.Session()
+        session: Session = self.Session()
         try:
             return session.query(TestRun).filter(
                 TestRun.model == model,
@@ -181,7 +196,7 @@ class ResultsDB:
     
     def get_answered_question_ids(self, run_id: int) -> set[str]:
         """Get the set of question IDs already answered in a run."""
-        session = self.Session()
+        session: Session = self.Session()
         try:
             responses = session.query(Response.question_id).filter(Response.test_run_id == run_id).all()
             return {r[0] for r in responses}

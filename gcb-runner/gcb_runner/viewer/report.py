@@ -37,7 +37,7 @@ def generate_report(
         conn.close()
 
 
-def _get_run_detail(conn, run_id: int) -> dict[str, Any]:
+def _get_run_detail(conn: sqlite3.Connection, run_id: int) -> dict[str, Any]:
     """Get detailed information for a single run."""
     cursor = conn.execute("""
         SELECT id, model, backend, benchmark_version, judge_model,
@@ -83,7 +83,7 @@ def _get_run_detail(conn, run_id: int) -> dict[str, Any]:
     }
 
 
-def _get_all_responses(conn, run_id: int) -> list[dict[str, Any]]:
+def _get_all_responses(conn: sqlite3.Connection, run_id: int) -> list[dict[str, Any]]:
     """Get all responses for a run."""
     cursor = conn.execute("""
         SELECT id, question_id, tier, category, response_text,
@@ -120,8 +120,8 @@ def _get_report_template(
     # Escape function for JSON embedding
     run_json = json.dumps(run)
     responses_json = json.dumps(responses)
-    compare_run_json = json.dumps(compare_run) if compare_run else "null"
-    compare_responses_json = json.dumps(compare_responses) if compare_responses else "null"
+    # TODO: Use compare_run and compare_responses when comparison feature is implemented
+    _ = (compare_run, compare_responses)  # Mark as intentionally unused for now
     
     return f'''<!DOCTYPE html>
 <html lang="en">

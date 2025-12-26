@@ -104,20 +104,17 @@ export function Header() {
                     <p className="text-sm font-medium">{user.name || "User"}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                   </div>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/settings">Account Settings</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard">My Dashboard</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard/settings">Account Settings</Link>
-                  </DropdownMenuItem>
                   {isModerator && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href="/moderator">Moderator Panel</Link>
-                      </DropdownMenuItem>
-                    </>
+                    <DropdownMenuItem asChild>
+                      <Link href="/moderator">Moderator Panel</Link>
+                    </DropdownMenuItem>
                   )}
                   {isBenchmarkDeveloper && (
                     <DropdownMenuItem asChild>
@@ -125,12 +122,9 @@ export function Header() {
                     </DropdownMenuItem>
                   )}
                   {isAdmin && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin">Admin Dashboard</Link>
-                      </DropdownMenuItem>
-                    </>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">Admin Dashboard</Link>
+                    </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>

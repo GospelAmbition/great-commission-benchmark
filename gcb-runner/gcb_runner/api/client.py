@@ -1,7 +1,8 @@
 """Platform API client for fetching benchmark questions."""
 
+from typing import Any, cast
+
 import httpx
-from typing import Any
 
 
 class PlatformAPIError(Exception):
@@ -56,29 +57,26 @@ class PlatformAPIClient:
             elif response.status_code >= 400:
                 raise PlatformAPIError(f"API error: {response.text}", response.status_code)
             
-            return response.json()
+            return cast(dict[str, Any], response.json())
             
-        except httpx.TimeoutException:
-            raise PlatformAPIError("Request timed out")
+        except httpx.TimeoutException as e:
+            raise PlatformAPIError("Request timed out") from e
         except httpx.RequestError as e:
-            raise PlatformAPIError(f"Network error: {e}")
+            raise PlatformAPIError(f"Network error: {e}") from e
     
     async def list_versions(self) -> dict[str, Any]:
         """List all available benchmark versions."""
         return await self._request("GET", "/api/runner/versions")
     
-    async def get_questions(self, version: str = "current") -> dict[str, Any]:
+    async def get_questions(self, version: str | None = "current") -> dict[str, Any]:
         """Fetch the complete question set for a benchmark version.
         
         Args:
             version: The semantic version (e.g. "1.0.0") or "current" for the active version.
                      If None or empty, uses "current".
         """
-        # Handle None/empty as current
-        if not version or version == "current":
-            params = {}  # No version param means get the active/current version
-        else:
-            params = {"version": version}
+        # Handle None/empty as current - no version param means get the active/current version
+        params = {} if not version or version == "current" else {"version": version}
         
         return await self._request("GET", "/api/runner/questions", params=params)
     

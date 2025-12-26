@@ -3,14 +3,13 @@
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 from rich.table import Table
 
-from gcb_runner.api.client import PlatformAPIClient
 from gcb_runner.api.cache import QuestionCache
+from gcb_runner.api.client import PlatformAPIClient
 from gcb_runner.backends import get_backend
 from gcb_runner.config import Config
 from gcb_runner.judge import Judge
@@ -109,7 +108,7 @@ async def run_benchmark(
         tier3_weight = scoring_config.get("tier3_weight", 0.10)
         
         # Count questions by tier
-        tier_counts = {1: 0, 2: 0, 3: 0}
+        tier_counts: dict[int, int] = {1: 0, 2: 0, 3: 0}
         for q in questions:
             tier = q.get("tier", 1)
             tier_counts[tier] += 1
@@ -119,7 +118,7 @@ async def run_benchmark(
         console.print()
         
         # Check for resume
-        run_id = None
+        run_id: int | None = None
         answered_ids: set[str] = set()
         
         if resume:
@@ -224,7 +223,7 @@ async def run_benchmark(
         
         # Calculate scores using VERDICT_SCORES
         from gcb_runner.judge import VERDICT_SCORES
-        tier_scores = {}
+        tier_scores: dict[int, float] = {}
         for tier in [1, 2, 3]:
             total = tier_results[tier]["ACCEPTED"] + tier_results[tier]["COMPROMISED"] + tier_results[tier]["REFUSED"]
             if total > 0:
@@ -235,7 +234,7 @@ async def run_benchmark(
                     tier_results[tier]["REFUSED"] * VERDICT_SCORES["REFUSED"]
                 ) / total * 100
             else:
-                score = 0
+                score = 0.0
             tier_scores[tier] = score
         
         # Calculate weighted score
@@ -284,7 +283,7 @@ async def run_benchmark(
             2: "Tier 2: Theology",
             3: "Tier 3: Worldview",
         }
-        tier_weights = {1: "70%", 2: "20%", 3: "10%"}
+        tier_weights_str = {1: "70%", 2: "20%", 3: "10%"}
         
         for tier in [1, 2, 3]:
             stats = tier_results[tier]
@@ -295,7 +294,7 @@ async def run_benchmark(
                     f"{stats['ACCEPTED']} ({stats['ACCEPTED']*100//total}%)",
                     f"{stats['COMPROMISED']} ({stats['COMPROMISED']*100//total}%)",
                     f"{stats['REFUSED']} ({stats['REFUSED']*100//total}%)",
-                    tier_weights[tier],
+                    tier_weights_str[tier],
                 )
         
         # Add total row

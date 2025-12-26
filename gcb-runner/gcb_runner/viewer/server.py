@@ -3,9 +3,10 @@
 import json
 import sqlite3
 from functools import partial
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from typing import Any
+from urllib.parse import ParseResult, parse_qs, urlparse
 
 from gcb_runner.viewer.dashboard import get_dashboard_html
 
@@ -13,15 +14,15 @@ from gcb_runner.viewer.dashboard import get_dashboard_html
 class ViewerHandler(BaseHTTPRequestHandler):
     """Custom handler that serves the dashboard and API endpoints."""
     
-    def __init__(self, *args, db_path: Path, **kwargs):
+    def __init__(self, *args: Any, db_path: Path, **kwargs: Any) -> None:
         self.db_path = db_path
         super().__init__(*args, **kwargs)
     
-    def log_message(self, format, *args):
+    def log_message(self, format: str, *args: Any) -> None:
         """Suppress default logging."""
         pass
     
-    def do_GET(self):
+    def do_GET(self) -> None:
         """Handle GET requests."""
         parsed = urlparse(self.path)
         
@@ -34,7 +35,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
         else:
             self._send_error(404, "Not found")
     
-    def _handle_api(self, parsed):
+    def _handle_api(self, parsed: ParseResult) -> None:
         """Handle API requests by querying SQLite."""
         path = parsed.path
         params = parse_qs(parsed.query)
@@ -63,7 +64,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
         finally:
             conn.close()
     
-    def _get_runs(self, conn):
+    def _get_runs(self, conn: sqlite3.Connection) -> dict[str, Any]:
         """Get list of test runs."""
         cursor = conn.execute("""
             SELECT id, model, backend, benchmark_version, judge_model,
@@ -92,7 +93,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
         
         return {"runs": runs}
     
-    def _get_run_detail(self, conn, run_id):
+    def _get_run_detail(self, conn: sqlite3.Connection, run_id: int) -> dict[str, Any]:
         """Get detailed information for a single run."""
         cursor = conn.execute("""
             SELECT id, model, backend, benchmark_version, judge_model,
@@ -137,7 +138,9 @@ class ViewerHandler(BaseHTTPRequestHandler):
             "refused_count": verdict_counts["REFUSED"],
         }
     
-    def _get_responses(self, conn, run_id, params):
+    def _get_responses(
+        self, conn: sqlite3.Connection, run_id: int, params: dict[str, list[str]]
+    ) -> dict[str, Any]:
         """Get responses for a run with optional filtering."""
         verdict_filter = params.get("verdict", [None])[0]
         tier_filter = params.get("tier", [None])[0]
@@ -146,7 +149,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
         
         # Build query
         query = "SELECT * FROM responses WHERE test_run_id = ?"
-        query_params = [run_id]
+        query_params: list[Any] = [run_id]
         
         if verdict_filter:
             query += " AND verdict = ?"
@@ -159,7 +162,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
         # Count total
         count_query = query.replace("SELECT *", "SELECT COUNT(*)")
         count_cursor = conn.execute(count_query, query_params)
-        total = count_cursor.fetchone()[0]
+        total: int = count_cursor.fetchone()[0]
         
         # Get page
         query += f" ORDER BY tier, id LIMIT {per_page} OFFSET {(page - 1) * per_page}"
@@ -167,12 +170,13 @@ class ViewerHandler(BaseHTTPRequestHandler):
         
         responses = []
         for row in cursor:
+            response_text = row["response_text"]
             responses.append({
                 "id": row["id"],
                 "question_id": row["question_id"],
                 "tier": row["tier"],
                 "category": row["category"],
-                "response_text": row["response_text"][:500] + "..." if len(row["response_text"]) > 500 else row["response_text"],
+                "response_text": response_text[:500] + "..." if len(response_text) > 500 else response_text,
                 "verdict": row["verdict"],
                 "judge_reasoning": row["judge_reasoning"],
                 "response_time_ms": row["response_time_ms"],
@@ -186,35 +190,35 @@ class ViewerHandler(BaseHTTPRequestHandler):
             "pages": (total + per_page - 1) // per_page,
         }
     
-    def _serve_dashboard(self):
+    def _serve_dashboard(self) -> None:
         """Serve the embedded single-page dashboard."""
         html = get_dashboard_html()
         self.send_response(200)
         self.send_header("Content-type", "text/html")
-        self.send_header("Content-Length", len(html.encode()))
+        self.send_header("Content-Length", str(len(html.encode())))
         self.end_headers()
         self.wfile.write(html.encode())
     
-    def _send_json(self, data):
+    def _send_json(self, data: dict[str, Any]) -> None:
         """Send a JSON response."""
         body = json.dumps(data).encode()
         self.send_response(200)
         self.send_header("Content-type", "application/json")
-        self.send_header("Content-Length", len(body))
+        self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
     
-    def _send_error(self, code, message):
+    def _send_error(self, code: int, message: str) -> None:
         """Send an error response."""
         body = json.dumps({"error": message}).encode()
         self.send_response(code)
         self.send_header("Content-type", "application/json")
-        self.send_header("Content-Length", len(body))
+        self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
 
-def start_viewer(db_path: Path, port: int = 8642, open_browser: bool = True):
+def start_viewer(db_path: Path, port: int = 8642, open_browser: bool = True) -> None:
     """Start the results viewer server."""
     handler = partial(ViewerHandler, db_path=db_path)
     server = HTTPServer(("localhost", port), handler)

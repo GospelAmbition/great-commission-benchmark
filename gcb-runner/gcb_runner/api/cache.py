@@ -3,7 +3,7 @@
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from gcb_runner.config import get_cache_dir
 
@@ -27,7 +27,7 @@ class QuestionCache:
         meta_path = self._get_version_dir(version) / "metadata.json"
         if meta_path.exists():
             try:
-                return json.loads(meta_path.read_text())
+                return cast(dict[str, Any], json.loads(meta_path.read_text()))
             except (json.JSONDecodeError, OSError):
                 pass
         return None
@@ -57,7 +57,7 @@ class QuestionCache:
             return None
         
         try:
-            return json.loads(questions_path.read_text())
+            return cast(dict[str, Any], json.loads(questions_path.read_text()))
         except (json.JSONDecodeError, OSError):
             return None
     
@@ -70,7 +70,7 @@ class QuestionCache:
             return None
         
         try:
-            return json.loads(prompts_path.read_text())
+            return cast(dict[str, str], json.loads(prompts_path.read_text()))
         except (json.JSONDecodeError, OSError):
             return None
     
@@ -88,10 +88,12 @@ class QuestionCache:
             prompts_path.write_text(json.dumps(data["judge_prompts"], indent=2))
         
         # Update metadata
+        version_data = data.get("version")
+        checksum = version_data.get("checksum") if isinstance(version_data, dict) else None
         metadata = {
             "version": version,
             "cached_at": datetime.now().isoformat(),
-            "checksum": data.get("version", {}).get("checksum") if isinstance(data.get("version"), dict) else None,
+            "checksum": checksum,
             "question_count": len(data.get("questions", [])),
         }
         meta_path = version_dir / "metadata.json"
@@ -104,7 +106,7 @@ class QuestionCache:
             return None
         
         try:
-            data = json.loads(versions_path.read_text())
+            data = cast(dict[str, Any], json.loads(versions_path.read_text()))
             # Check if stale
             cached_at = data.get("_cached_at")
             if cached_at:

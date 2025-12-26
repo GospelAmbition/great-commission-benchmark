@@ -3,18 +3,13 @@
 import json
 import os
 from pathlib import Path
-from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 def get_config_dir() -> Path:
     """Get the configuration directory path."""
-    if os.name == "nt":  # Windows
-        base = Path(os.environ.get("APPDATA", Path.home()))
-    else:  # macOS/Linux
-        base = Path.home()
-    
+    base = Path(os.environ.get("APPDATA", Path.home())) if os.name == "nt" else Path.home()
     config_dir = base / ".gcb-runner"
     config_dir.mkdir(parents=True, exist_ok=True)
     return config_dir

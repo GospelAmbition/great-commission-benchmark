@@ -28,7 +28,8 @@ import {
   Mail, 
   CheckCircle2,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Download
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -180,28 +181,25 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Step 2: Install */}
+                {/* Step 2: Download */}
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
                     <span className="font-bold">2</span>
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold">Install the GCB Runner</h3>
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Download className="h-4 w-4" />
+                      Download the GCB Runner
+                    </h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Install the GCB Runner from PyPI using pip.
+                      Download the standalone executable for your platform — no Python required.
                     </p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <code className="bg-muted px-3 py-2 rounded-md text-sm font-mono flex-1">
-                        pip install gcb-runner
-                      </code>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => copyToClipboard("pip install gcb-runner")}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button asChild variant="brand" size="sm" className="mt-2">
+                      <Link href="/runner">
+                        <Download className="h-4 w-4 mr-2" />
+                        Download GCB Runner
+                      </Link>
+                    </Button>
                   </div>
                 </div>
 

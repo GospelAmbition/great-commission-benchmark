@@ -5,6 +5,7 @@ This module handles checking for updates, downloading new versions,
 and applying updates for the standalone executable distribution.
 """
 
+import contextlib
 import hashlib
 import os
 import platform
@@ -18,7 +19,6 @@ from typing import Any
 import httpx
 
 from gcb_runner import __version__
-
 
 # Update check URL - points to the platform API
 DEFAULT_UPDATE_URL = "https://greatcommissionbenchmark.ai/api/runner/latest"
@@ -183,7 +183,7 @@ async def download_update(
         os.close(fd)
         temp_file = Path(temp_path)
         
-        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:  # noqa: SIM117
             async with client.stream("GET", download_url) as response:
                 response.raise_for_status()
                 total_size = int(response.headers.get("content-length", 0))
@@ -279,10 +279,8 @@ def cleanup_old_executable() -> None:
     
     old_exe = current_exe.with_suffix(".old")
     if old_exe.exists():
-        try:
+        with contextlib.suppress(Exception):
             old_exe.unlink()
-        except Exception:
-            pass  # Ignore cleanup failures
 
 
 def format_size(size_bytes: int) -> str:

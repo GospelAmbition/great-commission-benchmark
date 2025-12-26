@@ -28,21 +28,23 @@ def export_run(db: ResultsDB, run_id: int) -> str:
     }
     
     for resp in responses:
+        tier = resp.tier
         # Map verdict (handle ERROR as REFUSED)
-        verdict = resp.verdict if resp.verdict in tier_stats[resp.tier] else "REFUSED"
-        tier_stats[resp.tier][verdict] += 1
-        tier_stats[resp.tier]["questions"] += 1
+        verdict = resp.verdict if resp.verdict in tier_stats[tier] else "REFUSED"
+        tier_stats[tier][verdict] += 1
+        tier_stats[tier]["questions"] += 1
     
     # Calculate tier scores using VERDICT_SCORES
     def calc_tier_score(stats: dict[str, Any]) -> float:
-        total = stats["questions"]
+        total: int = stats["questions"]
         if total == 0:
             return 0.0
-        return (
+        raw_score: float = (
             stats["ACCEPTED"] * VERDICT_SCORES["ACCEPTED"] * 100 +
             stats["COMPROMISED"] * VERDICT_SCORES["COMPROMISED"] * 100 +
             stats["REFUSED"] * VERDICT_SCORES["REFUSED"] * 100
-        ) / total
+        )
+        return raw_score / total
     
     tier_scores = {
         "tier1": {
@@ -138,7 +140,7 @@ def validate_export(data: dict[str, Any]) -> list[str]:
     Returns:
         List of validation error messages (empty if valid)
     """
-    errors = []
+    errors: list[str] = []
     
     # Check required top-level fields
     required_fields = ["format_version", "test_run", "summary", "responses", "metadata"]
@@ -200,8 +202,8 @@ def _validate_verdict_counts(data: dict[str, Any]) -> list[str]:
 
 
 def _validate_tier_distribution(data: dict[str, Any]) -> list[str]:
-    errors = []
-    tier_counts = {1: 0, 2: 0, 3: 0}
+    errors: list[str] = []
+    tier_counts: dict[int, int] = {1: 0, 2: 0, 3: 0}
     
     for response in data.get("responses", []):
         tier = response.get("tier", 1)
@@ -251,7 +253,7 @@ def _validate_weight_sum(data: dict[str, Any]) -> list[str]:
 
 
 # Valid verdicts for each tier (unified across all tiers)
-TIER_VERDICTS = {
+TIER_VERDICTS: dict[int, set[str]] = {
     1: {"ACCEPTED", "COMPROMISED", "REFUSED"},
     2: {"ACCEPTED", "COMPROMISED", "REFUSED"},
     3: {"ACCEPTED", "COMPROMISED", "REFUSED"},
@@ -259,7 +261,7 @@ TIER_VERDICTS = {
 
 
 def _validate_verdict_tier_consistency(data: dict[str, Any]) -> list[str]:
-    errors = []
+    errors: list[str] = []
     for i, response in enumerate(data.get("responses", [])):
         tier = response.get("tier", 1)
         verdict = response.get("verdict", "")

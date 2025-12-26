@@ -3,18 +3,17 @@
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any
 
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Prompt, Confirm, IntPrompt
+from rich.prompt import Confirm, IntPrompt, Prompt
 from rich.table import Table
 from rich.text import Text
-from rich import box
 
 from gcb_runner import __version__
-from gcb_runner.config import Config, BackendConfig, get_config_dir
-
+from gcb_runner.config import BackendConfig, Config, get_config_dir
 
 console = Console()
 
@@ -26,12 +25,12 @@ class MenuAction(Enum):
     EXIT = "exit"
 
 
-def clear_screen():
+def clear_screen() -> None:
     """Clear the terminal screen."""
     console.clear()
 
 
-def print_header():
+def print_header() -> None:
     """Print the GCB Runner header."""
     header_text = Text()
     header_text.append("✝ ", style="bold yellow")
@@ -47,7 +46,7 @@ def print_header():
     console.print()
 
 
-def print_menu(title: str, options: list[tuple[str, str]], show_back: bool = True):
+def print_menu(title: str, options: list[tuple[str, str]], show_back: bool = True) -> None:
     """Print a menu with numbered options.
     
     Args:
@@ -85,7 +84,7 @@ def get_choice(valid_choices: list[str], prompt: str = "Select an option") -> st
         console.print(f"[red]Invalid choice. Please enter one of: {', '.join(valid_choices)}[/red]")
 
 
-def show_status_panel(cfg: Config):
+def show_status_panel(cfg: Config) -> None:
     """Show current configuration status."""
     status_items = []
     
@@ -311,7 +310,7 @@ def setup_wizard() -> MenuAction:
     table.add_column("#", style="bold green", width=3)
     table.add_column("Model", style="cyan")
     
-    for i, (key, name) in enumerate(judge_options, 1):
+    for i, (_key, name) in enumerate(judge_options, 1):
         table.add_row(str(i), name)
     
     console.print(table)
@@ -399,7 +398,7 @@ def config_menu() -> MenuAction:
             reset_database()
 
 
-def configure_platform_key():
+def configure_platform_key() -> None:
     """Configure the platform API key."""
     console.print()
     cfg = Config.load()
@@ -424,7 +423,7 @@ def configure_platform_key():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def configure_backend():
+def configure_backend() -> None:
     """Configure the LLM backend."""
     console.print()
     cfg = Config.load()
@@ -488,7 +487,7 @@ def configure_backend():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def configure_judge():
+def configure_judge() -> None:
     """Configure the judge model."""
     console.print()
     cfg = Config.load()
@@ -529,12 +528,17 @@ def configure_judge():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def view_config():
+def view_config() -> None:
     """View the current configuration."""
     console.print()
     cfg = Config.load()
     
     config_path = get_config_dir() / "config.json"
+    
+    backends_str = "\n".join([
+        f"  {name}: {'API key set' if bc.api_key else bc.base_url or 'configured'}"
+        for name, bc in cfg.backends.items()
+    ]) if cfg.backends else "  [dim]None configured[/dim]"
     
     console.print(Panel(
         f"[bold]Configuration File:[/bold] {config_path}\n\n"
@@ -544,11 +548,7 @@ def view_config():
         f"[bold]Defaults[/bold]\n"
         f"  Backend: {cfg.defaults.backend}\n"
         f"  Judge Model: {cfg.defaults.judge_model}\n\n"
-        f"[bold]Configured Backends[/bold]\n" +
-        "\n".join([
-            f"  {name}: {'API key set' if bc.api_key else bc.base_url or 'configured'}"
-            for name, bc in cfg.backends.items()
-        ]) if cfg.backends else "  [dim]None configured[/dim]",
+        f"[bold]Configured Backends[/bold]\n{backends_str}",
         border_style="blue"
     ))
     
@@ -556,7 +556,7 @@ def view_config():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def reset_config():
+def reset_config() -> None:
     """Reset all configuration settings."""
     console.print()
     
@@ -572,7 +572,7 @@ def reset_config():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def reset_database():
+def reset_database() -> None:
     """Reset the results database."""
     console.print()
     
@@ -692,7 +692,7 @@ def run_test_menu() -> MenuAction:
     )
     
     # Version selection
-    benchmark_version = None
+    benchmark_version: str | None = None
     use_specific_version = Confirm.ask("Use a specific benchmark version?", default=False)
     if use_specific_version:
         console.print()
@@ -754,6 +754,7 @@ def run_test_menu() -> MenuAction:
     
     # Import and run the test
     import asyncio
+
     from gcb_runner.runner import run_benchmark
     
     try:
@@ -776,16 +777,17 @@ def run_test_menu() -> MenuAction:
     return MenuAction.BACK
 
 
-def fetch_versions_sync(cfg: Config) -> tuple[list[dict], str | None]:
+def fetch_versions_sync(cfg: Config) -> tuple[list[dict[str, Any]], str | None]:
     """Fetch available versions synchronously.
     
     Returns:
         Tuple of (versions list, error message or None)
     """
     import asyncio
+
     from gcb_runner.api.client import PlatformAPIClient, PlatformAPIError
     
-    async def _fetch():
+    async def _fetch() -> tuple[list[dict[str, Any]], str | None]:
         if not cfg.platform.api_key:
             return [], "Platform API key not configured"
         
@@ -837,7 +839,7 @@ def results_menu() -> MenuAction:
             export_results()
 
 
-def view_recent_runs():
+def view_recent_runs() -> None:
     """Show list of recent test runs."""
     console.print()
     
@@ -877,14 +879,14 @@ def view_recent_runs():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def view_run_details():
+def view_run_details() -> None:
     """View details of a specific run."""
     console.print()
     
-    run_id = Prompt.ask("Enter run ID to view")
+    run_id_str = Prompt.ask("Enter run ID to view")
     
     try:
-        run_id = int(run_id)
+        run_id = int(run_id_str)
     except ValueError:
         console.print("[red]Invalid run ID[/red]")
         Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
@@ -922,11 +924,12 @@ def view_run_details():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def launch_dashboard():
+def launch_dashboard() -> None:
     """Launch the web dashboard."""
     console.print()
     
     import webbrowser
+
     from gcb_runner.config import get_data_dir
     
     db_path = get_data_dir() / "results.db"
@@ -957,18 +960,18 @@ def launch_dashboard():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def generate_report():
+def generate_report() -> None:
     """Generate an HTML report."""
     console.print()
     
-    run_id = Prompt.ask("Enter run ID (leave empty for latest)", default="")
+    run_id_str = Prompt.ask("Enter run ID (leave empty for latest)", default="")
     
-    from gcb_runner.results import ResultsDB
     from gcb_runner.config import get_data_dir
+    from gcb_runner.results import ResultsDB
     
     db = ResultsDB()
     
-    if not run_id:
+    if not run_id_str:
         runs = db.list_runs(limit=1)
         if not runs:
             console.print("[red]No test runs found.[/red]")
@@ -977,7 +980,7 @@ def generate_report():
         run_id = runs[0].id
     else:
         try:
-            run_id = int(run_id)
+            run_id = int(run_id_str)
         except ValueError:
             console.print("[red]Invalid run ID[/red]")
             Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
@@ -989,10 +992,9 @@ def generate_report():
         Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
         return
     
-    from datetime import datetime
-    from pathlib import Path
-    
-    date_str = run.completed_at.strftime("%Y-%m-%d") if run.completed_at else datetime.now().strftime("%Y-%m-%d")
+    from datetime import datetime as dt
+
+    date_str = run.completed_at.strftime("%Y-%m-%d") if run.completed_at else dt.now().strftime("%Y-%m-%d")
     model_name = run.model.replace("/", "-").replace(":", "-")
     default_output = f"gcb-report-{model_name}-{date_str}.html"
     
@@ -1017,18 +1019,18 @@ def generate_report():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def export_results():
+def export_results() -> None:
     """Export results to JSON."""
     console.print()
     
-    run_id = Prompt.ask("Enter run ID (leave empty for latest)", default="")
+    run_id_str = Prompt.ask("Enter run ID (leave empty for latest)", default="")
     
-    from gcb_runner.results import ResultsDB
     from gcb_runner.export import export_run
+    from gcb_runner.results import ResultsDB
     
     db = ResultsDB()
     
-    if not run_id:
+    if not run_id_str:
         runs = db.list_runs(limit=1)
         if not runs:
             console.print("[red]No test runs found.[/red]")
@@ -1037,7 +1039,7 @@ def export_results():
         run_id = runs[0].id
     else:
         try:
-            run_id = int(run_id)
+            run_id = int(run_id_str)
         except ValueError:
             console.print("[red]Invalid run ID[/red]")
             Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
@@ -1112,7 +1114,7 @@ def help_menu() -> MenuAction:
             show_about()
 
 
-def show_quick_start():
+def show_quick_start() -> None:
     """Show quick start guide."""
     console.print()
     console.print(Panel(
@@ -1136,7 +1138,7 @@ def show_quick_start():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def show_scoring_info():
+def show_scoring_info() -> None:
     """Show scoring methodology."""
     console.print()
     console.print(Panel(
@@ -1159,7 +1161,7 @@ def show_scoring_info():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def show_backend_info():
+def show_backend_info() -> None:
     """Show backend setup information."""
     console.print()
     console.print(Panel(
@@ -1189,7 +1191,7 @@ def show_backend_info():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def show_command_reference():
+def show_command_reference() -> None:
     """Show CLI command reference."""
     console.print()
     
@@ -1220,7 +1222,7 @@ def show_command_reference():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def show_about():
+def show_about() -> None:
     """Show about information."""
     console.print()
     console.print(Panel(
@@ -1283,7 +1285,7 @@ def diagnostics_menu() -> MenuAction:
             view_api_endpoints()
 
 
-def run_full_diagnostics():
+def run_full_diagnostics() -> None:
     """Run complete diagnostic tests."""
     import asyncio
     
@@ -1294,7 +1296,7 @@ def run_full_diagnostics():
     console.print()
     
     cfg = Config.load()
-    results = []
+    results: list[tuple[str, bool | None, str]] = []
     
     # Test 1: Configuration
     console.print("[bold]1. Configuration Check[/bold]")
@@ -1330,11 +1332,11 @@ def run_full_diagnostics():
             api_result = asyncio.run(test_platform_api(cfg))
         
         if api_result["success"]:
-            console.print(f"   ✅ Connection: [green]Success[/green]")
+            console.print("   ✅ Connection: [green]Success[/green]")
             console.print(f"   ✅ Response time: {api_result.get('response_time_ms', '?')}ms")
             results.append(("Platform API", True, f"{api_result.get('response_time_ms', '?')}ms"))
         else:
-            console.print(f"   ❌ Connection: [red]Failed[/red]")
+            console.print("   ❌ Connection: [red]Failed[/red]")
             console.print(f"   ❌ Error: {api_result.get('error', 'Unknown error')}")
             results.append(("Platform API", False, api_result.get('error', 'Unknown error')))
     else:
@@ -1355,10 +1357,10 @@ def run_full_diagnostics():
             current = versions_result.get("current_version")
             
             if len(versions) == 0:
-                console.print(f"   ⚠️  Versions found: 0")
-                console.print(f"   ⚠️  [yellow]No published versions available[/yellow]")
-                console.print(f"   [dim]Note: Question sets must be published (status='active')[/dim]")
-                console.print(f"   [dim]via Admin → Versions → Publish to be visible here.[/dim]")
+                console.print("   ⚠️  Versions found: 0")
+                console.print("   ⚠️  [yellow]No published versions available[/yellow]")
+                console.print("   [dim]Note: Question sets must be published (status='active')[/dim]")
+                console.print("   [dim]via Admin → Versions → Publish to be visible here.[/dim]")
                 results.append(("Versions Endpoint", True, "0 versions (none published)"))
             else:
                 console.print(f"   ✅ Versions found: {len(versions)}")
@@ -1437,9 +1439,10 @@ def run_full_diagnostics():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-async def test_platform_api(cfg: Config) -> dict:
+async def test_platform_api(cfg: Config) -> dict[str, Any]:
     """Test basic platform API connectivity."""
     import time
+
     import httpx
     
     try:
@@ -1461,7 +1464,7 @@ async def test_platform_api(cfg: Config) -> dict:
         return {"success": False, "error": str(e)}
 
 
-async def test_versions_endpoint(cfg: Config) -> dict:
+async def test_versions_endpoint(cfg: Config) -> dict[str, Any]:
     """Test the versions endpoint."""
     from gcb_runner.api.client import PlatformAPIClient
     
@@ -1479,7 +1482,7 @@ async def test_versions_endpoint(cfg: Config) -> dict:
         await client.close()
 
 
-async def test_questions_endpoint(cfg: Config, version: str | None = None) -> dict:
+async def test_questions_endpoint(cfg: Config, version: str | None = None) -> dict[str, Any]:
     """Test the questions endpoint."""
     from gcb_runner.api.client import PlatformAPIClient
     
@@ -1488,7 +1491,7 @@ async def test_questions_endpoint(cfg: Config, version: str | None = None) -> di
         result = await client.get_questions(version or "current")
         questions = result.get("questions", [])
         
-        tier_counts = {1: 0, 2: 0, 3: 0}
+        tier_counts: dict[int, int] = {1: 0, 2: 0, 3: 0}
         for q in questions:
             tier = q.get("tier", 1)
             if tier in tier_counts:
@@ -1506,7 +1509,7 @@ async def test_questions_endpoint(cfg: Config, version: str | None = None) -> di
         await client.close()
 
 
-async def test_local_backend(cfg: Config, backend: str) -> dict:
+async def test_local_backend(cfg: Config, backend: str) -> dict[str, Any]:
     """Test connection to a local backend."""
     import httpx
     
@@ -1518,7 +1521,7 @@ async def test_local_backend(cfg: Config, backend: str) -> dict:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(f"{base_url}/models")
                 if response.status_code == 200:
-                    data = response.json()
+                    data: dict[str, Any] = response.json()
                     models = data.get("data", [])
                     return {"success": True, "models": [m.get("id") for m in models]}
                 else:
@@ -1543,7 +1546,7 @@ async def test_local_backend(cfg: Config, backend: str) -> dict:
     return {"success": False, "error": "Unknown backend"}
 
 
-def test_platform_connection():
+def test_platform_connection() -> None:
     """Test Platform API connection only."""
     import asyncio
     
@@ -1564,17 +1567,17 @@ def test_platform_connection():
         result = asyncio.run(test_platform_api(cfg))
     
     if result["success"]:
-        console.print(f"[green]✅ Connection successful![/green]")
+        console.print("[green]✅ Connection successful![/green]")
         console.print(f"   Response time: {result.get('response_time_ms', '?')}ms")
     else:
-        console.print(f"[red]❌ Connection failed[/red]")
+        console.print("[red]❌ Connection failed[/red]")
         console.print(f"   Error: {result.get('error', 'Unknown error')}")
     
     console.print()
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def test_backend_connection():
+def test_backend_connection() -> None:
     """Test backend connection."""
     import asyncio
     
@@ -1594,7 +1597,7 @@ def test_backend_connection():
             result = asyncio.run(test_local_backend(cfg, backend))
         
         if result["success"]:
-            console.print(f"[green]✅ Connection successful![/green]")
+            console.print("[green]✅ Connection successful![/green]")
             models = result.get("models", [])
             if models:
                 console.print(f"   Available models: {len(models)}")
@@ -1603,7 +1606,7 @@ def test_backend_connection():
                 if len(models) > 5:
                     console.print(f"     ... and {len(models) - 5} more")
         else:
-            console.print(f"[red]❌ Connection failed[/red]")
+            console.print("[red]❌ Connection failed[/red]")
             console.print(f"   Error: {result.get('error', 'Unknown error')}")
             console.print()
             console.print("[dim]Make sure the server is running:[/dim]")
@@ -1616,16 +1619,16 @@ def test_backend_connection():
                 console.print("  2. Pull a model: ollama pull llama3.2")
     else:
         if backend_cfg.api_key:
-            console.print(f"[green]✅ API key configured[/green]")
+            console.print("[green]✅ API key configured[/green]")
             console.print("[dim]Cloud backends are tested when running a benchmark.[/dim]")
         else:
-            console.print(f"[red]❌ API key not configured[/red]")
+            console.print("[red]❌ API key not configured[/red]")
     
     console.print()
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def list_versions_diagnostic():
+def list_versions_diagnostic() -> None:
     """List available benchmark versions with details."""
     import asyncio
     
@@ -1683,14 +1686,14 @@ def list_versions_diagnostic():
             console.print()
             console.print(f"[dim]Current version: {current or 'None set'}[/dim]")
     else:
-        console.print(f"[red]❌ Failed to fetch versions[/red]")
+        console.print("[red]❌ Failed to fetch versions[/red]")
         console.print(f"   Error: {result.get('error', 'Unknown error')}")
     
     console.print()
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def test_question_download():
+def test_question_download() -> None:
     """Test downloading questions for a specific version."""
     import asyncio
     
@@ -1716,10 +1719,10 @@ def test_question_download():
         return
     
     versions = versions_result.get("versions", [])
-    current = versions_result.get("current_version")
     
     console.print()
     
+    selected_version: str | None = None
     if versions:
         table = Table(box=box.ROUNDED, show_header=True)
         table.add_column("#", style="bold green", width=3)
@@ -1769,7 +1772,7 @@ def test_question_download():
         result = asyncio.run(test_questions_endpoint(cfg, selected_version))
     
     if result["success"]:
-        console.print(f"[green]✅ Questions downloaded successfully![/green]")
+        console.print("[green]✅ Questions downloaded successfully![/green]")
         console.print()
         console.print(f"   Version: {result.get('version', '?')}")
         console.print(f"   Total questions: {result.get('question_count', 0)}")
@@ -1782,7 +1785,7 @@ def test_question_download():
             console.print(f"     Tier 2 (Theology):  {tier_counts.get(2, 0)}")
             console.print(f"     Tier 3 (Worldview): {tier_counts.get(3, 0)}")
     else:
-        console.print(f"[red]❌ Failed to download questions[/red]")
+        console.print("[red]❌ Failed to download questions[/red]")
         console.print(f"   Error: {result.get('error', 'Unknown error')}")
         console.print()
         
@@ -1809,7 +1812,7 @@ def test_question_download():
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
 
-def view_api_endpoints():
+def view_api_endpoints() -> None:
     """Show API endpoint information."""
     console.print()
     cfg = Config.load()
@@ -1841,7 +1844,7 @@ def view_api_endpoints():
 # Main Menu
 # ============================================================================
 
-def main_menu():
+def main_menu() -> None:
     """Display the main interactive menu."""
     while True:
         clear_screen()
@@ -1891,7 +1894,7 @@ def main_menu():
             help_menu()
 
 
-def run_menu():
+def run_menu() -> None:
     """Entry point for the interactive menu."""
     try:
         main_menu()

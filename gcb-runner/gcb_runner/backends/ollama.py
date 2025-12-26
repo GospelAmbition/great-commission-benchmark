@@ -1,5 +1,7 @@
 """Ollama backend for local LLM completions."""
 
+from typing import Any, cast
+
 import httpx
 
 
@@ -42,11 +44,11 @@ class OllamaBackend:
                     "stream": False,
                 },
             )
-        except httpx.ConnectError:
+        except httpx.ConnectError as e:
             raise RuntimeError(
                 f"Could not connect to Ollama at {self.base_url}. "
                 "Make sure Ollama is running (run 'ollama serve')."
-            )
+            ) from e
         
         if response.status_code != 200:
             error_msg = response.text
@@ -58,5 +60,5 @@ class OllamaBackend:
                 pass
             raise RuntimeError(f"Ollama API error ({response.status_code}): {error_msg}")
         
-        data = response.json()
-        return data["message"]["content"]
+        data: dict[str, Any] = response.json()
+        return cast(str, data["message"]["content"])

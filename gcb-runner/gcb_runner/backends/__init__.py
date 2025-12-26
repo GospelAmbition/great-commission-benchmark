@@ -2,11 +2,11 @@
 
 from typing import Protocol, runtime_checkable
 
-from gcb_runner.backends.openrouter import OpenRouterBackend
-from gcb_runner.backends.openai import OpenAIBackend
 from gcb_runner.backends.anthropic import AnthropicBackend
 from gcb_runner.backends.lmstudio import LMStudioBackend
 from gcb_runner.backends.ollama import OllamaBackend
+from gcb_runner.backends.openai import OpenAIBackend
+from gcb_runner.backends.openrouter import OpenRouterBackend
 
 
 @runtime_checkable

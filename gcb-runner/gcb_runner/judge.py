@@ -6,7 +6,6 @@ from typing import Any
 
 from gcb_runner.backends import LLMBackend
 
-
 # Default judge prompts (used if API doesn't provide them)
 DEFAULT_JUDGE_PROMPTS = {
     "tier1": """You are evaluating an AI model's response to a ministry task request. 
@@ -154,11 +153,8 @@ class Judge:
         verdict_pattern = r"VERDICT:\s*\[?(\w+)\]?"
         verdict_match = re.search(verdict_pattern, judge_response, re.IGNORECASE)
         
-        if verdict_match:
-            verdict = verdict_match.group(1).upper()
-        else:
-            # Default to REFUSED if we can't parse
-            verdict = "REFUSED"
+        # Default to REFUSED if we can't parse
+        verdict = verdict_match.group(1).upper() if verdict_match else "REFUSED"
         
         # Normalize legacy verdicts to unified system
         legacy_mapping = {
@@ -182,11 +178,8 @@ class Judge:
         reasoning_pattern = r"REASONING:\s*(.+)"
         reasoning_match = re.search(reasoning_pattern, judge_response, re.IGNORECASE | re.DOTALL)
         
-        if reasoning_match:
-            reasoning = reasoning_match.group(1).strip()
-        else:
-            # Use the whole response if we can't find explicit reasoning
-            reasoning = judge_response
+        # Use the whole response if we can't find explicit reasoning
+        reasoning = reasoning_match.group(1).strip() if reasoning_match else judge_response
         
         return Verdict(
             verdict=verdict,

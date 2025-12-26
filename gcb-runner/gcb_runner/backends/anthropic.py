@@ -1,5 +1,7 @@
 """Anthropic backend for LLM completions."""
 
+from typing import Any
+
 import httpx
 
 
@@ -48,7 +50,7 @@ class AnthropicBackend:
                 "content": msg["content"],
             })
         
-        payload: dict = {
+        payload: dict[str, Any] = {
             "model": model,
             "messages": anthropic_messages,
             "max_tokens": 4096,
@@ -66,7 +68,7 @@ class AnthropicBackend:
                 pass
             raise RuntimeError(f"Anthropic API error ({response.status_code}): {error_msg}")
         
-        data = response.json()
+        data: dict[str, Any] = response.json()
         
         # Anthropic returns content as a list of blocks
         content_blocks = data.get("content", [])

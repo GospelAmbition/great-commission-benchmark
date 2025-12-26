@@ -62,6 +62,7 @@ dmypy.json
 .idea/
 *.sublime-workspace
 *.sublime-project
+.ruff_cache/
 
 # Mac OS
 .DS_Store

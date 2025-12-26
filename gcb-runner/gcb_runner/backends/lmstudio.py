@@ -1,5 +1,7 @@
 """LM Studio backend for local LLM completions."""
 
+from typing import Any, cast
+
 import httpx
 
 
@@ -41,11 +43,11 @@ class LMStudioBackend:
                     "messages": messages,
                 },
             )
-        except httpx.ConnectError:
+        except httpx.ConnectError as e:
             raise RuntimeError(
                 f"Could not connect to LM Studio at {self.base_url}. "
                 "Make sure LM Studio is running and the server is started."
-            )
+            ) from e
         
         if response.status_code != 200:
             error_msg = response.text
@@ -57,5 +59,5 @@ class LMStudioBackend:
                 pass
             raise RuntimeError(f"LM Studio API error ({response.status_code}): {error_msg}")
         
-        data = response.json()
-        return data["choices"][0]["message"]["content"]
+        data: dict[str, Any] = response.json()
+        return cast(str, data["choices"][0]["message"]["content"])

@@ -4,24 +4,24 @@ import asyncio
 import webbrowser
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 import typer
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
 from gcb_runner import __version__
-from gcb_runner.config import Config, BackendConfig, get_config_dir
+from gcb_runner.config import BackendConfig, Config, get_config_dir
 from gcb_runner.updater import (
-    check_for_updates_sync,
-    download_update_sync,
     apply_update,
+    check_for_updates_sync,
     cleanup_old_executable,
-    is_frozen,
+    download_update_sync,
     format_size,
+    is_frozen,
 )
 
 app = typer.Typer(
@@ -57,7 +57,7 @@ def check_for_updates_notification() -> None:
         pass  # Silently ignore update check failures
 
 
-def print_header():
+def print_header() -> None:
     """Print the GCB Runner header."""
     console.print(Panel.fit(
         "[bold blue]Great Commission Benchmark - Runner[/bold blue]\n"
@@ -67,7 +67,7 @@ def print_header():
 
 
 @app.command()
-def config():
+def config() -> None:
     """Configure API keys and preferences."""
     print_header()
     console.print()
@@ -161,7 +161,7 @@ def config():
 
 
 @app.command()
-def versions():
+def versions() -> None:
     """List available benchmark versions."""
     print_header()
     console.print()
@@ -181,7 +181,7 @@ def versions():
             result = asyncio.run(client.list_versions())
         except Exception as e:
             console.print(f"[red]Error connecting to Platform API: {e}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
     
     console.print("[green]✓ Connected to Platform API[/green]")
     console.print()
@@ -214,13 +214,13 @@ def versions():
 @app.command()
 def test(
     model: str = typer.Option(..., "--model", "-m", help="Model identifier (e.g., gpt-4o)"),
-    backend: Optional[str] = typer.Option(None, "--backend", "-b", help="Backend: openrouter, lmstudio, ollama, openai, anthropic"),
-    benchmark_version: Optional[str] = typer.Option(None, "--benchmark-version", help="Benchmark version to run"),
-    judge_model: Optional[str] = typer.Option(None, "--judge-model", help="Model for judging responses"),
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Save results to JSON file"),
+    backend: str | None = typer.Option(None, "--backend", "-b", help="Backend: openrouter, lmstudio, ollama, openai, anthropic"),
+    benchmark_version: str | None = typer.Option(None, "--benchmark-version", help="Benchmark version to run"),
+    judge_model: str | None = typer.Option(None, "--judge-model", help="Model for judging responses"),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Save results to JSON file"),  # noqa: B008
     resume: bool = typer.Option(False, "--resume", help="Resume interrupted test run"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Validate configuration without running tests"),
-):
+) -> None:
     """Run the benchmark against a model."""
     print_header()
     console.print()
@@ -266,9 +266,9 @@ def test(
 
 @app.command()
 def results(
-    run_id: Optional[int] = typer.Option(None, "--run", "-r", help="View specific run ID"),
+    run_id: int | None = typer.Option(None, "--run", "-r", help="View specific run ID"),
     limit: int = typer.Option(10, "--limit", "-n", help="Number of results to show"),
-):
+) -> None:
     """View past test results."""
     print_header()
     console.print()
@@ -295,7 +295,7 @@ def results(
         table.add_row("Backend", run.backend)
         table.add_row("Benchmark Version", run.benchmark_version)
         table.add_row("Judge Model", run.judge_model)
-        table.add_row("Score", f"[bold green]{run.score:.1f}[/bold green]")
+        table.add_row("Score", f"[bold green]{run.score:.1f}[/bold green]" if run.score else "-")
         table.add_row("Completed", run.completed_at.isoformat() if run.completed_at else "In Progress")
         
         console.print(table)
@@ -305,9 +305,11 @@ def results(
         console.print("[bold]Tier Breakdown:[/bold]")
         
         responses = db.get_responses(run_id)
-        tier_stats = {1: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0}, 
-                      2: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0}, 
-                      3: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0}}
+        tier_stats: dict[int, dict[str, int]] = {
+            1: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0}, 
+            2: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0}, 
+            3: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0}
+        }
         
         for resp in responses:
             # Map verdict (handle legacy/ERROR verdicts as REFUSED)
@@ -375,57 +377,65 @@ def results(
 
 @app.command(name="export")
 def export_results(
-    run_id: Optional[int] = typer.Option(None, "--run", "-r", help="Test run ID to export"),
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output path (defaults to ./<model>.json in current directory)"),
-):
+    run_id: int | None = typer.Option(None, "--run", "-r", help="Test run ID to export"),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Output path (defaults to ./<model>.json in current directory)"),  # noqa: B008
+) -> None:
     """Export results to JSON for platform submission."""
     print_header()
     console.print()
     
-    from gcb_runner.results import ResultsDB
     from gcb_runner.export import export_run
+    from gcb_runner.results import ResultsDB
     
     db = ResultsDB()
     
+    actual_run_id: int
     if not run_id:
         # Get latest completed run
         runs = db.list_runs(limit=1)
         if not runs:
             console.print("[red]No test runs found.[/red]")
             raise typer.Exit(1)
-        run_id = runs[0].id
+        actual_run_id = runs[0].id
+    else:
+        actual_run_id = run_id
     
-    run = db.get_run(run_id)
+    run = db.get_run(actual_run_id)
     if not run:
-        console.print(f"[red]Test run #{run_id} not found.[/red]")
+        console.print(f"[red]Test run #{actual_run_id} not found.[/red]")
         raise typer.Exit(1)
     
     if not run.completed_at:
-        console.print(f"[red]Test run #{run_id} is not complete.[/red]")
+        console.print(f"[red]Test run #{actual_run_id} is not complete.[/red]")
         raise typer.Exit(1)
     
     # Generate output path from model name if not specified
+    actual_output: Path
     if output is None:
         model_name = run.model.replace("/", "-").replace(":", "-")
-        output = Path(f"{model_name}.json")
+        actual_output = Path(f"{model_name}.json")
+    else:
+        actual_output = output
     
-    console.print(f"Exporting test run #{run_id}...")
+    console.print(f"Exporting test run #{actual_run_id}...")
     
-    export_data = export_run(db, run_id)
-    output.write_text(export_data)
+    export_data = export_run(db, actual_run_id)
+    actual_output.write_text(export_data)
     
-    console.print(f"[green]✓ Exported to {output}[/green]")
+    console.print(f"[green]✓ Exported to {actual_output}[/green]")
     console.print()
     console.print("File ready for upload at https://greatcommissionbenchmark.ai/submit")
 
 
 @app.command()
 def upload(
-    run_id: Optional[int] = typer.Option(None, "--run", "-r", help="Test run ID to upload"),
-):
+    run_id: int | None = typer.Option(None, "--run", "-r", help="Test run ID to upload"),
+) -> None:
     """Upload results to the platform for verification and publication."""
     print_header()
     console.print()
+    
+    _ = run_id  # Mark as intentionally unused for now
     
     console.print(Panel(
         "[bold]CLI Submission Information[/bold]\n\n"
@@ -450,16 +460,16 @@ def upload(
 
 @app.command()
 def view(
-    run_id: Optional[int] = typer.Option(None, "--run", "-r", help="Open directly to a specific test run"),
+    run_id: int | None = typer.Option(None, "--run", "-r", help="Open directly to a specific test run"),
     port: int = typer.Option(8642, "--port", "-p", help="Server port"),
     no_browser: bool = typer.Option(False, "--no-browser", help="Don't open browser automatically"),
-):
+) -> None:
     """Launch a local web dashboard to explore results visually."""
     print_header()
     console.print()
     
-    from gcb_runner.viewer.server import start_viewer
     from gcb_runner.config import get_data_dir
+    from gcb_runner.viewer.server import start_viewer
     
     db_path = get_data_dir() / "results.db"
     
@@ -487,7 +497,7 @@ def view(
 @app.command(name="reset-db")
 def reset_database(
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),
-):
+) -> None:
     """Delete and reinitialize the results database.
     
     Use this when you want to start testing from scratch. All test runs
@@ -529,10 +539,9 @@ def reset_database(
         console.print(f"[dim]Database location: {db_path}[/dim]")
         console.print()
     
-    if not force:
-        if not Confirm.ask("[red]Are you sure you want to delete all test data?[/red]", default=False):
-            console.print("[yellow]Reset cancelled.[/yellow]")
-            return
+    if not force and not Confirm.ask("[red]Are you sure you want to delete all test data?[/red]", default=False):
+        console.print("[yellow]Reset cancelled.[/yellow]")
+        return
     
     # Delete the database file
     try:
@@ -542,60 +551,66 @@ def reset_database(
         console.print("[dim]A new database will be created automatically when you run your next test.[/dim]")
     except Exception as e:
         console.print(f"[red]Error deleting database: {e}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 @app.command()
 def report(
-    run_id: Optional[int] = typer.Option(None, "--run", "-r", help="Test run ID"),
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output filename"),
+    run_id: int | None = typer.Option(None, "--run", "-r", help="Test run ID"),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Output filename"),  # noqa: B008
     no_browser: bool = typer.Option(False, "--no-browser", help="Don't open browser automatically"),
-    compare: Optional[int] = typer.Option(None, "--compare", "-c", help="Compare with another run"),
-):
+    compare: int | None = typer.Option(None, "--compare", "-c", help="Compare with another run"),
+) -> None:
     """Generate a static HTML report."""
     print_header()
     console.print()
     
+    from gcb_runner.config import get_data_dir
     from gcb_runner.results import ResultsDB
     from gcb_runner.viewer.report import generate_report
-    from gcb_runner.config import get_data_dir
     
     db = ResultsDB()
     
+    actual_run_id: int
     if not run_id:
         runs = db.list_runs(limit=1)
         if not runs:
             console.print("[red]No test runs found.[/red]")
             raise typer.Exit(1)
-        run_id = runs[0].id
+        actual_run_id = runs[0].id
+    else:
+        actual_run_id = run_id
     
-    run = db.get_run(run_id)
+    run = db.get_run(actual_run_id)
     if not run:
-        console.print(f"[red]Test run #{run_id} not found.[/red]")
+        console.print(f"[red]Test run #{actual_run_id} not found.[/red]")
         raise typer.Exit(1)
     
-    console.print(f"Generating report for test run #{run_id}...")
+    console.print(f"Generating report for test run #{actual_run_id}...")
     
+    actual_output: Path
     if not output:
         date_str = run.completed_at.strftime("%Y-%m-%d") if run.completed_at else datetime.now().strftime("%Y-%m-%d")
         model_name = run.model.replace("/", "-").replace(":", "-")
-        output = Path(f"gcb-report-{model_name}-{date_str}.html")
+        actual_output = Path(f"gcb-report-{model_name}-{date_str}.html")
+    else:
+        actual_output = output
     
     db_path = get_data_dir() / "results.db"
-    generate_report(db_path, run_id, output, compare_run_id=compare)
+    generate_report(db_path, actual_run_id, actual_output, compare_run_id=compare)
     
-    console.print(f"[green]✓ Report saved to {output}[/green]")
+    console.print(f"[green]✓ Report saved to {actual_output}[/green]")
     
     if not no_browser:
         console.print("Opening in browser...")
-        webbrowser.open(f"file://{output.absolute()}")
+        webbrowser.open(f"file://{actual_output.absolute()}")
 
 
 @app.command()
 def update(
     check_only: bool = typer.Option(False, "--check", "-c", help="Only check for updates, don't install"),
     force: bool = typer.Option(False, "--force", "-f", help="Force update even if already on latest version"),
-):
+) -> None:
     """Check for and install updates."""
     print_header()
     console.print()
@@ -618,7 +633,7 @@ def update(
         return
     
     if update_info:
-        console.print(f"[bold]Update available![/bold]")
+        console.print("[bold]Update available![/bold]")
         console.print(f"  Current version: {update_info['current_version']}")
         console.print(f"  Latest version:  [green]{update_info['latest_version']}[/green]")
         if update_info.get('release_notes'):
@@ -631,7 +646,7 @@ def update(
         return
     
     if not update_info:
-        console.print(f"[yellow]No update info available. Cannot force update.[/yellow]")
+        console.print("[yellow]No update info available. Cannot force update.[/yellow]")
         return
     
     if not Confirm.ask("Download and install update?"):
@@ -683,8 +698,9 @@ def update(
 
 
 @app.command(name="help")
-def show_help(ctx: typer.Context):
+def show_help(ctx: typer.Context) -> None:
     """Show CLI command reference."""
+    _ = ctx  # Mark as intentionally unused
     print_header()
     console.print()
     console.print("[bold]Available Commands:[/bold]")
@@ -724,13 +740,13 @@ def show_help(ctx: typer.Context):
 
 
 @app.command(name="menu")
-def menu_command():
+def menu_command() -> None:
     """Launch the interactive menu interface."""
     from gcb_runner.menu import run_menu
     run_menu()
 
 
-def version_callback(value: bool):
+def version_callback(value: bool) -> None:
     """Show version and exit."""
     if value:
         console.print(f"gcb-runner {__version__}")
@@ -742,17 +758,19 @@ def callback(
     ctx: typer.Context,
     version: bool = typer.Option(False, "--version", "-v", help="Show version", callback=version_callback, is_eager=True),
     no_update_check: bool = typer.Option(False, "--no-update-check", help="Skip automatic update check", hidden=True),
-):
+) -> None:
     """GCB Runner - Great Commission Benchmark CLI
     
     Run without arguments to launch the interactive menu.
     Use 'gcb-runner help' for command reference.
     """
+    _ = version  # Mark as intentionally unused (handled by callback)
+    
     # Check for updates on startup (non-blocking notification)
     if not no_update_check and ctx.invoked_subcommand not in ("update", None):
         check_for_updates_notification()
     
-    if ctx.invoked_subcommand is None and not version:
+    if ctx.invoked_subcommand is None:
         # Check for updates before launching menu
         if not no_update_check:
             check_for_updates_notification()
@@ -761,7 +779,7 @@ def callback(
         run_menu()
 
 
-def main():
+def main() -> None:
     """Entry point for the CLI."""
     app()
 
