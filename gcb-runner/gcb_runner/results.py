@@ -71,7 +71,24 @@ class ResultsDB:
         self.db_path = db_path
         self.engine = create_engine(f"sqlite:///{db_path}")
         Base.metadata.create_all(self.engine)
+        self._migrate_schema()
         self.Session = sessionmaker(bind=self.engine)
+    
+    def _migrate_schema(self) -> None:
+        """Run schema migrations for existing databases."""
+        from sqlalchemy import text
+        
+        with self.engine.connect() as conn:
+            # Check if is_draft_test column exists
+            result = conn.execute(text("PRAGMA table_info(test_runs)"))
+            columns = [row[1] for row in result.fetchall()]
+            
+            if "is_draft_test" not in columns:
+                # Add the column with default value
+                conn.execute(text(
+                    "ALTER TABLE test_runs ADD COLUMN is_draft_test BOOLEAN NOT NULL DEFAULT 0"
+                ))
+                conn.commit()
     
     def create_run(
         self,

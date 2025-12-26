@@ -136,8 +136,7 @@ def config() -> None:
     console.print("[dim]openai/gpt-oss-20b is the standard judge for consistent scoring.[/dim]")
     console.print()
     judge_models = [
-        "openai/gpt-oss-20b (platform hosted - recommended)",
-        "openai/gpt-oss-20b (self-hosted via LM Studio/Ollama)",
+        "openai/gpt-oss-20b (recommended)",
         "custom"
     ]
     for i, m in enumerate(judge_models, 1):
@@ -149,8 +148,6 @@ def config() -> None:
         judge_idx = int(judge_choice) - 1
         if judge_idx == 0:
             cfg.defaults.judge_model = "openai/gpt-oss-20b"
-        elif judge_idx == 1:
-            cfg.defaults.judge_model = "local/openai-gpt-oss-20b"
         else:
             custom_judge = Prompt.ask("Enter custom judge model name")
             cfg.defaults.judge_model = custom_judge

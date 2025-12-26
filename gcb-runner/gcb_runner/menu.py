@@ -294,14 +294,13 @@ def setup_wizard() -> MenuAction:
     console.print(Panel(
         "The judge model evaluates AI responses for accuracy and faithfulness.\n\n"
         "[bold]Standard Judge:[/bold] openai/gpt-oss-20b ensures consistent scoring across all tests.\n\n"
-        "[dim]Choose platform-hosted for convenience, or self-host for offline use.[/dim]",
+        "[dim]The judge will use your configured backend (local or cloud).[/dim]",
         border_style="blue"
     ))
     console.print()
     
     judge_options = [
-        ("openai/gpt-oss-20b", "openai/gpt-oss-20b (platform hosted - recommended)"),
-        ("local/openai-gpt-oss-20b", "openai/gpt-oss-20b (self-hosted via LM Studio/Ollama)"),
+        ("openai/gpt-oss-20b", "openai/gpt-oss-20b (recommended)"),
         ("custom", "Custom model..."),
     ]
     
@@ -492,11 +491,11 @@ def configure_judge() -> None:
     cfg = Config.load()
     
     console.print("[dim]openai/gpt-oss-20b is the standard judge for consistent scoring.[/dim]")
+    console.print("[dim]The judge will use your configured backend (local or cloud).[/dim]")
     console.print()
     
     judge_models = [
-        ("openai/gpt-oss-20b", "openai/gpt-oss-20b (platform hosted - recommended)"),
-        ("local/openai-gpt-oss-20b", "openai/gpt-oss-20b (self-hosted via LM Studio/Ollama)"),
+        ("openai/gpt-oss-20b", "openai/gpt-oss-20b (recommended)"),
     ]
     
     table = Table(box=box.ROUNDED, show_header=False)
@@ -506,7 +505,7 @@ def configure_judge() -> None:
     for i, (key, name) in enumerate(judge_models, 1):
         marker = " ← current" if key == cfg.defaults.judge_model else ""
         table.add_row(str(i), name + marker)
-    table.add_row("3", "Custom model...")
+    table.add_row("2", "Custom model...")
     
     console.print(table)
     console.print()
@@ -515,7 +514,7 @@ def configure_judge() -> None:
     
     try:
         judge_idx = int(choice) - 1
-        if judge_idx == 2:
+        if judge_idx == 1:
             custom_judge = Prompt.ask("Enter custom judge model name")
             cfg.defaults.judge_model = custom_judge
         elif 0 <= judge_idx < len(judge_models):
