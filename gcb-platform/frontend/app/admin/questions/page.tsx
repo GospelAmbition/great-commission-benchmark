@@ -898,7 +898,7 @@ export default function AdminQuestionsPage() {
                   <TableCell className="text-center text-muted-foreground text-sm">
                     {showAll ? index + 1 : (currentPage - 1) * pageSize + index + 1}
                   </TableCell>
-                  <TableCell className="max-w-md">
+                  <TableCell>
                     <div className="whitespace-normal break-words">
                       {q.content}
                     </div>

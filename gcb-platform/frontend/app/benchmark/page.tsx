@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -35,6 +36,10 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useUserProfile } from "@/lib/useUserProfile";
+
+// =============================================================================
+// Types
+// =============================================================================
 
 interface QuestionSet {
   id: string;
@@ -86,26 +91,126 @@ interface BenchmarkOverview {
   };
 }
 
+interface CategoryDifficultyBreakdown {
+  easy: number;
+  medium: number;
+  hard: number;
+}
+
+interface CategoryStats {
+  count: number;
+  target: number;
+  difficulty: CategoryDifficultyBreakdown;
+}
+
+interface TierStats {
+  count: number;
+  target: number;
+  categories: Record<string, CategoryStats>;
+}
+
+interface DifficultyCount {
+  count: number;
+  percentage: number;
+}
+
+interface DifficultyStats {
+  easy: DifficultyCount;
+  medium: DifficultyCount;
+  hard: DifficultyCount;
+}
+
+interface VersionStats {
+  question_set_id: string;
+  semantic_version: string;
+  marketing_version: string;
+  total_questions: number;
+  target_total: number;
+  tier_stats: Record<number, TierStats>;
+  difficulty_stats: DifficultyStats;
+  category_difficulty_matrix: Record<string, CategoryDifficultyBreakdown>;
+}
+
+interface Alert {
+  type: "error" | "warning" | "info";
+  message: string;
+  category?: string;
+  tier?: number;
+}
+
+// =============================================================================
+// Constants
+// =============================================================================
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+const CATEGORIES: Record<number, string[]> = {
+  1: ["3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7"],
+  2: ["4.1", "4.2", "4.3", "4.4", "4.5", "4.6"],
+  3: ["5.1", "5.2", "5.3", "5.4", "5.5", "5.6"],
+};
+
+const CATEGORY_NAMES: Record<string, string> = {
+  "3.1": "Missiological Research",
+  "3.2": "Evangelistic Material",
+  "3.3": "Apologetics",
+  "3.4": "Conversational AI",
+  "3.5": "Intercessory Prayer",
+  "3.6": "Problematic Vocabulary",
+  "3.7": "Difficult Passages",
+  "4.1": "Exclusivity of Jesus",
+  "4.2": "Universality of Sin",
+  "4.3": "Reality of Judgment",
+  "4.4": "Lordship of Jesus",
+  "4.5": "Call to Repentance",
+  "4.6": "Burden to Make Disciples",
+  "5.1": "Existence of God",
+  "5.2": "Historical Jesus",
+  "5.3": "The Crucifixion",
+  "5.4": "The Resurrection",
+  "5.5": "Universal Sinfulness",
+  "5.6": "Salvation Through Faith",
+};
+
+const TIER_NAMES: Record<number, string> = {
+  1: "Task Completion",
+  2: "Doctrinal Fidelity",
+  3: "Worldview Confession",
+};
+
+// Target distribution: 15% easy, 70% medium, 15% hard
+const DIFFICULTY_TARGETS = {
+  easy: 15,
+  medium: 70,
+  hard: 15,
+};
+
+// =============================================================================
+// Main Component
+// =============================================================================
 
 export default function BenchmarkDashboardPage() {
   const { data: session, status } = useSession();
   const { isBenchmarkDeveloper, loading: profileLoading } = useUserProfile();
   const router = useRouter();
   
+  // Data state
   const [overview, setOverview] = useState<BenchmarkOverview | null>(null);
   const [questionSets, setQuestionSets] = useState<QuestionSet[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [versionStats, setVersionStats] = useState<VersionStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [questionsLoading, setQuestionsLoading] = useState(false);
   
-  // Filters
+  // Selection state
   const [selectedVersionId, setSelectedVersionId] = useState<string>("");
   const [selectedTier, setSelectedTier] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<string>("versions");
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("statistics");
   
-  // Dialogs
+  // Dialog state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditQuestionDialog, setShowEditQuestionDialog] = useState(false);
   const [showCreateQuestionDialog, setShowCreateQuestionDialog] = useState(false);
@@ -131,25 +236,12 @@ export default function BenchmarkDashboardPage() {
   // Form state
   const [newVersion, setNewVersion] = useState({ semantic_version: "", marketing_version: "", copy_from: "" });
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [newQuestion, setNewQuestion] = useState({ tier: "1", category: "", content: "" });
+  const [newQuestion, setNewQuestion] = useState({ tier: "1", category: "", content: "", difficulty: "medium" });
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    if (status === "loading" || profileLoading) return;
-    
-    if (!session?.user) {
-      router.push("/api/auth/signin");
-      return;
-    }
-    
-    if (!isBenchmarkDeveloper) {
-      router.push("/dashboard");
-      toast.error("You don't have permission to access the Benchmark Development dashboard");
-      return;
-    }
-    
-    loadData();
-  }, [session, status, profileLoading, isBenchmarkDeveloper, router]);
+  // =============================================================================
+  // Auth & API Helpers
+  // =============================================================================
 
   async function getAuthToken(): Promise<string | null> {
     try {
@@ -183,7 +275,11 @@ export default function BenchmarkDashboardPage() {
     return response.json();
   }
 
-  async function loadData() {
+  // =============================================================================
+  // Data Loading
+  // =============================================================================
+
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [overviewData, questionSetsData] = await Promise.all([
@@ -194,12 +290,14 @@ export default function BenchmarkDashboardPage() {
       setOverview(overviewData);
       setQuestionSets(questionSetsData.items || []);
       
-      // Auto-select a version for questions tab
+      // Auto-select a version
       if (!selectedVersionId) {
         if (overviewData.draft_versions.length > 0) {
           setSelectedVersionId(overviewData.draft_versions[0].id);
         } else if (overviewData.active_version) {
           setSelectedVersionId(overviewData.active_version.id);
+        } else if (questionSetsData.items?.length > 0) {
+          setSelectedVersionId(questionSetsData.items[0].id);
         }
       }
     } catch (error) {
@@ -208,9 +306,26 @@ export default function BenchmarkDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [selectedVersionId]);
 
-  async function loadQuestions() {
+  const loadVersionStats = useCallback(async () => {
+    if (!selectedVersionId) return;
+    
+    setStatsLoading(true);
+    try {
+      const stats = await apiRequest<VersionStats>(
+        `/api/benchmark/question-sets/${selectedVersionId}/stats`
+      );
+      setVersionStats(stats);
+    } catch (error) {
+      console.error("Failed to load version stats:", error);
+      toast.error("Failed to load version statistics");
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [selectedVersionId]);
+
+  const loadQuestions = useCallback(async () => {
     if (!selectedVersionId) return;
     
     setQuestionsLoading(true);
@@ -219,27 +334,61 @@ export default function BenchmarkDashboardPage() {
       params.append("question_set_id", selectedVersionId);
       if (selectedTier !== "all") params.append("tier", selectedTier);
       if (selectedCategory !== "all") params.append("category", selectedCategory);
-      params.append("limit", "100");
+      params.append("limit", "200");
       
       const data = await apiRequest<{ items: Question[]; total: number }>(
         `/api/benchmark/questions?${params.toString()}`
       );
-      setQuestions(data.items || []);
+      
+      // Filter by difficulty if selected (client-side since backend doesn't support it)
+      let filteredQuestions = data.items || [];
+      if (selectedDifficulty !== "all") {
+        filteredQuestions = filteredQuestions.filter(q => 
+          q.metadata?.difficulty?.toLowerCase() === selectedDifficulty
+        );
+      }
+      
+      setQuestions(filteredQuestions);
     } catch (error) {
       console.error("Failed to load questions:", error);
       toast.error("Failed to load questions");
     } finally {
       setQuestionsLoading(false);
     }
-  }
+  }, [selectedVersionId, selectedTier, selectedCategory, selectedDifficulty]);
+
+  // =============================================================================
+  // Effects
+  // =============================================================================
+
+  useEffect(() => {
+    if (status === "loading" || profileLoading) return;
+    
+    if (!session?.user) {
+      router.push("/api/auth/signin");
+      return;
+    }
+    
+    if (!isBenchmarkDeveloper) {
+      router.push("/dashboard");
+      toast.error("You don't have permission to access the Benchmark Development dashboard");
+      return;
+    }
+    
+    loadData();
+  }, [session, status, profileLoading, isBenchmarkDeveloper, router, loadData]);
 
   useEffect(() => {
     if (selectedVersionId) {
+      loadVersionStats();
       loadQuestions();
     }
-  }, [selectedVersionId, selectedTier, selectedCategory]);
+  }, [selectedVersionId, loadVersionStats, loadQuestions]);
 
-  // Version actions
+  // =============================================================================
+  // Version Actions
+  // =============================================================================
+
   async function handleCreateVersion() {
     if (!newVersion.semantic_version || !newVersion.marketing_version) {
       toast.error("Please fill in all required fields");
@@ -312,7 +461,10 @@ export default function BenchmarkDashboardPage() {
     }
   }
 
-  // Question actions
+  // =============================================================================
+  // Question Actions
+  // =============================================================================
+
   async function handleCreateQuestion() {
     if (!newQuestion.category || !newQuestion.content) {
       toast.error("Please fill in all required fields");
@@ -321,22 +473,25 @@ export default function BenchmarkDashboardPage() {
     
     setActionLoading(true);
     try {
-      const params = new URLSearchParams({
-        question_set_id: selectedVersionId,
-        tier: newQuestion.tier,
-        category: newQuestion.category,
-        content: newQuestion.content,
-      });
-      
-      await apiRequest(`/api/benchmark/questions?${params.toString()}`, {
+      await apiRequest('/api/benchmark/questions', {
         method: "POST",
+        body: JSON.stringify({
+          question_set_id: selectedVersionId,
+          tier: parseInt(newQuestion.tier),
+          category: newQuestion.category,
+          content: newQuestion.content,
+          metadata: {
+            difficulty: newQuestion.difficulty,
+          },
+        }),
       });
       
       toast.success("Question created");
       setShowCreateQuestionDialog(false);
-      setNewQuestion({ tier: "1", category: "", content: "" });
+      setNewQuestion({ tier: "1", category: "", content: "", difficulty: "medium" });
       loadQuestions();
-      loadData(); // Refresh counts
+      loadVersionStats();
+      loadData();
     } catch (error: any) {
       toast.error(error.message || "Failed to create question");
     } finally {
@@ -355,6 +510,7 @@ export default function BenchmarkDashboardPage() {
           tier: editingQuestion.tier,
           category: editingQuestion.category,
           content: editingQuestion.content,
+          metadata: editingQuestion.metadata,
         }),
       });
       
@@ -362,6 +518,7 @@ export default function BenchmarkDashboardPage() {
       setShowEditQuestionDialog(false);
       setEditingQuestion(null);
       loadQuestions();
+      loadVersionStats();
     } catch (error: any) {
       toast.error(error.message || "Failed to update question");
     } finally {
@@ -378,21 +535,22 @@ export default function BenchmarkDashboardPage() {
       });
       toast.success("Question deleted");
       loadQuestions();
-      loadData(); // Refresh counts
+      loadVersionStats();
+      loadData();
     } catch (error: any) {
       toast.error(error.message || "Failed to delete question");
     }
   }
 
-  // Import functions
-  
-  // CSV Parser - handles quoted fields, commas within quotes, and escaped quotes
+  // =============================================================================
+  // Import Functions
+  // =============================================================================
+
   function parseCSV(content: string): { headers: string[]; rows: string[][] } {
     const lines: string[] = [];
     let currentLine = "";
     let inQuotes = false;
 
-    // Split by lines while respecting quoted fields
     for (let i = 0; i < content.length; i++) {
       const char = content[i];
       const nextChar = content[i + 1];
@@ -458,7 +616,6 @@ export default function BenchmarkDashboardPage() {
     return { headers, rows };
   }
 
-  // Infer tier from category code (3.x -> 1, 4.x -> 2, 5.x -> 3)
   function inferTierFromCategory(category: string): number | null {
     const majorCategory = category.split(".")[0];
     switch (majorCategory) {
@@ -469,7 +626,6 @@ export default function BenchmarkDashboardPage() {
     }
   }
 
-  // Parse boolean value from CSV string
   function parseBooleanValue(value: string | undefined): boolean | undefined {
     if (!value || value.trim() === "") return undefined;
     const lower = value.toLowerCase().trim();
@@ -478,13 +634,11 @@ export default function BenchmarkDashboardPage() {
     return undefined;
   }
 
-  // Parse pipe-separated tags into array
   function parseTags(value: string | undefined): string[] | undefined {
     if (!value || value.trim() === "") return undefined;
     return value.split("|").map((tag) => tag.trim()).filter((tag) => tag.length > 0);
   }
 
-  // Parse CSV rows into questions
   function parseCSVQuestions(headers: string[], rows: string[][]): any[] {
     const questions: any[] = [];
     const headerIndex: Record<string, number> = {};
@@ -552,7 +706,6 @@ export default function BenchmarkDashboardPage() {
     return questions;
   }
 
-  // Detect file type from content
   function detectFileType(filename: string, content: string): "csv" | "json" {
     if (filename.toLowerCase().endsWith(".csv")) return "csv";
     if (filename.toLowerCase().endsWith(".json")) return "json";
@@ -564,7 +717,6 @@ export default function BenchmarkDashboardPage() {
   function parseImportFile(fileContent: string, filename: string = ""): { questions: any[]; format: 'standard' | 'generated' | 'csv' | 'unknown' } {
     const fileType = detectFileType(filename, fileContent);
 
-    // Handle CSV files
     if (fileType === "csv") {
       const { headers, rows } = parseCSV(fileContent);
       if (headers.length === 0) {
@@ -574,83 +726,42 @@ export default function BenchmarkDashboardPage() {
       return { questions, format: questions.length > 0 ? 'csv' : 'unknown' };
     }
 
-    // Handle JSON files
     try {
       const data = JSON.parse(fileContent);
       
-      // Check if it's the "generated" format from FULL-QUESTION-GENERATION-PROMPT.md
-      // This format has tier1_questions, tier2_questions, tier3_questions arrays
       if (data.tier1_questions || data.tier2_questions || data.tier3_questions) {
         const allQuestions: any[] = [];
         
-        // Process each tier
-        if (Array.isArray(data.tier1_questions)) {
-          data.tier1_questions.forEach((q: any) => {
-            allQuestions.push({
-              ...q,
-              tier: 1,
-              metadata: {
-                difficulty: q.difficulty,
-                expected_verdict: q.expected_verdict,
-                expected_refusal_type: q.expected_refusal_type,
-                tests_capability: q.tests_capability,
-                tests_willingness: q.tests_willingness,
-                use_case_tags: q.use_case_tags,
-                audience_context: q.audience_context,
-                ministry_type: q.ministry_type,
-                reasoning: q.reasoning,
-              }
+        [1, 2, 3].forEach((tier) => {
+          const key = `tier${tier}_questions`;
+          if (Array.isArray(data[key])) {
+            data[key].forEach((q: any) => {
+              allQuestions.push({
+                ...q,
+                tier,
+                metadata: {
+                  difficulty: q.difficulty,
+                  expected_verdict: q.expected_verdict,
+                  expected_refusal_type: q.expected_refusal_type,
+                  tests_capability: q.tests_capability,
+                  tests_willingness: q.tests_willingness,
+                  use_case_tags: q.use_case_tags,
+                  audience_context: q.audience_context,
+                  ministry_type: q.ministry_type,
+                  reasoning: q.reasoning,
+                }
+              });
             });
-          });
-        }
-        if (Array.isArray(data.tier2_questions)) {
-          data.tier2_questions.forEach((q: any) => {
-            allQuestions.push({
-              ...q,
-              tier: 2,
-              metadata: {
-                difficulty: q.difficulty,
-                expected_verdict: q.expected_verdict,
-                expected_refusal_type: q.expected_refusal_type,
-                tests_capability: q.tests_capability,
-                tests_willingness: q.tests_willingness,
-                use_case_tags: q.use_case_tags,
-                audience_context: q.audience_context,
-                ministry_type: q.ministry_type,
-                reasoning: q.reasoning,
-              }
-            });
-          });
-        }
-        if (Array.isArray(data.tier3_questions)) {
-          data.tier3_questions.forEach((q: any) => {
-            allQuestions.push({
-              ...q,
-              tier: 3,
-              metadata: {
-                difficulty: q.difficulty,
-                expected_verdict: q.expected_verdict,
-                expected_refusal_type: q.expected_refusal_type,
-                tests_capability: q.tests_capability,
-                tests_willingness: q.tests_willingness,
-                use_case_tags: q.use_case_tags,
-                audience_context: q.audience_context,
-                ministry_type: q.ministry_type,
-                reasoning: q.reasoning,
-              }
-            });
-          });
-        }
+          }
+        });
         
         return { questions: allQuestions, format: 'generated' };
       }
       
-      // Check if it's an array of questions (standard format)
       if (Array.isArray(data)) {
         return { questions: data, format: 'standard' };
       }
       
-      // Check if it has a "questions" array
       if (Array.isArray(data.questions)) {
         return { questions: data.questions, format: 'standard' };
       }
@@ -691,7 +802,6 @@ export default function BenchmarkDashboardPage() {
     
     setImportLoading(true);
     try {
-      // Prepare questions with the selected version ID
       const questionsToImport = importPreview.questions.map(q => ({
         question_set_id: selectedVersionId,
         tier: q.tier,
@@ -730,7 +840,6 @@ export default function BenchmarkDashboardPage() {
     
     setImportLoading(true);
     try {
-      // Prepare questions with the selected version ID
       const questionsToImport = importPreview.questions.map(q => ({
         question_set_id: selectedVersionId,
         tier: q.tier,
@@ -756,12 +865,9 @@ export default function BenchmarkDashboardPage() {
         toast.success(`Successfully imported ${result.imported} questions`);
       }
       
-      // Reset and close
-      setShowImportDialog(false);
-      setImportFile(null);
-      setImportPreview(null);
-      setImportValidation(null);
+      resetImportDialog();
       loadQuestions();
+      loadVersionStats();
       loadData();
     } catch (error: any) {
       toast.error(error.message || "Import failed");
@@ -777,6 +883,200 @@ export default function BenchmarkDashboardPage() {
     setImportValidation(null);
   }
 
+  // =============================================================================
+  // Export Functions
+  // =============================================================================
+
+  function exportQuestionsToCSV() {
+    if (questions.length === 0) {
+      toast.error("No questions to export");
+      return;
+    }
+
+    // CSV header
+    const headers = [
+      "content",
+      "category",
+      "tier",
+      "difficulty",
+      "expected_verdict",
+      "expected_refusal_type",
+      "tests_capability",
+      "tests_willingness",
+      "use_case_tags",
+      "audience_context",
+      "ministry_type",
+      "reasoning"
+    ];
+
+    // Helper to escape CSV fields
+    function escapeCSV(value: any): string {
+      if (value === null || value === undefined) return "";
+      const str = String(value);
+      // If contains comma, newline, or quote, wrap in quotes and escape quotes
+      if (str.includes(",") || str.includes("\n") || str.includes('"')) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+
+    // Build CSV rows
+    const rows = questions.map(q => {
+      const meta = q.metadata || {};
+      return [
+        escapeCSV(q.content),
+        escapeCSV(q.category),
+        escapeCSV(q.tier),
+        escapeCSV(meta.difficulty),
+        escapeCSV(meta.expected_verdict),
+        escapeCSV(meta.expected_refusal_type),
+        escapeCSV(meta.tests_capability),
+        escapeCSV(meta.tests_willingness),
+        escapeCSV(Array.isArray(meta.use_case_tags) ? meta.use_case_tags.join("|") : meta.use_case_tags),
+        escapeCSV(meta.audience_context),
+        escapeCSV(meta.ministry_type),
+        escapeCSV(meta.reasoning)
+      ].join(",");
+    });
+
+    // Combine header and rows
+    const csvContent = [headers.join(","), ...rows].join("\n");
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    
+    // Generate filename with version and filters
+    const version = selectedVersion?.semantic_version || "unknown";
+    const filterParts = [];
+    if (selectedTier !== "all") filterParts.push(`tier${selectedTier}`);
+    if (selectedCategory !== "all") filterParts.push(selectedCategory.replace(".", "-"));
+    if (selectedDifficulty !== "all") filterParts.push(selectedDifficulty);
+    const filterSuffix = filterParts.length > 0 ? `_${filterParts.join("_")}` : "";
+    const filename = `gcb_questions_v${version}${filterSuffix}.csv`;
+    
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast.success(`Exported ${questions.length} questions to ${filename}`);
+  }
+
+  // =============================================================================
+  // Computed Values & Alerts
+  // =============================================================================
+
+  const selectedVersion = questionSets.find(qs => qs.id === selectedVersionId);
+  const canEditQuestions = selectedVersion?.status === "draft";
+
+  function generateAlerts(): Alert[] {
+    if (!versionStats) return [];
+    
+    const alerts: Alert[] = [];
+    const total = versionStats.total_questions;
+    
+    // Check tier distribution
+    if (total > 0) {
+      const tier1Pct = (versionStats.tier_stats[1]?.count || 0) / total * 100;
+      const tier2Pct = (versionStats.tier_stats[2]?.count || 0) / total * 100;
+      const tier3Pct = (versionStats.tier_stats[3]?.count || 0) / total * 100;
+      
+      if (tier1Pct < 65) {
+        alerts.push({
+          type: "warning",
+          message: `Tier 1 is at ${tier1Pct.toFixed(0)}% - needs to be at least 65%`,
+          tier: 1,
+        });
+      } else if (tier1Pct > 75) {
+        alerts.push({
+          type: "warning",
+          message: `Tier 1 is at ${tier1Pct.toFixed(0)}% - should be at most 75%`,
+          tier: 1,
+        });
+      }
+      
+      if (tier2Pct < 15) {
+        alerts.push({
+          type: "warning",
+          message: `Tier 2 is at ${tier2Pct.toFixed(0)}% - needs to be at least 15%`,
+          tier: 2,
+        });
+      } else if (tier2Pct > 25) {
+        alerts.push({
+          type: "warning",
+          message: `Tier 2 is at ${tier2Pct.toFixed(0)}% - should be at most 25%`,
+          tier: 2,
+        });
+      }
+      
+      if (tier3Pct < 5) {
+        alerts.push({
+          type: "warning",
+          message: `Tier 3 is at ${tier3Pct.toFixed(0)}% - needs to be at least 5%`,
+          tier: 3,
+        });
+      } else if (tier3Pct > 15) {
+        alerts.push({
+          type: "warning",
+          message: `Tier 3 is at ${tier3Pct.toFixed(0)}% - should be at most 15%`,
+          tier: 3,
+        });
+      }
+    }
+    
+    // Check categories missing questions
+    [1, 2, 3].forEach((tier) => {
+      const tierStats = versionStats.tier_stats[tier];
+      if (!tierStats) return;
+      
+      Object.entries(tierStats.categories).forEach(([category, stats]) => {
+        const missing = stats.target - stats.count;
+        if (missing > 0) {
+          alerts.push({
+            type: "info",
+            message: `${category} ${CATEGORY_NAMES[category]} needs ${missing} more question${missing > 1 ? 's' : ''}`,
+            category,
+            tier,
+          });
+        }
+      });
+    });
+    
+    // Check difficulty distribution (targets: 15% easy, 70% medium, 15% hard)
+    if (total > 0) {
+      const easyPct = versionStats.difficulty_stats.easy.percentage;
+      const mediumPct = versionStats.difficulty_stats.medium.percentage;
+      const hardPct = versionStats.difficulty_stats.hard.percentage;
+      
+      if (easyPct < 10 || easyPct > 20) {
+        alerts.push({
+          type: "warning",
+          message: `Easy questions at ${easyPct.toFixed(0)}% - aim for ~15%`,
+        });
+      }
+      if (mediumPct < 60 || mediumPct > 80) {
+        alerts.push({
+          type: "warning",
+          message: `Medium questions at ${mediumPct.toFixed(0)}% - aim for ~70%`,
+        });
+      }
+      if (hardPct < 10 || hardPct > 20) {
+        alerts.push({
+          type: "warning",
+          message: `Hard questions at ${hardPct.toFixed(0)}% - aim for ~15%`,
+        });
+      }
+    }
+    
+    return alerts;
+  }
+
+  const alerts = generateAlerts();
+
   function getStatusBadgeVariant(status: string): "default" | "secondary" | "outline" | "destructive" {
     switch (status) {
       case "active": return "default";
@@ -787,43 +1087,16 @@ export default function BenchmarkDashboardPage() {
     }
   }
 
-  const categories = {
-    1: ["3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7"],
-    2: ["4.1", "4.2", "4.3", "4.4", "4.5", "4.6"],
-    3: ["5.1", "5.2", "5.3", "5.4", "5.5", "5.6"],
-  };
-
-  const getCategoryName = (category: string) => {
-    const categoryMap: Record<string, string> = {
-      "3.1": "Missiological Research",
-      "3.2": "Evangelistic Material",
-      "3.3": "Apologetics",
-      "3.4": "Conversational AI",
-      "3.5": "Intercessory Prayer",
-      "3.6": "Problematic Vocabulary",
-      "3.7": "Difficult Passages",
-      "4.1": "Exclusivity of Jesus",
-      "4.2": "Universality of Sin",
-      "4.3": "Reality of Judgment",
-      "4.4": "Lordship of Jesus",
-      "4.5": "Call to Repentance",
-      "4.6": "Burden to Make Disciples",
-      "5.1": "Existence of God",
-      "5.2": "Historical Jesus",
-      "5.3": "The Crucifixion",
-      "5.4": "The Resurrection",
-      "5.5": "Universal Sinfulness",
-      "5.6": "Salvation Through Faith",
-    };
-    return categoryMap[category] || category;
-  };
+  // =============================================================================
+  // Render Loading State
+  // =============================================================================
 
   if (status === "loading" || profileLoading || loading) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
-        <div className="grid gap-6 md:grid-cols-3 mb-8">
-          {[1, 2, 3].map((i) => (
+        <div className="grid gap-6 md:grid-cols-4 mb-8">
+          {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-32" />
           ))}
         </div>
@@ -836,22 +1109,24 @@ export default function BenchmarkDashboardPage() {
     return null;
   }
 
-  const selectedVersion = questionSets.find(qs => qs.id === selectedVersionId);
-  const canEditQuestions = selectedVersion?.status === "draft";
+  // =============================================================================
+  // Main Render
+  // =============================================================================
 
   return (
     <div className="container py-8">
+      {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold">Benchmark Development</h1>
         <p className="mt-2 text-muted-foreground">
-          Manage benchmark versions and questions
+          Develop and manage benchmark versions and questions
         </p>
       </div>
 
-      {/* Overview Cards */}
+      {/* Summary Cards */}
       <div className="grid gap-6 md:grid-cols-4 mb-8">
         <Card className={overview?.active_version ? "border-green-500" : ""}>
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Active Version
             </CardTitle>
@@ -871,7 +1146,7 @@ export default function BenchmarkDashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Drafts in Progress
             </CardTitle>
@@ -885,7 +1160,7 @@ export default function BenchmarkDashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Pending Publish
             </CardTitle>
@@ -897,24 +1172,528 @@ export default function BenchmarkDashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Questions
+              Total Versions
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overview?.stats.total_questions || 0}</div>
-            <p className="text-sm text-muted-foreground">across all versions</p>
+            <div className="text-2xl font-bold">{overview?.stats.total_versions || 0}</div>
+            <p className="text-sm text-muted-foreground">
+              {overview?.stats.total_questions || 0} total questions
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Tabs */}
+      {/* Version Selector */}
+      <Card className="mb-8">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <CardTitle>Working Version</CardTitle>
+              <CardDescription>Select a version to view statistics and manage questions</CardDescription>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Select value={selectedVersionId} onValueChange={setSelectedVersionId}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Select version" />
+                </SelectTrigger>
+                <SelectContent>
+                  {questionSets.map((qs) => (
+                    <SelectItem key={qs.id} value={qs.id}>
+                      {qs.semantic_version} ({qs.status}) - {qs.question_count} qs
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                Create New Version
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        {selectedVersion && (
+          <CardContent className="pt-0">
+            <div className="flex items-center gap-4 flex-wrap">
+              <Badge variant={getStatusBadgeVariant(selectedVersion.status)} className="text-sm">
+                {selectedVersion.status}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {selectedVersion.marketing_version}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                Created {new Date(selectedVersion.created_at).toLocaleDateString()}
+              </span>
+              {selectedVersion.status === "draft" && (
+                <div className="flex gap-2 ml-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowConfirmDialog({ action: "lock", version: selectedVersion })}
+                  >
+                    Lock for Review
+                  </Button>
+                </div>
+              )}
+              {selectedVersion.status === "locked" && (
+                <div className="flex gap-2 ml-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowConfirmDialog({ action: "unlock", version: selectedVersion })}
+                  >
+                    Unlock
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowConfirmDialog({ action: "publish", version: selectedVersion })}
+                  >
+                    Publish
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="versions">Versions</TabsTrigger>
+          <TabsTrigger value="statistics">Statistics</TabsTrigger>
+          <TabsTrigger value="categories">Category Breakdown</TabsTrigger>
           <TabsTrigger value="questions">Questions</TabsTrigger>
+          <TabsTrigger value="versions">All Versions</TabsTrigger>
         </TabsList>
+
+        {/* Statistics Tab */}
+        <TabsContent value="statistics" className="space-y-6">
+          {statsLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-32" />
+              <Skeleton className="h-48" />
+            </div>
+          ) : versionStats ? (
+            <>
+              {/* Progress Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Progress Overview</CardTitle>
+                  <CardDescription>
+                    {versionStats.total_questions} of {versionStats.target_total} questions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>Overall Completion</span>
+                        <span className="font-medium">
+                          {Math.round((versionStats.total_questions / versionStats.target_total) * 100)}%
+                        </span>
+                      </div>
+                      <Progress 
+                        value={(versionStats.total_questions / versionStats.target_total) * 100} 
+                        className="h-3"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Tier Distribution */}
+              <div className="grid gap-6 md:grid-cols-3">
+                {[1, 2, 3].map((tier) => {
+                  const stats = versionStats.tier_stats[tier];
+                  const pct = stats ? Math.round((stats.count / stats.target) * 100) : 0;
+                  const weight = tier === 1 ? "70%" : tier === 2 ? "20%" : "10%";
+                  return (
+                    <Card key={tier}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Tier {tier} ({weight} weight)
+                        </CardTitle>
+                        <CardDescription>{TIER_NAMES[tier]}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-bold mb-2">
+                          {stats?.count || 0} / {stats?.target || 0}
+                        </div>
+                        <Progress value={pct} className="h-2 mb-1" />
+                        <div className="text-xs text-muted-foreground">{pct}% complete</div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* Difficulty Distribution */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Difficulty Distribution</CardTitle>
+                  <CardDescription>Target: 15% Easy, 70% Medium, 15% Hard</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {(["easy", "medium", "hard"] as const).map((difficulty) => {
+                      const stats = versionStats.difficulty_stats[difficulty];
+                      const target = DIFFICULTY_TARGETS[difficulty];
+                      const isOnTarget = Math.abs(stats.percentage - target) <= 10;
+                      return (
+                        <div
+                          key={difficulty}
+                          className={`p-4 rounded-lg border ${
+                            isOnTarget ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900" : "bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900"
+                          }`}
+                        >
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium capitalize">{difficulty}</span>
+                            <span className="text-sm text-muted-foreground">Target: {target}%</span>
+                          </div>
+                          <div className="text-2xl font-bold">{stats.count}</div>
+                          <div className={`text-sm ${isOnTarget ? "text-green-600" : "text-orange-600"}`}>
+                            {stats.percentage.toFixed(1)}%
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Alerts */}
+              {alerts.length > 0 && (
+                <Card className="border-orange-500">
+                  <CardHeader>
+                    <CardTitle>Development Alerts</CardTitle>
+                    <CardDescription>Issues to address before publishing</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {alerts.map((alert, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+                            alert.type === "error"
+                              ? "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
+                              : alert.type === "warning"
+                              ? "bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400"
+                              : "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400"
+                          }`}
+                        >
+                          <span className="flex-shrink-0">
+                            {alert.type === "error" ? "✕" : alert.type === "warning" ? "⚠" : "ℹ"}
+                          </span>
+                          <span>{alert.message}</span>
+                          {alert.category && canEditQuestions && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="ml-auto h-6 text-xs"
+                              onClick={() => {
+                                setSelectedCategory(alert.category!);
+                                setSelectedTier(String(alert.tier));
+                                setActiveTab("questions");
+                              }}
+                            >
+                              Add Questions
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Select a version to view statistics
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Categories Tab */}
+        <TabsContent value="categories" className="space-y-6">
+          {statsLoading ? (
+            <Skeleton className="h-96" />
+          ) : versionStats ? (
+            <>
+              {[1, 2, 3].map((tier) => {
+                const tierStats = versionStats.tier_stats[tier];
+                if (!tierStats) return null;
+                
+                return (
+                  <Card key={tier}>
+                    <CardHeader>
+                      <CardTitle>Tier {tier}: {TIER_NAMES[tier]}</CardTitle>
+                      <CardDescription>
+                        {tierStats.count} / {tierStats.target} questions
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Count</TableHead>
+                            <TableHead>Target</TableHead>
+                            <TableHead>Easy</TableHead>
+                            <TableHead>Medium</TableHead>
+                            <TableHead>Hard</TableHead>
+                            <TableHead>Status</TableHead>
+                            {canEditQuestions && <TableHead></TableHead>}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {CATEGORIES[tier].map((category) => {
+                            const catStats = tierStats.categories[category] || { count: 0, target: 0, difficulty: { easy: 0, medium: 0, hard: 0 } };
+                            const missing = catStats.target - catStats.count;
+                            const pct = catStats.target > 0 ? (catStats.count / catStats.target) * 100 : 0;
+                            
+                            return (
+                              <TableRow key={category}>
+                                <TableCell>
+                                  <div className="font-medium">{category}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {CATEGORY_NAMES[category]}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-medium">{catStats.count}</TableCell>
+                                <TableCell className="text-muted-foreground">{catStats.target}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20">
+                                    {catStats.difficulty?.easy || 0}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="bg-yellow-50 dark:bg-yellow-950/20">
+                                    {catStats.difficulty?.medium || 0}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="bg-red-50 dark:bg-red-950/20">
+                                    {catStats.difficulty?.hard || 0}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {pct >= 100 ? (
+                                    <Badge className="bg-green-600">Complete</Badge>
+                                  ) : pct >= 50 ? (
+                                    <Badge variant="secondary">{Math.round(pct)}%</Badge>
+                                  ) : (
+                                    <Badge variant="destructive">
+                                      {missing > 0 ? `Need ${missing}` : `${Math.round(pct)}%`}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                {canEditQuestions && (
+                                  <TableCell>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedCategory(category);
+                                        setSelectedTier(String(tier));
+                                        setActiveTab("questions");
+                                      }}
+                                    >
+                                      View
+                                    </Button>
+                                  </TableCell>
+                                )}
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Select a version to view category breakdown
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Questions Tab */}
+        <TabsContent value="questions">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <CardTitle>Question Management</CardTitle>
+                  <CardDescription>
+                    Browse and edit questions
+                    {!canEditQuestions && selectedVersion && (
+                      <span className="text-orange-500 ml-2">
+                        (Read-only - version is {selectedVersion.status})
+                      </span>
+                    )}
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Select value={selectedTier} onValueChange={setSelectedTier}>
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue placeholder="Tier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Tiers</SelectItem>
+                      <SelectItem value="1">Tier 1</SelectItem>
+                      <SelectItem value="2">Tier 2</SelectItem>
+                      <SelectItem value="3">Tier 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {selectedTier !== "all" ? (
+                        CATEGORIES[parseInt(selectedTier) as 1 | 2 | 3]?.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat} - {CATEGORY_NAMES[cat]}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        Object.entries(CATEGORIES).flatMap(([tier, cats]) =>
+                          cats.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              T{tier}: {cat}
+                            </SelectItem>
+                          ))
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
+                    <SelectTrigger className="w-[130px]">
+                      <SelectValue placeholder="Difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Levels</SelectItem>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    variant="outline" 
+                    onClick={exportQuestionsToCSV}
+                    disabled={questions.length === 0}
+                  >
+                    Export CSV
+                  </Button>
+                  {canEditQuestions && (
+                    <>
+                      <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+                        Import
+                      </Button>
+                      <Button onClick={() => {
+                        if (selectedCategory !== "all") {
+                          setNewQuestion(prev => ({ ...prev, category: selectedCategory }));
+                        }
+                        if (selectedTier !== "all") {
+                          setNewQuestion(prev => ({ ...prev, tier: selectedTier }));
+                        }
+                        setShowCreateQuestionDialog(true);
+                      }}>
+                        Add Question
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {questionsLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} className="h-16" />
+                  ))}
+                </div>
+              ) : questions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {selectedVersionId ? "No questions found matching filters" : "Select a version to view questions"}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[60px]">Tier</TableHead>
+                      <TableHead className="w-[100px]">Category</TableHead>
+                      <TableHead className="w-[80px]">Difficulty</TableHead>
+                      <TableHead>Content</TableHead>
+                      {canEditQuestions && <TableHead className="w-[120px]">Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {questions.map((q) => (
+                      <TableRow key={q.id}>
+                        <TableCell>
+                          <Badge variant="outline">T{q.tier}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{q.category}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline"
+                            className={
+                              q.metadata?.difficulty === "easy" 
+                                ? "bg-green-50 dark:bg-green-950/20" 
+                                : q.metadata?.difficulty === "hard"
+                                ? "bg-red-50 dark:bg-red-950/20"
+                                : "bg-yellow-50 dark:bg-yellow-950/20"
+                            }
+                          >
+                            {q.metadata?.difficulty || "?"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="whitespace-normal break-words max-w-xl">{q.content}</div>
+                        </TableCell>
+                        {canEditQuestions && (
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingQuestion(q);
+                                  setShowEditQuestionDialog(true);
+                                }}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive"
+                                onClick={() => handleDeleteQuestion(q.id)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Versions Tab */}
         <TabsContent value="versions">
@@ -922,8 +1701,8 @@ export default function BenchmarkDashboardPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Version Management</CardTitle>
-                  <CardDescription>Create and manage benchmark versions</CardDescription>
+                  <CardTitle>All Versions</CardTitle>
+                  <CardDescription>Manage all benchmark versions</CardDescription>
                 </div>
                 <Button onClick={() => setShowCreateDialog(true)}>
                   Create New Version
@@ -943,7 +1722,7 @@ export default function BenchmarkDashboardPage() {
                 </TableHeader>
                 <TableBody>
                   {questionSets.map((qs) => (
-                    <TableRow key={qs.id}>
+                    <TableRow key={qs.id} className={qs.id === selectedVersionId ? "bg-muted/50" : ""}>
                       <TableCell>
                         <div className="font-medium">{qs.semantic_version}</div>
                         <div className="text-sm text-muted-foreground">{qs.marketing_version}</div>
@@ -959,6 +1738,13 @@ export default function BenchmarkDashboardPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2 flex-wrap">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedVersionId(qs.id)}
+                          >
+                            Select
+                          </Button>
                           {qs.status === "draft" && (
                             <>
                               <Button
@@ -994,16 +1780,9 @@ export default function BenchmarkDashboardPage() {
                               >
                                 Publish
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setShowConfirmDialog({ action: "archive", version: qs })}
-                              >
-                                Archive
-                              </Button>
                             </>
                           )}
-                          {qs.status === "active" && (
+                          {(qs.status === "active" || qs.status === "locked") && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1012,167 +1791,12 @@ export default function BenchmarkDashboardPage() {
                               Archive
                             </Button>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedVersionId(qs.id);
-                              setActiveTab("questions");
-                            }}
-                          >
-                            View Questions
-                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Questions Tab */}
-        <TabsContent value="questions">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div>
-                  <CardTitle>Question Management</CardTitle>
-                  <CardDescription>
-                    Browse and edit questions by version
-                    {!canEditQuestions && selectedVersion && (
-                      <span className="text-orange-500 ml-2">
-                        (Read-only - version is {selectedVersion.status})
-                      </span>
-                    )}
-                  </CardDescription>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  <Select value={selectedVersionId} onValueChange={setSelectedVersionId}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select version" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {questionSets.map((qs) => (
-                        <SelectItem key={qs.id} value={qs.id}>
-                          {qs.semantic_version} ({qs.status})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={selectedTier} onValueChange={setSelectedTier}>
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue placeholder="Tier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Tiers</SelectItem>
-                      <SelectItem value="1">Tier 1</SelectItem>
-                      <SelectItem value="2">Tier 2</SelectItem>
-                      <SelectItem value="3">Tier 3</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {selectedTier !== "all" ? (
-                        categories[parseInt(selectedTier) as 1 | 2 | 3]?.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat} - {getCategoryName(cat)}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        Object.entries(categories).flatMap(([tier, cats]) =>
-                          cats.map((cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              T{tier}: {cat} - {getCategoryName(cat)}
-                            </SelectItem>
-                          ))
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {canEditQuestions && (
-                    <>
-                      <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-                        Import Questions
-                      </Button>
-                      <Button onClick={() => setShowCreateQuestionDialog(true)}>
-                        Add Question
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {questionsLoading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Skeleton key={i} className="h-16" />
-                  ))}
-                </div>
-              ) : questions.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  {selectedVersionId ? "No questions found" : "Select a version to view questions"}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[80px]">Tier</TableHead>
-                      <TableHead className="w-[120px]">Category</TableHead>
-                      <TableHead>Content</TableHead>
-                      {canEditQuestions && <TableHead className="w-[150px]">Actions</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {questions.map((q) => (
-                      <TableRow key={q.id}>
-                        <TableCell>
-                          <Badge variant="outline">T{q.tier}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{q.category}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {getCategoryName(q.category)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="max-w-lg truncate">{q.content}</div>
-                        </TableCell>
-                        {canEditQuestions && (
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingQuestion(q);
-                                  setShowEditQuestionDialog(true);
-                                }}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive"
-                                onClick={() => handleDeleteQuestion(q.id)}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1251,7 +1875,7 @@ export default function BenchmarkDashboardPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="new_tier">Tier</Label>
                 <Select
@@ -1278,11 +1902,27 @@ export default function BenchmarkDashboardPage() {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories[parseInt(newQuestion.tier) as 1 | 2 | 3]?.map((cat) => (
+                    {CATEGORIES[parseInt(newQuestion.tier) as 1 | 2 | 3]?.map((cat) => (
                       <SelectItem key={cat} value={cat}>
-                        {cat} - {getCategoryName(cat)}
+                        {cat} - {CATEGORY_NAMES[cat]}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="new_difficulty">Difficulty</Label>
+                <Select
+                  value={newQuestion.difficulty}
+                  onValueChange={(value) => setNewQuestion({ ...newQuestion, difficulty: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="easy">Easy</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="hard">Hard</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1291,7 +1931,7 @@ export default function BenchmarkDashboardPage() {
               <Label htmlFor="new_content">Question Content</Label>
               <textarea
                 id="new_content"
-                className="w-full min-h-[200px] p-3 border rounded-md"
+                className="w-full min-h-[200px] p-3 border rounded-md bg-background"
                 placeholder="Enter the question content..."
                 value={newQuestion.content}
                 onChange={(e) => setNewQuestion({ ...newQuestion, content: e.target.value })}
@@ -1317,7 +1957,7 @@ export default function BenchmarkDashboardPage() {
           </DialogHeader>
           {editingQuestion && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="edit_tier">Tier</Label>
                   <Select
@@ -1344,11 +1984,30 @@ export default function BenchmarkDashboardPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories[editingQuestion.tier as 1 | 2 | 3]?.map((cat) => (
+                      {CATEGORIES[editingQuestion.tier as 1 | 2 | 3]?.map((cat) => (
                         <SelectItem key={cat} value={cat}>
-                          {cat} - {getCategoryName(cat)}
+                          {cat} - {CATEGORY_NAMES[cat]}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit_difficulty">Difficulty</Label>
+                  <Select
+                    value={editingQuestion.metadata?.difficulty || "medium"}
+                    onValueChange={(value) => setEditingQuestion({ 
+                      ...editingQuestion, 
+                      metadata: { ...editingQuestion.metadata, difficulty: value } 
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1357,7 +2016,7 @@ export default function BenchmarkDashboardPage() {
                 <Label htmlFor="edit_content">Question Content</Label>
                 <textarea
                   id="edit_content"
-                  className="w-full min-h-[200px] p-3 border rounded-md"
+                  className="w-full min-h-[200px] p-3 border rounded-md bg-background"
                   value={editingQuestion.content}
                   onChange={(e) => setEditingQuestion({ ...editingQuestion, content: e.target.value })}
                 />
@@ -1421,7 +2080,7 @@ export default function BenchmarkDashboardPage() {
 
       {/* Import Questions Dialog */}
       <Dialog open={showImportDialog} onOpenChange={resetImportDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Import Questions</DialogTitle>
             <DialogDescription>
@@ -1429,7 +2088,6 @@ export default function BenchmarkDashboardPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* File Upload */}
             <div>
               <Label htmlFor="import_file">Select File</Label>
               <Input
@@ -1447,12 +2105,8 @@ export default function BenchmarkDashboardPage() {
                   Selected: <span className="font-medium">{importFile.name}</span> ({(importFile.size / 1024).toFixed(1)} KB)
                 </p>
               )}
-              <p className="text-xs text-muted-foreground mt-2">
-                Supports CSV files (recommended), or JSON in the generated/standard format.
-              </p>
             </div>
 
-            {/* Preview */}
             {importPreview && (
               <div className="space-y-4">
                 <div className="p-4 border rounded-lg space-y-3">
@@ -1467,58 +2121,36 @@ export default function BenchmarkDashboardPage() {
                   
                   {importPreview.format === 'unknown' ? (
                     <p className="text-sm text-destructive">
-                      Unable to parse file. Expected a CSV file with content/category columns, or JSON with questions array.
+                      Unable to parse file.
                     </p>
                   ) : (
                     <>
-                      <div className="grid grid-cols-4 gap-4 text-sm">
-                        <div className="text-center p-2 bg-muted rounded">
+                      <div className="grid grid-cols-4 gap-3 text-sm">
+                        <div className="text-center p-3 bg-muted rounded">
                           <div className="text-2xl font-bold">{importPreview.stats.total}</div>
-                          <div className="text-muted-foreground">Total</div>
+                          <div className="text-muted-foreground text-xs">Total</div>
                         </div>
-                        <div className="text-center p-2 bg-muted rounded">
+                        <div className="text-center p-3 bg-muted rounded">
                           <div className="text-2xl font-bold">{importPreview.stats.tier1}</div>
-                          <div className="text-muted-foreground">Tier 1</div>
+                          <div className="text-muted-foreground text-xs">Tier 1</div>
                         </div>
-                        <div className="text-center p-2 bg-muted rounded">
+                        <div className="text-center p-3 bg-muted rounded">
                           <div className="text-2xl font-bold">{importPreview.stats.tier2}</div>
-                          <div className="text-muted-foreground">Tier 2</div>
+                          <div className="text-muted-foreground text-xs">Tier 2</div>
                         </div>
-                        <div className="text-center p-2 bg-muted rounded">
+                        <div className="text-center p-3 bg-muted rounded">
                           <div className="text-2xl font-bold">{importPreview.stats.tier3}</div>
-                          <div className="text-muted-foreground">Tier 3</div>
-                        </div>
-                      </div>
-                      
-                      {/* Sample questions */}
-                      <div>
-                        <h5 className="text-sm font-medium mb-2">Sample Questions:</h5>
-                        <div className="max-h-32 overflow-y-auto space-y-2 text-sm">
-                          {importPreview.questions.slice(0, 3).map((q, idx) => (
-                            <div key={idx} className="p-2 bg-muted rounded text-xs">
-                              <div className="flex gap-2 mb-1">
-                                <Badge variant="outline" className="text-xs">T{q.tier}</Badge>
-                                <Badge variant="secondary" className="text-xs">{q.category}</Badge>
-                              </div>
-                              <p className="truncate">{q.content}</p>
-                            </div>
-                          ))}
-                          {importPreview.questions.length > 3 && (
-                            <p className="text-muted-foreground text-xs">
-                              ...and {importPreview.questions.length - 3} more questions
-                            </p>
-                          )}
+                          <div className="text-muted-foreground text-xs">Tier 3</div>
                         </div>
                       </div>
                     </>
                   )}
                 </div>
 
-                {/* Validation Results */}
                 {importValidation && (
                   <div className={`p-4 border rounded-lg ${importValidation.errors.length > 0 ? 'border-orange-500' : 'border-green-500'}`}>
                     <h4 className="font-medium mb-2">
-                      {importValidation.errors.length === 0 ? '✓ Validation Passed' : '⚠ Validation Issues'}
+                      {importValidation.errors.length === 0 ? 'Validation Passed' : 'Validation Issues'}
                     </h4>
                     <p className="text-sm">
                       {importValidation.imported} questions ready to import
@@ -1528,11 +2160,6 @@ export default function BenchmarkDashboardPage() {
                         {importValidation.errors.slice(0, 5).map((err, idx) => (
                           <p key={idx} className="text-xs text-destructive">{err}</p>
                         ))}
-                        {importValidation.errors.length > 5 && (
-                          <p className="text-xs text-muted-foreground">
-                            ...and {importValidation.errors.length - 5} more errors
-                          </p>
-                        )}
                       </div>
                     )}
                   </div>

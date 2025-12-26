@@ -117,10 +117,18 @@ class AdminStatsResponse(BaseModel):
     api_keys: Dict
 
 
+class CategoryDifficultyBreakdown(BaseModel):
+    """Difficulty breakdown for a category"""
+    easy: int = 0
+    medium: int = 0
+    hard: int = 0
+
+
 class CategoryStats(BaseModel):
     """Category statistics"""
     count: int
     target: int
+    difficulty: CategoryDifficultyBreakdown = CategoryDifficultyBreakdown()
 
 
 class TierStats(BaseModel):
@@ -152,6 +160,7 @@ class QuestionSetStatsResponse(BaseModel):
     target_total: int
     tier_stats: Dict[int, TierStats]
     difficulty_stats: DifficultyStats
+    category_difficulty_matrix: Dict[str, CategoryDifficultyBreakdown]  # category -> difficulty breakdown
 
 
 class QuestionSetCopyRequest(BaseModel):

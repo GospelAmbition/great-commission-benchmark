@@ -39,7 +39,8 @@ from app.schemas.admin import (
     CategoryStats,
     TierStats,
     DifficultyStats,
-    DifficultyCount
+    DifficultyCount,
+    CategoryDifficultyBreakdown
 )
 
 router = APIRouter()
@@ -610,12 +611,15 @@ async def get_question_set_stats(
     tier_counts = {1: 0, 2: 0, 3: 0}
     category_counts = {1: {}, 2: {}, 3: {}}
     difficulty_counts = {"easy": 0, "medium": 0, "hard": 0}
+    # Track difficulty per category: category -> {easy: n, medium: n, hard: n}
+    category_difficulty = {}
     
     for q in questions:
         tier = q.tier
         category = q.category
         
-        # Count difficulty from metadata
+        # Get difficulty from metadata
+        difficulty = ""
         if q.question_metadata and isinstance(q.question_metadata, dict):
             difficulty = q.question_metadata.get("difficulty", "").lower()
             if difficulty in difficulty_counts:
@@ -634,15 +638,30 @@ async def get_question_set_stats(
         if category not in category_counts[tier]:
             category_counts[tier][category] = 0
         category_counts[tier][category] += 1
+        
+        # Track difficulty per category
+        if category not in category_difficulty:
+            category_difficulty[category] = {"easy": 0, "medium": 0, "hard": 0}
+        if difficulty in category_difficulty[category]:
+            category_difficulty[category][difficulty] += 1
     
-    # Build tier stats with categories
+    # Build tier stats with categories including difficulty breakdown
     tier_stats = {}
     for tier in [1, 2, 3]:
         categories_dict = {}
         # Include all categories from targets, even if count is 0
         for category, target in CATEGORY_TARGETS[tier].items():
             count = category_counts[tier].get(category, 0)
-            categories_dict[category] = CategoryStats(count=count, target=target)
+            cat_diff = category_difficulty.get(category, {"easy": 0, "medium": 0, "hard": 0})
+            categories_dict[category] = CategoryStats(
+                count=count,
+                target=target,
+                difficulty=CategoryDifficultyBreakdown(
+                    easy=cat_diff["easy"],
+                    medium=cat_diff["medium"],
+                    hard=cat_diff["hard"]
+                )
+            )
         
         tier_stats[tier] = TierStats(
             count=tier_counts[tier],
@@ -667,6 +686,17 @@ async def get_question_set_stats(
         )
     )
     
+    # Build category difficulty matrix
+    category_difficulty_matrix = {}
+    for tier in [1, 2, 3]:
+        for category in CATEGORY_TARGETS[tier].keys():
+            cat_diff = category_difficulty.get(category, {"easy": 0, "medium": 0, "hard": 0})
+            category_difficulty_matrix[category] = CategoryDifficultyBreakdown(
+                easy=cat_diff["easy"],
+                medium=cat_diff["medium"],
+                hard=cat_diff["hard"]
+            )
+    
     return QuestionSetStatsResponse(
         question_set_id=question_set.id,
         semantic_version=question_set.semantic_version,
@@ -674,7 +704,8 @@ async def get_question_set_stats(
         total_questions=total_questions,
         target_total=TOTAL_TARGET,
         tier_stats=tier_stats,
-        difficulty_stats=difficulty_stats
+        difficulty_stats=difficulty_stats,
+        category_difficulty_matrix=category_difficulty_matrix
     )
 
 
