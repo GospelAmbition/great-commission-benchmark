@@ -104,9 +104,6 @@ export function Header() {
                     <p className="text-sm font-medium">{user.name || "User"}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                   </div>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard/settings">Account Settings</Link>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard">My Dashboard</Link>
@@ -127,6 +124,9 @@ export function Header() {
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/settings">Account Settings</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
                     Logout
                   </DropdownMenuItem>

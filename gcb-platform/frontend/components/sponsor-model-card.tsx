@@ -25,8 +25,9 @@ import {
   X
 } from "lucide-react";
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
+// Initialize Stripe only if key is provided
+const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 
 // Sponsorship fee
 const SPONSORSHIP_FEE = 20.00;
@@ -382,15 +383,23 @@ export function SponsorModelCard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Elements stripe={stripePromise}>
-            <SponsorshipPaymentForm
-              modelId={paymentData.sponsorshipId}
-              modelName={paymentData.modelName}
-              clientSecret={paymentData.clientSecret}
-              onSuccess={handlePaymentSuccess}
-              onCancel={handlePaymentCancel}
-            />
-          </Elements>
+          {stripePromise ? (
+            <Elements stripe={stripePromise}>
+              <SponsorshipPaymentForm
+                modelId={paymentData.sponsorshipId}
+                modelName={paymentData.modelName}
+                clientSecret={paymentData.clientSecret}
+                onSuccess={handlePaymentSuccess}
+                onCancel={handlePaymentCancel}
+              />
+            </Elements>
+          ) : (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Stripe is not configured. Please set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable.
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
     );

@@ -103,6 +103,7 @@ export default function BenchmarkDashboardPage() {
   const [selectedVersionId, setSelectedVersionId] = useState<string>("");
   const [selectedTier, setSelectedTier] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("versions");
   
   // Dialogs
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -118,7 +119,7 @@ export default function BenchmarkDashboardPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<{
     questions: any[];
-    format: 'standard' | 'generated' | 'unknown';
+    format: 'standard' | 'generated' | 'csv' | 'unknown';
     stats: { tier1: number; tier2: number; tier3: number; total: number };
   } | null>(null);
   const [importValidation, setImportValidation] = useState<{
@@ -384,7 +385,196 @@ export default function BenchmarkDashboardPage() {
   }
 
   // Import functions
-  function parseImportFile(fileContent: string): { questions: any[]; format: 'standard' | 'generated' | 'unknown' } {
+  
+  // CSV Parser - handles quoted fields, commas within quotes, and escaped quotes
+  function parseCSV(content: string): { headers: string[]; rows: string[][] } {
+    const lines: string[] = [];
+    let currentLine = "";
+    let inQuotes = false;
+
+    // Split by lines while respecting quoted fields
+    for (let i = 0; i < content.length; i++) {
+      const char = content[i];
+      const nextChar = content[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          currentLine += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+          currentLine += char;
+        }
+      } else if ((char === "\n" || (char === "\r" && nextChar === "\n")) && !inQuotes) {
+        if (currentLine.trim()) {
+          lines.push(currentLine);
+        }
+        currentLine = "";
+        if (char === "\r") i++;
+      } else if (char !== "\r") {
+        currentLine += char;
+      }
+    }
+    if (currentLine.trim()) {
+      lines.push(currentLine);
+    }
+
+    if (lines.length === 0) {
+      return { headers: [], rows: [] };
+    }
+
+    function parseLine(line: string): string[] {
+      const fields: string[] = [];
+      let currentField = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        const nextChar = line[i + 1];
+
+        if (char === '"') {
+          if (!inQuotes) {
+            inQuotes = true;
+          } else if (nextChar === '"') {
+            currentField += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        } else if (char === "," && !inQuotes) {
+          fields.push(currentField.trim());
+          currentField = "";
+        } else {
+          currentField += char;
+        }
+      }
+      fields.push(currentField.trim());
+      return fields;
+    }
+
+    const headers = parseLine(lines[0]).map((h) => h.toLowerCase().trim());
+    const rows = lines.slice(1).map(parseLine);
+
+    return { headers, rows };
+  }
+
+  // Infer tier from category code (3.x -> 1, 4.x -> 2, 5.x -> 3)
+  function inferTierFromCategory(category: string): number | null {
+    const majorCategory = category.split(".")[0];
+    switch (majorCategory) {
+      case "3": return 1;
+      case "4": return 2;
+      case "5": return 3;
+      default: return null;
+    }
+  }
+
+  // Parse boolean value from CSV string
+  function parseBooleanValue(value: string | undefined): boolean | undefined {
+    if (!value || value.trim() === "") return undefined;
+    const lower = value.toLowerCase().trim();
+    if (lower === "true" || lower === "1" || lower === "yes") return true;
+    if (lower === "false" || lower === "0" || lower === "no") return false;
+    return undefined;
+  }
+
+  // Parse pipe-separated tags into array
+  function parseTags(value: string | undefined): string[] | undefined {
+    if (!value || value.trim() === "") return undefined;
+    return value.split("|").map((tag) => tag.trim()).filter((tag) => tag.length > 0);
+  }
+
+  // Parse CSV rows into questions
+  function parseCSVQuestions(headers: string[], rows: string[][]): any[] {
+    const questions: any[] = [];
+    const headerIndex: Record<string, number> = {};
+    headers.forEach((header, index) => {
+      headerIndex[header] = index;
+    });
+
+    if (!("content" in headerIndex)) {
+      return [];
+    }
+
+    for (const row of rows) {
+      if (row.every((cell) => !cell || cell.trim() === "")) continue;
+
+      const getValue = (field: string): string | undefined => {
+        const idx = headerIndex[field];
+        return idx !== undefined ? row[idx]?.trim() : undefined;
+      };
+
+      const content = getValue("content");
+      if (!content) continue;
+
+      const category = getValue("category");
+      if (!category) continue;
+
+      let tier: number;
+      const tierValue = getValue("tier");
+      if (tierValue) {
+        tier = parseInt(tierValue, 10);
+        if (isNaN(tier) || tier < 1 || tier > 3) continue;
+      } else {
+        const inferredTier = inferTierFromCategory(category);
+        if (inferredTier === null) continue;
+        tier = inferredTier;
+      }
+
+      const difficulty = getValue("difficulty");
+      const expectedVerdict = getValue("expected_verdict");
+      const expectedRefusalType = getValue("expected_refusal_type");
+      const testsCapability = parseBooleanValue(getValue("tests_capability"));
+      const testsWillingness = parseBooleanValue(getValue("tests_willingness"));
+      const useCaseTags = parseTags(getValue("use_case_tags"));
+      const audienceContext = getValue("audience_context");
+      const ministryType = getValue("ministry_type");
+      const reasoning = getValue("reasoning");
+
+      questions.push({
+        content,
+        category,
+        tier,
+        metadata: {
+          difficulty: difficulty?.toLowerCase(),
+          expected_verdict: expectedVerdict?.toUpperCase(),
+          expected_refusal_type: expectedRefusalType,
+          tests_capability: testsCapability,
+          tests_willingness: testsWillingness,
+          use_case_tags: useCaseTags,
+          audience_context: audienceContext,
+          ministry_type: ministryType,
+          reasoning,
+        },
+      });
+    }
+
+    return questions;
+  }
+
+  // Detect file type from content
+  function detectFileType(filename: string, content: string): "csv" | "json" {
+    if (filename.toLowerCase().endsWith(".csv")) return "csv";
+    if (filename.toLowerCase().endsWith(".json")) return "json";
+    const trimmed = content.trim();
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) return "json";
+    return "csv";
+  }
+
+  function parseImportFile(fileContent: string, filename: string = ""): { questions: any[]; format: 'standard' | 'generated' | 'csv' | 'unknown' } {
+    const fileType = detectFileType(filename, fileContent);
+
+    // Handle CSV files
+    if (fileType === "csv") {
+      const { headers, rows } = parseCSV(fileContent);
+      if (headers.length === 0) {
+        return { questions: [], format: 'unknown' };
+      }
+      const questions = parseCSVQuestions(headers, rows);
+      return { questions, format: questions.length > 0 ? 'csv' : 'unknown' };
+    }
+
+    // Handle JSON files
     try {
       const data = JSON.parse(fileContent);
       
@@ -478,7 +668,7 @@ export default function BenchmarkDashboardPage() {
     
     try {
       const text = await file.text();
-      const { questions, format } = parseImportFile(text);
+      const { questions, format } = parseImportFile(text, file.name);
       
       const stats = {
         tier1: questions.filter(q => q.tier === 1).length,
@@ -720,7 +910,7 @@ export default function BenchmarkDashboardPage() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs defaultValue="versions" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="versions">Versions</TabsTrigger>
           <TabsTrigger value="questions">Questions</TabsTrigger>
@@ -827,8 +1017,7 @@ export default function BenchmarkDashboardPage() {
                             size="sm"
                             onClick={() => {
                               setSelectedVersionId(qs.id);
-                              const tabsEl = document.querySelector('[data-state="inactive"][value="questions"]');
-                              if (tabsEl) (tabsEl as HTMLElement).click();
+                              setActiveTab("questions");
                             }}
                           >
                             View Questions
@@ -1000,7 +1189,9 @@ export default function BenchmarkDashboardPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="semantic_version">Semantic Version</Label>
+              <Label htmlFor="semantic_version">
+                Semantic Version <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="semantic_version"
                 placeholder="e.g., 1.2.0"
@@ -1009,7 +1200,9 @@ export default function BenchmarkDashboardPage() {
               />
             </div>
             <div>
-              <Label htmlFor="marketing_version">Marketing Version</Label>
+              <Label htmlFor="marketing_version">
+                Marketing Version <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="marketing_version"
                 placeholder="e.g., Version 1.2"
@@ -1020,14 +1213,14 @@ export default function BenchmarkDashboardPage() {
             <div>
               <Label htmlFor="copy_from">Copy from (optional)</Label>
               <Select
-                value={newVersion.copy_from}
-                onValueChange={(value) => setNewVersion({ ...newVersion, copy_from: value })}
+                value={newVersion.copy_from || "none"}
+                onValueChange={(value) => setNewVersion({ ...newVersion, copy_from: value === "none" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Start empty" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Start empty</SelectItem>
+                  <SelectItem value="none">Start empty</SelectItem>
                   {questionSets.map((qs) => (
                     <SelectItem key={qs.id} value={qs.id}>
                       {qs.semantic_version} ({qs.question_count} questions)
@@ -1232,17 +1425,17 @@ export default function BenchmarkDashboardPage() {
           <DialogHeader>
             <DialogTitle>Import Questions</DialogTitle>
             <DialogDescription>
-              Import questions from a JSON file into {selectedVersion?.semantic_version || 'the selected version'}
+              Import questions from a CSV or JSON file into {selectedVersion?.semantic_version || 'the selected version'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/* File Upload */}
             <div>
-              <Label htmlFor="import_file">Select JSON File</Label>
+              <Label htmlFor="import_file">Select File</Label>
               <Input
                 id="import_file"
                 type="file"
-                accept=".json"
+                accept=".csv,.json"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) handleFileSelect(file);
@@ -1255,7 +1448,7 @@ export default function BenchmarkDashboardPage() {
                 </p>
               )}
               <p className="text-xs text-muted-foreground mt-2">
-                Supports the generated format from the Question Generation Prompt or standard question arrays.
+                Supports CSV files (recommended), or JSON in the generated/standard format.
               </p>
             </div>
 
@@ -1266,14 +1459,15 @@ export default function BenchmarkDashboardPage() {
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium">File Preview</h4>
                     <Badge variant={importPreview.format === 'unknown' ? 'destructive' : 'secondary'}>
-                      {importPreview.format === 'generated' ? 'Generated Format' :
-                       importPreview.format === 'standard' ? 'Standard Format' : 'Unknown Format'}
+                      {importPreview.format === 'csv' ? 'CSV Format' :
+                       importPreview.format === 'generated' ? 'Generated JSON' :
+                       importPreview.format === 'standard' ? 'Standard JSON' : 'Unknown Format'}
                     </Badge>
                   </div>
                   
                   {importPreview.format === 'unknown' ? (
                     <p className="text-sm text-destructive">
-                      Unable to parse file. Expected a JSON file with questions array or tier1_questions/tier2_questions/tier3_questions arrays.
+                      Unable to parse file. Expected a CSV file with content/category columns, or JSON with questions array.
                     </p>
                   ) : (
                     <>

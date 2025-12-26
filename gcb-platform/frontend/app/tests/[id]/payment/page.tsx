@@ -14,8 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
+// Initialize Stripe only if key is provided
+const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 
 // Dev Mode Payment Form - bypasses Stripe for local development
 function DevModePaymentForm({ testId, test, onSuccess }: { testId: string; test: any; onSuccess: () => void }) {
@@ -423,7 +424,7 @@ export default function PaymentPage() {
   }
 
   // Check if we should use dev mode or real Stripe
-  const useDevMode = devMode || !process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  const useDevMode = devMode || !process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || !stripePromise;
 
   return (
     <div className="container py-8 max-w-3xl">
@@ -487,10 +488,16 @@ export default function PaymentPage() {
         <CardContent>
           {useDevMode ? (
             <DevModePaymentForm testId={testId} test={test} onSuccess={handleSuccess} />
-          ) : (
+          ) : stripePromise ? (
             <Elements stripe={stripePromise}>
               <PaymentForm testId={testId} test={test} onSuccess={handleSuccess} />
             </Elements>
+          ) : (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Stripe is not configured. Please set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable.
+              </AlertDescription>
+            </Alert>
           )}
         </CardContent>
       </Card>

@@ -106,6 +106,23 @@ export default function AdminQuestionsPage() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importVersionId, setImportVersionId] = useState<string>("");
+  const [importPreview, setImportPreview] = useState<{
+    dry_run: boolean;
+    file_type: string;
+    total_questions: number;
+    tier_counts: Record<number, number>;
+    category_counts: Record<string, number>;
+    difficulty_counts: Record<string, number>;
+    parse_errors: Array<{ row: number; field: string; message: string }>;
+    sample_questions: Array<{
+      content: string;
+      tier: number;
+      category: string;
+      difficulty?: string;
+    }>;
+  } | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -320,12 +337,17 @@ export default function AdminQuestionsPage() {
     }
   }
 
-  async function handleImport() {
+  async function handleImportPreview() {
     if (!importFile) return;
-    setImporting(true);
+    setLoadingPreview(true);
+    setImportPreview(null);
     try {
       const formData = new FormData();
       formData.append("file", importFile);
+      formData.append("dry_run", "true");
+      if (importVersionId) {
+        formData.append("question_set_id", importVersionId);
+      }
 
       const response = await fetch("/api/admin/questions/import", {
         method: "POST",
@@ -334,14 +356,48 @@ export default function AdminQuestionsPage() {
 
       if (response.ok) {
         const result = await response.json();
-        toast.success(`Imported ${result.imported} questions`);
+        setImportPreview(result);
+      } else {
+        const error = await response.json().catch(() => ({ error: "Preview failed" }));
+        toast.error(error.error || "Failed to preview file");
+      }
+    } catch (error) {
+      console.error("Failed to preview import:", error);
+      toast.error("Failed to preview import");
+    } finally {
+      setLoadingPreview(false);
+    }
+  }
+
+  async function handleImport() {
+    if (!importFile) return;
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", importFile);
+      if (importVersionId) {
+        formData.append("question_set_id", importVersionId);
+      }
+
+      const response = await fetch("/api/admin/questions/import", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`Imported ${result.imported} questions from ${result.file_type?.toUpperCase() || 'file'}`);
         setShowImportDialog(false);
         setImportFile(null);
+        setImportPreview(null);
+        setImportVersionId("");
         setCurrentPage(1);
         setShowAll(false);
         loadQuestions(1, false);
+        loadVersionStats();
       } else {
-        throw new Error("Failed to import");
+        const error = await response.json().catch(() => ({ error: "Import failed" }));
+        toast.error(error.error || "Failed to import questions");
       }
     } catch (error) {
       console.error("Failed to import questions:", error);
@@ -349,6 +405,13 @@ export default function AdminQuestionsPage() {
     } finally {
       setImporting(false);
     }
+  }
+
+  function resetImportDialog() {
+    setShowImportDialog(false);
+    setImportFile(null);
+    setImportPreview(null);
+    setImportVersionId("");
   }
 
   const filteredQuestions = questions.filter((q) => {
@@ -1076,33 +1139,228 @@ export default function AdminQuestionsPage() {
       </Dialog>
 
       {/* Import Dialog */}
-      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent>
+      <Dialog open={showImportDialog} onOpenChange={resetImportDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Import Questions</DialogTitle>
             <DialogDescription>
-              Upload a JSON or CSV file with questions
+              Upload a CSV or JSON file with questions. CSV is the recommended format.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="file">Select File</Label>
-            <Input
-              id="file"
-              type="file"
-              accept=".json,.csv"
-              onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-              className="mt-1"
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              Supported formats: JSON, CSV
-            </p>
+          <div className="space-y-4 py-4">
+            {/* Version Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="import-version">Target Version</Label>
+              <Select
+                value={importVersionId || "auto"}
+                onValueChange={(value) => {
+                  setImportVersionId(value === "auto" ? "" : value);
+                  setImportPreview(null);
+                }}
+              >
+                <SelectTrigger id="import-version">
+                  <SelectValue placeholder="Select target version" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Auto-select (first draft or create new)</SelectItem>
+                  {versions
+                    .filter((v) => v.status === "draft")
+                    .map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.semantic_version} - {v.marketing_version} (Draft)
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Questions can only be imported to draft versions
+              </p>
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="file">Select File</Label>
+              <div className="relative">
+                <input
+                  id="file"
+                  type="file"
+                  accept=".json,.csv"
+                  onChange={(e) => {
+                    setImportFile(e.target.files?.[0] || null);
+                    setImportPreview(null);
+                  }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                <div className="flex items-center gap-2 border-2 border-dashed border-muted-foreground/25 bg-muted/30 hover:border-primary/50 hover:bg-muted/50 rounded-md px-4 py-2 min-h-[2.5rem] transition-colors">
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    className="pointer-events-none"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    Choose File
+                  </Button>
+                  <span className="text-sm text-muted-foreground flex-1">
+                    {importFile ? importFile.name : "No file chosen"}
+                  </span>
+                </div>
+                {importFile && (
+                  <div className="mt-2 flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">File size:</span>
+                    <span className="font-medium">
+                      {(importFile.size / 1024).toFixed(1)} KB
+                    </span>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Supported formats: CSV (recommended), JSON
+              </p>
+            </div>
+
+            {/* Preview Button */}
+            {importFile && !importPreview && (
+              <Button
+                variant="secondary"
+                onClick={handleImportPreview}
+                disabled={loadingPreview}
+                className="w-full"
+              >
+                {loadingPreview ? "Analyzing file..." : "Preview Import"}
+              </Button>
+            )}
+
+            {/* Import Preview */}
+            {importPreview && (
+              <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold">Import Preview</h4>
+                  <Badge variant="outline">{importPreview.file_type.toUpperCase()}</Badge>
+                </div>
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="text-center p-2 bg-background rounded border">
+                    <div className="text-2xl font-bold">{importPreview.total_questions}</div>
+                    <div className="text-muted-foreground">Total Questions</div>
+                  </div>
+                  <div className="text-center p-2 bg-background rounded border">
+                    <div className="text-2xl font-bold">{Object.keys(importPreview.category_counts).length}</div>
+                    <div className="text-muted-foreground">Categories</div>
+                  </div>
+                  <div className="text-center p-2 bg-background rounded border">
+                    <div className="text-2xl font-bold text-destructive">{importPreview.parse_errors.length}</div>
+                    <div className="text-muted-foreground">Errors</div>
+                  </div>
+                </div>
+
+                {/* Tier Distribution */}
+                <div>
+                  <h5 className="text-sm font-medium mb-2">Tier Distribution</h5>
+                  <div className="flex gap-2">
+                    {[1, 2, 3].map((tier) => (
+                      <Badge key={tier} variant="secondary">
+                        Tier {tier}: {importPreview.tier_counts[tier] || 0}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Difficulty Distribution */}
+                {Object.keys(importPreview.difficulty_counts).length > 0 && (
+                  <div>
+                    <h5 className="text-sm font-medium mb-2">Difficulty Distribution</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(importPreview.difficulty_counts).map(([diff, count]) => (
+                        <Badge key={diff} variant="outline" className="capitalize">
+                          {diff}: {count}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Category Breakdown */}
+                <div>
+                  <h5 className="text-sm font-medium mb-2">Categories</h5>
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(importPreview.category_counts)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([cat, count]) => (
+                        <Badge key={cat} variant="outline" className="text-xs">
+                          {cat}: {count}
+                        </Badge>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Sample Questions */}
+                {importPreview.sample_questions.length > 0 && (
+                  <div>
+                    <h5 className="text-sm font-medium mb-2">Sample Questions</h5>
+                    <div className="space-y-2 text-sm">
+                      {importPreview.sample_questions.map((q, idx) => (
+                        <div key={idx} className="p-2 bg-background rounded border">
+                          <div className="flex gap-2 mb-1">
+                            <Badge variant="secondary" className="text-xs">Tier {q.tier}</Badge>
+                            <Badge variant="outline" className="text-xs">{q.category}</Badge>
+                            {q.difficulty && (
+                              <Badge variant="outline" className="text-xs capitalize">{q.difficulty}</Badge>
+                            )}
+                          </div>
+                          <p className="text-muted-foreground text-xs">{q.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Parse Errors */}
+                {importPreview.parse_errors.length > 0 && (
+                  <div>
+                    <h5 className="text-sm font-medium mb-2 text-destructive">Parse Errors</h5>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {importPreview.parse_errors.map((err, idx) => (
+                        <div key={idx} className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                          Row {err.row}: {err.field} - {err.message}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* CSV Format Help */}
+            <details className="text-sm">
+              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                CSV Format Reference
+              </summary>
+              <div className="mt-2 p-3 bg-muted rounded text-xs font-mono overflow-x-auto">
+                <p className="mb-2 font-sans text-muted-foreground">Required columns: content, category</p>
+                <p className="mb-2 font-sans text-muted-foreground">Optional columns: tier, difficulty, expected_verdict, expected_refusal_type, tests_capability, tests_willingness, use_case_tags, audience_context, ministry_type, reasoning</p>
+                <p className="font-sans text-muted-foreground">Tier is auto-inferred from category (3.x→1, 4.x→2, 5.x→3)</p>
+              </div>
+            </details>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowImportDialog(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={resetImportDialog}>
               Cancel
             </Button>
-            <Button onClick={handleImport} disabled={!importFile || importing}>
-              {importing ? "Importing..." : "Import"}
+            {importPreview && (
+              <Button
+                variant="secondary"
+                onClick={() => setImportPreview(null)}
+              >
+                Re-select File
+              </Button>
+            )}
+            <Button
+              onClick={handleImport}
+              disabled={!importFile || importing || !importPreview || importPreview.total_questions === 0}
+            >
+              {importing ? "Importing..." : `Import ${importPreview?.total_questions || 0} Questions`}
             </Button>
           </DialogFooter>
         </DialogContent>
