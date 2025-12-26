@@ -64,9 +64,15 @@ class PlatformAPIClient:
         except httpx.RequestError as e:
             raise PlatformAPIError(f"Network error: {e}") from e
     
-    async def list_versions(self) -> dict[str, Any]:
-        """List all available benchmark versions."""
-        return await self._request("GET", "/api/runner/versions")
+    async def list_versions(self, include_drafts: bool = False) -> dict[str, Any]:
+        """List available benchmark versions.
+        
+        Args:
+            include_drafts: If True, include draft and locked versions for testing.
+                           Default is False (only published versions).
+        """
+        params = {"include_drafts": "true"} if include_drafts else {}
+        return await self._request("GET", "/api/runner/versions", params=params)
     
     async def get_questions(self, version: str | None = "current") -> dict[str, Any]:
         """Fetch the complete question set for a benchmark version.

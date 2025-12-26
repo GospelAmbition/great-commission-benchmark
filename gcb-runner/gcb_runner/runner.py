@@ -107,6 +107,12 @@ async def run_benchmark(
         tier2_weight = scoring_config.get("tier2_weight", 0.20)
         tier3_weight = scoring_config.get("tier3_weight", 0.10)
         
+        # Check if this is a draft version
+        is_draft_test = questions_data.get("is_draft", False)
+        if is_draft_test:
+            console.print("[yellow]⚠️  Testing draft version - results won't be published to leaderboard[/yellow]")
+            console.print()
+        
         # Count questions by tier
         tier_counts: dict[int, int] = {1: 0, 2: 0, 3: 0}
         for q in questions:
@@ -135,6 +141,7 @@ async def run_benchmark(
                 backend=backend,
                 benchmark_version=actual_version,
                 judge_model=judge_model,
+                is_draft_test=is_draft_test,
             )
             run_id = run.id
         

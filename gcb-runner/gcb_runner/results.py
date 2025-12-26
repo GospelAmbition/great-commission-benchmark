@@ -35,6 +35,7 @@ class TestRun(Base):
     tier3_score: Mapped[float | None] = mapped_column(nullable=True)
     started_at: Mapped[datetime] = mapped_column()
     completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    is_draft_test: Mapped[bool] = mapped_column(default=False)  # True if testing a draft version
     
     responses: Mapped[list["Response"]] = relationship(
         "Response", back_populates="test_run", cascade="all, delete-orphan"
@@ -78,8 +79,17 @@ class ResultsDB:
         backend: str,
         benchmark_version: str,
         judge_model: str,
+        is_draft_test: bool = False,
     ) -> TestRun:
-        """Create a new test run."""
+        """Create a new test run.
+        
+        Args:
+            model: Model identifier being tested
+            backend: Backend used for the model
+            benchmark_version: Benchmark version being tested
+            judge_model: Model used for judging
+            is_draft_test: True if testing a draft/locked version (won't be published to leaderboard)
+        """
         session: Session = self.Session()
         try:
             run = TestRun(
@@ -88,6 +98,7 @@ class ResultsDB:
                 benchmark_version=benchmark_version,
                 judge_model=judge_model,
                 started_at=datetime.now(),
+                is_draft_test=is_draft_test,
             )
             session.add(run)
             session.commit()

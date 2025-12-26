@@ -293,16 +293,15 @@ def setup_wizard() -> MenuAction:
     
     console.print(Panel(
         "The judge model evaluates AI responses for accuracy and faithfulness.\n\n"
-        "[bold]Recommended:[/bold] GPT-4o provides the most consistent judging.\n\n"
-        "[dim]The judge uses the same backend as your test model.[/dim]",
+        "[bold]Standard Judge:[/bold] openai/gpt-oss-20b ensures consistent scoring across all tests.\n\n"
+        "[dim]Choose platform-hosted for convenience, or self-host for offline use.[/dim]",
         border_style="blue"
     ))
     console.print()
     
     judge_options = [
-        ("openai/gpt-4o", "openai/gpt-4o (recommended)"),
-        ("anthropic/claude-3.5-sonnet", "anthropic/claude-3.5-sonnet"),
-        ("openai/gpt-4-turbo", "openai/gpt-4-turbo"),
+        ("openai/gpt-oss-20b", "openai/gpt-oss-20b (platform hosted - recommended)"),
+        ("local/openai-gpt-oss-20b", "openai/gpt-oss-20b (self-hosted via LM Studio/Ollama)"),
         ("custom", "Custom model..."),
     ]
     
@@ -492,10 +491,12 @@ def configure_judge() -> None:
     console.print()
     cfg = Config.load()
     
+    console.print("[dim]openai/gpt-oss-20b is the standard judge for consistent scoring.[/dim]")
+    console.print()
+    
     judge_models = [
-        ("openai/gpt-4o", "openai/gpt-4o (recommended)"),
-        ("anthropic/claude-3.5-sonnet", "anthropic/claude-3.5-sonnet"),
-        ("openai/gpt-4-turbo", "openai/gpt-4-turbo"),
+        ("openai/gpt-oss-20b", "openai/gpt-oss-20b (platform hosted - recommended)"),
+        ("local/openai-gpt-oss-20b", "openai/gpt-oss-20b (self-hosted via LM Studio/Ollama)"),
     ]
     
     table = Table(box=box.ROUNDED, show_header=False)
@@ -505,7 +506,7 @@ def configure_judge() -> None:
     for i, (key, name) in enumerate(judge_models, 1):
         marker = " ← current" if key == cfg.defaults.judge_model else ""
         table.add_row(str(i), name + marker)
-    table.add_row("4", "Custom model...")
+    table.add_row("3", "Custom model...")
     
     console.print(table)
     console.print()
@@ -514,7 +515,7 @@ def configure_judge() -> None:
     
     try:
         judge_idx = int(choice) - 1
-        if judge_idx == 3:
+        if judge_idx == 2:
             custom_judge = Prompt.ask("Enter custom judge model name")
             cfg.defaults.judge_model = custom_judge
         elif 0 <= judge_idx < len(judge_models):
@@ -693,11 +694,13 @@ def run_test_menu() -> MenuAction:
     
     # Version selection
     benchmark_version: str | None = None
+    is_draft_version: bool = False
     use_specific_version = Confirm.ask("Use a specific benchmark version?", default=False)
     if use_specific_version:
         console.print()
+        include_drafts = Confirm.ask("Include draft versions for testing?", default=False)
         console.print("[dim]Fetching available versions...[/dim]")
-        versions, error = fetch_versions_sync(cfg)
+        versions, error = fetch_versions_sync(cfg, include_drafts=include_drafts)
         if versions:
             console.print()
             table = Table(box=box.ROUNDED, show_header=True)
@@ -707,7 +710,18 @@ def run_test_menu() -> MenuAction:
             table.add_column("Questions", justify="right")
             
             for i, v in enumerate(versions, 1):
-                status = "[green]✓ Current[/green]" if v.get("status") == "current" else v.get("status", "")
+                status_raw = v.get("status", "")
+                # Map status to display with icons
+                if status_raw == "current":
+                    status = "[green]⭐ Current[/green]"
+                elif status_raw == "draft":
+                    status = "[yellow]🔨 Draft[/yellow]"
+                elif status_raw == "locked":
+                    status = "[blue]🔒 Locked[/blue]"
+                elif status_raw == "archived":
+                    status = "[dim]📦 Archived[/dim]"
+                else:
+                    status = status_raw
                 table.add_row(
                     str(i),
                     f"{v.get('marketing_version', '')} ({v.get('semantic_version', '')})",
@@ -716,6 +730,9 @@ def run_test_menu() -> MenuAction:
                 )
             
             console.print(table)
+            if include_drafts:
+                console.print()
+                console.print("[yellow]⚠️  Draft versions are for testing only - results won't be published to leaderboard[/yellow]")
             console.print()
             
             version_choice = Prompt.ask("Select version number (or press Enter for current)", default="")
@@ -724,7 +741,10 @@ def run_test_menu() -> MenuAction:
                     idx = int(version_choice) - 1
                     if 0 <= idx < len(versions):
                         benchmark_version = versions[idx].get("semantic_version")
+                        is_draft_version = versions[idx].get("is_draft", False)
                         console.print(f"[green]✓ Selected version: {benchmark_version}[/green]")
+                        if is_draft_version:
+                            console.print("[yellow]  (draft version - for testing only)[/yellow]")
                 except (ValueError, IndexError):
                     console.print("[yellow]Invalid selection, using current version[/yellow]")
         else:
@@ -777,8 +797,12 @@ def run_test_menu() -> MenuAction:
     return MenuAction.BACK
 
 
-def fetch_versions_sync(cfg: Config) -> tuple[list[dict[str, Any]], str | None]:
+def fetch_versions_sync(cfg: Config, include_drafts: bool = False) -> tuple[list[dict[str, Any]], str | None]:
     """Fetch available versions synchronously.
+    
+    Args:
+        cfg: Configuration object
+        include_drafts: If True, include draft and locked versions for testing
     
     Returns:
         Tuple of (versions list, error message or None)
@@ -793,7 +817,7 @@ def fetch_versions_sync(cfg: Config) -> tuple[list[dict[str, Any]], str | None]:
         
         client = PlatformAPIClient(cfg.platform.api_key, cfg.platform.url)
         try:
-            result = await client.list_versions()
+            result = await client.list_versions(include_drafts=include_drafts)
             return result.get("versions", []), None
         except PlatformAPIError as e:
             return [], str(e)
@@ -1464,13 +1488,18 @@ async def test_platform_api(cfg: Config) -> dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
-async def test_versions_endpoint(cfg: Config) -> dict[str, Any]:
-    """Test the versions endpoint."""
+async def test_versions_endpoint(cfg: Config, include_drafts: bool = False) -> dict[str, Any]:
+    """Test the versions endpoint.
+    
+    Args:
+        cfg: Configuration object
+        include_drafts: If True, include draft and locked versions for testing
+    """
     from gcb_runner.api.client import PlatformAPIClient
     
     client = PlatformAPIClient(cfg.platform.api_key or "", cfg.platform.url)
     try:
-        result = await client.list_versions()
+        result = await client.list_versions(include_drafts=include_drafts)
         return {
             "success": True,
             "versions": result.get("versions", []),
@@ -1641,11 +1670,13 @@ def list_versions_diagnostic() -> None:
         Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
         return
     
+    include_drafts = Confirm.ask("Include draft versions?", default=True)
+    console.print()
     console.print("[bold]Fetching benchmark versions...[/bold]")
     console.print()
     
     with console.status("Connecting to Platform API..."):
-        result = asyncio.run(test_versions_endpoint(cfg))
+        result = asyncio.run(test_versions_endpoint(cfg, include_drafts=include_drafts))
     
     if result["success"]:
         versions = result.get("versions", [])
@@ -1663,9 +1694,12 @@ def list_versions_diagnostic() -> None:
             console.print("  3. Add questions to the set")
             console.print("  4. Click 'Publish' on the version")
             console.print()
-            console.print("[dim]The API only returns 'active' or 'archived' versions.[/dim]")
+            console.print("[dim]Use --include-drafts to see draft versions for testing.[/dim]")
         else:
-            table = Table(title="Available Benchmark Versions", box=box.ROUNDED)
+            title = "Available Benchmark Versions"
+            if include_drafts:
+                title += " (including drafts)"
+            table = Table(title=title, box=box.ROUNDED)
             table.add_column("Version", style="cyan")
             table.add_column("Marketing", style="white")
             table.add_column("Status")
@@ -1673,7 +1707,17 @@ def list_versions_diagnostic() -> None:
             table.add_column("Released", style="dim")
             
             for v in versions:
-                status = "[green]✓ Current[/green]" if v.get("status") == "current" else v.get("status", "")
+                status_raw = v.get("status", "")
+                if status_raw == "current":
+                    status = "[green]⭐ Current[/green]"
+                elif status_raw == "draft":
+                    status = "[yellow]🔨 Draft[/yellow]"
+                elif status_raw == "locked":
+                    status = "[blue]🔒 Locked[/blue]"
+                elif status_raw == "archived":
+                    status = "[dim]📦 Archived[/dim]"
+                else:
+                    status = status_raw
                 table.add_row(
                     v.get("semantic_version", "?"),
                     v.get("marketing_version", "?"),
@@ -1683,6 +1727,9 @@ def list_versions_diagnostic() -> None:
                 )
             
             console.print(table)
+            if include_drafts:
+                console.print()
+                console.print("[yellow]⚠️  Draft versions are for testing only - results won't be published to leaderboard[/yellow]")
             console.print()
             console.print(f"[dim]Current version: {current or 'None set'}[/dim]")
     else:

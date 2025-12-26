@@ -133,7 +133,13 @@ def config() -> None:
     # Judge model selection
     console.print()
     console.print("[bold]Which model should judge responses?[/bold]")
-    judge_models = ["openai/gpt-4o (recommended)", "anthropic/claude-3.5-sonnet", "custom"]
+    console.print("[dim]openai/gpt-oss-20b is the standard judge for consistent scoring.[/dim]")
+    console.print()
+    judge_models = [
+        "openai/gpt-oss-20b (platform hosted - recommended)",
+        "openai/gpt-oss-20b (self-hosted via LM Studio/Ollama)",
+        "custom"
+    ]
     for i, m in enumerate(judge_models, 1):
         console.print(f"  {i}. {m}")
     
@@ -142,14 +148,14 @@ def config() -> None:
     try:
         judge_idx = int(judge_choice) - 1
         if judge_idx == 0:
-            cfg.defaults.judge_model = "openai/gpt-4o"
+            cfg.defaults.judge_model = "openai/gpt-oss-20b"
         elif judge_idx == 1:
-            cfg.defaults.judge_model = "anthropic/claude-3.5-sonnet"
+            cfg.defaults.judge_model = "local/openai-gpt-oss-20b"
         else:
             custom_judge = Prompt.ask("Enter custom judge model name")
             cfg.defaults.judge_model = custom_judge
     except (ValueError, IndexError):
-        cfg.defaults.judge_model = "openai/gpt-4o"
+        cfg.defaults.judge_model = "openai/gpt-oss-20b"
     
     # Save configuration
     cfg.save()
@@ -160,7 +166,10 @@ def config() -> None:
 
 
 @app.command()
-def versions() -> None:
+def versions(
+    include_drafts: bool = typer.Option(False, "--include-drafts", "-d", 
+                                        help="Include draft versions for testing")
+) -> None:
     """List available benchmark versions."""
     print_header()
     console.print()
@@ -177,7 +186,7 @@ def versions() -> None:
     with console.status("Fetching versions from Platform API..."):
         try:
             client = PlatformAPIClient(cfg.platform.api_key, cfg.platform.url)
-            result = asyncio.run(client.list_versions())
+            result = asyncio.run(client.list_versions(include_drafts=include_drafts))
         except Exception as e:
             console.print(f"[red]Error connecting to Platform API: {e}[/red]")
             raise typer.Exit(1) from None
@@ -185,14 +194,30 @@ def versions() -> None:
     console.print("[green]✓ Connected to Platform API[/green]")
     console.print()
     
-    table = Table(title="Available Benchmark Versions")
+    title = "Available Benchmark Versions"
+    if include_drafts:
+        title += " (including drafts)"
+    
+    table = Table(title=title)
     table.add_column("Version", style="cyan")
     table.add_column("Status", style="green")
     table.add_column("Questions", justify="right")
     table.add_column("Released", style="dim")
     
     for v in result.get("versions", []):
-        status = "⭐ Current" if v.get("status") == "current" else v.get("status", "")
+        status_raw = v.get("status", "")
+        # Map status to display with icons
+        if status_raw == "current":
+            status = "⭐ Current"
+        elif status_raw == "draft":
+            status = "🔨 Draft"
+        elif status_raw == "locked":
+            status = "🔒 Locked"
+        elif status_raw == "archived":
+            status = "📦 Archived"
+        else:
+            status = status_raw
+        
         table.add_row(
             f"{v.get('marketing_version', '')} ({v.get('semantic_version', '')})",
             status,
@@ -202,12 +227,19 @@ def versions() -> None:
     
     console.print(table)
     console.print()
+    
+    if include_drafts:
+        console.print("[yellow]⚠️  Draft versions are for testing only - results won't be published to leaderboard[/yellow]")
+        console.print()
+    
     console.print("[dim]Question distribution follows 70/20/10 weighting:[/dim]")
     console.print("  • Tier 1 (Task Capability): 70%")
     console.print("  • Tier 2 (Doctrinal Fidelity): 20%")
     console.print("  • Tier 3 (Worldview Confession): 10%")
     console.print()
     console.print("[dim]Use --benchmark-version to select a specific version.[/dim]")
+    if not include_drafts:
+        console.print("[dim]Use --include-drafts to see draft versions for testing.[/dim]")
 
 
 @app.command()

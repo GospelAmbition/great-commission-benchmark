@@ -1,6 +1,6 @@
 """Runner API endpoints (for CLI)"""
 import os
-from fastapi import APIRouter, Depends, HTTPException, Header, Request
+from fastapi import APIRouter, Depends, HTTPException, Header, Request, Query
 from sqlalchemy.orm import Session
 from typing import Optional, Tuple
 
@@ -110,26 +110,40 @@ async def get_runner_latest(request: Request):
 @router.get("/versions")
 async def get_runner_versions(
     request: Request,
+    include_drafts: bool = Query(False, description="Include draft/locked versions for testing"),
     db: Session = Depends(get_db),
     auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
     _rate_limit: bool = Depends(runner_rate_limit)
 ):
-    """Get available benchmark versions for CLI"""
+    """Get available benchmark versions for CLI
+    
+    By default, only returns published versions (active/archived).
+    Pass include_drafts=true to also include draft and locked versions for testing.
+    """
     # auth contains (api_key_record, user) - available for logging/tracking
+    # Build status filter - always include published versions
+    statuses = ["active", "archived"]
+    if include_drafts:
+        statuses.extend(["draft", "locked"])
+    
     question_sets = db.query(QuestionSet).filter(
-        QuestionSet.status.in_(["active", "archived"])
+        QuestionSet.status.in_(statuses)
     ).order_by(QuestionSet.created_at.desc()).all()
     
     versions = []
     for qs in question_sets:
         question_count = db.query(Question).filter(Question.question_set_id == qs.id).count()
         
+        # Map status for display: active -> current, keep others as-is
+        display_status = "current" if qs.status == "active" else qs.status
+        
         versions.append({
             "semantic_version": qs.semantic_version,
             "marketing_version": qs.marketing_version,
-            "status": "current" if qs.status == "active" else qs.status,
+            "status": display_status,
             "question_count": question_count,
-            "release_date": qs.created_at.isoformat() if qs.created_at else None
+            "release_date": qs.created_at.isoformat() if qs.created_at else None,
+            "is_draft": qs.status in ["draft", "locked"]
         })
     
     return {
@@ -186,7 +200,8 @@ async def get_runner_questions(
             "tier1_weight": 0.70,
             "tier2_weight": 0.20,
             "tier3_weight": 0.10
-        }
+        },
+        "is_draft": question_set.status in ["draft", "locked"]
     }
 
 
