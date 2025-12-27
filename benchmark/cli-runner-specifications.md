@@ -941,7 +941,7 @@ class QuestionSetLoader:
         return QuestionSet(
             version=data["version"]["semantic_version"],
             questions=data["questions"],
-            judge_prompts=data["judge_prompts"],
+            judge_prompts=data["prompts"],  # Served from code (single source of truth)
             scoring_config=data["scoring"]
         )
     
@@ -1013,7 +1013,9 @@ class TestRunner:
 
 ### LLM Judge
 
-Evaluates responses using official judge prompts:
+Evaluates responses using official judge prompts.
+
+**Note:** Judge prompts are served from code (`backend/app/services/judge.py`) as the single source of truth. The CLI fetches prompts via the API, with built-in fallback defaults for offline mode. This ensures consistency between server-side and CLI-side judging.
 
 ```python
 # gcb_runner/judge.py

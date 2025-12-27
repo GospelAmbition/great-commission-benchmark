@@ -608,7 +608,6 @@ async def review_community_submission(
             # Create a default methodology version for this question set
             methodology_version = MethodologyVersion(
                 question_set_id=question_set.id,
-                judge_prompt="Default judge prompt",
                 scoring_config={"tier1": 0.7, "tier2": 0.2, "tier3": 0.1},
                 active_from=datetime.utcnow()
             )
@@ -812,7 +811,7 @@ async def reprocess_community_submission(
     if not methodology_version:
         methodology_version = MethodologyVersion(
             question_set_id=question_set.id,
-            judge_prompt="Default judge prompt",
+            judge_prompt=TIER1_JUDGE_PROMPT,  # Use actual judge prompt with compromise indicators
             scoring_config={"tier1": 0.7, "tier2": 0.2, "tier3": 0.1},
             active_from=datetime.utcnow()
         )

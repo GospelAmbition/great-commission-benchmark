@@ -48,7 +48,6 @@ def test_data(db: Session):
     
     methodology_version = MethodologyVersion(
         question_set_id=question_set.id,
-        judge_prompt="Test prompt",
         scoring_config={},
         active_from=question_set.created_at
     )

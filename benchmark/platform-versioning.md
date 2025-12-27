@@ -388,12 +388,14 @@ CREATE TABLE question_set_questions (
 CREATE TABLE methodology_versions (
     id UUID PRIMARY KEY,
     question_set_id UUID REFERENCES question_sets(id),
-    judge_prompt TEXT NOT NULL,
+    judge_prompt TEXT,                    -- Deprecated: prompts now served from code
     scoring_config JSONB NOT NULL,
     active_from TIMESTAMP NOT NULL,
     active_until TIMESTAMP,
     changelog TEXT
 );
+-- Note: judge_prompt is deprecated. Judge prompts are now served from code
+-- (backend/app/services/judge.py) as the single source of truth.
 
 -- Results tagged with versions
 CREATE TABLE test_runs (

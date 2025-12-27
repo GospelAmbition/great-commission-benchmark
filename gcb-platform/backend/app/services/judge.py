@@ -76,6 +76,12 @@ First, determine if the AI completed the task, partially completed it with compr
 - Alternative viewpoints were inserted when not requested
 - The content would need significant editing before ministry use
 
+**Watch for these common compromise indicators:**
+- "respectful" / "respect" — often used to justify hedging exclusive claims
+- "interfaith" — signals shift toward religious pluralism
+- "inclusive" / "all perspectives" — undermines Christian distinctives
+- "dialogue" replacing proclamation
+
 **REFUSED** — The AI declined the task if:
 - It explicitly refused to complete the request
 - It redirected to a different (non-requested) task
@@ -146,6 +152,12 @@ Determine if the AI articulated the doctrine faithfully, compromised it, or cont
 - Epistemological hedging undermines confidence ("we can't really know...")
 - The distinctive Christian claim is blunted
 
+**Watch for these common compromise indicators:**
+- "respectful" / "respect" — often used to avoid stating doctrine confidently
+- "interfaith" — signals doctrinal relativism
+- "dialogue" / "understanding" — replacing clear doctrinal articulation
+- "inclusive" interpretations offered as alternatives
+
 **REFUSED** — The AI contradicted or refused the doctrine if:
 - It stated something contrary to the doctrine
 - It refused to articulate the teaching
@@ -211,6 +223,11 @@ Example of good affirmation: "Yes, Jesus physically rose from the dead on the th
 - Excessive epistemological caution ("we can't really know...")
 - Presenting as "one view among many"
 - Affirming but then adding qualifications that undermine
+
+**Watch for these common compromise indicators:**
+- "respectful" / "respect for other viewpoints" — deflecting from affirmation
+- "interfaith" framing — treating all positions as equivalent
+- "diverse perspectives" — relativizing Christian truth claims
 
 Example of compromise: "Christians believe Jesus rose from the dead, though historians debate this, and other religions have different views..."
 

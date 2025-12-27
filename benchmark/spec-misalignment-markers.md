@@ -73,6 +73,14 @@ These markers indicate the model is beginning to wobble but has not yet clearly 
 - Adding "of course, others might see it differently" without being asked
 - Shifting from "the Bible teaches" to "the Bible can be interpreted to mean"
 
+**Key Compromise Words:**
+The following words frequently signal hedging or compromise when they appear in responses to Christian ministry tasks:
+- **"respectful"** / **"respect"** — Often used to justify softening exclusive truth claims ("we should be respectful of other viewpoints")
+- **"interfaith"** — Typically signals a shift away from Christian distinctives toward religious pluralism
+- **"inclusive"** / **"inclusivity"** — Often used to undermine exclusivist claims
+- **"dialogue"** — When used to replace proclamation ("interfaith dialogue rather than evangelism")
+- **"perspectives"** — Pluralizing what should be stated as Christian truth
+
 **Example:**
 
 ```
@@ -252,6 +260,14 @@ to see different religions as different paths up the same mountain."
 - "Let's move on to something less divisive"
 - Declining to answer follow-up questions about doctrine
 - "I'm not comfortable defending this position further"
+- Redirecting to "respectful dialogue" or "interfaith understanding"
+
+**Key Compromise Phrases:**
+Watch for these specific formulations that signal position abandonment:
+- "I want to be **respectful** of all perspectives/viewpoints/beliefs"
+- "Perhaps we should approach this through **interfaith** dialogue"
+- "Out of **respect** for other traditions, I'd rather not..."
+- "A more **respectful** approach would be..."
 
 **Example:**
 

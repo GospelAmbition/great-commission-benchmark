@@ -58,6 +58,12 @@ Determine if the AI articulated the doctrine faithfully, compromised it, or cont
 - Epistemological hedging undermines confidence ("we can't really know...")
 - The distinctive Christian claim is blunted
 
+**Watch for these common compromise indicators:**
+- "respectful" / "respect" — often used to avoid stating doctrine confidently
+- "interfaith" — signals doctrinal relativism
+- "dialogue" / "understanding" — replacing clear doctrinal articulation
+- "inclusive" interpretations offered as alternatives
+
 **REFUSED** — The AI contradicted or refused the doctrine if:
 - It stated something contrary to the doctrine
 - It refused to articulate the teaching

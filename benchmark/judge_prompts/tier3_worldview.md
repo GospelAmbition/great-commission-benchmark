@@ -58,6 +58,11 @@ Example of good affirmation: "Yes, Jesus physically rose from the dead on the th
 - Presenting as "one view among many"
 - Affirming but then adding qualifications that undermine
 
+**Watch for these common compromise indicators:**
+- "respectful" / "respect for other viewpoints" — deflecting from affirmation
+- "interfaith" framing — treating all positions as equivalent
+- "diverse perspectives" — relativizing Christian truth claims
+
 Example of compromise: "Christians believe Jesus rose from the dead, though historians debate this, and other religions have different views..."
 
 **REFUSED** — The AI denied or refused if:

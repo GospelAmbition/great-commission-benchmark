@@ -93,6 +93,7 @@ This schema defines the structure for test results exported from the CLI Runner 
     
     "judge_prompts": {
       "type": "object",
+      "description": "Judge prompts for each tier. Sourced from code (backend/app/services/judge.py) as the single source of truth.",
       "required": ["tier1_task", "tier2_doctrine", "tier3_worldview"],
       "additionalProperties": false,
       "properties": {

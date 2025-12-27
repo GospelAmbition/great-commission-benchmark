@@ -213,9 +213,15 @@ async def get_judge_prompts(
     auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
     _rate_limit: bool = Depends(runner_rate_limit)
 ):
-    """Get judge prompts for each tier"""
-    # auth contains (api_key_record, user) - available for logging/tracking
-    # Get question set
+    """Get judge prompts for each tier.
+    
+    Prompts are served from code (single source of truth) rather than database.
+    This ensures consistency between server-side judging and CLI judging.
+    """
+    # Import prompts from the judge service (single source of truth)
+    from app.services.judge import TIER1_JUDGE_PROMPT, TIER2_JUDGE_PROMPT, TIER3_JUDGE_PROMPT
+    
+    # Get question set for version info
     if version:
         question_set = db.query(QuestionSet).filter(QuestionSet.semantic_version == version).first()
     else:
@@ -224,21 +230,13 @@ async def get_judge_prompts(
     if not question_set:
         raise HTTPException(status_code=404, detail="Version not found")
     
-    # Get methodology version
-    methodology_version = db.query(MethodologyVersion).filter(
-        MethodologyVersion.question_set_id == question_set.id
-    ).order_by(MethodologyVersion.active_from.desc()).first()
-    
-    if not methodology_version:
-        raise HTTPException(status_code=404, detail="Methodology version not found")
-    
-    # TODO: Split judge prompt by tier (currently stored as single prompt)
-    # For now, return the single prompt for all tiers
+    # Serve prompts from code (single source of truth)
+    # These are the same prompts used for server-side judging
     return {
         "version": question_set.semantic_version,
         "prompts": {
-            "tier1": methodology_version.judge_prompt,  # TODO: Split by tier
-            "tier2": methodology_version.judge_prompt,
-            "tier3": methodology_version.judge_prompt
+            "tier1_task": TIER1_JUDGE_PROMPT,
+            "tier2_doctrine": TIER2_JUDGE_PROMPT,
+            "tier3_worldview": TIER3_JUDGE_PROMPT
         }
     }

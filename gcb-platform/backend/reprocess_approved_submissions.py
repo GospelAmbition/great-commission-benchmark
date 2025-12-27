@@ -97,7 +97,6 @@ def reprocess_approved_submissions():
                 # Create a default methodology version for this question set
                 methodology_version = MethodologyVersion(
                     question_set_id=question_set.id,
-                    judge_prompt="Default judge prompt",
                     scoring_config={"tier1": 0.7, "tier2": 0.2, "tier3": 0.1},
                     active_from=datetime.now(timezone.utc)
                 )

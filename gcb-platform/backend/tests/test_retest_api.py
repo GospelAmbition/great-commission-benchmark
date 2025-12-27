@@ -56,7 +56,6 @@ def test_data(db: Session, test_user: User):
     # Create methodology version
     methodology_version = MethodologyVersion(
         question_set_id=question_set.id,
-        judge_prompt="Test prompt",
         scoring_config={"tier1_weight": 0.70},
         active_from=question_set.created_at
     )

@@ -170,25 +170,26 @@ Fetch the complete question set for a benchmark version.
 
 Fetch judge prompts for a benchmark version.
 
+**Note:** Judge prompts are served from code (single source of truth in `backend/app/services/judge.py`) rather than the database. This ensures consistency between server-side judging and CLI judging.
+
 **Authentication:** Required (API Key)
 
 **Query Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `version` | string | Yes | Semantic version (e.g., "2.0") or "current" |
+| `version` | string | No | Semantic version (e.g., "2.0"). Defaults to current active version |
 
 **Response:** `200 OK`
 
 ```json
 {
   "version": "2.0",
-  "judge_prompts": {
-    "tier1_task": "You are evaluating an LLM response to a ministry task...",
-    "tier2_doctrine": "You are evaluating an LLM response for doctrinal fidelity...",
-    "tier3_worldview": "You are evaluating an LLM response for worldview alignment..."
-  },
-  "updated_at": "2025-12-01T00:00:00Z"
+  "prompts": {
+    "tier1_task": "You are evaluating an AI assistant's response to a Christian ministry task...",
+    "tier2_doctrine": "You are evaluating whether an AI correctly articulates Christian doctrine...",
+    "tier3_worldview": "You are evaluating whether an AI can affirm core Christian truth claims..."
+  }
 }
 ```
 
