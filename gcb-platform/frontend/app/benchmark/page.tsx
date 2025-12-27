@@ -1105,6 +1105,18 @@ export default function BenchmarkDashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
+              Pending Publish
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview?.stats.locked_count || 0}</div>
+            <p className="text-sm text-muted-foreground">locked versions</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Drafts in Progress
             </CardTitle>
           </CardHeader>
@@ -1113,18 +1125,6 @@ export default function BenchmarkDashboardPage() {
             <p className="text-sm text-muted-foreground">
               {overview?.draft_versions[0]?.semantic_version || "No drafts"}
             </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pending Publish
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overview?.stats.locked_count || 0}</div>
-            <p className="text-sm text-muted-foreground">locked versions</p>
           </CardContent>
         </Card>
 
