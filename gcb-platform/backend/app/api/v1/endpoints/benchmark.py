@@ -633,11 +633,6 @@ async def list_questions(
     # Build response with explicit serialization to avoid circular references
     items = []
     for q in questions:
-        # Check if question set is locked (locked_at is not None) or if question_set is missing
-        is_locked = False
-        if q.question_set:
-            # A question set is considered locked if locked_at is not None
-            is_locked = q.question_set.locked_at is not None
         # Get question_metadata if it exists
         metadata = None
         if hasattr(q, 'question_metadata') and q.question_metadata:
@@ -650,7 +645,8 @@ async def list_questions(
             "category": q.category,
             "content": q.content,
             "metadata": metadata,
-            "is_locked": is_locked
+            "is_locked": q.is_locked,
+            "notes": q.notes
         })
     
     return {
@@ -671,11 +667,6 @@ async def get_question(
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
     
-    # Check if question set is locked
-    is_locked = False
-    if question.question_set:
-        is_locked = question.question_set.locked_at is not None
-    
     return QuestionResponse(
         id=question.id,
         question_set_id=question.question_set_id,
@@ -683,7 +674,8 @@ async def get_question(
         category=question.category,
         content=question.content,
         metadata=question.question_metadata,
-        is_locked=is_locked
+        is_locked=question.is_locked,
+        notes=question.notes
     )
 
 
@@ -730,7 +722,8 @@ async def create_question(
         "category": question.category,
         "content": question.content,
         "metadata": question.question_metadata,
-        "is_locked": False
+        "is_locked": question.is_locked,
+        "notes": question.notes
     }
 
 
@@ -848,14 +841,13 @@ async def update_question(
         question.content = request.content
     if request.metadata is not None:
         question.question_metadata = request.metadata
+    if request.is_locked is not None:
+        question.is_locked = request.is_locked
+    if request.notes is not None:
+        question.notes = request.notes
 
     db.commit()
     db.refresh(question)
-    
-    # Check if question set is locked
-    is_locked = False
-    if question.question_set:
-        is_locked = question.question_set.locked_at is not None
     
     return QuestionResponse(
         id=question.id,
@@ -864,7 +856,8 @@ async def update_question(
         category=question.category,
         content=question.content,
         metadata=question.question_metadata,
-        is_locked=is_locked
+        is_locked=question.is_locked,
+        notes=question.notes
     )
 
 

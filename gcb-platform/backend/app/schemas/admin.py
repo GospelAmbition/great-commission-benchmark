@@ -76,6 +76,8 @@ class QuestionUpdateRequest(BaseModel):
     category: Optional[str] = None
     content: Optional[str] = None
     metadata: Optional[Dict] = None
+    is_locked: Optional[bool] = None
+    notes: Optional[str] = None
 
 
 class QuestionResponse(BaseModel):
@@ -87,6 +89,7 @@ class QuestionResponse(BaseModel):
     content: str
     metadata: Optional[Dict] = None
     is_locked: bool
+    notes: Optional[str] = None
 
 
 class QuestionSetCreateRequest(BaseModel):

@@ -60,6 +60,7 @@ interface Question {
   content: string;
   metadata?: Record<string, any>;
   is_locked: boolean;
+  notes?: string;
 }
 
 interface BenchmarkOverview {
@@ -511,6 +512,8 @@ export default function BenchmarkDashboardPage() {
           category: editingQuestion.category,
           content: editingQuestion.content,
           metadata: editingQuestion.metadata,
+          is_locked: editingQuestion.is_locked,
+          notes: editingQuestion.notes,
         }),
       });
       
@@ -1632,7 +1635,9 @@ export default function BenchmarkDashboardPage() {
                       <TableHead className="w-[60px]">Tier</TableHead>
                       <TableHead className="w-[100px]">Category</TableHead>
                       <TableHead className="w-[80px]">Difficulty</TableHead>
+                      <TableHead className="w-[60px]">Locked</TableHead>
                       <TableHead>Content</TableHead>
+                      <TableHead className="w-[150px]">Notes</TableHead>
                       {canEditQuestions && <TableHead className="w-[120px]">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -1660,7 +1665,25 @@ export default function BenchmarkDashboardPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
+                          {q.is_locked ? (
+                            <Badge variant="default" className="bg-green-600 hover:bg-green-600">
+                              ✓
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <div className="whitespace-normal break-words max-w-xl">{q.content}</div>
+                        </TableCell>
+                        <TableCell>
+                          {q.notes ? (
+                            <div className="text-sm text-muted-foreground truncate max-w-[140px]" title={q.notes}>
+                              {q.notes}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         {canEditQuestions && (
                           <TableCell>
@@ -2020,6 +2043,28 @@ export default function BenchmarkDashboardPage() {
                   value={editingQuestion.content}
                   onChange={(e) => setEditingQuestion({ ...editingQuestion, content: e.target.value })}
                 />
+              </div>
+              <div>
+                <Label htmlFor="edit_notes">Notes</Label>
+                <textarea
+                  id="edit_notes"
+                  className="w-full min-h-[100px] p-3 border rounded-md bg-background text-sm"
+                  placeholder="Add notes about this question's framing, history, or reasoning..."
+                  value={editingQuestion.notes || ""}
+                  onChange={(e) => setEditingQuestion({ ...editingQuestion, notes: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                  type="checkbox"
+                  id="edit_locked"
+                  checked={editingQuestion.is_locked}
+                  onChange={(e) => setEditingQuestion({ ...editingQuestion, is_locked: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <Label htmlFor="edit_locked" className="font-normal cursor-pointer">
+                  Mark as locked/accepted
+                </Label>
               </div>
             </div>
           )}
