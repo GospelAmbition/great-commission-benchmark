@@ -1,9 +1,18 @@
 """Common schemas used across the API"""
 from typing import Optional, Generic, TypeVar, List
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 T = TypeVar('T')
+
+
+class GCBBaseModel(BaseModel):
+    """Base model for GCB schemas that allows 'model_' prefixed fields.
+    
+    Pydantic v2 reserves 'model_' prefix by default. Since we have legitimate
+    fields like model_id, model_name, model_provider, we disable this protection.
+    """
+    model_config = ConfigDict(protected_namespaces=())
 
 
 class PaginationParams(BaseModel):

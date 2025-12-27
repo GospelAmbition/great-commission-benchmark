@@ -184,8 +184,55 @@ def get_dashboard_html() -> str:
             font-size: 0.875rem;
             margin-top: 0.5rem;
             white-space: pre-wrap;
-            max-height: 200px;
-            overflow-y: auto;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .response-text.collapsed {
+            max-height: 150px;
+        }
+        
+        .response-text.collapsed.has-overflow::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: linear-gradient(transparent, var(--bg));
+            pointer-events: none;
+        }
+        
+        .response-text.expanded {
+            max-height: none;
+        }
+        
+        .expand-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            color: var(--primary);
+            background: transparent;
+            border: 1px solid var(--primary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .expand-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .expand-btn .icon {
+            transition: transform 0.2s;
+        }
+        
+        .expand-btn.expanded .icon {
+            transform: rotate(180deg);
         }
         
         .pagination {
@@ -332,6 +379,8 @@ def get_dashboard_html() -> str:
                 if (this.state.currentRun) {
                     app.innerHTML = this.renderRunDetail();
                     this.renderCharts();
+                    // Check for overflow after DOM is updated
+                    requestAnimationFrame(() => this.checkOverflows());
                 } else {
                     app.innerHTML = this.renderRunList();
                 }
@@ -429,7 +478,7 @@ def get_dashboard_html() -> str:
                             </span>
                         </div>
                         
-                        ${this.state.responses.map(r => `
+                        ${this.state.responses.map((r, idx) => `
                             <div class="response-card">
                                 <div class="header">
                                     <div>
@@ -440,12 +489,17 @@ def get_dashboard_html() -> str:
                                     </div>
                                     <span class="badge ${r.verdict === 'ACCEPTED' ? 'badge-pass' : r.verdict === 'COMPROMISED' ? 'badge-partial' : 'badge-fail'}">${r.verdict}</span>
                                 </div>
-                                <div class="response-text">${this.escapeHtml(r.response_text)}</div>
+                                <div class="meta" style="font-weight: 500;">Model Response:</div>
+                                <div class="response-text collapsed" id="response-${idx}" data-full-height="0">${this.escapeHtml(r.response_text)}</div>
+                                <button class="expand-btn" id="expand-btn-${idx}" onclick="App.toggleExpand('response-${idx}', 'expand-btn-${idx}')" style="display: none;">
+                                    <span class="icon">▼</span> <span class="label">Show full response</span>
+                                </button>
                                 ${r.judge_reasoning ? `
-                                    <details style="margin-top: 0.5rem;">
-                                        <summary class="meta" style="cursor: pointer;">Judge Reasoning</summary>
-                                        <div class="response-text" style="margin-top: 0.25rem;">${this.escapeHtml(r.judge_reasoning)}</div>
-                                    </details>
+                                    <div class="meta" style="margin-top: 0.75rem; font-weight: 500;">Judge Reasoning:</div>
+                                    <div class="response-text collapsed" id="reasoning-${idx}" data-full-height="0">${this.escapeHtml(r.judge_reasoning)}</div>
+                                    <button class="expand-btn" id="expand-reasoning-btn-${idx}" onclick="App.toggleExpand('reasoning-${idx}', 'expand-reasoning-btn-${idx}')" style="display: none;">
+                                        <span class="icon">▼</span> <span class="label">Show full reasoning</span>
+                                    </button>
                                 ` : ''}
                             </div>
                         `).join('')}
@@ -527,6 +581,43 @@ def get_dashboard_html() -> str:
                 const div = document.createElement('div');
                 div.textContent = text;
                 return div.innerHTML;
+            },
+            
+            toggleExpand(textId, btnId) {
+                const textEl = document.getElementById(textId);
+                const btnEl = document.getElementById(btnId);
+                
+                if (textEl.classList.contains('collapsed')) {
+                    textEl.classList.remove('collapsed');
+                    textEl.classList.add('expanded');
+                    btnEl.classList.add('expanded');
+                    btnEl.querySelector('.label').textContent = textId.includes('reasoning') ? 'Show less' : 'Show less';
+                } else {
+                    textEl.classList.remove('expanded');
+                    textEl.classList.add('collapsed');
+                    btnEl.classList.remove('expanded');
+                    btnEl.querySelector('.label').textContent = textId.includes('reasoning') ? 'Show full reasoning' : 'Show full response';
+                }
+            },
+            
+            checkOverflows() {
+                // Check all response-text elements for overflow
+                document.querySelectorAll('.response-text.collapsed').forEach(el => {
+                    const id = el.id;
+                    const btnId = id.includes('reasoning') ? 
+                        'expand-reasoning-btn-' + id.split('-').pop() : 
+                        'expand-btn-' + id.split('-').pop();
+                    const btn = document.getElementById(btnId);
+                    
+                    // Check if content overflows
+                    if (el.scrollHeight > 150) {
+                        el.classList.add('has-overflow');
+                        if (btn) btn.style.display = 'inline-flex';
+                    } else {
+                        el.classList.remove('has-overflow');
+                        if (btn) btn.style.display = 'none';
+                    }
+                });
             }
         };
         

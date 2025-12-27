@@ -4,8 +4,10 @@ from pydantic import BaseModel
 from datetime import datetime
 from uuid import UUID
 
+from app.schemas.common import GCBBaseModel
 
-class CreateTestRequest(BaseModel):
+
+class CreateTestRequest(GCBBaseModel):
     """Create test request"""
     model_id: str  # OpenRouter model ID (e.g., "anthropic/claude-3-opus")
     version: Optional[str] = None  # Semantic version (e.g., "1.0.0") - defaults to current
@@ -66,7 +68,7 @@ class RetestHistoryItem(BaseModel):
     benchmark_version: str
 
 
-class RetestHistoryResponse(BaseModel):
+class RetestHistoryResponse(GCBBaseModel):
     """Retest history response"""
     model_id: UUID
     model_name: str

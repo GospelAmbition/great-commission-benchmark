@@ -4,10 +4,10 @@ from pydantic import BaseModel
 from datetime import datetime
 from uuid import UUID
 
-from app.schemas.common import PaginationResponse
+from app.schemas.common import PaginationResponse, GCBBaseModel
 
 
-class ModelSummary(BaseModel):
+class ModelSummary(GCBBaseModel):
     """Model summary for leaderboard"""
     id: UUID
     name: str
@@ -66,7 +66,7 @@ class LeaderboardResponse(BaseModel):
     pagination: PaginationResponse
 
 
-class ModelListItem(BaseModel):
+class ModelListItem(GCBBaseModel):
     """Model list item"""
     id: UUID
     name: str

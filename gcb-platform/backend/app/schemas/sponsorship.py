@@ -1,8 +1,10 @@
 """Sponsorship API schemas"""
 from typing import Optional, List, Literal
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, ConfigDict, validator
 from datetime import datetime
 from uuid import UUID
+
+from app.schemas.common import GCBBaseModel
 
 
 class CreateSponsorshipRequest(BaseModel):
@@ -31,7 +33,7 @@ class CreateSponsorshipRequest(BaseModel):
         return v
 
 
-class CreateSponsorshipResponse(BaseModel):
+class CreateSponsorshipResponse(GCBBaseModel):
     """Response after creating a sponsorship"""
     id: UUID
     request_type: str
@@ -43,8 +45,10 @@ class CreateSponsorshipResponse(BaseModel):
     message: str
 
 
-class SponsorshipItem(BaseModel):
+class SponsorshipItem(GCBBaseModel):
     """Sponsorship list item"""
+    model_config = ConfigDict(protected_namespaces=(), from_attributes=True)
+    
     id: UUID
     request_type: str
     model_name: str
@@ -53,9 +57,6 @@ class SponsorshipItem(BaseModel):
     created_at: datetime
     reviewed_at: Optional[datetime] = None
     reviewer_notes: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
 
 
 class SponsorshipListResponse(BaseModel):
@@ -64,8 +65,10 @@ class SponsorshipListResponse(BaseModel):
     total: int
 
 
-class SponsorshipQueueItem(BaseModel):
+class SponsorshipQueueItem(GCBBaseModel):
     """Sponsorship queue item for moderators"""
+    model_config = ConfigDict(protected_namespaces=(), from_attributes=True)
+    
     id: UUID
     request_type: str
     model_name: str
@@ -75,9 +78,6 @@ class SponsorshipQueueItem(BaseModel):
     status: str
     payment_status: Optional[str] = None
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 class SponsorshipQueueResponse(BaseModel):
@@ -86,7 +86,7 @@ class SponsorshipQueueResponse(BaseModel):
     total: int
 
 
-class SponsorshipDetailResponse(BaseModel):
+class SponsorshipDetailResponse(GCBBaseModel):
     """Detailed sponsorship information for moderator review"""
     id: UUID
     request_type: str

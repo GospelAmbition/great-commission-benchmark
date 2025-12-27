@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from uuid import UUID
 
-from app.schemas.common import PaginationResponse
+from app.schemas.common import PaginationResponse, GCBBaseModel
 
 
 class UserProfile(BaseModel):
@@ -64,7 +64,7 @@ class UserTestsResponse(BaseModel):
     pagination: PaginationResponse
 
 
-class SubmissionListItem(BaseModel):
+class SubmissionListItem(GCBBaseModel):
     """Submission list item"""
     id: UUID
     model_name: str

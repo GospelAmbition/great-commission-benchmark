@@ -4,8 +4,10 @@ from pydantic import BaseModel
 from datetime import datetime
 from uuid import UUID
 
+from app.schemas.common import GCBBaseModel
 
-class QueueItem(BaseModel):
+
+class QueueItem(GCBBaseModel):
     """Moderation queue item"""
     test_id: UUID
     model_name: str
@@ -46,7 +48,7 @@ class ReviewSubmissionResponse(BaseModel):
     requires_second_review: bool
 
 
-class ModeratorActivityItem(BaseModel):
+class ModeratorActivityItem(GCBBaseModel):
     """Moderator activity item"""
     review_id: UUID
     test_id: Optional[UUID] = None  # None for CLI submissions

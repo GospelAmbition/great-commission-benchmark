@@ -1980,7 +1980,7 @@ export default function BenchmarkDashboardPage() {
           </DialogHeader>
           {editingQuestion && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit_tier">Tier</Label>
                   <Select
@@ -1994,24 +1994,6 @@ export default function BenchmarkDashboardPage() {
                       <SelectItem value="1">Tier 1</SelectItem>
                       <SelectItem value="2">Tier 2</SelectItem>
                       <SelectItem value="3">Tier 3</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="edit_category">Category</Label>
-                  <Select
-                    value={editingQuestion.category}
-                    onValueChange={(value) => setEditingQuestion({ ...editingQuestion, category: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES[editingQuestion.tier as 1 | 2 | 3]?.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat} - {CATEGORY_NAMES[cat]}
-                        </SelectItem>
-                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -2034,6 +2016,24 @@ export default function BenchmarkDashboardPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="edit_category">Category</Label>
+                <Select
+                  value={editingQuestion.category}
+                  onValueChange={(value) => setEditingQuestion({ ...editingQuestion, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES[editingQuestion.tier as 1 | 2 | 3]?.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat} - {CATEGORY_NAMES[cat]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="edit_content">Question Content</Label>
