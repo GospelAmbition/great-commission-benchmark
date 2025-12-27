@@ -68,6 +68,8 @@ class QuestionCreateRequest(BaseModel):
     category: str
     content: str
     metadata: Optional[Dict] = None
+    is_locked: Optional[bool] = False
+    notes: Optional[str] = None
 
 
 class QuestionUpdateRequest(BaseModel):

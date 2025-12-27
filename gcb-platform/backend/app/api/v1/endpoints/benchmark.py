@@ -17,6 +17,7 @@ from app.db.models.question_set import QuestionSet
 from app.schemas.admin import (
     QuestionImportRequest,
     QuestionImportResponse,
+    QuestionCreateRequest,
     QuestionUpdateRequest,
     QuestionResponse,
     QuestionSetCreateRequest,
@@ -681,17 +682,13 @@ async def get_question(
 
 @router.post("/questions")
 async def create_question(
-    question_set_id: UUID,
-    tier: int,
-    category: str,
-    content: str,
-    metadata: Optional[Dict[str, Any]] = None,
+    request: QuestionCreateRequest,
     current_user: User = Depends(require_benchmark_developer),
     db: Session = Depends(get_db)
 ):
     """Create a new question"""
     # Validate question set exists
-    question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
+    question_set = db.query(QuestionSet).filter(QuestionSet.id == request.question_set_id).first()
     if not question_set:
         raise HTTPException(status_code=404, detail="Question set not found")
     
@@ -700,16 +697,18 @@ async def create_question(
         raise HTTPException(status_code=400, detail="Question set is locked")
     
     # Validate tier
-    if tier not in [1, 2, 3]:
+    if request.tier not in [1, 2, 3]:
         raise HTTPException(status_code=400, detail="Tier must be 1, 2, or 3")
     
     # Create question
     question = Question(
-        question_set_id=question_set_id,
-        tier=tier,
-        category=category,
-        content=content,
-        question_metadata=metadata
+        question_set_id=request.question_set_id,
+        tier=request.tier,
+        category=request.category,
+        content=request.content,
+        question_metadata=request.metadata,
+        is_locked=request.is_locked or False,
+        notes=request.notes
     )
     db.add(question)
     db.commit()

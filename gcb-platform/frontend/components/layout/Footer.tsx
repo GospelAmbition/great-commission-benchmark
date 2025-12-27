@@ -87,9 +87,14 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <Link href="/api/docs" className="text-muted-foreground hover:text-foreground">
+                <a
+                  href={`${process.env.NEXT_PUBLIC_API_URL || 'https://backend-production-f36a.up.railway.app'}/docs`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground"
+                >
                   API Documentation
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
