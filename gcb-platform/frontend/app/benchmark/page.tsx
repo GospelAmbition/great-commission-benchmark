@@ -237,7 +237,7 @@ export default function BenchmarkDashboardPage() {
   // Form state
   const [newVersion, setNewVersion] = useState({ semantic_version: "", marketing_version: "", copy_from: "" });
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [newQuestion, setNewQuestion] = useState({ tier: "1", category: "", content: "", difficulty: "medium" });
+  const [newQuestion, setNewQuestion] = useState({ tier: "1", category: "", content: "", difficulty: "medium", notes: "", expected_verdict: "" });
   const [actionLoading, setActionLoading] = useState(false);
 
   // =============================================================================
@@ -483,13 +483,15 @@ export default function BenchmarkDashboardPage() {
           content: newQuestion.content,
           metadata: {
             difficulty: newQuestion.difficulty,
+            expected_verdict: newQuestion.expected_verdict || undefined,
           },
+          notes: newQuestion.notes || undefined,
         }),
       });
       
       toast.success("Question created");
       setShowCreateQuestionDialog(false);
-      setNewQuestion({ tier: "1", category: "", content: "", difficulty: "medium" });
+      setNewQuestion({ tier: "1", category: "", content: "", difficulty: "medium", notes: "", expected_verdict: "" });
       loadQuestions();
       loadVersionStats();
       loadData();
@@ -629,19 +631,6 @@ export default function BenchmarkDashboardPage() {
     }
   }
 
-  function parseBooleanValue(value: string | undefined): boolean | undefined {
-    if (!value || value.trim() === "") return undefined;
-    const lower = value.toLowerCase().trim();
-    if (lower === "true" || lower === "1" || lower === "yes") return true;
-    if (lower === "false" || lower === "0" || lower === "no") return false;
-    return undefined;
-  }
-
-  function parseTags(value: string | undefined): string[] | undefined {
-    if (!value || value.trim() === "") return undefined;
-    return value.split("|").map((tag) => tag.trim()).filter((tag) => tag.length > 0);
-  }
-
   function parseCSVQuestions(headers: string[], rows: string[][]): any[] {
     const questions: any[] = [];
     const headerIndex: Record<string, number> = {};
@@ -680,13 +669,6 @@ export default function BenchmarkDashboardPage() {
 
       const difficulty = getValue("difficulty");
       const expectedVerdict = getValue("expected_verdict");
-      const expectedRefusalType = getValue("expected_refusal_type");
-      const testsCapability = parseBooleanValue(getValue("tests_capability"));
-      const testsWillingness = parseBooleanValue(getValue("tests_willingness"));
-      const useCaseTags = parseTags(getValue("use_case_tags"));
-      const audienceContext = getValue("audience_context");
-      const ministryType = getValue("ministry_type");
-      const reasoning = getValue("reasoning");
 
       questions.push({
         content,
@@ -695,13 +677,6 @@ export default function BenchmarkDashboardPage() {
         metadata: {
           difficulty: difficulty?.toLowerCase(),
           expected_verdict: expectedVerdict?.toUpperCase(),
-          expected_refusal_type: expectedRefusalType,
-          tests_capability: testsCapability,
-          tests_willingness: testsWillingness,
-          use_case_tags: useCaseTags,
-          audience_context: audienceContext,
-          ministry_type: ministryType,
-          reasoning,
         },
       });
     }
@@ -745,13 +720,6 @@ export default function BenchmarkDashboardPage() {
                 metadata: {
                   difficulty: q.difficulty,
                   expected_verdict: q.expected_verdict,
-                  expected_refusal_type: q.expected_refusal_type,
-                  tests_capability: q.tests_capability,
-                  tests_willingness: q.tests_willingness,
-                  use_case_tags: q.use_case_tags,
-                  audience_context: q.audience_context,
-                  ministry_type: q.ministry_type,
-                  reasoning: q.reasoning,
                 }
               });
             });
@@ -896,20 +864,13 @@ export default function BenchmarkDashboardPage() {
       return;
     }
 
-    // CSV header
+    // CSV header - only essential fields
     const headers = [
       "content",
       "category",
       "tier",
       "difficulty",
-      "expected_verdict",
-      "expected_refusal_type",
-      "tests_capability",
-      "tests_willingness",
-      "use_case_tags",
-      "audience_context",
-      "ministry_type",
-      "reasoning"
+      "expected_verdict"
     ];
 
     // Helper to escape CSV fields
@@ -931,14 +892,7 @@ export default function BenchmarkDashboardPage() {
         escapeCSV(q.category),
         escapeCSV(q.tier),
         escapeCSV(meta.difficulty),
-        escapeCSV(meta.expected_verdict),
-        escapeCSV(meta.expected_refusal_type),
-        escapeCSV(meta.tests_capability),
-        escapeCSV(meta.tests_willingness),
-        escapeCSV(Array.isArray(meta.use_case_tags) ? meta.use_case_tags.join("|") : meta.use_case_tags),
-        escapeCSV(meta.audience_context),
-        escapeCSV(meta.ministry_type),
-        escapeCSV(meta.reasoning)
+        escapeCSV(meta.expected_verdict)
       ].join(",");
     });
 
@@ -1890,7 +1844,7 @@ export default function BenchmarkDashboardPage() {
 
       {/* Create Question Dialog */}
       <Dialog open={showCreateQuestionDialog} onOpenChange={setShowCreateQuestionDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Add New Question</DialogTitle>
             <DialogDescription>
@@ -1898,7 +1852,7 @@ export default function BenchmarkDashboardPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="new_tier">Tier</Label>
                 <Select
@@ -1912,24 +1866,6 @@ export default function BenchmarkDashboardPage() {
                     <SelectItem value="1">Tier 1 (70%)</SelectItem>
                     <SelectItem value="2">Tier 2 (20%)</SelectItem>
                     <SelectItem value="3">Tier 3 (10%)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="new_category">Category</Label>
-                <Select
-                  value={newQuestion.category}
-                  onValueChange={(value) => setNewQuestion({ ...newQuestion, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES[parseInt(newQuestion.tier) as 1 | 2 | 3]?.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat} - {CATEGORY_NAMES[cat]}
-                      </SelectItem>
-                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1951,6 +1887,40 @@ export default function BenchmarkDashboardPage() {
               </div>
             </div>
             <div>
+              <Label htmlFor="new_category">Category</Label>
+              <Select
+                value={newQuestion.category}
+                onValueChange={(value) => setNewQuestion({ ...newQuestion, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES[parseInt(newQuestion.tier) as 1 | 2 | 3]?.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat} - {CATEGORY_NAMES[cat]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="new_expected_verdict">Expected Verdict</Label>
+              <Select
+                value={newQuestion.expected_verdict}
+                onValueChange={(value) => setNewQuestion({ ...newQuestion, expected_verdict: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select expected verdict" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACCEPTED">ACCEPTED</SelectItem>
+                  <SelectItem value="COMPROMISED">COMPROMISED</SelectItem>
+                  <SelectItem value="REFUSED">REFUSED</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label htmlFor="new_content">Question Content</Label>
               <textarea
                 id="new_content"
@@ -1958,6 +1928,16 @@ export default function BenchmarkDashboardPage() {
                 placeholder="Enter the question content..."
                 value={newQuestion.content}
                 onChange={(e) => setNewQuestion({ ...newQuestion, content: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="new_notes">Notes</Label>
+              <textarea
+                id="new_notes"
+                className="w-full min-h-[100px] p-3 border rounded-md bg-background text-sm"
+                placeholder="Add notes about this question's framing, history, or reasoning..."
+                value={newQuestion.notes}
+                onChange={(e) => setNewQuestion({ ...newQuestion, notes: e.target.value })}
               />
             </div>
           </div>

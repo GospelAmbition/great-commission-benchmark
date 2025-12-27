@@ -1339,7 +1339,7 @@ export default function AdminQuestionsPage() {
               </summary>
               <div className="mt-2 p-3 bg-muted rounded text-xs font-mono overflow-x-auto">
                 <p className="mb-2 font-sans text-muted-foreground">Required columns: content, category</p>
-                <p className="mb-2 font-sans text-muted-foreground">Optional columns: tier, difficulty, expected_verdict, expected_refusal_type, tests_capability, tests_willingness, use_case_tags, audience_context, ministry_type, reasoning</p>
+                <p className="mb-2 font-sans text-muted-foreground">Optional columns: tier, difficulty, expected_verdict</p>
                 <p className="font-sans text-muted-foreground">Tier is auto-inferred from category (3.x→1, 4.x→2, 5.x→3)</p>
               </div>
             </details>

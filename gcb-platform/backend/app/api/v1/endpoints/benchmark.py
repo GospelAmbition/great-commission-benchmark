@@ -646,6 +646,7 @@ async def list_questions(
             "category": q.category,
             "content": q.content,
             "metadata": metadata,
+            "expected_verdict": q.expected_verdict,
             "is_locked": q.is_locked,
             "notes": q.notes
         })
@@ -675,6 +676,7 @@ async def get_question(
         category=question.category,
         content=question.content,
         metadata=question.question_metadata,
+        expected_verdict=question.expected_verdict,
         is_locked=question.is_locked,
         notes=question.notes
     )
@@ -700,13 +702,24 @@ async def create_question(
     if request.tier not in [1, 2, 3]:
         raise HTTPException(status_code=400, detail="Tier must be 1, 2, or 3")
     
+    # Extract expected_verdict from metadata if provided there (for backward compatibility)
+    expected_verdict = request.expected_verdict
+    clean_metadata = None
+    if request.metadata and isinstance(request.metadata, dict):
+        if not expected_verdict:
+            expected_verdict = request.metadata.get("expected_verdict")
+        # Keep only difficulty in metadata
+        if "difficulty" in request.metadata:
+            clean_metadata = {"difficulty": request.metadata["difficulty"]}
+    
     # Create question
     question = Question(
         question_set_id=request.question_set_id,
         tier=request.tier,
         category=request.category,
         content=request.content,
-        question_metadata=request.metadata,
+        expected_verdict=expected_verdict,
+        question_metadata=clean_metadata,
         is_locked=request.is_locked or False,
         notes=request.notes
     )
@@ -721,6 +734,7 @@ async def create_question(
         "category": question.category,
         "content": question.content,
         "metadata": question.question_metadata,
+        "expected_verdict": question.expected_verdict,
         "is_locked": question.is_locked,
         "notes": question.notes
     }
@@ -792,13 +806,23 @@ async def import_questions(
                     errors.append(f"Question {idx}: question set is locked")
                     continue
                 
+                # Extract expected_verdict from metadata to column
+                expected_verdict = None
+                clean_metadata = None
+                if metadata and isinstance(metadata, dict):
+                    expected_verdict = metadata.get("expected_verdict")
+                    # Keep only difficulty in metadata
+                    if "difficulty" in metadata:
+                        clean_metadata = {"difficulty": metadata["difficulty"]}
+                
                 # Create question
                 question = Question(
                     question_set_id=question_set_id,
                     tier=tier,
                     category=category,
                     content=content,
-                    question_metadata=metadata
+                    expected_verdict=expected_verdict,
+                    question_metadata=clean_metadata
                 )
                 db.add(question)
                 imported += 1
@@ -839,7 +863,13 @@ async def update_question(
     if request.content is not None:
         question.content = request.content
     if request.metadata is not None:
-        question.question_metadata = request.metadata
+        # Keep only difficulty in metadata
+        if isinstance(request.metadata, dict) and "difficulty" in request.metadata:
+            question.question_metadata = {"difficulty": request.metadata["difficulty"]}
+        else:
+            question.question_metadata = None
+    if request.expected_verdict is not None:
+        question.expected_verdict = request.expected_verdict
     if request.is_locked is not None:
         question.is_locked = request.is_locked
     if request.notes is not None:
@@ -855,6 +885,7 @@ async def update_question(
         category=question.category,
         content=question.content,
         metadata=question.question_metadata,
+        expected_verdict=question.expected_verdict,
         is_locked=question.is_locked,
         notes=question.notes
     )

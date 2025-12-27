@@ -67,7 +67,8 @@ class QuestionCreateRequest(BaseModel):
     tier: int
     category: str
     content: str
-    metadata: Optional[Dict] = None
+    metadata: Optional[Dict] = None  # Only 'difficulty' should be stored here
+    expected_verdict: Optional[str] = None
     is_locked: Optional[bool] = False
     notes: Optional[str] = None
 
@@ -77,7 +78,8 @@ class QuestionUpdateRequest(BaseModel):
     tier: Optional[int] = None
     category: Optional[str] = None
     content: Optional[str] = None
-    metadata: Optional[Dict] = None
+    metadata: Optional[Dict] = None  # Only 'difficulty' should be stored here
+    expected_verdict: Optional[str] = None
     is_locked: Optional[bool] = None
     notes: Optional[str] = None
 
@@ -89,7 +91,8 @@ class QuestionResponse(BaseModel):
     tier: int
     category: str
     content: str
-    metadata: Optional[Dict] = None
+    metadata: Optional[Dict] = None  # Only 'difficulty' should be stored here
+    expected_verdict: Optional[str] = None
     is_locked: bool
     notes: Optional[str] = None
 

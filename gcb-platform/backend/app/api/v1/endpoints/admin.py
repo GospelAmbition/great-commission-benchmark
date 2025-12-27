@@ -228,13 +228,23 @@ async def import_questions(
                     errors.append(f"Question {idx}: question set is locked")
                     continue
                 
+                # Extract expected_verdict from metadata to column
+                expected_verdict = None
+                clean_metadata = None
+                if metadata and isinstance(metadata, dict):
+                    expected_verdict = metadata.get("expected_verdict")
+                    # Keep only difficulty in metadata
+                    if "difficulty" in metadata:
+                        clean_metadata = {"difficulty": metadata["difficulty"]}
+                
                 # Create question
                 question = Question(
                     question_set_id=question_set_id,
                     tier=tier,
                     category=category,
                     content=content,
-                    question_metadata=metadata
+                    expected_verdict=expected_verdict,
+                    question_metadata=clean_metadata
                 )
                 db.add(question)
                 imported += 1
@@ -299,6 +309,7 @@ async def list_questions(
             "category": q.category,
             "content": q.content,  # Return full content, not truncated
             "metadata": metadata,
+            "expected_verdict": q.expected_verdict,
             "is_locked": is_locked
         })
     
@@ -332,6 +343,7 @@ async def get_question(
         category=question.category,
         content=question.content,
         metadata=question.question_metadata,
+        expected_verdict=question.expected_verdict,
         is_locked=is_locked
     )
 
@@ -360,7 +372,13 @@ async def update_question(
     if request.content is not None:
         question.content = request.content
     if request.metadata is not None:
-        question.question_metadata = request.metadata
+        # Keep only difficulty in metadata
+        if isinstance(request.metadata, dict) and "difficulty" in request.metadata:
+            question.question_metadata = {"difficulty": request.metadata["difficulty"]}
+        else:
+            question.question_metadata = None
+    if request.expected_verdict is not None:
+        question.expected_verdict = request.expected_verdict
 
     db.commit()
     db.refresh(question)
@@ -377,6 +395,7 @@ async def update_question(
         category=question.category,
         content=question.content,
         metadata=question.question_metadata,
+        expected_verdict=question.expected_verdict,
         is_locked=is_locked
     )
 

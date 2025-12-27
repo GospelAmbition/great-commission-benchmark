@@ -28,13 +28,6 @@ interface QuestionFromFile {
   tier: number;
   difficulty?: string;
   expected_verdict?: string;
-  expected_refusal_type?: string;
-  tests_capability?: boolean;
-  tests_willingness?: boolean;
-  use_case_tags?: string[];
-  audience_context?: string;
-  ministry_type?: string;
-  reasoning?: string;
 }
 
 interface QuestionsFile {
@@ -153,27 +146,6 @@ function inferTierFromCategory(category: string): number | null {
   }
 }
 
-/**
- * Parse boolean value from CSV string
- */
-function parseBoolean(value: string | undefined): boolean | undefined {
-  if (!value || value.trim() === "") return undefined;
-  const lower = value.toLowerCase().trim();
-  if (lower === "true" || lower === "1" || lower === "yes") return true;
-  if (lower === "false" || lower === "0" || lower === "no") return false;
-  return undefined;
-}
-
-/**
- * Parse pipe-separated tags into array
- */
-function parseTags(value: string | undefined): string[] | undefined {
-  if (!value || value.trim() === "") return undefined;
-  return value
-    .split("|")
-    .map((tag) => tag.trim())
-    .filter((tag) => tag.length > 0);
-}
 
 /**
  * Parse CSV rows into questions
@@ -257,27 +229,6 @@ function parseCSVQuestions(
     const expectedVerdict = getValue("expected_verdict");
     if (expectedVerdict) metadata.expected_verdict = expectedVerdict.toUpperCase();
 
-    const expectedRefusalType = getValue("expected_refusal_type");
-    if (expectedRefusalType) metadata.expected_refusal_type = expectedRefusalType;
-
-    const testsCapability = parseBoolean(getValue("tests_capability"));
-    if (testsCapability !== undefined) metadata.tests_capability = testsCapability;
-
-    const testsWillingness = parseBoolean(getValue("tests_willingness"));
-    if (testsWillingness !== undefined) metadata.tests_willingness = testsWillingness;
-
-    const useCaseTags = parseTags(getValue("use_case_tags"));
-    if (useCaseTags) metadata.use_case_tags = useCaseTags;
-
-    const audienceContext = getValue("audience_context");
-    if (audienceContext) metadata.audience_context = audienceContext;
-
-    const ministryType = getValue("ministry_type");
-    if (ministryType) metadata.ministry_type = ministryType;
-
-    const reasoning = getValue("reasoning");
-    if (reasoning) metadata.reasoning = reasoning;
-
     questions.push({
       question_set_id: questionSetId,
       tier,
@@ -321,13 +272,6 @@ function parseJSONQuestions(
         metadata: {
           difficulty: q.difficulty,
           expected_verdict: q.expected_verdict,
-          expected_refusal_type: q.expected_refusal_type,
-          tests_capability: q.tests_capability,
-          tests_willingness: q.tests_willingness,
-          use_case_tags: q.use_case_tags,
-          audience_context: q.audience_context,
-          ministry_type: q.ministry_type,
-          reasoning: q.reasoning,
         },
       });
     }
