@@ -173,6 +173,14 @@ export default function AdminQuestionsPage() {
     }
   }, [showAll]);
 
+  useEffect(() => {
+    if (versionFilter) {
+      setCurrentPage(1); // Reset to first page when filters change
+      setShowAll(false); // Reset show all when filters change
+      loadQuestions(1, false);
+    }
+  }, [tierFilter, categoryFilter]);
+
   async function loadVersions() {
     try {
       const response = await fetch("/api/admin/question-sets");
@@ -239,6 +247,8 @@ export default function AdminQuestionsPage() {
     try {
       // Get question_set_id from versions list
       const selectedVersion = versions.find(v => v.semantic_version === versionFilter);
+      let questionSetId: string | null = null;
+      
       if (!selectedVersion) {
         // If not in versions list, fetch from API
         const questionSetsResponse = await fetch("/api/admin/question-sets");
@@ -247,22 +257,36 @@ export default function AdminQuestionsPage() {
           const selectedQuestionSet = questionSetsData.items?.find(
             (qs: { semantic_version: string }) => qs.semantic_version === versionFilter
           );
-          
           if (selectedQuestionSet) {
-            const response = await fetch(
-              `/api/admin/questions?question_set_id=${selectedQuestionSet.id}&limit=${limit}&offset=${offset}`
-            );
-            if (response.ok) {
-              const data = await response.json();
-              setQuestions(data.items || []);
-              setTotalQuestions(data.total || 0);
-            }
+            questionSetId = selectedQuestionSet.id;
           }
         }
       } else {
-        const response = await fetch(
-          `/api/admin/questions?question_set_id=${selectedVersion.id}&limit=${limit}&offset=${offset}`
-        );
+        questionSetId = selectedVersion.id;
+      }
+      
+      if (questionSetId) {
+        // Build query parameters
+        const params = new URLSearchParams({
+          question_set_id: questionSetId,
+          limit: limit.toString(),
+          offset: offset.toString(),
+        });
+        
+        // Add tier filter if not "all"
+        if (tierFilter !== "all") {
+          const tierNum = parseInt(tierFilter.replace("tier", ""));
+          if (!isNaN(tierNum)) {
+            params.append("tier", tierNum.toString());
+          }
+        }
+        
+        // Add category filter if not "all"
+        if (categoryFilter !== "all") {
+          params.append("category", categoryFilter);
+        }
+        
+        const response = await fetch(`/api/admin/questions?${params.toString()}`);
         if (response.ok) {
           const data = await response.json();
           setQuestions(data.items || []);
