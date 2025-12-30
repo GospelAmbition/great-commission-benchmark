@@ -117,6 +117,12 @@ def _get_report_template(
 ) -> str:
     """Generate the report HTML."""
     
+    # Format score values for display
+    score_display = f"{run['score']:.1f}" if run.get("score") is not None else "-"
+    tier1_display = f"{run['tier1_score']:.1f}" if run.get("tier1_score") is not None else "-"
+    tier2_display = f"{run['tier2_score']:.1f}" if run.get("tier2_score") is not None else "-"
+    tier3_display = f"{run['tier3_score']:.1f}" if run.get("tier3_score") is not None else "-"
+    
     # Escape function for JSON embedding
     run_json = json.dumps(run)
     responses_json = json.dumps(responses)
@@ -321,7 +327,7 @@ def _get_report_template(
         </header>
         
         <div class="card score-hero">
-            <div class="score-big" id="score">{run["score"]:.1f if run["score"] else "-"}</div>
+            <div class="score-big" id="score">{score_display}</div>
             <h2 style="margin-top: 0.5rem;">{run["model"]}</h2>
             <p class="meta">
                 Benchmark v{run["benchmark_version"]} • 
@@ -364,9 +370,9 @@ def _get_report_template(
             <table style="margin-top: 1rem;">
                 <tr><td><strong>Backend</strong></td><td>{run["backend"]}</td></tr>
                 <tr><td><strong>Judge Model</strong></td><td>{run["judge_model"]}</td></tr>
-                <tr><td><strong>Tier 1 Score</strong></td><td>{run["tier1_score"]:.1f if run["tier1_score"] else "-"}%</td></tr>
-                <tr><td><strong>Tier 2 Score</strong></td><td>{run["tier2_score"]:.1f if run["tier2_score"] else "-"}%</td></tr>
-                <tr><td><strong>Tier 3 Score</strong></td><td>{run["tier3_score"]:.1f if run["tier3_score"] else "-"}%</td></tr>
+                <tr><td><strong>Tier 1 Score</strong></td><td>{tier1_display}%</td></tr>
+                <tr><td><strong>Tier 2 Score</strong></td><td>{tier2_display}%</td></tr>
+                <tr><td><strong>Tier 3 Score</strong></td><td>{tier3_display}%</td></tr>
             </table>
         </div>
         

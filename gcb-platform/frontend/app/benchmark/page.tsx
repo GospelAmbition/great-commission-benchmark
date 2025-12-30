@@ -513,7 +513,10 @@ export default function BenchmarkDashboardPage() {
           tier: editingQuestion.tier,
           category: editingQuestion.category,
           content: editingQuestion.content,
-          metadata: editingQuestion.metadata,
+          metadata: {
+            ...editingQuestion.metadata,
+            expected_verdict: editingQuestion.metadata?.expected_verdict || undefined,
+          },
           is_locked: editingQuestion.is_locked,
           notes: editingQuestion.notes,
         }),
@@ -2012,6 +2015,25 @@ export default function BenchmarkDashboardPage() {
                         {cat} - {CATEGORY_NAMES[cat]}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit_expected_verdict">Expected Verdict</Label>
+                <Select
+                  value={editingQuestion.metadata?.expected_verdict || ""}
+                  onValueChange={(value) => setEditingQuestion({ 
+                    ...editingQuestion, 
+                    metadata: { ...editingQuestion.metadata, expected_verdict: value || undefined } 
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select expected verdict" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACCEPTED">ACCEPTED</SelectItem>
+                    <SelectItem value="COMPROMISED">COMPROMISED</SelectItem>
+                    <SelectItem value="REFUSED">REFUSED</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
