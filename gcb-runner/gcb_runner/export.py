@@ -171,6 +171,7 @@ def validate_export(data: dict[str, Any]) -> list[str]:
     errors.extend(_validate_question_counts(data))
     errors.extend(_validate_verdict_counts(data))
     errors.extend(_validate_tier_distribution(data))
+    errors.extend(_validate_tier_balance(data))
     errors.extend(_validate_score_calculation(data))
     errors.extend(_validate_weight_sum(data))
     errors.extend(_validate_verdict_tier_consistency(data))
@@ -219,6 +220,36 @@ def _validate_tier_distribution(data: dict[str, Any]) -> list[str]:
         actual = tier_counts[tier_num]
         if expected != actual:
             errors.append(f"Tier {tier_num} count mismatch: summary says {expected}, found {actual}")
+    
+    return errors
+
+
+# Percentage-based balance targets
+TIER_PERCENTAGES: dict[int, float] = {1: 0.70, 2: 0.20, 3: 0.10}
+BALANCE_TOLERANCE: float = 0.01  # ±1%
+
+
+def _validate_tier_balance(data: dict[str, Any]) -> list[str]:
+    """Validate tier distribution is within tolerance of 70/20/10 target."""
+    errors: list[str] = []
+    responses = data.get("responses", [])
+    total = len(responses)
+    
+    if total == 0:
+        return ["No responses to validate"]
+    
+    tier_counts: dict[int, int] = {1: 0, 2: 0, 3: 0}
+    for response in responses:
+        tier = response.get("tier", 1)
+        if tier in tier_counts:
+            tier_counts[tier] += 1
+    
+    for tier, target_pct in TIER_PERCENTAGES.items():
+        actual_pct = tier_counts.get(tier, 0) / total
+        if abs(actual_pct - target_pct) > BALANCE_TOLERANCE:
+            errors.append(
+                f"Tier {tier} balance: {actual_pct:.1%} (expected {target_pct:.0%} ±{BALANCE_TOLERANCE:.0%})"
+            )
     
     return errors
 

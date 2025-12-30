@@ -1,5 +1,5 @@
 """QuestionSet model"""
-from sqlalchemy import Column, String, DateTime, Text
+from sqlalchemy import Column, String, DateTime, Text, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -19,3 +19,4 @@ class QuestionSet(Base):
     locked_at = Column(DateTime(timezone=True))
     archived_at = Column(DateTime(timezone=True))
     notes = Column(Text)
+    target_question_count = Column(Integer, nullable=True)  # Optional target for version (e.g., 200 or 300)

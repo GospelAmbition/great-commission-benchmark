@@ -11,6 +11,7 @@ from app.db.models.user import User
 from app.db.models.test_run import TestRun
 from app.db.models.community_submission import CommunitySubmission
 from app.db.models.result import Result
+from app.db.models.question import Question
 from app.services.scoring import ScoringService
 from app.schemas.user import (
     UserProfileResponse,
@@ -137,12 +138,15 @@ async def get_user_tests(
                 pass
         
         # Calculate progress
-        total_questions = db.query(Result).filter(Result.test_run_id == test_run.id).count()
-        # TODO: Get total from question_set
+        completed_questions = db.query(Result).filter(Result.test_run_id == test_run.id).count()
+        # Get actual total from question_set
+        question_set_total = db.query(Question).filter(
+            Question.question_set_id == test_run.question_set_id
+        ).count()
         progress = {
-            "completed": total_questions,
-            "total": 300,  # Placeholder
-            "percentage": int((total_questions / 300) * 100) if total_questions > 0 else 0
+            "completed": completed_questions,
+            "total": question_set_total,
+            "percentage": int((completed_questions / question_set_total) * 100) if question_set_total > 0 else 0
         }
         
         tests.append(TestListItem(

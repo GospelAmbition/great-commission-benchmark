@@ -220,6 +220,10 @@ export default function BenchmarkDashboardPage() {
     action: string;
     version: QuestionSet;
   } | null>(null);
+  const [showTargetDialog, setShowTargetDialog] = useState(false);
+  const [targetVersion, setTargetVersion] = useState<QuestionSet | null>(null);
+  const [editTargetValue, setEditTargetValue] = useState("");
+  const [targetLoading, setTargetLoading] = useState(false);
   
   // Import state
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -459,6 +463,29 @@ export default function BenchmarkDashboardPage() {
       toast.error(error.message || `Failed to ${action} version`);
     } finally {
       setActionLoading(false);
+    }
+  }
+
+  async function handleUpdateTarget() {
+    if (!targetVersion) return;
+    setTargetLoading(true);
+    try {
+      const targetValue = editTargetValue.trim() === "" ? null : parseInt(editTargetValue, 10);
+      await apiRequest(`/api/benchmark/question-sets/${targetVersion.id}/target`, {
+        method: "PATCH",
+        body: JSON.stringify({ target_question_count: targetValue }),
+      });
+
+      const targetDisplay = targetValue ? `${targetValue} questions` : "auto-calculated";
+      toast.success(`Target updated to ${targetDisplay}`);
+      setShowTargetDialog(false);
+      setTargetVersion(null);
+      setEditTargetValue("");
+      loadData();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update target");
+    } finally {
+      setTargetLoading(false);
     }
   }
 
@@ -1730,6 +1757,17 @@ export default function BenchmarkDashboardPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={() => {
+                                  setTargetVersion(qs);
+                                  setEditTargetValue("");
+                                  setShowTargetDialog(true);
+                                }}
+                              >
+                                Set Target
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => setShowConfirmDialog({ action: "lock", version: qs })}
                               >
                                 Lock
@@ -2235,6 +2273,71 @@ export default function BenchmarkDashboardPage() {
                 {importLoading ? "Importing..." : `Import ${importValidation.imported} Questions`}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Set Target Dialog */}
+      <Dialog open={showTargetDialog} onOpenChange={setShowTargetDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Question Target</DialogTitle>
+            <DialogDescription>
+              Set a target question count for version {targetVersion?.semantic_version}.
+              Leave blank for automatic calculation based on current questions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="target-count">Target Question Count</Label>
+              <Input
+                id="target-count"
+                type="number"
+                placeholder="e.g., 200 or 300"
+                value={editTargetValue}
+                onChange={(e) => setEditTargetValue(e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Leave blank to calculate targets from actual question count
+              </p>
+            </div>
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Current Questions:</span>
+                <span className="font-medium">{targetVersion?.question_count || 0}</span>
+              </div>
+              {editTargetValue && parseInt(editTargetValue) > 0 && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span>Tier 1 target (70%):</span>
+                    <span>{Math.round(parseInt(editTargetValue) * 0.7)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Tier 2 target (20%):</span>
+                    <span>{Math.round(parseInt(editTargetValue) * 0.2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Tier 3 target (10%):</span>
+                    <span>{Math.round(parseInt(editTargetValue) * 0.1)}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowTargetDialog(false);
+              setEditTargetValue("");
+            }} disabled={targetLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateTarget}
+              disabled={targetLoading}
+            >
+              {targetLoading ? "Updating..." : "Update Target"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

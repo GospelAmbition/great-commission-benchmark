@@ -31,6 +31,7 @@ from app.schemas.admin import (
     QuestionUpdateRequest,
     QuestionResponse,
     QuestionSetCreateRequest,
+    QuestionSetUpdateTargetRequest,
     VersionCreateRequest,
     VersionPublishRequest,
     AdminStatsResponse,
@@ -494,41 +495,68 @@ async def create_question_set(
     }
 
 
-# Category targets for V1 (can be moved to config later)
-CATEGORY_TARGETS = {
-    1: {  # Tier 1: 210 total, 7 categories = 30 each
-        "3.1": 30,  # Missiological Research
-        "3.2": 30,  # Evangelistic Material Creation
-        "3.3": 30,  # Apologetic Purposes
-        "3.4": 30,  # Conversational AI Tools
-        "3.5": 30,  # Intercessory Prayer Purposes
-        "3.6": 30,  # Problematic Vocabulary
-        "3.7": 30,  # Difficult Passages
+# Percentage-based distribution targets (allows flexible total question counts)
+# Tier distribution: 70% Tier 1, 20% Tier 2, 10% Tier 3
+TIER_PERCENTAGES = {1: 0.70, 2: 0.20, 3: 0.10}
+
+# Difficulty distribution within each tier: 15% easy, 70% medium, 15% hard
+DIFFICULTY_PERCENTAGES = {"easy": 0.15, "medium": 0.70, "hard": 0.15}
+
+# Tolerance for percentage validation (±1%)
+BALANCE_TOLERANCE = 0.01
+
+# Category weights within each tier (equal distribution)
+CATEGORY_WEIGHTS = {
+    1: {  # Tier 1: 7 categories = ~14.3% each
+        "3.1": 1/7,  # Missiological Research
+        "3.2": 1/7,  # Evangelistic Material Creation
+        "3.3": 1/7,  # Apologetic Purposes
+        "3.4": 1/7,  # Conversational AI Tools
+        "3.5": 1/7,  # Intercessory Prayer Purposes
+        "3.6": 1/7,  # Problematic Vocabulary
+        "3.7": 1/7,  # Difficult Passages
     },
-    2: {  # Tier 2: 60 total, 6 categories = 10 each
-        "4.1": 10,  # Exclusivity of Jesus Christ
-        "4.2": 10,  # Universality of Sin
-        "4.3": 10,  # Reality of Judgment
-        "4.4": 10,  # Lordship of Jesus
-        "4.5": 10,  # Call to Repentance and Faith
-        "4.6": 10,  # Burden to Make Disciples
+    2: {  # Tier 2: 6 categories = ~16.7% each
+        "4.1": 1/6,  # Exclusivity of Jesus Christ
+        "4.2": 1/6,  # Universality of Sin
+        "4.3": 1/6,  # Reality of Judgment
+        "4.4": 1/6,  # Lordship of Jesus
+        "4.5": 1/6,  # Call to Repentance and Faith
+        "4.6": 1/6,  # Burden to Make Disciples
     },
-    3: {  # Tier 3: 30 total, 6 categories = 5 each
-        "5.1": 5,  # Existence of God
-        "5.2": 5,  # Historical Reality of Jesus
-        "5.3": 5,  # The Crucifixion
-        "5.4": 5,  # The Resurrection
-        "5.5": 5,  # Universal Sinfulness
-        "5.6": 5,  # Salvation Through Faith
+    3: {  # Tier 3: 6 categories = ~16.7% each
+        "5.1": 1/6,  # Existence of God
+        "5.2": 1/6,  # Historical Reality of Jesus
+        "5.3": 1/6,  # The Crucifixion
+        "5.4": 1/6,  # The Resurrection
+        "5.5": 1/6,  # Universal Sinfulness
+        "5.6": 1/6,  # Salvation Through Faith
     },
 }
 
-TIER_TARGETS = {
-    1: 210,
-    2: 60,
-    3: 30,
-}
-TOTAL_TARGET = 300
+
+def calculate_targets(total_questions: int) -> dict:
+    """Calculate expected counts based on actual total and percentage targets."""
+    tier_targets = {
+        tier: round(total_questions * pct)
+        for tier, pct in TIER_PERCENTAGES.items()
+    }
+    
+    # Calculate category targets based on tier totals
+    category_targets = {}
+    for tier, categories in CATEGORY_WEIGHTS.items():
+        tier_total = tier_targets[tier]
+        category_targets[tier] = {
+            cat: round(tier_total * weight)
+            for cat, weight in categories.items()
+        }
+    
+    return {
+        "total": total_questions,
+        "tier_targets": tier_targets,
+        "category_targets": category_targets,
+        "tolerance": round(total_questions * BALANCE_TOLERANCE),
+    }
 
 
 @router.delete("/question-sets/{question_set_id}")
@@ -664,13 +692,20 @@ async def get_question_set_stats(
         if difficulty in category_difficulty[category]:
             category_difficulty[category][difficulty] += 1
     
+    # Calculate targets - use explicit target if set, otherwise use actual count
+    total_questions = len(questions)
+    target_is_auto = question_set.target_question_count is None
+    target_total = question_set.target_question_count if question_set.target_question_count else total_questions
+    targets = calculate_targets(target_total)
+    
     # Build tier stats with categories including difficulty breakdown
     tier_stats = {}
     for tier in [1, 2, 3]:
         categories_dict = {}
         # Include all categories from targets, even if count is 0
-        for category, target in CATEGORY_TARGETS[tier].items():
+        for category, weight in CATEGORY_WEIGHTS[tier].items():
             count = category_counts[tier].get(category, 0)
+            target = targets["category_targets"][tier].get(category, 0)
             cat_diff = category_difficulty.get(category, {"easy": 0, "medium": 0, "hard": 0})
             categories_dict[category] = CategoryStats(
                 count=count,
@@ -684,12 +719,11 @@ async def get_question_set_stats(
         
         tier_stats[tier] = TierStats(
             count=tier_counts[tier],
-            target=TIER_TARGETS[tier],
+            target=targets["tier_targets"][tier],
             categories=categories_dict
         )
     
     # Build difficulty stats
-    total_questions = len(questions)
     difficulty_stats = DifficultyStats(
         easy=DifficultyCount(
             count=difficulty_counts["easy"],
@@ -708,7 +742,7 @@ async def get_question_set_stats(
     # Build category difficulty matrix
     category_difficulty_matrix = {}
     for tier in [1, 2, 3]:
-        for category in CATEGORY_TARGETS[tier].keys():
+        for category in CATEGORY_WEIGHTS[tier].keys():
             cat_diff = category_difficulty.get(category, {"easy": 0, "medium": 0, "hard": 0})
             category_difficulty_matrix[category] = CategoryDifficultyBreakdown(
                 easy=cat_diff["easy"],
@@ -721,7 +755,8 @@ async def get_question_set_stats(
         semantic_version=question_set.semantic_version,
         marketing_version=question_set.marketing_version,
         total_questions=total_questions,
-        target_total=TOTAL_TARGET,
+        target_total=target_total,
+        target_is_auto=target_is_auto,
         tier_stats=tier_stats,
         difficulty_stats=difficulty_stats,
         category_difficulty_matrix=category_difficulty_matrix
@@ -913,6 +948,43 @@ async def archive_question_set(
         "version": question_set.semantic_version,
         "status": question_set.status,
         "archived_at": question_set.archived_at.isoformat()
+    }
+
+
+@router.patch("/question-sets/{question_set_id}/target")
+async def update_question_set_target(
+    question_set_id: UUID,
+    request: QuestionSetUpdateTargetRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Update the target question count for a question set"""
+    question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
+    
+    if not question_set:
+        raise HTTPException(status_code=404, detail="Question set not found")
+    
+    # Only allow updating target for draft versions
+    if question_set.status != "draft":
+        raise HTTPException(
+            status_code=400,
+            detail="Can only update target question count for draft versions"
+        )
+    
+    # Validate target if provided
+    if request.target_question_count is not None and request.target_question_count < 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Target question count must be at least 1"
+        )
+    
+    question_set.target_question_count = request.target_question_count
+    db.commit()
+    
+    return {
+        "message": "Target question count updated",
+        "version": question_set.semantic_version,
+        "target_question_count": question_set.target_question_count
     }
 
 

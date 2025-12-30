@@ -102,6 +102,7 @@ class QuestionSetCreateRequest(BaseModel):
     semantic_version: str = "1.0"
     marketing_version: str = "Version 1"
     notes: Optional[str] = None
+    target_question_count: Optional[int] = None  # Optional target (e.g., 200 or 300)
 
 
 class VersionCreateRequest(BaseModel):
@@ -166,6 +167,7 @@ class QuestionSetStatsResponse(BaseModel):
     marketing_version: str
     total_questions: int
     target_total: int
+    target_is_auto: bool  # True if target was auto-calculated from actual count
     tier_stats: Dict[int, TierStats]
     difficulty_stats: DifficultyStats
     category_difficulty_matrix: Dict[str, CategoryDifficultyBreakdown]  # category -> difficulty breakdown
@@ -176,3 +178,15 @@ class QuestionSetCopyRequest(BaseModel):
     new_semantic_version: str
     new_marketing_version: str
     notes: Optional[str] = None
+
+
+class QuestionSetUpdateTargetRequest(BaseModel):
+    """Request to update question set target"""
+    target_question_count: Optional[int] = None  # Set to None to use auto-calculation
+
+
+class QuestionSetUpdateTargetResponse(BaseModel):
+    """Response after updating question set target"""
+    question_set_id: UUID
+    target_question_count: Optional[int]
+    message: str

@@ -229,10 +229,10 @@ def versions(
         console.print("[yellow]⚠️  Draft versions are for testing only - results won't be published to leaderboard[/yellow]")
         console.print()
     
-    console.print("[dim]Question distribution follows 70/20/10 weighting:[/dim]")
-    console.print("  • Tier 1 (Task Capability): 70%")
-    console.print("  • Tier 2 (Doctrinal Fidelity): 20%")
-    console.print("  • Tier 3 (Worldview Confession): 10%")
+    console.print("[dim]Question distribution follows 70/20/10 tier weighting:[/dim]")
+    console.print("  • Tier 1 (Task Capability): 70% of questions")
+    console.print("  • Tier 2 (Doctrinal Fidelity): 20% of questions")
+    console.print("  • Tier 3 (Worldview Confession): 10% of questions")
     console.print()
     console.print("[dim]Use --benchmark-version to select a specific version.[/dim]")
     if not include_drafts:

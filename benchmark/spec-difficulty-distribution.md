@@ -8,11 +8,13 @@ This document defines the target distribution of question difficulty levels acro
 
 The benchmark uses a **15/70/15 difficulty distribution**:
 
-| Difficulty | Percentage | Questions (of 300) | Purpose |
-|------------|------------|-------------------|---------|
-| **Easy** | 15% | 45 | Sanity check / baseline capability |
-| **Medium** | 70% | 210 | Primary differentiation zone |
-| **Hard** | 15% | 45 | Ceiling test / elite differentiation |
+| Difficulty | Percentage | Purpose |
+|------------|------------|---------|
+| **Easy** | 15% | Sanity check / baseline capability |
+| **Medium** | 70% | Primary differentiation zone |
+| **Hard** | 15% | Ceiling test / elite differentiation |
+
+*Note: The total question count is flexible (e.g., 200 or 300), but the percentage balance must be maintained within ±1% tolerance.*
 
 ---
 
@@ -41,7 +43,7 @@ When evaluating LLMs for Great Commission work, we need a difficulty distributio
 We chose **15/70/15** because it:
 
 1. **Focuses scoring power on medium questions** — Where models actually diverge in behavior
-2. **Maintains adequate sample size at extremes** — 45 questions each for easy/hard provides enough data for pattern analysis
+2. **Maintains adequate sample size at extremes** — 15% at each extreme provides enough data for pattern analysis
 3. **Avoids score compression** — Equal distributions cause bunching at the extremes
 4. **Enables meaningful "Difficulty Gap" analysis** — Enough data to compare Easy_Score - Hard_Score
 
@@ -104,48 +106,57 @@ We chose **15/70/15** because it:
 
 ## Distribution by Tier and Category
 
-### Overall Distribution
+### Overall Distribution (Percentage-Based)
 
-| Tier | Questions | Easy (15%) | Medium (70%) | Hard (15%) |
-|------|-----------|------------|--------------|------------|
-| **Tier 1: Task Capability** | 210 | 31-32 | 147 | 31-32 |
-| **Tier 2: Doctrinal Fidelity** | 60 | 9 | 42 | 9 |
-| **Tier 3: Worldview Confession** | 30 | 4-5 | 21 | 4-5 |
-| **Total** | 300 | 45 | 210 | 45 |
+| Tier | Percentage | Easy (15%) | Medium (70%) | Hard (15%) |
+|------|------------|------------|--------------|------------|
+| **Tier 1: Task Capability** | 70% | 15% of tier | 70% of tier | 15% of tier |
+| **Tier 2: Doctrinal Fidelity** | 20% | 15% of tier | 70% of tier | 15% of tier |
+| **Tier 3: Worldview Confession** | 10% | 15% of tier | 70% of tier | 15% of tier |
 
-### Tier 1 Per-Category Targets (~30 questions each)
+*Targets are calculated dynamically based on total question count. For example:*
+- **300 questions:** Tier 1 = 210, Tier 2 = 60, Tier 3 = 30
+- **200 questions:** Tier 1 = 140, Tier 2 = 40, Tier 3 = 20
 
-| Category | Easy | Medium | Hard |
-|----------|------|--------|------|
-| 3.1 Missiological Research | 4-5 | 21 | 4-5 |
-| 3.2 Evangelistic Material Creation | 4-5 | 21 | 4-5 |
-| 3.3 Apologetic Purposes | 4-5 | 21 | 4-5 |
-| 3.4 Conversational AI Tools | 4-5 | 21 | 4-5 |
-| 3.5 Intercessory Prayer Purposes | 4-5 | 21 | 4-5 |
-| 3.6 Problematic Vocabulary | 4-5 | 21 | 4-5 |
-| 3.7 Difficult Passages | 4-5 | 21 | 4-5 |
+### Tier 1 Per-Category Targets
 
-### Tier 2 Per-Category Targets (~10 questions each)
+7 categories, each receiving ~1/7 (≈14.3%) of Tier 1 questions.
 
-| Category | Easy | Medium | Hard |
-|----------|------|--------|------|
-| 4.1 Exclusivity of Jesus Christ | 1-2 | 7 | 1-2 |
-| 4.2 Universality of Sin | 1-2 | 7 | 1-2 |
-| 4.3 Reality of Judgment | 1-2 | 7 | 1-2 |
-| 4.4 Lordship of Jesus | 1-2 | 7 | 1-2 |
-| 4.5 Call to Repentance and Faith | 1-2 | 7 | 1-2 |
-| 4.6 Burden to Make Disciples | 1-2 | 7 | 1-2 |
+| Category | Percentage of Tier 1 |
+|----------|---------------------|
+| 3.1 Missiological Research | ~14.3% |
+| 3.2 Evangelistic Material Creation | ~14.3% |
+| 3.3 Apologetic Purposes | ~14.3% |
+| 3.4 Conversational AI Tools | ~14.3% |
+| 3.5 Intercessory Prayer Purposes | ~14.3% |
+| 3.6 Problematic Vocabulary | ~14.3% |
+| 3.7 Difficult Passages | ~14.3% |
 
-### Tier 3 Per-Category Targets (~5 questions each)
+### Tier 2 Per-Category Targets
 
-| Category | Easy | Medium | Hard |
-|----------|------|--------|------|
-| 5.1 Existence of God | ~1 | 3-4 | ~1 |
-| 5.2 Historical Reality of Jesus | ~1 | 3-4 | ~1 |
-| 5.3 The Crucifixion | ~1 | 3-4 | ~1 |
-| 5.4 The Resurrection | ~1 | 3-4 | ~1 |
-| 5.5 Universal Sinfulness | ~1 | 3-4 | ~1 |
-| 5.6 Salvation Through Faith | ~1 | 3-4 | ~1 |
+6 categories, each receiving ~1/6 (≈16.7%) of Tier 2 questions.
+
+| Category | Percentage of Tier 2 |
+|----------|---------------------|
+| 4.1 Exclusivity of Jesus Christ | ~16.7% |
+| 4.2 Universality of Sin | ~16.7% |
+| 4.3 Reality of Judgment | ~16.7% |
+| 4.4 Lordship of Jesus | ~16.7% |
+| 4.5 Call to Repentance and Faith | ~16.7% |
+| 4.6 Burden to Make Disciples | ~16.7% |
+
+### Tier 3 Per-Category Targets
+
+6 categories, each receiving ~1/6 (≈16.7%) of Tier 3 questions.
+
+| Category | Percentage of Tier 3 |
+|----------|---------------------|
+| 5.1 Existence of God | ~16.7% |
+| 5.2 Historical Reality of Jesus | ~16.7% |
+| 5.3 The Crucifixion | ~16.7% |
+| 5.4 The Resurrection | ~16.7% |
+| 5.5 Universal Sinfulness | ~16.7% |
+| 5.6 Salvation Through Faith | ~16.7% |
 
 ---
 
@@ -154,7 +165,7 @@ We chose **15/70/15** because it:
 ### Why Not 10/80/10?
 
 Initially considered for maximum medium-focus, but rejected because:
-- Only 30 questions at each extreme provides weak statistical power
+- Only 10% at each extreme provides weak statistical power
 - Harder to identify patterns in easy/hard failures
 - Calibration set would have too few edge cases
 
@@ -180,13 +191,13 @@ A reasonable alternative, but:
 ### Easy Question Failure Rate
 
 ```
-Easy_Failure_Rate = (Failed_Easy_Questions / 45) × 100
+Easy_Failure_Rate = (Failed_Easy_Questions / Total_Easy_Questions) × 100
 
 Interpretation:
 - 0%: Ideal
-- 1-5% (0-2 failures): Minor issues
-- 5-10% (2-4 failures): Concerning
-- >10% (5+ failures): Major problems—model not suitable
+- 1-5%: Minor issues
+- 5-10%: Concerning
+- >10%: Major problems—model not suitable
 ```
 
 ### Difficulty Gap
@@ -194,7 +205,7 @@ Interpretation:
 ```
 Difficulty_Gap = Easy_Score - Hard_Score
 
-With 45 questions at each extreme, this metric has adequate statistical power.
+With 15% at each extreme, this metric has adequate statistical power.
 
 Interpretation:
 - <15 points: Excellent—model handles difficulty consistently
@@ -205,9 +216,9 @@ Interpretation:
 ### Medium Question Pass Rate
 
 ```
-Medium_Pass_Rate = (Passed_Medium_Questions / 210) × 100
+Medium_Pass_Rate = (Passed_Medium_Questions / Total_Medium_Questions) × 100
 
-This is the primary differentiator between models.
+This is the primary differentiator between models (70% of questions).
 
 Interpretation:
 - 80%+: Excellent for Great Commission work

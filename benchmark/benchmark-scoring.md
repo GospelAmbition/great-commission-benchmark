@@ -146,6 +146,8 @@ Round to the nearest integer for leaderboard display.
 
 ### Example Calculation
 
+*Example with 300 questions (counts scale proportionally with different totals):*
+
 | Tier | Questions | Passing | Raw Score | × Weight | Contribution |
 |------|-----------|---------|-----------|----------|--------------|
 | Tier 1 (Task) | 210 | 172 | 82.0% | × 0.70 | 57.4 |
@@ -157,35 +159,38 @@ Round to the nearest integer for leaderboard display.
 
 ## Question Distribution
 
-### Target Distribution
+### Target Distribution (Percentage-Based)
 
-For a 300-question benchmark:
+The benchmark supports variable question counts (e.g., 200 or 300) while maintaining consistent percentage balance:
 
-| Tier | Target % | Questions | Categories |
-|------|----------|-----------|------------|
-| Tier 1 | 70% | 210 | 7 use case categories |
-| Tier 2 | 20% | 60 | 6 doctrinal areas |
-| Tier 3 | 10% | 30 | 6 worldview affirmations |
+| Tier | Target % | Categories | Balance Tolerance |
+|------|----------|------------|-------------------|
+| Tier 1 | 70% | 7 use case categories | ±1% |
+| Tier 2 | 20% | 6 doctrinal areas | ±1% |
+| Tier 3 | 10% | 6 worldview affirmations | ±1% |
 
-### Tier 1 Distribution (210 questions across 7 categories)
+*Example counts:*
+- **300 questions:** 210 / 60 / 30
+- **200 questions:** 140 / 40 / 20
 
-| Category | Min | Target | Max |
-|----------|-----|--------|-----|
-| 3.1 Missiological Research | 25 | 30 | 35 |
-| 3.2 Evangelistic Material Creation | 25 | 30 | 35 |
-| 3.3 Apologetic Purposes | 25 | 30 | 35 |
-| 3.4 Conversational AI Tools | 25 | 30 | 35 |
-| 3.5 Intercessory Prayer Purposes | 25 | 30 | 35 |
-| 3.6 Problematic Vocabulary | 25 | 30 | 35 |
-| 3.7 Difficult Passages | 25 | 30 | 35 |
+### Tier 1 Distribution (7 categories, ~14.3% each)
 
-### Tier 2 Distribution (60 questions across 6 doctrines)
+Categories receive equal distribution within Tier 1:
+- 3.1 Missiological Research
+- 3.2 Evangelistic Material Creation
+- 3.3 Apologetic Purposes
+- 3.4 Conversational AI Tools
+- 3.5 Intercessory Prayer Purposes
+- 3.6 Problematic Vocabulary
+- 3.7 Difficult Passages
 
-Each of the 6 theological minimums should have ~10 questions.
+### Tier 2 Distribution (6 doctrines, ~16.7% each)
 
-### Tier 3 Distribution (30 questions across 6 affirmations)
+Each of the 6 theological minimums receives equal distribution within Tier 2.
 
-Each of the 6 worldview affirmations should have ~5 questions.
+### Tier 3 Distribution (6 affirmations, ~16.7% each)
+
+Each of the 6 worldview affirmations receives equal distribution within Tier 3.
 
 ---
 

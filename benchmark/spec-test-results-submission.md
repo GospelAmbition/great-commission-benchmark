@@ -85,12 +85,12 @@ CLI submissions have **stricter validation requirements** than benchmark version
 │   1. EVERY QUESTION MUST BE ANSWERED                                        │
 │   ─────────────────────────────────────                                     │
 │                                                                             │
-│   Benchmark Version 2.0 has 300 questions.                                  │
-│   Submission must contain exactly 300 responses.                            │
+│   Submission must contain exactly N responses matching the question set.    │
+│   The total question count is flexible (e.g., 200 or 300).                  │
 │                                                                             │
-│   ✗ 299 responses → Rejected (incomplete)                                   │
-│   ✗ 301 responses → Rejected (extra responses)                              │
-│   ✓ 300 responses → Accepted for further validation                         │
+│   ✗ N-1 responses → Rejected (incomplete)                                   │
+│   ✗ N+1 responses → Rejected (extra responses)                              │
+│   ✓ N responses → Accepted for further validation                           │
 │                                                                             │
 │   ─────────────────────────────────────────────────────────────────────────│
 │                                                                             │
@@ -99,9 +99,9 @@ CLI submissions have **stricter validation requirements** than benchmark version
 │                                                                             │
 │   Every response.question_id must match a question in the benchmark.        │
 │                                                                             │
-│   Benchmark questions: [1, 2, 3, 4, ..., 300]                               │
-│   Submission IDs:      [1, 2, 3, 4, ..., 300] ✓                             │
-│   Submission IDs:      [1, 2, 3, 5, ..., 301] ✗ (ID 4 missing, 301 unknown) │
+│   Benchmark questions: [1, 2, 3, 4, ..., N]                                 │
+│   Submission IDs:      [1, 2, 3, 4, ..., N] ✓                               │
+│   Submission IDs:      [1, 2, 3, 5, ..., N+1] ✗ (ID 4 missing, N+1 unknown) │
 │                                                                             │
 │   ─────────────────────────────────────────────────────────────────────────│
 │                                                                             │
@@ -150,7 +150,7 @@ CLI submissions have **stricter validation requirements** than benchmark version
 │   CLI Version: 1.3.0                                                        │
 │                                                                             │
 │   Loading questions from embedded bundle...                                 │
-│     ✓ 300 questions loaded (Tier 1: 210, Tier 2: 60, Tier 3: 30)           │
+│     ✓ Questions loaded (Tier 1: 70%, Tier 2: 20%, Tier 3: 10%)             │
 │     ✓ Bundle checksum verified                                             │
 │                                                                             │
 │   Testing: llama3.2:70b via Ollama                                         │
@@ -195,9 +195,9 @@ CLI submissions have **stricter validation requirements** than benchmark version
 │   Exporting test run #3...                                                  │
 │                                                                             │
 │   Pre-export validation:                                                    │
-│     ✓ All 300 questions answered                                           │
+│     ✓ All questions answered                                               │
 │     ✓ No duplicate question IDs                                            │
-│     ✓ Tier distribution matches (210/60/30)                                │
+│     ✓ Tier distribution matches 70/20/10 (±1%)                             │
 │     ✓ Score calculation verified                                           │
 │     ✓ Checksum generated: sha256:a1b2c3d4...                               │
 │                                                                             │
@@ -226,7 +226,7 @@ See [spec-export-schema-validation.md](./spec-export-schema-validation.md) for c
     "completed_at": "2025-12-15T14:32:01Z"
   },
   "summary": {
-    "total_questions": 300,
+    "total_questions": 300,  // Flexible total (e.g., 200 or 300)
     "score": 72.4,
     "scoring_weights": { "tier1": 0.70, "tier2": 0.20, "tier3": 0.10 },
     "tier_scores": {
@@ -352,8 +352,8 @@ See [spec-export-schema-validation.md](./spec-export-schema-validation.md) for c
 │   │                                                                     │   │
 │   │   Stage 3: Completeness Validation  ◀── STRICT REQUIREMENTS         │   │
 │   │   ──────────────────────────────────                                │   │
-│   │   ✓ Response count (300) matches question count for v2.0            │   │
-│   │   ✓ All 300 question IDs present in responses                       │   │
+│   │   ✓ Response count matches question count for version               │   │
+│   │   ✓ All question IDs present in responses                           │   │
 │   │   ✓ No duplicate question IDs                                       │   │
 │   │   ✓ All question IDs are valid for benchmark v2.0                   │   │
 │   │                                                                     │   │
@@ -645,7 +645,7 @@ Content-Type: application/json
       "errors": [
         {
           "code": "INCOMPLETE_RESPONSES",
-          "message": "Expected 300 responses, found 298",
+          "message": "Expected N responses, found N-2",
           "path": "$.responses",
           "missing_question_ids": [145, 267]
         },
@@ -678,7 +678,7 @@ Get user's submission history.
 
 | Code | HTTP Status | Description | Resolution |
 |------|-------------|-------------|------------|
-| `INCOMPLETE_RESPONSES` | 400 | Not all questions answered | Ensure all 300 responses included |
+| `INCOMPLETE_RESPONSES` | 400 | Not all questions answered | Ensure all responses included |
 | `INVALID_QUESTION_ID` | 400 | Question ID not in benchmark | Check question IDs match benchmark |
 | `DUPLICATE_QUESTION_ID` | 400 | Same question answered twice | Remove duplicate response |
 | `SCORE_MISMATCH` | 400 | Calculated ≠ reported score | Re-export from CLI |

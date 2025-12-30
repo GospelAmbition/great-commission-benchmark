@@ -164,7 +164,18 @@ async def run_benchmark(
             3: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0},
         }
         
-        tier_names = {1: "Tier 1 - Use Cases (70%)", 2: "Tier 2 - Theology (20%)", 3: "Tier 3 - Worldview (10%)"}
+        # Calculate actual tier counts from questions
+        tier_counts = {1: 0, 2: 0, 3: 0}
+        for q in questions:
+            tier = q.get("tier")
+            if tier in tier_counts:
+                tier_counts[tier] += 1
+        
+        tier_names = {
+            1: f"Tier 1 - Use Cases (70%) [{tier_counts[1]} questions]",
+            2: f"Tier 2 - Theology (20%) [{tier_counts[2]} questions]",
+            3: f"Tier 3 - Worldview (10%) [{tier_counts[3]} questions]",
+        }
         
         with Progress(
             SpinnerColumn(),

@@ -205,18 +205,18 @@ CLI Version: 1.3.0
 
 Fetching questions from Platform API...
   ✓ Connected to Platform API
-  ✓ Version 2.0 found (300 questions)
+  ✓ Version 2.0 found
   ✓ Cached locally for offline use
-  ✓ 300 questions loaded (Tier 1: 210, Tier 2: 60, Tier 3: 30)
+  ✓ Questions loaded (Tier 1: 70%, Tier 2: 20%, Tier 3: 10%)
   ✓ Scoring weights: 70% Task / 20% Doctrine / 10% Worldview
 
 Testing: gpt-4o via OpenRouter
 Judge: gpt-4o
 
 Running benchmark...
-  Tier 1 - Use Cases (70%)   ━━━━━━━━━━━━━━━━━━━━ 210/210
-  Tier 2 - Theology (20%)    ━━━━━━━━━━━━━━━━━━━━ 60/60
-  Tier 3 - Worldview (10%)   ━━━━━━━━━━━━━━━━━━━━ 30/30
+  Tier 1 - Use Cases (70%)   ━━━━━━━━━━━━━━━━━━━━ [N questions]
+  Tier 2 - Theology (20%)    ━━━━━━━━━━━━━━━━━━━━ [N questions]
+  Tier 3 - Worldview (10%)   ━━━━━━━━━━━━━━━━━━━━ [N questions]
 
 ═══════════════════════════════════════════════════════════════
 
@@ -343,7 +343,7 @@ The export conforms to the Test Results Export Schema (format version `1.0`):
     "completed_at": "2025-01-15T14:32:01Z"
   },
   "summary": {
-    "total_questions": 300,
+    "total_questions": 300,  // Flexible total (e.g., 200 or 300)
     "score": 78.0,
     "scoring_weights": {
       "tier1": 0.70,
@@ -351,6 +351,7 @@ The export conforms to the Test Results Export Schema (format version `1.0`):
       "tier3": 0.10
     },
     "tier_scores": {
+      // Question counts scale proportionally with total
       "tier1": { "raw": 75.0, "weighted": 52.5, "questions": 210 },
       "tier2": { "raw": 83.0, "weighted": 16.6, "questions": 60 },
       "tier3": { "raw": 87.0, "weighted": 8.7, "questions": 30 }
@@ -1285,10 +1286,10 @@ Fetching versions from Platform API...
 │ Version 1 (1.0)     │ Archived     │ 120        │ January 2025    │
 └─────────────────────┴──────────────┴────────────┴─────────────────┘
 
-Question distribution follows 70/20/10 weighting:
-  • Tier 1 (Task Capability): 70% - e.g., 210 questions in 2.0
-  • Tier 2 (Doctrinal Fidelity): 20% - e.g., 60 questions in 2.0
-  • Tier 3 (Worldview Confession): 10% - e.g., 30 questions in 2.0
+Question distribution follows 70/20/10 tier weighting (±1% tolerance):
+  • Tier 1 (Task Capability): 70% of questions
+  • Tier 2 (Doctrinal Fidelity): 20% of questions
+  • Tier 3 (Worldview Confession): 10% of questions
 
 Use --benchmark-version to select a specific version.
 ```

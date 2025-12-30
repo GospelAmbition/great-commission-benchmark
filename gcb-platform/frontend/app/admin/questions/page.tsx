@@ -223,9 +223,13 @@ export default function AdminQuestionsPage() {
   async function loadVersionStats() {
     if (!versionFilter) return;
     
+    // Find the version ID from the semantic version
+    const version = versions.find(v => v.semantic_version === versionFilter);
+    if (!version) return;
+    
     setLoadingStats(true);
     try {
-      const response = await fetch(`/api/admin/versions/${versionFilter}/stats`);
+      const response = await fetch(`/api/benchmark/question-sets/${version.id}/stats`);
       if (response.ok) {
         const data = await response.json();
         setVersionStats(data);
@@ -550,7 +554,7 @@ export default function AdminQuestionsPage() {
             <div className="text-muted-foreground">
               <p>No question sets available.</p>
               <p className="text-sm mt-2">
-                Create a question set in the <Link href="/admin/versions" className="text-primary underline">Versions</Link> page first.
+                Create a question set in the <Link href="/benchmark" className="text-primary underline">Benchmark Development</Link> page first.
               </p>
             </div>
           ) : (
