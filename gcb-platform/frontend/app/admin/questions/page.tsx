@@ -229,7 +229,7 @@ export default function AdminQuestionsPage() {
     
     setLoadingStats(true);
     try {
-      const response = await fetch(`/api/benchmark/question-sets/${version.id}/stats`);
+      const response = await fetch(`/api/admin/question-sets/${version.id}/stats`);
       if (response.ok) {
         const data = await response.json();
         setVersionStats(data);
