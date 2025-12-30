@@ -280,6 +280,22 @@ def get_dashboard_html() -> str:
             padding: 2rem;
             color: var(--text-muted);
         }
+        
+        .elevated-access-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: #dbeafe;
+            color: #1e40af;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+        
+        .question-text-section {
+            background: #fffbeb;
+            border-left: 3px solid #f59e0b;
+        }
     </style>
 </head>
 <body>
@@ -287,7 +303,7 @@ def get_dashboard_html() -> str:
         <header>
             <div>
                 <h1>Great Commission Benchmark</h1>
-                <p>Results Viewer</p>
+                <p>Results Viewer <span id="elevated-badge" style="display: none;" class="elevated-access-badge">Developer Access</span></p>
             </div>
         </header>
         
@@ -307,9 +323,14 @@ def get_dashboard_html() -> str:
                 responsesPagesTotal: 1,
                 verdictFilter: '',
                 tierFilter: '',
+                // User access level info
+                hasElevatedAccess: false,
+                userRole: null,
             },
             
             async init() {
+                // Load user info first to determine access level
+                await this.loadUserInfo();
                 await this.loadRuns();
                 
                 // Check URL for run param
@@ -320,6 +341,20 @@ def get_dashboard_html() -> str:
                 }
                 
                 this.render();
+            },
+            
+            async loadUserInfo() {
+                try {
+                    // Force refresh on initial load to get latest permissions
+                    const res = await fetch('/api/user-info?refresh=true');
+                    const data = await res.json();
+                    this.state.hasElevatedAccess = data.is_admin || data.is_benchmark_developer || false;
+                    this.state.userRole = data.role || null;
+                } catch (e) {
+                    // If user info fails, default to no elevated access
+                    this.state.hasElevatedAccess = false;
+                    this.state.userRole = null;
+                }
             },
             
             async loadRuns() {
@@ -350,6 +385,10 @@ def get_dashboard_html() -> str:
                 this.state.responsesPage = data.page;
                 this.state.responsesTotal = data.total;
                 this.state.responsesPagesTotal = data.pages;
+                // Update elevated access from response (server-side check)
+                if (data.has_elevated_access !== undefined) {
+                    this.state.hasElevatedAccess = data.has_elevated_access;
+                }
             },
             
             goBack() {
@@ -376,6 +415,13 @@ def get_dashboard_html() -> str:
             
             render() {
                 const app = document.getElementById('app');
+                
+                // Show/hide elevated access badge
+                const badge = document.getElementById('elevated-badge');
+                if (badge) {
+                    badge.style.display = this.state.hasElevatedAccess ? 'inline-block' : 'none';
+                }
+                
                 if (this.state.currentRun) {
                     app.innerHTML = this.renderRunDetail();
                     this.renderCharts();
@@ -489,7 +535,14 @@ def get_dashboard_html() -> str:
                                     </div>
                                     <span class="badge ${r.verdict === 'ACCEPTED' ? 'badge-pass' : r.verdict === 'COMPROMISED' ? 'badge-partial' : 'badge-fail'}">${r.verdict}</span>
                                 </div>
-                                <div class="meta" style="font-weight: 500;">Model Response:</div>
+                                ${r.question_text ? `
+                                    <div class="meta" style="font-weight: 500; margin-top: 0.5rem;">Question:</div>
+                                    <div class="response-text question-text-section collapsed" id="question-${idx}" data-full-height="0">${this.escapeHtml(r.question_text)}</div>
+                                    <button class="expand-btn" id="expand-question-btn-${idx}" onclick="App.toggleExpand('question-${idx}', 'expand-question-btn-${idx}')" style="display: none;">
+                                        <span class="icon">▼</span> <span class="label">Show full question</span>
+                                    </button>
+                                ` : ''}
+                                <div class="meta" style="font-weight: 500; margin-top: 0.5rem;">Model Response:</div>
                                 <div class="response-text collapsed" id="response-${idx}" data-full-height="0">${this.escapeHtml(r.response_text)}</div>
                                 <button class="expand-btn" id="expand-btn-${idx}" onclick="App.toggleExpand('response-${idx}', 'expand-btn-${idx}')" style="display: none;">
                                     <span class="icon">▼</span> <span class="label">Show full response</span>
@@ -591,12 +644,19 @@ def get_dashboard_html() -> str:
                     textEl.classList.remove('collapsed');
                     textEl.classList.add('expanded');
                     btnEl.classList.add('expanded');
-                    btnEl.querySelector('.label').textContent = textId.includes('reasoning') ? 'Show less' : 'Show less';
+                    btnEl.querySelector('.label').textContent = 'Show less';
                 } else {
                     textEl.classList.remove('expanded');
                     textEl.classList.add('collapsed');
                     btnEl.classList.remove('expanded');
-                    btnEl.querySelector('.label').textContent = textId.includes('reasoning') ? 'Show full reasoning' : 'Show full response';
+                    // Determine the correct label based on the text element type
+                    let label = 'Show full response';
+                    if (textId.includes('reasoning')) {
+                        label = 'Show full reasoning';
+                    } else if (textId.includes('question')) {
+                        label = 'Show full question';
+                    }
+                    btnEl.querySelector('.label').textContent = label;
                 }
             },
             
@@ -604,9 +664,14 @@ def get_dashboard_html() -> str:
                 // Check all response-text elements for overflow
                 document.querySelectorAll('.response-text.collapsed').forEach(el => {
                     const id = el.id;
-                    const btnId = id.includes('reasoning') ? 
-                        'expand-reasoning-btn-' + id.split('-').pop() : 
-                        'expand-btn-' + id.split('-').pop();
+                    let btnId;
+                    if (id.includes('reasoning')) {
+                        btnId = 'expand-reasoning-btn-' + id.split('-').pop();
+                    } else if (id.includes('question')) {
+                        btnId = 'expand-question-btn-' + id.split('-').pop();
+                    } else {
+                        btnId = 'expand-btn-' + id.split('-').pop();
+                    }
                     const btn = document.getElementById(btnId);
                     
                     // Check if content overflows

@@ -11,6 +11,127 @@ from urllib.parse import ParseResult, parse_qs, urlparse
 from gcb_runner.viewer.dashboard import get_dashboard_html
 
 
+# Module-level cache for user info and questions (shared across requests)
+_user_info_cache: dict[str, Any] | None = None
+_cached_api_key: str | None = None  # Track which API key was used for cache
+_questions_cache: dict[str, str] = {}  # question_id -> content
+
+
+def _clear_user_info_cache() -> None:
+    """Clear the user info cache to force refresh on next request."""
+    global _user_info_cache, _cached_api_key
+    _user_info_cache = None
+    _cached_api_key = None
+
+
+def _load_user_info(force_refresh: bool = False) -> dict[str, Any]:
+    """Load user info from Platform API (cached, but invalidates on API key change).
+    
+    Args:
+        force_refresh: If True, bypass cache and fetch fresh data
+    """
+    global _user_info_cache, _cached_api_key
+    
+    try:
+        from gcb_runner.config import Config
+        from gcb_runner.api.client import get_user_info_sync
+        
+        config = Config.load()
+        api_key = config.platform.api_key
+        base_url = config.platform.url
+        
+        # Force refresh if requested
+        if force_refresh:
+            _user_info_cache = None
+            _cached_api_key = None
+        
+        # Invalidate cache if API key changed
+        if _user_info_cache is not None and _cached_api_key != api_key:
+            _user_info_cache = None
+            _cached_api_key = None
+        
+        # Return cached value if available and API key matches
+        if _user_info_cache is not None and _cached_api_key == api_key and not force_refresh:
+            return _user_info_cache
+        
+        # Default non-admin response
+        default_info = {
+            "role": None,
+            "is_admin": False,
+            "is_benchmark_developer": False,
+            "is_moderator": False,
+        }
+        
+        if not api_key:
+            _user_info_cache = default_info
+            _cached_api_key = None
+            return _user_info_cache
+        
+        result = get_user_info_sync(api_key, base_url)
+        if result:
+            _user_info_cache = result
+            _cached_api_key = api_key
+        else:
+            _user_info_cache = default_info
+            _cached_api_key = None
+            
+    except Exception:
+        default_info = {
+            "role": None,
+            "is_admin": False,
+            "is_benchmark_developer": False,
+            "is_moderator": False,
+        }
+        _user_info_cache = default_info
+        _cached_api_key = None
+    
+    return _user_info_cache
+
+
+def _load_questions_for_version(version: str) -> dict[str, str]:
+    """Load questions from cache for a specific version.
+    
+    Returns a mapping of question_id -> question content.
+    """
+    global _questions_cache
+    
+    try:
+        from gcb_runner.api.cache import QuestionCache
+        
+        cache = QuestionCache()
+        data = cache.get(version)
+        
+        if data and "questions" in data:
+            for q in data["questions"]:
+                q_id = q.get("id", "")
+                q_content = q.get("content", "")
+                if q_id and q_content:
+                    _questions_cache[q_id] = q_content
+                    
+    except Exception:
+        pass
+    
+    return _questions_cache
+
+
+def _get_question_text(question_id: str, version: str | None = None) -> str | None:
+    """Get question text for a question ID.
+    
+    Tries to find the question in the cache. If not found and version is provided,
+    loads questions for that version first.
+    """
+    # Check if already in cache
+    if question_id in _questions_cache:
+        return _questions_cache[question_id]
+    
+    # Try to load from version cache
+    if version:
+        _load_questions_for_version(version)
+        return _questions_cache.get(question_id)
+    
+    return None
+
+
 class ViewerHandler(BaseHTTPRequestHandler):
     """Custom handler that serves the dashboard and API endpoints."""
     
@@ -39,6 +160,14 @@ class ViewerHandler(BaseHTTPRequestHandler):
         """Handle API requests by querying SQLite."""
         path = parsed.path
         params = parse_qs(parsed.query)
+        
+        # User info endpoint doesn't need database
+        if path == "/api/user-info":
+            # Check for force refresh parameter
+            force_refresh = params.get("refresh", [None])[0] == "true"
+            user_info = _load_user_info(force_refresh=force_refresh)
+            self._send_json(user_info)
+            return
         
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -147,6 +276,17 @@ class ViewerHandler(BaseHTTPRequestHandler):
         page = int(params.get("page", [1])[0])
         per_page = int(params.get("per_page", [20])[0])
         
+        # Check if user has elevated access (admin or benchmark_developer)
+        user_info = _load_user_info()
+        has_elevated_access = user_info.get("is_admin", False) or user_info.get("is_benchmark_developer", False)
+        
+        # Get benchmark version for this run to load correct questions
+        version_cursor = conn.execute(
+            "SELECT benchmark_version FROM test_runs WHERE id = ?", (run_id,)
+        )
+        version_row = version_cursor.fetchone()
+        benchmark_version = version_row["benchmark_version"] if version_row else None
+        
         # Build query
         query = "SELECT * FROM responses WHERE test_run_id = ?"
         query_params: list[Any] = [run_id]
@@ -171,16 +311,32 @@ class ViewerHandler(BaseHTTPRequestHandler):
         responses = []
         for row in cursor:
             response_text = row["response_text"]
-            responses.append({
+            question_id = row["question_id"]
+            
+            # Build response object
+            response_obj: dict[str, Any] = {
                 "id": row["id"],
-                "question_id": row["question_id"],
+                "question_id": question_id,
                 "tier": row["tier"],
                 "category": row["category"],
-                "response_text": response_text[:500] + "..." if len(response_text) > 500 else response_text,
                 "verdict": row["verdict"],
                 "judge_reasoning": row["judge_reasoning"],
                 "response_time_ms": row["response_time_ms"],
-            })
+            }
+            
+            if has_elevated_access:
+                # Admin/benchmark_developer: show full response and question text
+                response_obj["response_text"] = response_text
+                question_text = _get_question_text(question_id, benchmark_version)
+                if question_text:
+                    response_obj["question_text"] = question_text
+            else:
+                # Regular user: truncate response, no question text
+                response_obj["response_text"] = (
+                    response_text[:500] + "..." if len(response_text) > 500 else response_text
+                )
+            
+            responses.append(response_obj)
         
         return {
             "responses": responses,
@@ -188,6 +344,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
             "page": page,
             "per_page": per_page,
             "pages": (total + per_page - 1) // per_page,
+            "has_elevated_access": has_elevated_access,
         }
     
     def _serve_dashboard(self) -> None:

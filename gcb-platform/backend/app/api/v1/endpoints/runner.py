@@ -240,3 +240,38 @@ async def get_judge_prompts(
             "tier3_worldview": TIER3_JUDGE_PROMPT
         }
     }
+
+
+@router.get("/user-info")
+async def get_user_info(
+    request: Request,
+    db: Session = Depends(get_db),
+    auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
+    _rate_limit: bool = Depends(runner_rate_limit)
+):
+    """Get user information for the authenticated API key.
+    
+    Returns the user's role and permission flags for controlling
+    access to sensitive data like question content in the results viewer.
+    
+    Roles with elevated access:
+    - admin: Full access to all features
+    - benchmark_developer: Access to benchmark development features including question content
+    - moderator: Access to moderation features
+    - user: Standard user access
+    """
+    api_key_record, user = auth
+    
+    # Determine permission flags based on role
+    is_admin = user.role == "admin"
+    is_benchmark_developer = user.role in ("admin", "benchmark_developer")
+    is_moderator = user.role in ("admin", "moderator")
+    
+    return {
+        "role": user.role,
+        "is_admin": is_admin,
+        "is_benchmark_developer": is_benchmark_developer,
+        "is_moderator": is_moderator,
+        "email": user.email,
+        "name": user.name
+    }

@@ -29,7 +29,7 @@ class PlatformAPIClient:
                 base_url=self.base_url,
                 headers={
                     "X-API-Key": self.api_key,
-                    "User-Agent": "gcb-runner/0.1.0",
+                    "User-Agent": "gcb-runner/0.1.1",
                 },
                 timeout=30.0,
             )
@@ -89,3 +89,48 @@ class PlatformAPIClient:
     async def get_judge_prompts(self, version: str = "current") -> dict[str, Any]:
         """Fetch judge prompts for a benchmark version."""
         return await self._request("GET", "/api/runner/judge-prompts", params={"version": version})
+    
+    async def get_user_info(self) -> dict[str, Any]:
+        """Fetch user information for the authenticated API key.
+        
+        Returns:
+            dict with role, is_admin, is_benchmark_developer, is_moderator, email, name
+        """
+        return await self._request("GET", "/api/runner/user-info")
+
+
+def get_user_info_sync(api_key: str, base_url: str = "https://api.greatcommissionbenchmark.ai") -> dict[str, Any] | None:
+    """Synchronous function to fetch user info for the results viewer.
+    
+    This is a standalone sync function (not a method) for use in the synchronous
+    HTTP server that powers the results viewer.
+    
+    Args:
+        api_key: The platform API key
+        base_url: The platform API base URL
+        
+    Returns:
+        dict with role, is_admin, is_benchmark_developer, is_moderator, email, name
+        Returns None if the request fails or API key is invalid.
+    """
+    if not api_key:
+        return None
+    
+    try:
+        with httpx.Client(
+            base_url=base_url.rstrip("/"),
+            headers={
+                "X-API-Key": api_key,
+                "User-Agent": "gcb-runner/0.1.1",
+            },
+            timeout=10.0,
+        ) as client:
+            response = client.get("/api/runner/user-info")
+            
+            if response.status_code == 200:
+                return cast(dict[str, Any], response.json())
+            else:
+                return None
+                
+    except (httpx.TimeoutException, httpx.RequestError):
+        return None
