@@ -210,6 +210,7 @@ export default function BenchmarkDashboardPage() {
   const [selectedTier, setSelectedTier] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
+  const [hideLocked, setHideLocked] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("statistics");
   
   // Dialog state
@@ -1525,6 +1526,11 @@ export default function BenchmarkDashboardPage() {
                   <CardTitle>Question Management</CardTitle>
                   <CardDescription>
                     Browse and edit questions
+                    {questions.length > 0 && (
+                      <span className="ml-2">
+                        ({hideLocked ? `${questions.filter(q => !q.is_locked).length} shown, ${questions.filter(q => q.is_locked).length} locked hidden` : `${questions.length} questions`})
+                      </span>
+                    )}
                     {!canEditQuestions && selectedVersion && (
                       <span className="text-orange-500 ml-2">
                         (Read-only - version is {selectedVersion.status})
@@ -1578,6 +1584,18 @@ export default function BenchmarkDashboardPage() {
                       <SelectItem value="hard">Hard</SelectItem>
                     </SelectContent>
                   </Select>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="hide-locked"
+                      checked={hideLocked}
+                      onChange={(e) => setHideLocked(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <Label htmlFor="hide-locked" className="font-normal cursor-pointer text-sm">
+                      Hide locked
+                    </Label>
+                  </div>
                   <Button 
                     variant="outline" 
                     onClick={exportQuestionsToCSV}
@@ -1617,6 +1635,10 @@ export default function BenchmarkDashboardPage() {
                 <div className="text-center py-8 text-muted-foreground">
                   {selectedVersionId ? "No questions found matching filters" : "Select a version to view questions"}
                 </div>
+              ) : hideLocked && questions.every(q => q.is_locked) ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  All {questions.length} questions are locked. Uncheck &quot;Hide locked&quot; to view them.
+                </div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -1631,7 +1653,7 @@ export default function BenchmarkDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {questions.map((q) => (
+                    {questions.filter(q => !hideLocked || !q.is_locked).map((q) => (
                       <TableRow key={q.id}>
                         <TableCell>
                           <Badge variant="outline">T{q.tier}</Badge>
