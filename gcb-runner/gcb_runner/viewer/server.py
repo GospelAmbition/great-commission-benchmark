@@ -114,11 +114,62 @@ def _load_questions_for_version(version: str) -> dict[str, str]:
     return _questions_cache
 
 
-def _get_question_text(question_id: str, version: str | None = None) -> str | None:
+def _fetch_questions_from_api(version: str | None = None) -> dict[str, str]:
+    """Fetch questions from the Platform API for elevated users (synchronous).
+    
+    Returns a mapping of question_id -> question content.
+    """
+    try:
+        import httpx
+        from gcb_runner.config import Config
+        
+        config = Config.load()
+        api_key = config.platform.api_key
+        base_url = config.platform.url
+        
+        if not api_key:
+            return {}
+        
+        # Build URL
+        url_path = "/api/runner/questions"
+        if version and version != "current":
+            url_path += f"?version={version}"
+        
+        # Make synchronous request
+        with httpx.Client(
+            base_url=base_url.rstrip("/"),
+            headers={
+                "X-API-Key": api_key,
+                "User-Agent": "gcb-runner/0.1.1",
+            },
+            timeout=30.0,
+            verify=False,  # Allow SSL issues for Railway
+        ) as client:
+            response = client.get(url_path)
+            
+            if response.status_code == 200:
+                questions_data = response.json()
+                questions = questions_data.get("questions", [])
+                result = {}
+                for q in questions:
+                    q_id = q.get("id", "")
+                    q_content = q.get("content", "")
+                    if q_id and q_content:
+                        result[q_id] = q_content
+                return result
+    except Exception:
+        # Silently fail - questions will just not be shown
+        pass
+    
+    return {}
+
+
+def _get_question_text(question_id: str, version: str | None = None, fetch_from_api: bool = False) -> str | None:
     """Get question text for a question ID.
     
     Tries to find the question in the cache. If not found and version is provided,
-    loads questions for that version first.
+    loads questions for that version first. If still not found and fetch_from_api is True,
+    attempts to fetch from the Platform API.
     """
     # Check if already in cache
     if question_id in _questions_cache:
@@ -127,7 +178,15 @@ def _get_question_text(question_id: str, version: str | None = None) -> str | No
     # Try to load from version cache
     if version:
         _load_questions_for_version(version)
-        return _questions_cache.get(question_id)
+        if question_id in _questions_cache:
+            return _questions_cache[question_id]
+    
+    # If still not found and API fetch is requested, try fetching from API
+    if fetch_from_api and version:
+        api_questions = _fetch_questions_from_api(version)
+        # Update cache with fetched questions
+        _questions_cache.update(api_questions)
+        return api_questions.get(question_id)
     
     return None
 
@@ -287,6 +346,17 @@ class ViewerHandler(BaseHTTPRequestHandler):
         version_row = version_cursor.fetchone()
         benchmark_version = version_row["benchmark_version"] if version_row else None
         
+        # For elevated users, ensure questions are loaded for this version
+        if has_elevated_access and benchmark_version:
+            # Try loading from cache first
+            _load_questions_for_version(benchmark_version)
+            # If cache is empty or missing questions, fetch from API
+            # Check if we have any questions for this version in cache
+            if not _questions_cache:
+                api_questions = _fetch_questions_from_api(benchmark_version)
+                if api_questions:
+                    _questions_cache.update(api_questions)
+        
         # Build query
         query = "SELECT * FROM responses WHERE test_run_id = ?"
         query_params: list[Any] = [run_id]
@@ -327,7 +397,8 @@ class ViewerHandler(BaseHTTPRequestHandler):
             if has_elevated_access:
                 # Admin/benchmark_developer: show full response and question text
                 response_obj["response_text"] = response_text
-                question_text = _get_question_text(question_id, benchmark_version)
+                # Questions should already be loaded in cache from above
+                question_text = _get_question_text(question_id, benchmark_version, fetch_from_api=False)
                 if question_text:
                     response_obj["question_text"] = question_text
             else:
