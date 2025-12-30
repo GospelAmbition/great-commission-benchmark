@@ -26,6 +26,7 @@ async def run_benchmark(
     judge_model: str | None = None,
     output_path: Path | None = None,
     resume: bool = False,
+    is_draft: bool = False,
 ) -> None:
     """Run the benchmark against a model."""
     
@@ -63,8 +64,20 @@ async def run_benchmark(
         
         version = benchmark_version or "current"
         
-        # Check cache first
-        cached_data = cache.get(version) if version != "current" else None
+        # Check cache first - but skip cache for draft versions since they can change
+        cached_data = None
+        skip_cache = is_draft
+        
+        if not skip_cache and version != "current":
+            cached_data = cache.get(version)
+            # Also skip cache if cached data indicates it's a draft (drafts can change)
+            if cached_data and cached_data.get("is_draft", False):
+                console.print("[dim]Skipping cache for draft version (content may have changed)[/dim]")
+                cached_data = None
+                skip_cache = True
+        
+        if skip_cache:
+            console.print("[dim]Fetching fresh questions for draft version[/dim]")
         
         if cached_data and not cache.is_stale(version):
             console.print("[green]✓ Using cached questions[/green]")
@@ -72,7 +85,12 @@ async def run_benchmark(
         else:
             try:
                 questions_data = await api_client.get_questions(version if version != "current" else None)
-                cache.store(version, questions_data)
+                # Only cache non-draft versions (drafts can change frequently)
+                if questions_data.get("is_draft", False):
+                    # Clear any stale cached data for this draft version
+                    cache.clear(version)
+                else:
+                    cache.store(version, questions_data)
                 console.print("[green]✓ Connected to Platform API[/green]")
             except Exception as e:
                 error_msg = str(e)

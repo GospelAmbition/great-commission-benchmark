@@ -785,6 +785,7 @@ def run_test_menu() -> MenuAction:
             config=cfg,
             output_path=None,
             resume=False,
+            is_draft=is_draft_version,
         ))
     except KeyboardInterrupt:
         console.print("\n[yellow]Test interrupted by user[/yellow]")
