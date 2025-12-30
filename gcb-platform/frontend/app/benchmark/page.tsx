@@ -47,6 +47,7 @@ interface QuestionSet {
   marketing_version: string;
   status: "draft" | "locked" | "active" | "archived";
   question_count: number;
+  target_question_count: number | null;
   created_at: string;
   locked_at?: string;
   archived_at?: string;
@@ -482,6 +483,10 @@ export default function BenchmarkDashboardPage() {
       setTargetVersion(null);
       setEditTargetValue("");
       loadData();
+      // Reload stats if we updated the currently selected version
+      if (targetVersion.id === selectedVersionId) {
+        loadVersionStats();
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to update target");
     } finally {
@@ -1723,6 +1728,7 @@ export default function BenchmarkDashboardPage() {
                     <TableHead>Version</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Questions</TableHead>
+                    <TableHead>Target</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -1740,6 +1746,13 @@ export default function BenchmarkDashboardPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>{qs.question_count}</TableCell>
+                      <TableCell>
+                        {qs.target_question_count ? (
+                          <span>{qs.target_question_count}</span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Auto</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {new Date(qs.created_at).toLocaleDateString()}
                       </TableCell>
@@ -1759,7 +1772,7 @@ export default function BenchmarkDashboardPage() {
                                 size="sm"
                                 onClick={() => {
                                   setTargetVersion(qs);
-                                  setEditTargetValue("");
+                                  setEditTargetValue(qs.target_question_count?.toString() || "");
                                   setShowTargetDialog(true);
                                 }}
                               >
@@ -2307,8 +2320,15 @@ export default function BenchmarkDashboardPage() {
                 <span>Current Questions:</span>
                 <span className="font-medium">{targetVersion?.question_count || 0}</span>
               </div>
+              <div className="flex justify-between">
+                <span>Current Target:</span>
+                <span className="font-medium">
+                  {targetVersion?.target_question_count ? targetVersion.target_question_count : "Auto"}
+                </span>
+              </div>
               {editTargetValue && parseInt(editTargetValue) > 0 && (
                 <>
+                  <hr className="my-2 border-muted-foreground/20" />
                   <div className="flex justify-between text-sm">
                     <span>Tier 1 target (70%):</span>
                     <span>{Math.round(parseInt(editTargetValue) * 0.7)}</span>
