@@ -60,6 +60,7 @@ interface Question {
   category: string;
   content: string;
   metadata?: Record<string, any>;
+  expected_verdict?: string;
   is_locked: boolean;
   notes?: string;
 }
@@ -546,10 +547,8 @@ export default function BenchmarkDashboardPage() {
           tier: editingQuestion.tier,
           category: editingQuestion.category,
           content: editingQuestion.content,
-          metadata: {
-            ...editingQuestion.metadata,
-            expected_verdict: editingQuestion.metadata?.expected_verdict || undefined,
-          },
+          metadata: editingQuestion.metadata,
+          expected_verdict: editingQuestion.expected_verdict || undefined,
           is_locked: editingQuestion.is_locked,
           notes: editingQuestion.notes,
         }),
@@ -2094,10 +2093,10 @@ export default function BenchmarkDashboardPage() {
               <div>
                 <Label htmlFor="edit_expected_verdict">Expected Verdict</Label>
                 <Select
-                  value={editingQuestion.metadata?.expected_verdict || ""}
+                  value={editingQuestion.expected_verdict || ""}
                   onValueChange={(value) => setEditingQuestion({ 
                     ...editingQuestion, 
-                    metadata: { ...editingQuestion.metadata, expected_verdict: value || undefined } 
+                    expected_verdict: value || undefined 
                   })}
                 >
                   <SelectTrigger>
