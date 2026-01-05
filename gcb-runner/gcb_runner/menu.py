@@ -1905,29 +1905,44 @@ def utilities_menu() -> MenuAction:
         
         print_menu("🔧 Utilities", [
             ("1", "🚀 Setup Wizard" + (" [yellow](recommended)[/yellow]" if needs_setup else "")),
-            ("2", "🔧 Diagnostics & Connection Test"),
-            ("3", "📋 View Recent Runs"),
-            ("4", "🔍 View Run Details"),
-            ("5", "📄 Generate HTML Report"),
-            ("6", "⚙️  Configuration"),
+            ("2", "🔑 Set Platform API Key"),
+            ("3", "⚙️  Configure Backend"),
+            ("4", "⚖️  Set Judge Model"),
+            ("5", "📋 View Current Config"),
+            ("6", "📊 View Recent Runs"),
+            ("7", "🔍 View Run Details"),
+            ("8", "📄 Generate HTML Report"),
+            ("9", "🔧 Diagnostics & Connection Test"),
+            ("10", "🔄 Reset All Settings"),
+            ("11", "🗑️  Reset Results Database"),
         ])
         
-        choice = get_choice(["0", "1", "2", "3", "4", "5", "6"])
+        choice = get_choice(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"])
         
         if choice == "0":
             return MenuAction.BACK
         elif choice == "1":
             setup_wizard()
         elif choice == "2":
-            diagnostics_menu()
+            configure_platform_key()
         elif choice == "3":
-            view_recent_runs()
+            configure_backend()
         elif choice == "4":
-            view_run_details()
+            configure_judge()
         elif choice == "5":
-            generate_report()
+            view_config()
         elif choice == "6":
-            config_menu()
+            view_recent_runs()
+        elif choice == "7":
+            view_run_details()
+        elif choice == "8":
+            generate_report()
+        elif choice == "9":
+            diagnostics_menu()
+        elif choice == "10":
+            reset_config()
+        elif choice == "11":
+            reset_database()
 
 
 # ============================================================================
