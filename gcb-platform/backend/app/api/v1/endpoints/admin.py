@@ -810,7 +810,9 @@ async def copy_question_set(
             category=source_q.category,
             content=source_q.content,
             subcategory=source_q.subcategory,
-            expected_verdict=source_q.expected_verdict
+            expected_verdict=source_q.expected_verdict,
+            question_metadata=source_q.question_metadata,
+            notes=source_q.notes
         )
         db.add(new_question)
         copied_count += 1
