@@ -350,12 +350,11 @@ class ViewerHandler(BaseHTTPRequestHandler):
         if has_elevated_access and benchmark_version:
             # Try loading from cache first
             _load_questions_for_version(benchmark_version)
-            # If cache is empty or missing questions, fetch from API
-            # Check if we have any questions for this version in cache
-            if not _questions_cache:
-                api_questions = _fetch_questions_from_api(benchmark_version)
-                if api_questions:
-                    _questions_cache.update(api_questions)
+            # Always try to fetch from API for elevated users to ensure we have questions
+            # This ensures questions are available even if cache is empty or incomplete
+            api_questions = _fetch_questions_from_api(benchmark_version)
+            if api_questions:
+                _questions_cache.update(api_questions)
         
         # Build query
         query = "SELECT * FROM responses WHERE test_run_id = ?"
@@ -397,8 +396,8 @@ class ViewerHandler(BaseHTTPRequestHandler):
             if has_elevated_access:
                 # Admin/benchmark_developer: show full response and question text
                 response_obj["response_text"] = response_text
-                # Questions should already be loaded in cache from above
-                question_text = _get_question_text(question_id, benchmark_version, fetch_from_api=False)
+                # Questions should already be loaded in cache from above, but allow API fetch as fallback
+                question_text = _get_question_text(question_id, benchmark_version, fetch_from_api=True)
                 if question_text:
                     response_obj["question_text"] = question_text
             else:
