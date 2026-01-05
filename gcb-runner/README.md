@@ -63,14 +63,30 @@ gcb-runner update
 
 Running `gcb-runner` without arguments launches an interactive menu. The menu provides:
 
-- **Setup Wizard** - Guided 4-step configuration for first-time users
 - **Run Benchmark Test** - Interactive test runner with model and version selection
-- **View Results** - Browse test runs, launch dashboard, generate reports
-- **Configuration** - Manage API keys, backends, and preferences
-- **Diagnostics** - Test connections, verify API access, troubleshoot issues
+- **Launch Web Results Dashboard** - Open the web interface to view results
+- **Export Results (JSON)** - Export test results for submission
+- **Utilities** - Setup wizard, diagnostics, configuration, and more
 - **Help & Documentation** - Quick start guide, scoring info, and more
 
 The menu is perfect for users who prefer a guided experience over command-line flags.
+
+### Utilities Menu
+
+The Utilities menu provides access to setup, configuration, and diagnostic tools:
+
+```bash
+gcb-runner
+# Select [4] Utilities
+```
+
+Available utilities:
+- **Setup Wizard** - Guided 4-step configuration for first-time users
+- **Diagnostics & Connection Test** - Verify your setup is working correctly
+- **View Recent Runs** - Browse your test run history
+- **View Run Details** - See detailed information about a specific run
+- **Generate HTML Report** - Create a standalone HTML report
+- **Configuration** - Manage API keys, backends, and preferences
 
 ### Diagnostics & Troubleshooting
 
@@ -78,7 +94,7 @@ The diagnostics menu helps verify your setup is working correctly:
 
 ```bash
 gcb-runner
-# Select [5] Diagnostics & Connection Test
+# Select [4] Utilities → [2] Diagnostics & Connection Test
 ```
 
 Available diagnostics:
@@ -279,7 +295,7 @@ gcb-runner versions
 
 # Or use the interactive menu for more details
 gcb-runner
-# Select [5] Diagnostics → [4] List Available Versions
+# Select [4] Utilities → [2] Diagnostics → [4] List Available Versions
 ```
 
 This shows available versions with their status, question counts, and release dates.
@@ -389,7 +405,7 @@ This error when running tests usually means:
 **Solution:** Run diagnostics to check available versions:
 ```bash
 gcb-runner
-# Select [5] Diagnostics → [1] Run Full Diagnostics
+# Select [4] Utilities → [2] Diagnostics → [1] Run Full Diagnostics
 ```
 
 ### Connection Issues

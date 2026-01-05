@@ -101,7 +101,7 @@ async def run_benchmark(
                     console.print("  • No benchmark version has been published yet")
                     console.print("  • The requested version doesn't exist")
                     console.print()
-                    console.print("[dim]Run 'gcb-runner menu' → Diagnostics to troubleshoot.[/dim]")
+                    console.print("[dim]Run 'gcb-runner menu' → Utilities → Diagnostics to troubleshoot.[/dim]")
                     raise
                 if cached_data:
                     console.print(f"[yellow]Warning: Could not fetch fresh questions ({e}), using cache[/yellow]")

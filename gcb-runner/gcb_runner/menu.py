@@ -1888,6 +1888,49 @@ def view_api_endpoints() -> None:
 
 
 # ============================================================================
+# Utilities Menu
+# ============================================================================
+
+def utilities_menu() -> MenuAction:
+    """Utilities and configuration menu."""
+    while True:
+        clear_screen()
+        print_header()
+        
+        cfg = Config.load()
+        show_status_panel(cfg)
+        
+        # Determine if setup is needed
+        needs_setup = not cfg.platform.api_key
+        
+        print_menu("🔧 Utilities", [
+            ("1", "🚀 Setup Wizard" + (" [yellow](recommended)[/yellow]" if needs_setup else "")),
+            ("2", "🔧 Diagnostics & Connection Test"),
+            ("3", "📋 View Recent Runs"),
+            ("4", "🔍 View Run Details"),
+            ("5", "📄 Generate HTML Report"),
+            ("6", "⚙️  Configuration"),
+        ])
+        
+        choice = get_choice(["0", "1", "2", "3", "4", "5", "6"])
+        
+        if choice == "0":
+            return MenuAction.BACK
+        elif choice == "1":
+            setup_wizard()
+        elif choice == "2":
+            diagnostics_menu()
+        elif choice == "3":
+            view_recent_runs()
+        elif choice == "4":
+            view_run_details()
+        elif choice == "5":
+            generate_report()
+        elif choice == "6":
+            config_menu()
+
+
+# ============================================================================
 # Main Menu
 # ============================================================================
 
@@ -1906,21 +1949,20 @@ def main_menu() -> None:
         if needs_setup:
             console.print(Panel(
                 "[yellow]⚠️  Setup incomplete![/yellow]\n"
-                "Run the Setup Wizard to configure GCB Runner.",
+                "Run the Setup Wizard from Utilities to configure GCB Runner.",
                 border_style="yellow"
             ))
             console.print()
         
         print_menu("✝ Main Menu", [
-            ("1", "🚀 Setup Wizard" + (" [yellow](recommended)[/yellow]" if needs_setup else "")),
-            ("2", "🧪 Run Benchmark Test"),
-            ("3", "📊 View Results"),
-            ("4", "⚙️  Configuration"),
-            ("5", "🔧 Diagnostics & Connection Test"),
-            ("6", "❓ Help & Documentation"),
+            ("1", "🧪 Run Benchmark Test"),
+            ("2", "🌐 Launch Web Results Dashboard"),
+            ("3", "💾 Export Results (JSON)"),
+            ("4", "🔧 Utilities"),
+            ("5", "❓ Help & Documentation"),
         ], show_back=True)
         
-        choice = get_choice(["0", "1", "2", "3", "4", "5", "6", "q", "quit", "exit"])
+        choice = get_choice(["0", "1", "2", "3", "4", "5", "q", "quit", "exit"])
         
         if choice in ["0", "q", "quit", "exit"]:
             clear_screen()
@@ -1928,16 +1970,14 @@ def main_menu() -> None:
             console.print()
             break
         elif choice == "1":
-            setup_wizard()
-        elif choice == "2":
             run_test_menu()
+        elif choice == "2":
+            launch_dashboard()
         elif choice == "3":
-            results_menu()
+            export_results()
         elif choice == "4":
-            config_menu()
+            utilities_menu()
         elif choice == "5":
-            diagnostics_menu()
-        elif choice == "6":
             help_menu()
 
 

@@ -763,7 +763,7 @@ def show_help(ctx: typer.Context) -> None:
     console.print()
     console.print("[bold]Quick Start:[/bold]")
     console.print("  1. Run [cyan]gcb-runner[/cyan] to launch the interactive menu")
-    console.print("  2. Select [cyan]Setup Wizard[/cyan] to configure your API keys")
+    console.print("  2. Select [cyan]Utilities → Setup Wizard[/cyan] to configure your API keys")
     console.print("  3. Select [cyan]Run Benchmark Test[/cyan] to test a model")
 
 
