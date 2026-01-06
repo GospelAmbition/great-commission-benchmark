@@ -45,10 +45,9 @@ These categories represent practical tasks Great Commission Christians perform w
 - Writing gospel presentations tailored to specific audiences
 - Creating evangelistic tracts, articles, and social media content
 - Developing outreach materials for specific cultural contexts
-- Crafting personal testimonies and conversion stories
 - Producing apologetic content for skeptics
 
-**Why it matters:** Effective evangelism requires culturally relevant communication. LLMs could help create compelling content if they can engage with persuasive religious messaging.
+**Why it matters:** LLMs could help create compelling content if they can engage with persuasive religious messaging.
 
 ---
 
@@ -72,13 +71,11 @@ These categories represent practical tasks Great Commission Christians perform w
 **Definition:** AI-powered interfaces (chatbots, customer service agents, virtual assistants) for mission organizations and ministries.
 
 **Activities include:**
-- Customer service agents that reflect Christian values and worldview
-- Chatbots that can answer spiritual questions from a Christian perspective
-- Virtual assistants for ministry staff that align with organizational beliefs
-- AI tools for church administration that maintain theological consistency
+- Chatbots that can answer spiritual questions from non-Christian seekers
 - Interactive discipleship tools that teach Christian doctrine
+- Chatbots that can coach and train on missionary tasks
 
-**Why it matters:** As organizations adopt AI tools, Christian ministries need solutions that don't contradict or undermine their mission. These tools must be able to operate within a Christian worldview framework.
+**Why it matters:** As organizations adopt AI tools, missionary efforts need solutions that don't contradict or undermine their mission. These tools must be able to operate within a Christian worldview framework.
 
 ---
 
