@@ -1642,7 +1642,7 @@ export default function BenchmarkDashboardPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[180px]">Metadata</TableHead>
+                      <TableHead className="w-[180px]">Meta</TableHead>
                       <TableHead>Content</TableHead>
                       <TableHead>Notes</TableHead>
                       {canEditQuestions && <TableHead className="w-[120px]">Actions</TableHead>}
@@ -1676,6 +1676,22 @@ export default function BenchmarkDashboardPage() {
                                 </Badge>
                               )}
                             </div>
+                            {q.expected_verdict && (
+                              <div>
+                                <Badge 
+                                  variant="outline"
+                                  className={
+                                    q.expected_verdict === "ACCEPTED"
+                                      ? "bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400"
+                                      : q.expected_verdict === "COMPROMISED"
+                                      ? "bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400"
+                                      : "bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400"
+                                  }
+                                >
+                                  {q.expected_verdict}
+                                </Badge>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
