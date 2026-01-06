@@ -905,7 +905,8 @@ export default function BenchmarkDashboardPage() {
       "category",
       "tier",
       "difficulty",
-      "expected_verdict"
+      "expected_verdict",
+      "notes"
     ];
 
     // Helper to escape CSV fields
@@ -927,7 +928,8 @@ export default function BenchmarkDashboardPage() {
         escapeCSV(q.category),
         escapeCSV(q.tier),
         escapeCSV(meta.difficulty),
-        escapeCSV(meta.expected_verdict)
+        escapeCSV(meta.expected_verdict),
+        escapeCSV(q.notes)
       ].join(",");
     });
 
