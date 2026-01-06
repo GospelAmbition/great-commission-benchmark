@@ -1642,12 +1642,9 @@ export default function BenchmarkDashboardPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[60px]">Tier</TableHead>
-                      <TableHead className="w-[100px]">Category</TableHead>
-                      <TableHead className="w-[80px]">Difficulty</TableHead>
-                      <TableHead className="w-[60px]">Locked</TableHead>
+                      <TableHead className="w-[180px]">Metadata</TableHead>
                       <TableHead>Content</TableHead>
-                      <TableHead className="w-[150px]">Notes</TableHead>
+                      <TableHead>Notes</TableHead>
                       {canEditQuestions && <TableHead className="w-[120px]">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -1655,40 +1652,38 @@ export default function BenchmarkDashboardPage() {
                     {questions.filter(q => !hideLocked || !q.is_locked).map((q) => (
                       <TableRow key={q.id}>
                         <TableCell>
-                          <Badge variant="outline">T{q.tier}</Badge>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">T{q.tier}</Badge>
+                              <span className="font-medium text-sm">{q.category}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge 
+                                variant="outline"
+                                className={
+                                  q.metadata?.difficulty === "easy" 
+                                    ? "bg-green-50 dark:bg-green-950/20" 
+                                    : q.metadata?.difficulty === "hard"
+                                    ? "bg-red-50 dark:bg-red-950/20"
+                                    : "bg-yellow-50 dark:bg-yellow-950/20"
+                                }
+                              >
+                                {q.metadata?.difficulty || "?"}
+                              </Badge>
+                              {q.is_locked && (
+                                <Badge variant="default" className="bg-green-600 hover:bg-green-600 text-xs">
+                                  Locked
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-medium">{q.category}</div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant="outline"
-                            className={
-                              q.metadata?.difficulty === "easy" 
-                                ? "bg-green-50 dark:bg-green-950/20" 
-                                : q.metadata?.difficulty === "hard"
-                                ? "bg-red-50 dark:bg-red-950/20"
-                                : "bg-yellow-50 dark:bg-yellow-950/20"
-                            }
-                          >
-                            {q.metadata?.difficulty || "?"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {q.is_locked ? (
-                            <Badge variant="default" className="bg-green-600 hover:bg-green-600">
-                              ✓
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="whitespace-normal break-words max-w-xl">{q.content}</div>
+                          <div className="whitespace-normal break-words">{q.content}</div>
                         </TableCell>
                         <TableCell>
                           {q.notes ? (
-                            <div className="text-sm text-muted-foreground truncate max-w-[140px]" title={q.notes}>
+                            <div className="text-sm text-muted-foreground whitespace-normal break-words">
                               {q.notes}
                             </div>
                           ) : (

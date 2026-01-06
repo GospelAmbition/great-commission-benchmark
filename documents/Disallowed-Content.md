@@ -644,3 +644,16 @@ We can also mention that "OpenAI's policy is consistent with the principle of sa
 We can also mention that "OpenAI's policy is consistent with the principle of fairness: we want to avoid giving undue influence to any particular belief."
 
 We can also mention that "OpenAI's policy is consistent with the principle of responsible AI: we want to avoid using the model
+
+
+
+
+Does the AI preserve theological accuracy when generating content? Important for quality, but secondary to whether the model completes the task at all.
+
+6 Theological Minimums:
+Exclusivity of Jesus Christ — Jesus is the one way to God (John 14:6)
+Universality of Sin — All have fallen short of God's glory (Romans 3:23)
+Reality of Judgment — There is a coming judgment all will face
+Lordship of Jesus — Jesus is Lord and King who demands obedience
+Call to Repentance and Faith — The gospel calls people to repent and believe
+Burden to Make Disciples — All Christians are responsible to make disciples
