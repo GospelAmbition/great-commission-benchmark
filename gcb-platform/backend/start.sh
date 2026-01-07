@@ -13,6 +13,7 @@ echo "DATABASE_URL is $([ -n "$DATABASE_URL" ] && echo 'SET (length: '${#DATABAS
 echo "Testing Python imports..."
 python -c "
 import sys
+import traceback
 print(f'Python path: {sys.executable}')
 try:
     from app.core.config import settings
@@ -20,9 +21,18 @@ try:
     print(f'  CORS origins: {len(settings.CORS_ORIGINS)} configured')
 except Exception as e:
     print(f'Config load FAILED: {e}')
+    traceback.print_exc()
+    sys.exit(1)
+
+try:
+    from main import app
+    print('FastAPI app imported OK')
+except Exception as e:
+    print(f'FastAPI app import FAILED: {e}')
+    traceback.print_exc()
     sys.exit(1)
 " || {
-    echo "ERROR: Failed to load Python config. Check environment variables."
+    echo "ERROR: Failed to import application. Check logs above."
     exit 1
 }
 
@@ -44,7 +54,12 @@ else
 fi
 
 # Start the application (use exec to replace shell process)
+PORT=${PORT:-8000}
 echo "============================================"
-echo "Starting uvicorn server on port ${PORT:-8000}..."
+echo "Starting uvicorn server on port ${PORT}..."
 echo "============================================"
-exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+echo "Environment check:"
+echo "  PORT=${PORT}"
+echo "  DATABASE_URL=${DATABASE_URL:+SET (length: ${#DATABASE_URL})}"
+echo "Starting server..."
+exec uvicorn main:app --host 0.0.0.0 --port ${PORT} --log-level info
