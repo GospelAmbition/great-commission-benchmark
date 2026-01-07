@@ -12,11 +12,22 @@ interface PostEditorProps {
 export function PostEditor({ value, onChange, onImageUpload }: PostEditorProps) {
   const editorRef = useRef<any>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const apiKey = process.env.NEXT_PUBLIC_TINYMCE_API_KEY;
 
   useEffect(() => {
     setIsMounted(true);
+    // Check dark mode preference after mount
+    if (typeof window !== "undefined") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      setIsDarkMode(mediaQuery.matches);
+      
+      // Listen for changes
+      const handleChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
   }, []);
 
   // Custom image upload handler
@@ -33,6 +44,15 @@ export function PostEditor({ value, onChange, onImageUpload }: PostEditorProps) 
     }
     throw new Error("Image upload handler not provided");
   };
+
+  // Only render TinyMCE on the client to avoid hydration mismatches
+  if (!isMounted) {
+    return (
+      <div className="h-[500px] border rounded-md flex items-center justify-center bg-muted">
+        <p className="text-muted-foreground">Loading editor...</p>
+      </div>
+    );
+  }
 
   return (
     <Editor
@@ -107,12 +127,8 @@ export function PostEditor({ value, onChange, onImageUpload }: PostEditorProps) 
         link_assume_external_targets: true,
         paste_data_images: true,
         // Dark mode support
-        skin: typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches 
-          ? "oxide-dark" 
-          : "oxide",
-        content_css: typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches 
-          ? "dark" 
-          : "default",
+        skin: isDarkMode ? "oxide-dark" : "oxide",
+        content_css: isDarkMode ? "dark" : "default",
       }}
     />
   );
