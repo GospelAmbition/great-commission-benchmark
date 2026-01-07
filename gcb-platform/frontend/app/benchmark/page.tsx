@@ -942,7 +942,7 @@ export default function BenchmarkDashboardPage() {
         escapeCSV(q.category),
         escapeCSV(q.tier),
         escapeCSV(meta.difficulty),
-        escapeCSV(meta.expected_verdict),
+        escapeCSV(q.expected_verdict),
         escapeCSV(q.notes)
       ].join(",");
     });
