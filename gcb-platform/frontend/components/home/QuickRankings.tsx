@@ -112,7 +112,7 @@ export function QuickRankings({ rankings }: QuickRankingsProps) {
         },
         ticks: {
           font: {
-            weight: "500" as const,
+            weight: 500,
           },
         },
       },

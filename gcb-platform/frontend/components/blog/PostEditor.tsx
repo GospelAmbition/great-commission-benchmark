@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Editor } from "@tinymce/tinymce-react";
 
 interface PostEditorProps {
@@ -11,8 +11,13 @@ interface PostEditorProps {
 
 export function PostEditor({ value, onChange, onImageUpload }: PostEditorProps) {
   const editorRef = useRef<any>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   const apiKey = process.env.NEXT_PUBLIC_TINYMCE_API_KEY;
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Custom image upload handler
   const handleImageUpload = async (
