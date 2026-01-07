@@ -485,12 +485,14 @@ export default function PaymentPage() {
       const testData = await apiClient.getTest(testId);
       setTest(testData);
       
-      // Initialize breakdown
+      // Initialize breakdown - cast to any to access dynamic properties
+      const data = testData as any;
+      const apiCost = data.estimated_cost || data.cost_estimate || 0;
       setBreakdown({
-        api_cost: testData.estimated_cost || testData.cost_estimate || 0,
+        api_cost: apiCost,
         processing_fee: 20,
         tip_amount: 0,
-        total: (testData.estimated_cost || testData.cost_estimate || 0) + 20
+        total: apiCost + 20
       });
     } catch (error) {
       console.error("Failed to load test:", error);
