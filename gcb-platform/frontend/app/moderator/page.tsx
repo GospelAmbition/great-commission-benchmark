@@ -307,6 +307,7 @@ export default function ModeratorDashboardPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Model</TableHead>
+                  <TableHead>Version</TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>ID</TableHead>
                 </TableRow>
@@ -323,6 +324,9 @@ export default function ModeratorDashboardPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>{item.model_name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground font-mono">
+                      {item.benchmark_version || "—"}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={
                         item.action === "verified" || item.action === "approved" ? "default" :

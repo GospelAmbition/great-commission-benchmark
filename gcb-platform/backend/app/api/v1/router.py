@@ -11,11 +11,13 @@ from app.api.v1.endpoints import (
     runner,
     newsletter,
     payments,
+    donations,
     webhooks,
     moderator,
     admin,
     benchmark,
-    sponsorship
+    sponsorship,
+    blog
 )
 
 api_router = APIRouter()
@@ -50,6 +52,9 @@ api_router.include_router(newsletter.router, prefix="/newsletter", tags=["newsle
 # Payments API
 api_router.include_router(payments.router, prefix="/payments", tags=["payments"])
 
+# Donations API (public, no auth required)
+api_router.include_router(donations.router, prefix="/donations", tags=["donations"])
+
 # Webhooks API
 api_router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
 
@@ -64,3 +69,9 @@ api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 
 # Benchmark Development API (for benchmark_developer and admin roles)
 api_router.include_router(benchmark.router, prefix="/benchmark", tags=["benchmark"])
+
+# Blog API (public endpoints)
+api_router.include_router(blog.public_router, prefix="/blog", tags=["blog"])
+
+# Blog Admin API
+api_router.include_router(blog.admin_router, prefix="/admin/blog", tags=["admin-blog"])

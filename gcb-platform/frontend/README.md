@@ -126,7 +126,7 @@ Charts use Chart.js with react-chartjs-2.
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID | Yes |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Yes |
 | `NEXT_PUBLIC_API_URL` | Backend API URL | Yes |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe key | Production |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe key (for payments and donations) | Production |
 | `NEXT_PUBLIC_UMAMI_SCRIPT_URL` | Analytics URL | Optional |
 | `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Analytics ID | Optional |
 

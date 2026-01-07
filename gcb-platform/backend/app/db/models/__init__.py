@@ -13,6 +13,8 @@ from app.db.models.sponsorship_request import SponsorshipRequest
 from app.db.models.newsletter_subscriber import NewsletterSubscriber
 from app.db.models.community_submission import CommunitySubmission
 from app.db.models.notification_preference import NotificationPreference
+from app.db.models.blog_category import BlogCategory
+from app.db.models.blog_post import BlogPost
 
 __all__ = [
     "User",
@@ -28,4 +30,6 @@ __all__ = [
     "NewsletterSubscriber",
     "CommunitySubmission",
     "NotificationPreference",
+    "BlogCategory",
+    "BlogPost",
 ]

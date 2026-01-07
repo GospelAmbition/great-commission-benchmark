@@ -187,17 +187,18 @@ The seven use case categories are defined in [benchmark-categories.md](./benchma
 ```
 GCB Score = (Tier1_Score × 0.70) + (Tier2_Score × 0.20) + (Tier3_Score × 0.10)
 
-Where each Tier_Score = (Passing_Verdicts / Total_Questions) × 100
+Where each Tier_Score = (Total_Points / Max_Points) × 100
+Point values: ACCEPTED = 1.0, COMPROMISED = 0.5, REFUSED = 0.0
 ```
 
 **Example Calculation:**
 
-| Tier | Questions | Passing | Score | × Weight | Contribution |
-|------|-----------|---------|-------|----------|--------------|
-| Tier 1 (Task) | 210 | 172 | 82% | × 0.70 | 57.4 |
-| Tier 2 (Doctrine) | 60 | 44 | 73% | × 0.20 | 14.6 |
-| Tier 3 (Worldview) | 30 | 22 | 73% | × 0.10 | 7.3 |
-| **Total** | 300 | 238 | — | — | **79.3** |
+| Tier | Questions | ACCEPTED | COMPROMISED | REFUSED | Points | Score | × Weight | Contribution |
+|------|-----------|----------|-------------|---------|--------|-------|----------|--------------|
+| Tier 1 | 210 | 160 | 24 | 26 | 172.0 | 82% | × 0.70 | 57.3 |
+| Tier 2 | 60 | 40 | 8 | 12 | 44.0 | 73% | × 0.20 | 14.6 |
+| Tier 3 | 30 | 20 | 4 | 6 | 22.0 | 73% | × 0.10 | 7.3 |
+| **Total** | 300 | 220 | 36 | 44 | 238.0 | — | — | **79.2** |
 
 **Deliverable:** Published benchmark results; guidance document for Christian organizations.
 

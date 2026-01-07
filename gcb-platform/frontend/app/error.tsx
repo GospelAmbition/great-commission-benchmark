@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Home, RefreshCw, AlertCircle } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertCircle } from "lucide-react";
 
 export default function Error({
   error,
@@ -13,57 +11,37 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    // Log error to console or error reporting service
-    console.error("Application error:", error);
-  }, [error]);
-
   return (
-    <div className="container py-16 max-w-2xl">
-      <Card>
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <AlertCircle className="h-16 w-16 text-[--ga-red] mx-auto" />
+    <div className="container flex items-center justify-center min-h-[60vh] py-12">
+      <Card className="max-w-md w-full text-center">
+        <CardHeader>
+          <div className="flex justify-center mb-4">
+            <AlertCircle className="h-16 w-16 text-red-700" />
           </div>
-          <CardTitle className="text-2xl">Something Went Wrong</CardTitle>
-          <CardDescription>
-            We encountered an unexpected error. Please try again.
+          <CardTitle className="text-2xl text-slate-900">Something Went Wrong</CardTitle>
+          <CardDescription className="text-slate-600">
+            An error occurred while loading this page.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {process.env.NODE_ENV === "development" && (
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm font-mono text-muted-foreground break-all">
-                {error.message}
-              </p>
+          {process.env.NODE_ENV === "development" && error.message && (
+            <div className="p-3 bg-slate-100 rounded-lg text-left overflow-auto">
+              <code className="text-xs text-slate-700">{error.message}</code>
             </div>
           )}
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              variant="brand"
-              onClick={reset}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Try Again
-            </Button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={reset}>Try Again</Button>
             <Button asChild variant="outline">
-              <Link href="/">
-                <Home className="mr-2 h-4 w-4" />
-                Go Home
-              </Link>
+              <a href="/">Go Home</a>
             </Button>
           </div>
-
-          <div className="mt-8 pt-8 border-t">
-            <p className="text-sm text-muted-foreground text-center">
-              If this problem persists, please{" "}
-              <a href="mailto:contact@greatcommissionbenchmark.ai" className="text-[--ga-red] hover:underline">
-                contact support
-              </a>
-              .
-            </p>
-          </div>
+          <p className="text-xs text-slate-500 mt-4">
+            If this problem persists, please{" "}
+            <a href="mailto:contact@greatcommissionbenchmark.ai" className="text-red-700 hover:underline">
+              contact us
+            </a>
+            .
+          </p>
         </CardContent>
       </Card>
     </div>

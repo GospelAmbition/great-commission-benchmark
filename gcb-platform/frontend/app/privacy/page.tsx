@@ -1,5 +1,4 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -12,57 +11,396 @@ export default function PrivacyPage() {
     <div className="container py-8 max-w-4xl">
       <Card>
         <CardHeader>
-          <CardTitle>Privacy Policy</CardTitle>
-          <CardDescription>Last Updated: December 18, 2025</CardDescription>
+          <CardTitle className="text-2xl">Privacy Policy</CardTitle>
+          <CardDescription>
+            <span className="block">Last Updated: January 7, 2026</span>
+            <span className="block">Effective Date: January 7, 2026</span>
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="prose prose-sm max-w-none">
+        <CardContent className="prose prose-sm max-w-none dark:prose-invert">
+          {/* Section 1: Introduction */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">1. Introduction</h2>
+            <p className="text-muted-foreground mb-3">
+              The Great Commission Benchmark ("we," "us," or "our") is committed to protecting your privacy. 
+              This Privacy Policy explains how we collect, use, disclose, and safeguard your information when 
+              you use our platform (the "Service").
+            </p>
+            <p className="text-muted-foreground mb-3">
+              By using the Service, you consent to the data practices described in this Privacy Policy. 
+              If you do not agree with the practices described in this policy, please do not use the Service.
+            </p>
             <p className="text-muted-foreground">
-              The full Privacy Policy document is available in the project repository. 
-              For the complete legal text, please refer to{" "}
-              <Link href="https://github.com/your-org/great-commission-benchmark/blob/main/documents/Privacy-Policy.md" 
-                    className="text-[--ga-red] hover:underline">
-                the Privacy Policy document
-              </Link>.
+              We reserve the right to modify this Privacy Policy at any time. Material changes will be 
+              communicated through the Service or via email. Your continued use of the Service after such 
+              modifications constitutes acceptance of the updated Privacy Policy.
             </p>
+          </section>
+
+          {/* Section 2: Information We Collect */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">2. Information We Collect</h2>
             
-            <h2>Data We Collect</h2>
-            <ul className="list-disc pl-6 space-y-2">
-              <li>Account information (email, name) via Google OAuth</li>
-              <li>Test results and model responses</li>
-              <li>Usage data and analytics</li>
-              <li>Payment information (processed by Stripe)</li>
+            <h3 className="text-base font-medium mb-2 text-foreground">2.1 Information You Provide to Us</h3>
+            <p className="text-muted-foreground mb-2">We collect information that you voluntarily provide when you:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li><strong>Create an account:</strong> Email address (required), name (optional), and any other information you choose to provide</li>
+              <li><strong>Run benchmark tests:</strong> Your test selections, model preferences, and any comments or notes you submit</li>
+              <li><strong>Make payments:</strong> Payment information is processed through Stripe (see Section 4.2)</li>
+              <li><strong>Contact us:</strong> Information you provide when contacting us for support or inquiries</li>
+              <li><strong>Participate in moderation:</strong> Information you provide if you serve as a moderator or reviewer</li>
             </ul>
 
-            <h2>How We Use Your Data</h2>
-            <ul className="list-disc pl-6 space-y-2">
-              <li>To provide and improve the Service</li>
-              <li>To publish benchmark results on leaderboards</li>
-              <li>For research and analysis (anonymized)</li>
-              <li>To comply with legal obligations</li>
+            <h3 className="text-base font-medium mb-2 text-foreground">2.2 Information Automatically Collected</h3>
+            <p className="text-muted-foreground mb-2">When you use the Service, we may automatically collect:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li><strong>Usage data:</strong> Information about how you interact with the Service, including pages visited, features used, and time spent</li>
+              <li><strong>Device information:</strong> Browser type, operating system, device identifiers, and IP address</li>
+              <li><strong>Log data:</strong> Server logs, error reports, and diagnostic information</li>
+              <li><strong>Cookies and tracking technologies:</strong> See Section 6 for details</li>
             </ul>
 
-            <h2>Third-Party Services</h2>
-            <p>We use:</p>
-            <ul className="list-disc pl-6 space-y-2">
-              <li><strong>Google OAuth:</strong> Authentication and user management</li>
-              <li><strong>Stripe:</strong> Payment processing</li>
-              <li><strong>OpenRouter:</strong> AI model API access</li>
-              <li><strong>Umami:</strong> Privacy-respecting analytics</li>
+            <h3 className="text-base font-medium mb-2 text-foreground">2.3 Test Results and Model Responses</h3>
+            <p className="text-muted-foreground mb-2">When you run benchmark tests, we collect:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-2">
+              <li><strong>Test results:</strong> Scores, responses, and performance metrics</li>
+              <li><strong>Model responses:</strong> Full responses generated by AI models during testing</li>
+              <li><strong>Test metadata:</strong> Timestamps, model versions, test configurations, and related information</li>
+            </ul>
+            <p className="text-muted-foreground mt-2">This data is essential for:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground">
+              <li>Publishing results to public leaderboards</li>
+              <li>Verifying test accuracy and integrity</li>
+              <li>Enabling research and analysis</li>
+              <li>Maintaining historical records</li>
+            </ul>
+          </section>
+
+          {/* Section 3: How We Use Your Information */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">3. How We Use Your Information</h2>
+            <p className="text-muted-foreground mb-3">We use the information we collect to:</p>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">3.1 Service Operation</h3>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li>Provide, maintain, and improve the Service</li>
+              <li>Process your test requests and payments</li>
+              <li>Authenticate your account and manage access</li>
+              <li>Communicate with you about the Service, including updates and notifications</li>
+              <li>Respond to your inquiries and provide customer support</li>
             </ul>
 
-            <h2>Your Rights</h2>
-            <p>You have the right to access, correct, and delete your personal information, 
-            subject to limitations regarding published test results.</p>
+            <h3 className="text-base font-medium mb-2 text-foreground">3.2 Benchmark Publication</h3>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li>Publish aggregate test results to public leaderboards</li>
+              <li>Display your contributions (if you choose to be credited)</li>
+              <li>Maintain historical records of benchmark performance</li>
+              <li>Enable comparison and analysis of model performance</li>
+            </ul>
 
-            <h2>Contact</h2>
-            <p>
-              For privacy questions, please contact us at{" "}
-              <a href="mailto:privacy@greatcommissionbenchmark.ai" className="text-[--ga-red] hover:underline">
-                privacy@greatcommissionbenchmark.ai
-              </a>
+            <h3 className="text-base font-medium mb-2 text-foreground">3.3 Research and Analysis</h3>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li>Conduct research on AI model performance</li>
+              <li>Analyze trends and patterns in benchmark data</li>
+              <li>Improve our testing methodology and question sets</li>
+              <li>Generate insights and reports (using anonymized data where appropriate)</li>
+            </ul>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">3.4 Legal and Security</h3>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground">
+              <li>Comply with legal obligations</li>
+              <li>Enforce our Terms of Service and Tester Agreement</li>
+              <li>Detect, prevent, and address fraud, security issues, or violations</li>
+              <li>Protect the rights, property, or safety of the Service, users, or others</li>
+            </ul>
+          </section>
+
+          {/* Section 4: How We Share Your Information */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">4. How We Share Your Information</h2>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">4.1 Public Sharing</h3>
+            <p className="text-muted-foreground mb-2">We publish the following information publicly on our leaderboards:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-2">
+              <li><strong>Aggregate test results:</strong> Scores, performance metrics, and rankings</li>
+              <li><strong>Model information:</strong> Model names, versions, and configurations used</li>
+              <li><strong>Test metadata:</strong> Timestamps and general test parameters</li>
+              <li><strong>Contributor credits:</strong> Your name (if you choose to be credited)</li>
+            </ul>
+            <p className="text-muted-foreground mb-4 bg-muted/50 p-3 rounded-md border">
+              <strong>Note:</strong> Once results are published to the leaderboard, they become part of the public 
+              record and cannot be deleted, even if you request account deletion. This ensures the integrity and 
+              historical accuracy of benchmark data.
             </p>
-          </div>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">4.2 Service Providers</h3>
+            <p className="text-muted-foreground mb-2">We share information with third-party service providers who perform services on our behalf:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-2">
+              <li><strong>Stripe:</strong> Payment processing (see <a href="https://stripe.com/privacy" className="text-[--ga-red] hover:underline" target="_blank" rel="noopener noreferrer">Stripe's Privacy Policy</a>)</li>
+              <li><strong>OpenRouter or model providers:</strong> To execute benchmark tests against AI models</li>
+              <li><strong>Hosting and infrastructure providers:</strong> To operate and maintain the Service</li>
+              <li><strong>Analytics providers:</strong> To understand usage patterns and improve the Service</li>
+            </ul>
+            <p className="text-muted-foreground mb-4">
+              These service providers are contractually obligated to protect your information and use it only for the purposes we specify.
+            </p>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">4.3 Researchers</h3>
+            <p className="text-muted-foreground mb-4">
+              We may share anonymized or aggregated data with researchers upon request for legitimate research purposes. 
+              Personal identifying information will be removed before sharing.
+            </p>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">4.4 Model Providers</h3>
+            <p className="text-muted-foreground mb-2">We may share test results with the providers of the AI models being tested. This includes:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li>Their own model's results for transparency and verification</li>
+              <li>Aggregate comparisons (without identifying individual testers)</li>
+            </ul>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">4.5 Moderators</h3>
+            <p className="text-muted-foreground mb-4">
+              We share full test data with authorized moderators who verify test accuracy and integrity. 
+              Moderators are bound by confidentiality agreements.
+            </p>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">4.6 Legal Requirements</h3>
+            <p className="text-muted-foreground mb-2">We may disclose your information if required by law or in response to:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li>Valid legal process (subpoenas, court orders, warrants)</li>
+              <li>Government requests or investigations</li>
+              <li>Protection of rights, property, or safety</li>
+              <li>Enforcement of our Terms of Service or other agreements</li>
+            </ul>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">4.7 Business Transfers</h3>
+            <p className="text-muted-foreground">
+              In the event of a merger, acquisition, or sale of assets, your information may be transferred to the 
+              acquiring entity, subject to the same privacy protections.
+            </p>
+          </section>
+
+          {/* Section 5: Data Retention */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">5. Data Retention</h2>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">5.1 Test Data</h3>
+            <p className="text-muted-foreground mb-2">
+              <strong>Test data is retained indefinitely</strong> to maintain historical records and ensure the integrity of benchmark results. This includes:
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-2">
+              <li>Test results and scores</li>
+              <li>Model responses</li>
+              <li>Published leaderboard entries</li>
+            </ul>
+            <p className="text-muted-foreground mb-4">Once published, test results cannot be deleted as they are part of the public record.</p>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">5.2 User Account Data</h3>
+            <p className="text-muted-foreground mb-4">
+              User account data (email, profile information, preferences) is retained until you request deletion, 
+              subject to the limitations in Section 5.1 regarding published results.
+            </p>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">5.3 Payment Records</h3>
+            <p className="text-muted-foreground mb-4">
+              Payment records are retained as required by law and for accounting purposes. This information is shared 
+              with Stripe and may be subject to their retention policies.
+            </p>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">5.4 Logs and Analytics</h3>
+            <p className="text-muted-foreground">
+              Server logs and analytics data are typically retained for a limited period (e.g., 12-24 months) unless 
+              required for security, legal, or operational purposes.
+            </p>
+          </section>
+
+          {/* Section 6: Cookies and Tracking Technologies */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">6. Cookies and Tracking Technologies</h2>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">6.1 Cookies</h3>
+            <p className="text-muted-foreground mb-2">We use cookies and similar tracking technologies to:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li>Maintain your session and authentication state</li>
+              <li>Remember your preferences and settings</li>
+              <li>Analyze Service usage and performance</li>
+              <li>Provide personalized features</li>
+            </ul>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">6.2 Cookie Types</h3>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li><strong>Essential cookies:</strong> Required for the Service to function (cannot be disabled)</li>
+              <li><strong>Analytics cookies:</strong> Help us understand how the Service is used</li>
+              <li><strong>Preference cookies:</strong> Remember your settings and choices</li>
+            </ul>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">6.3 Managing Cookies</h3>
+            <p className="text-muted-foreground">
+              You can control cookies through your browser settings. However, disabling certain cookies may limit 
+              your ability to use some features of the Service.
+            </p>
+          </section>
+
+          {/* Section 7: Data Security */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">7. Data Security</h2>
+            <p className="text-muted-foreground mb-2">We implement reasonable technical and organizational measures to protect your information, including:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li>Encryption of data in transit (HTTPS/TLS)</li>
+              <li>Secure storage of sensitive information</li>
+              <li>Access controls and authentication</li>
+              <li>Regular security assessments</li>
+              <li>Monitoring for security threats</li>
+            </ul>
+            <p className="text-muted-foreground">
+              However, no method of transmission or storage is 100% secure. While we strive to protect your information, 
+              we cannot guarantee absolute security.
+            </p>
+          </section>
+
+          {/* Section 8: Your Rights and Choices */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">8. Your Rights and Choices</h2>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">8.1 Access and Correction</h3>
+            <p className="text-muted-foreground mb-2">You have the right to:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li>Access the personal information we hold about you</li>
+              <li>Request correction of inaccurate or incomplete information</li>
+              <li>Update your account information through your account settings</li>
+            </ul>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">8.2 Deletion</h3>
+            <p className="text-muted-foreground mb-2">You may request deletion of your account and personal information. However:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li><strong>Published test results cannot be deleted</strong> (see Section 4.1)</li>
+              <li>We may retain certain information as required by law or for legitimate business purposes</li>
+              <li>Payment records may be retained for accounting and legal compliance</li>
+            </ul>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">8.3 Data Portability</h3>
+            <p className="text-muted-foreground mb-4">
+              You may request a copy of your personal information in a structured, machine-readable format, subject to applicable limitations.
+            </p>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">8.4 Opt-Out</h3>
+            <p className="text-muted-foreground mb-2">You may:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li>Opt out of optional marketing communications (account-related communications may still be sent)</li>
+              <li>Disable certain cookies through your browser settings</li>
+              <li>Request that we stop processing your information for certain purposes (subject to legal and operational requirements)</li>
+            </ul>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">8.5 Exercising Your Rights</h3>
+            <p className="text-muted-foreground">
+              To exercise any of these rights, please contact us using the information provided in Section 14.
+            </p>
+          </section>
+
+          {/* Section 9: Children's Privacy */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">9. Children's Privacy</h2>
+            <p className="text-muted-foreground">
+              The Service is not intended for individuals under the age of 18 (or the age of majority in your jurisdiction). 
+              We do not knowingly collect personal information from children. If you believe we have collected information 
+              from a child, please contact us immediately.
+            </p>
+          </section>
+
+          {/* Section 10: International Data Transfers */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">10. International Data Transfers</h2>
+            <p className="text-muted-foreground mb-4">
+              The Service is operated from the United States. If you are located outside this jurisdiction, your information 
+              may be transferred to and processed in this jurisdiction or other countries where our service providers operate.
+            </p>
+            <p className="text-muted-foreground mb-4">
+              By using the Service, you consent to the transfer of your information to these jurisdictions, which may have 
+              different data protection laws than your country of residence.
+            </p>
+
+            <h3 className="text-base font-medium mb-2 text-foreground">10.1 European Users (GDPR)</h3>
+            <p className="text-muted-foreground mb-2">
+              If you are located in the European Economic Area (EEA), you have additional rights under the General Data Protection Regulation (GDPR):
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li><strong>Right to object:</strong> You may object to processing of your personal information for certain purposes</li>
+              <li><strong>Right to restriction:</strong> You may request restriction of processing in certain circumstances</li>
+              <li><strong>Right to lodge a complaint:</strong> You may file a complaint with your local data protection authority</li>
+            </ul>
+            <p className="text-muted-foreground mb-2">We process your information based on:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground">
+              <li><strong>Consent:</strong> When you create an account and use the Service</li>
+              <li><strong>Contract performance:</strong> To provide the Service and process payments</li>
+              <li><strong>Legitimate interests:</strong> For research, security, and service improvement</li>
+              <li><strong>Legal obligations:</strong> To comply with applicable laws</li>
+            </ul>
+          </section>
+
+          {/* Section 11: California Privacy Rights (CCPA) */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">11. California Privacy Rights (CCPA)</h2>
+            <p className="text-muted-foreground mb-2">
+              If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA):
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li><strong>Right to know:</strong> You may request information about the categories and specific pieces of personal information we collect</li>
+              <li><strong>Right to delete:</strong> You may request deletion of your personal information (subject to exceptions)</li>
+              <li><strong>Right to opt-out:</strong> You may opt out of the sale of personal information (we do not sell personal information)</li>
+              <li><strong>Right to non-discrimination:</strong> We will not discriminate against you for exercising your privacy rights</li>
+            </ul>
+            <p className="text-muted-foreground">
+              To exercise these rights, please contact us using the information provided in Section 14.
+            </p>
+          </section>
+
+          {/* Section 12: Third-Party Links */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">12. Third-Party Links</h2>
+            <p className="text-muted-foreground">
+              The Service may contain links to third-party websites or services. We are not responsible for the privacy 
+              practices of these third parties. We encourage you to review their privacy policies before providing any information.
+            </p>
+          </section>
+
+          {/* Section 13: Changes to This Privacy Policy */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">13. Changes to This Privacy Policy</h2>
+            <p className="text-muted-foreground mb-2">We may update this Privacy Policy from time to time. We will notify you of material changes by:</p>
+            <ul className="list-disc pl-6 space-y-1 text-muted-foreground mb-4">
+              <li>Posting the updated policy on the Service</li>
+              <li>Sending an email notification (if you have an account)</li>
+              <li>Updating the "Last Updated" date at the top of this policy</li>
+            </ul>
+            <p className="text-muted-foreground">
+              Your continued use of the Service after such changes constitutes acceptance of the updated Privacy Policy.
+            </p>
+          </section>
+
+          {/* Section 14: Contact Us */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">14. Contact Us</h2>
+            <p className="text-muted-foreground mb-4">
+              If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us at:
+            </p>
+            <div className="bg-muted/50 p-4 rounded-md border">
+              <p className="text-muted-foreground">
+                <strong>Email:</strong>{" "}
+                <a href="mailto:privacy@greatcommissionbenchmark.ai" className="text-[--ga-red] hover:underline">
+                  privacy@greatcommissionbenchmark.ai
+                </a>
+              </p>
+            </div>
+          </section>
+
+          {/* Section 15: Acknowledgment */}
+          <section className="mb-4">
+            <h2 className="text-lg font-semibold mb-3 text-foreground">15. Acknowledgment</h2>
+            <p className="text-muted-foreground font-medium bg-muted/50 p-4 rounded-md border">
+              BY USING THE SERVICE, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO THIS PRIVACY POLICY 
+              AND CONSENT TO THE COLLECTION, USE, AND DISCLOSURE OF YOUR INFORMATION AS DESCRIBED HEREIN.
+            </p>
+          </section>
         </CardContent>
       </Card>
     </div>

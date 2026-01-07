@@ -72,9 +72,11 @@ export function VerdictDistributionChart({
         display: false,
       },
       tooltip: {
+        filter: (tooltipItem: any) => tooltipItem.raw != null,
         callbacks: {
           label: function (context: any) {
             const value = context.raw;
+            if (value == null) return '';
             const percentage = ((value / total) * 100).toFixed(1);
             return showPercentages
               ? `${value} (${percentage}%)`

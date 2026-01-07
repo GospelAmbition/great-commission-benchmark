@@ -32,7 +32,6 @@ export default function ModelDetailPage() {
     }
   })();
   const [model, setModel] = useState<any>(null);
-  const [testRuns, setTestRuns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,9 +45,6 @@ export default function ModelDetailPage() {
     try {
       const modelData = await apiClient.getModel(modelId);
       setModel(modelData);
-
-      // Load recent test runs (would need a separate endpoint or include in model detail)
-      // For now, we'll use placeholder data structure
     } catch (error) {
       console.error("Failed to load model:", error);
     } finally {
@@ -238,31 +234,31 @@ export default function ModelDetailPage() {
               <CardTitle>Recent Test Runs</CardTitle>
             </CardHeader>
             <CardContent>
-              {testRuns.length > 0 ? (
+              {model.test_history && model.test_history.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead>Version</TableHead>
                       <TableHead>Score</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Trust Tier</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {testRuns.map((run) => (
-                      <TableRow key={run.id}>
+                    {model.test_history.map((run: any) => (
+                      <TableRow key={run.test_run_id}>
                         <TableCell>
-                          {new Date(run.created_at).toLocaleDateString()}
+                          {new Date(run.completed_at).toLocaleDateString()}
                         </TableCell>
-                        <TableCell>{run.version}</TableCell>
-                        <TableCell>{run.score?.toFixed(1) || "—"}</TableCell>
+                        <TableCell>{run.benchmark_version}</TableCell>
+                        <TableCell>{run.overall_score?.toFixed(1) || "—"}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{run.status}</Badge>
+                          <Badge variant="outline">{run.trust_tier}</Badge>
                         </TableCell>
                         <TableCell>
                           <Button asChild variant="ghost" size="sm">
-                            <Link href={`/dashboard/tests/${run.id}`}>View</Link>
+                            <Link href={`/tests/${run.test_run_id}/results`}>View</Link>
                           </Button>
                         </TableCell>
                       </TableRow>

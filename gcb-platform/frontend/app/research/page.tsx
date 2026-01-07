@@ -24,7 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiClient } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, BarChart3, Filter, AlertTriangle } from "lucide-react";
 
 interface LeaderboardItem {
   model_id: string;
@@ -99,266 +99,298 @@ export default function ResearchPage() {
   }
 
   return (
-    <div className="container py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold">Research</h1>
-        <p className="mt-2 text-muted-foreground">
-          Explore benchmark results, compare models, and dive deep into performance data
-        </p>
-      </div>
-
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-          <CardDescription>Refine your search</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Provider</label>
-              <Select
-                value={filters.provider || "all"}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, provider: value === "all" ? "" : value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All providers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All providers</SelectItem>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="anthropic">Anthropic</SelectItem>
-                  <SelectItem value="google">Google</SelectItem>
-                  <SelectItem value="meta">Meta</SelectItem>
-                </SelectContent>
-              </Select>
+    <div className="flex flex-col">
+      {/* Page Header */}
+      <div 
+        className="border-b border-red-900/20"
+        style={{ background: 'linear-gradient(135deg, #a11824 0%, #7a1219 100%)' }}
+      >
+        <div className="container py-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-white/10">
+              <BarChart3 className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Trust Tier</label>
-              <Select
-                value={filters.trust_tier || "all"}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, trust_tier: value === "all" ? "" : value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All tiers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All tiers</SelectItem>
-                  <SelectItem value="automated">Automated</SelectItem>
-                  <SelectItem value="reviewed">Reviewed</SelectItem>
-                  <SelectItem value="validated">Validated</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Category</label>
-              <Select
-                value={filters.category || "all"}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, category: value === "all" ? "" : value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  <SelectItem value="scripture">Scripture</SelectItem>
-                  <SelectItem value="theology">Theology</SelectItem>
-                  <SelectItem value="ethics">Ethics</SelectItem>
-                  <SelectItem value="apologetics">Apologetics</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Tier</label>
-              <Select
-                value={filters.tier || "all"}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, tier: value === "all" ? "" : value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All tiers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All tiers</SelectItem>
-                  <SelectItem value="tier1">Tier 1 (Task)</SelectItem>
-                  <SelectItem value="tier2">Tier 2 (Doctrine)</SelectItem>
-                  <SelectItem value="tier3">Tier 3 (Worldview)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">Research</h1>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Compare Button */}
-      {selectedModels.size > 0 && (
-        <div className="mb-4">
-          <Button asChild>
-            <Link href={`/research/compare?models=${Array.from(selectedModels).map(id => encodeURIComponent(id)).join(",")}`}>
-              Compare {selectedModels.size} Model{selectedModels.size > 1 ? "s" : ""}
-            </Link>
-          </Button>
+          <p className="text-white/80">
+            Explore benchmark results, compare models, and dive deep into performance data
+          </p>
         </div>
-      )}
-
-      {/* Disclaimer */}
-      <div className="mb-4 p-4 bg-muted rounded-lg border-l-4 border-[--ga-red]">
-        <p className="text-sm text-muted-foreground">
-          <strong>Disclaimer:</strong> This benchmark is for informational purposes only and does not 
-          constitute an endorsement or recommendation of any AI model or service. Results reflect 
-          performance on specific test questions at a point in time and may not predict performance 
-          on other tasks or future model versions.
-        </p>
       </div>
 
-      {/* Leaderboard Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Leaderboard</CardTitle>
-          <CardDescription>
-            {pagination.total > 0
-              ? `Showing ${pagination.offset + 1}-${Math.min(pagination.offset + pagination.limit, pagination.total)} of ${pagination.total} models`
-              : "No models to display"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
+      <div className="container py-6 space-y-4">
+        {/* Filters */}
+        <Card className="bg-white">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-slate-500" />
+              <CardTitle className="text-base text-slate-900">Filters</CardTitle>
             </div>
-          ) : leaderboard.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-lg text-muted-foreground mb-2">No benchmark results available yet</p>
-              <p className="text-sm text-muted-foreground">
-                Check back soon as we continue to evaluate AI models on the Great Commission Benchmark.
-              </p>
-            </div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox disabled />
-                    </TableHead>
-                    <TableHead>Rank</TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSort("model_name")}
-                        className="h-8"
-                      >
-                        Model
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                      </Button>
-                    </TableHead>
-                    <TableHead>Provider</TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSort("score")}
-                        className="h-8"
-                      >
-                        Overall Score
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                      </Button>
-                    </TableHead>
-                    <TableHead>Tier 1</TableHead>
-                    <TableHead>Tier 2</TableHead>
-                    <TableHead>Tier 3</TableHead>
-                    <TableHead>Trust</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leaderboard.map((item, index) => (
-                    <TableRow key={item.model_id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedModels.has(item.model_id)}
-                          onCheckedChange={() => toggleModelSelection(item.model_id)}
-                          disabled={!selectedModels.has(item.model_id) && selectedModels.size >= 5}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {pagination.offset + index + 1}
-                      </TableCell>
-                      <TableCell>
-                        <Link
-                          href={`/research/models/${encodeURIComponent(item.model_id)}`}
-                          className="hover:underline font-medium"
-                        >
-                          {item.model_name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{item.provider}</Badge>
-                      </TableCell>
-                      <TableCell className="font-semibold">
-                        {item.overall_score.toFixed(1)}
-                      </TableCell>
-                      <TableCell>{item.tier1_score?.toFixed(1) || "—"}</TableCell>
-                      <TableCell>{item.tier2_score?.toFixed(1) || "—"}</TableCell>
-                      <TableCell>{item.tier3_score?.toFixed(1) || "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{item.trust_tier || "automated"}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button asChild variant="ghost" size="sm">
-                          <Link href={`/research/models/${encodeURIComponent(item.model_id)}`}>View</Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {/* Pagination */}
-              <div className="mt-4 flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  disabled={pagination.offset === 0}
-                  onClick={() =>
-                    setPagination((prev) => ({
-                      ...prev,
-                      offset: Math.max(0, prev.offset - prev.limit),
-                    }))
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className="text-xs font-medium mb-1.5 block text-slate-500">Provider</label>
+                <Select
+                  value={filters.provider || "all"}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, provider: value === "all" ? "" : value }))
                   }
                 >
-                  Previous
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {Math.floor(pagination.offset / pagination.limit) + 1} of{" "}
-                  {Math.ceil(pagination.total / pagination.limit)}
-                </span>
-                <Button
-                  variant="outline"
-                  disabled={pagination.offset + pagination.limit >= pagination.total}
-                  onClick={() =>
-                    setPagination((prev) => ({
-                      ...prev,
-                      offset: prev.offset + prev.limit,
-                    }))
-                  }
-                >
-                  Next
-                </Button>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All providers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All providers</SelectItem>
+                    <SelectItem value="openai">OpenAI</SelectItem>
+                    <SelectItem value="anthropic">Anthropic</SelectItem>
+                    <SelectItem value="google">Google</SelectItem>
+                    <SelectItem value="meta">Meta</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+              <div>
+                <label className="text-xs font-medium mb-1.5 block text-slate-500">Trust Tier</label>
+                <Select
+                  value={filters.trust_tier || "all"}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, trust_tier: value === "all" ? "" : value }))
+                  }
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All tiers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All tiers</SelectItem>
+                    <SelectItem value="automated">Automated</SelectItem>
+                    <SelectItem value="reviewed">Reviewed</SelectItem>
+                    <SelectItem value="validated">Validated</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1.5 block text-slate-500">Category</label>
+                <Select
+                  value={filters.category || "all"}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, category: value === "all" ? "" : value }))
+                  }
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All categories</SelectItem>
+                    <SelectItem value="scripture">Scripture</SelectItem>
+                    <SelectItem value="theology">Theology</SelectItem>
+                    <SelectItem value="ethics">Ethics</SelectItem>
+                    <SelectItem value="apologetics">Apologetics</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1.5 block text-slate-500">Tier</label>
+                <Select
+                  value={filters.tier || "all"}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, tier: value === "all" ? "" : value }))
+                  }
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All tiers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All tiers</SelectItem>
+                    <SelectItem value="tier1">Tier 1 (Task)</SelectItem>
+                    <SelectItem value="tier2">Tier 2 (Doctrine)</SelectItem>
+                    <SelectItem value="tier3">Tier 3 (Worldview)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Compare Button */}
+        {selectedModels.size > 0 && (
+          <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
+            <span className="text-sm font-medium text-red-800">
+              {selectedModels.size} model{selectedModels.size > 1 ? "s" : ""} selected
+            </span>
+            <Button asChild variant="brand" size="sm">
+              <Link href={`/research/compare?models=${Array.from(selectedModels).map(id => encodeURIComponent(id)).join(",")}`}>
+                Compare Models
+              </Link>
+            </Button>
+          </div>
+        )}
+
+        {/* Disclaimer */}
+        <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border-l-4 border-red-700">
+          <AlertTriangle className="h-4 w-4 text-red-700 mt-0.5 shrink-0" />
+          <p className="text-xs text-slate-600 leading-relaxed">
+            <span className="font-semibold text-slate-900">Disclaimer:</span> This benchmark is for informational purposes only and does not 
+            constitute an endorsement or recommendation of any AI model or service. Results reflect 
+            performance on specific test questions at a point in time and may not predict performance 
+            on other tasks or future model versions.
+          </p>
+        </div>
+
+        {/* Leaderboard Table */}
+        <Card className="bg-white">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-slate-900">Leaderboard</CardTitle>
+            <CardDescription className="text-slate-600">
+              {pagination.total > 0
+                ? `Showing ${pagination.offset + 1}-${Math.min(pagination.offset + pagination.limit, pagination.total)} of ${pagination.total} models`
+                : "No models to display"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : leaderboard.length === 0 ? (
+              <div className="text-center py-10">
+                <div className="w-12 h-12 rounded-full bg-slate-100 mx-auto mb-3 flex items-center justify-center">
+                  <BarChart3 className="h-6 w-6 text-slate-400" />
+                </div>
+                <p className="text-base font-medium text-slate-900 mb-1">No benchmark results available yet</p>
+                <p className="text-sm text-slate-600">
+                  Check back soon as we continue to evaluate AI models on the Great Commission Benchmark.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50 hover:bg-slate-50">
+                        <TableHead className="w-10">
+                          <Checkbox disabled />
+                        </TableHead>
+                        <TableHead className="w-14 text-center text-slate-600">#</TableHead>
+                        <TableHead>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSort("model_name")}
+                            className="h-7 px-2 -ml-2 text-slate-700 hover:bg-transparent hover:text-red-700"
+                          >
+                            Model
+                            <ArrowUpDown className="ml-1 h-3 w-3" />
+                          </Button>
+                        </TableHead>
+                        <TableHead className="text-slate-600">Provider</TableHead>
+                        <TableHead>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSort("score")}
+                            className="h-7 px-2 -ml-2 text-slate-700 hover:bg-transparent hover:text-red-700"
+                          >
+                            Score
+                            <ArrowUpDown className="ml-1 h-3 w-3" />
+                          </Button>
+                        </TableHead>
+                        <TableHead className="text-center text-slate-600">T1</TableHead>
+                        <TableHead className="text-center text-slate-600">T2</TableHead>
+                        <TableHead className="text-center text-slate-600">T3</TableHead>
+                        <TableHead className="text-slate-600">Trust</TableHead>
+                        <TableHead className="w-16"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {leaderboard.map((item, index) => (
+                        <TableRow key={`${item.model_id}-${index}`} className="group">
+                          <TableCell className="py-2">
+                            <Checkbox
+                              checked={selectedModels.has(item.model_id)}
+                              onCheckedChange={() => toggleModelSelection(item.model_id)}
+                              disabled={!selectedModels.has(item.model_id) && selectedModels.size >= 5}
+                            />
+                          </TableCell>
+                          <TableCell className="py-2 text-center font-medium text-slate-500">
+                            {pagination.offset + index + 1}
+                          </TableCell>
+                          <TableCell className="py-2">
+                            <Link
+                              href={`/research/models/${encodeURIComponent(item.model_id)}`}
+                              className="font-medium text-slate-900 hover:text-red-700 transition-colors"
+                            >
+                              {item.model_name}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="py-2">
+                            <Badge variant="secondary" className="font-normal bg-slate-100 text-slate-700">{item.provider}</Badge>
+                          </TableCell>
+                          <TableCell className="py-2">
+                            <span className="font-bold text-red-700">{item.overall_score.toFixed(1)}</span>
+                          </TableCell>
+                          <TableCell className="py-2 text-center text-sm text-slate-500">
+                            {item.tier1_score?.toFixed(1) || "—"}
+                          </TableCell>
+                          <TableCell className="py-2 text-center text-sm text-slate-500">
+                            {item.tier2_score?.toFixed(1) || "—"}
+                          </TableCell>
+                          <TableCell className="py-2 text-center text-sm text-slate-500">
+                            {item.tier3_score?.toFixed(1) || "—"}
+                          </TableCell>
+                          <TableCell className="py-2">
+                            <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">{item.trust_tier || "automated"}</Badge>
+                          </TableCell>
+                          <TableCell className="py-2">
+                            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Link href={`/research/models/${encodeURIComponent(item.model_id)}`}>View</Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Pagination */}
+                <div className="mt-4 flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={pagination.offset === 0}
+                    onClick={() =>
+                      setPagination((prev) => ({
+                        ...prev,
+                        offset: Math.max(0, prev.offset - prev.limit),
+                      }))
+                    }
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-slate-600">
+                    Page {Math.floor(pagination.offset / pagination.limit) + 1} of{" "}
+                    {Math.ceil(pagination.total / pagination.limit) || 1}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={pagination.offset + pagination.limit >= pagination.total}
+                    onClick={() =>
+                      setPagination((prev) => ({
+                        ...prev,
+                        offset: prev.offset + prev.limit,
+                      }))
+                    }
+                  >
+                    Next
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

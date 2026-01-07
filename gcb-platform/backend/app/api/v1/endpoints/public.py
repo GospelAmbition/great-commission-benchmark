@@ -94,8 +94,17 @@ async def get_leaderboard(
     if trust_tier:
         query = query.filter(TestRun.trust_tier == trust_tier)
     
-    # Get test runs
+    # Get test runs (ordered by completed_at desc so most recent is first)
     test_runs = query.order_by(TestRun.completed_at.desc()).all()
+    
+    # Deduplicate: keep only the most recent test per model
+    seen_models = set()
+    unique_test_runs = []
+    for test_run in test_runs:
+        if test_run.model_id not in seen_models:
+            seen_models.add(test_run.model_id)
+            unique_test_runs.append(test_run)
+    test_runs = unique_test_runs
     
     # Calculate scores and build entries
     entries = []

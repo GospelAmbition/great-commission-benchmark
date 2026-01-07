@@ -49,8 +49,12 @@ export function VersionHistoryChart({ data }: VersionHistoryChartProps) {
         display: false,
       },
       tooltip: {
+        filter: (tooltipItem: any) => tooltipItem.raw != null,
         callbacks: {
-          label: (context: any) => `${context.parsed.y.toFixed(1)}%`,
+          label: (context: any) => {
+            if (context.parsed?.y == null) return '';
+            return `${context.parsed.y.toFixed(1)}%`;
+          },
         },
       },
     },

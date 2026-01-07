@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Home, RefreshCw, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
 export default function GlobalError({
   error,
@@ -13,53 +10,39 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    // Log error to console or error reporting service
-    console.error("Global application error:", error);
-  }, [error]);
-
   return (
-    <html lang="en">
-      <body>
-        <div className="container py-16 max-w-2xl">
-          <Card>
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4">
-                <AlertTriangle className="h-16 w-16 text-[--ga-red] mx-auto" />
+    <html>
+      <body className="bg-slate-50">
+        <div className="container flex items-center justify-center min-h-screen py-12">
+          <div className="max-w-md w-full text-center bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+            <div className="flex justify-center mb-4">
+              <AlertTriangle className="h-16 w-16 text-red-700" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">Something Went Wrong</h1>
+            <p className="text-slate-600 mb-6">
+              A critical error occurred. We apologize for the inconvenience.
+            </p>
+            {process.env.NODE_ENV === "development" && error.message && (
+              <div className="p-3 bg-slate-100 rounded-lg text-left overflow-auto mb-4">
+                <code className="text-xs text-slate-700">{error.message}</code>
               </div>
-              <CardTitle className="text-2xl">Critical Error</CardTitle>
-              <CardDescription>
-                A critical error occurred. Please refresh the page or contact support.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button
-                  variant="brand"
-                  onClick={reset}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Refresh Page
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href="/">
-                    <Home className="mr-2 h-4 w-4" />
-                    Go Home
-                  </Link>
-                </Button>
-              </div>
-
-              <div className="mt-8 pt-8 border-t">
-                <p className="text-sm text-muted-foreground text-center">
-                  If this problem persists, please{" "}
-                  <a href="mailto:contact@greatcommissionbenchmark.ai" className="text-[--ga-red] hover:underline">
-                    contact support
-                  </a>
-                  .
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            )}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button onClick={reset} className="bg-red-700 text-white hover:bg-red-800">
+                Try Again
+              </Button>
+              <Button variant="outline" asChild className="border-slate-300 text-slate-700">
+                <a href="/">Go Home</a>
+              </Button>
+            </div>
+            <p className="text-xs text-slate-500 mt-6">
+              If this problem persists, please{" "}
+              <a href="mailto:contact@greatcommissionbenchmark.ai" className="text-red-700 hover:underline">
+                contact us
+              </a>
+              .
+            </p>
+          </div>
         </div>
       </body>
     </html>

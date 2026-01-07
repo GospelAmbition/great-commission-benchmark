@@ -55,6 +55,13 @@ export interface ModelResponse {
   test_count?: number;
   category_scores?: Record<string, number>;
   version_history?: Array<{ version: string; score: number; date: string }>;
+  test_history?: Array<{
+    test_run_id: string;
+    overall_score: number;
+    benchmark_version: string;
+    completed_at: string;
+    trust_tier: string;
+  }>;
 }
 
 export interface ModelsResponse {
@@ -348,10 +355,8 @@ export class ApiClient {
   }
 
   async compareModels(modelIds: string[]): Promise<CompareResponse> {
-    return this.request<CompareResponse>('/api/public/leaderboard/compare', {
-      method: 'POST',
-      body: JSON.stringify({ model_ids: modelIds }),
-    });
+    const params = modelIds.map(id => `models=${encodeURIComponent(id)}`).join('&');
+    return this.request<CompareResponse>(`/api/public/leaderboard/compare?${params}`);
   }
 
   // User API endpoints (require auth)
@@ -461,15 +466,50 @@ export class ApiClient {
     model_name: string;
     status: string;
     created_at: string;
+    overall_score?: number;
   }>> {
     // Backend returns { submissions: [...], pagination: {...} }, extract the array
-    const response = await this.request<{ submissions: Array<{ id: string; model_name: string; status: string; submitted_at: string }> }>('/api/user/submissions');
+    const response = await this.request<{ submissions: Array<{ id: string; model_name: string; status: string; submitted_at: string; overall_score?: number }> }>('/api/user/submissions');
     return (response.submissions || []).map((sub) => ({
       id: sub.id,
       model_name: sub.model_name,
       status: sub.status,
       created_at: sub.submitted_at, // Map submitted_at to created_at for frontend compatibility
+      overall_score: sub.overall_score,
     }));
+  }
+
+  async getUserSubmissionDetail(submissionId: string): Promise<{
+    id: string;
+    model_name: string;
+    status: string;
+    cli_version: string;
+    question_set_version: string;
+    overall_score: number;
+    tier1_score: number;
+    tier2_score: number;
+    tier3_score: number;
+    total_questions: number;
+    verdict_counts: Record<string, number>;
+    submitted_at: string | null;
+    reviewed_at: string | null;
+    reviewer_notes: string | null;
+    judge_model: string | null;
+    backend: string | null;
+    completed_at: string | null;
+    responses: Array<{
+      question_id: string;
+      tier: number;
+      category: string;
+      response: string;
+      verdict: string;
+      verdict_normalized?: string;
+      judge_reasoning?: string;
+      response_time_ms?: number;
+    }>;
+    fee_waived: boolean;
+  }> {
+    return this.request(`/api/user/submissions/${submissionId}`);
   }
 
   async uploadCliSubmission(exportData: object): Promise<{
@@ -621,6 +661,21 @@ export class ApiClient {
       body: JSON.stringify({
         test_id: testId,
         accepted_cost: true,
+      }),
+    });
+  }
+
+  // Donations API (no auth required)
+  async createDonationIntent(amount: number, email?: string): Promise<{
+    payment_intent_id: string;
+    client_secret: string;
+    amount: number;
+  }> {
+    return this.request(`/api/v1/donations/create-intent`, {
+      method: 'POST',
+      body: JSON.stringify({
+        amount,
+        email: email || undefined,
       }),
     });
   }
@@ -902,6 +957,203 @@ export class ApiClient {
       body: JSON.stringify({ action, notes }),
     });
   }
+
+  // =============================================================================
+  // Blog API endpoints
+  // =============================================================================
+
+  // Public blog endpoints
+  async getBlogPosts(params?: {
+    category?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    items: BlogPost[];
+    total: number;
+  }> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const query = queryParams.toString();
+    return this.request(`/api/blog/posts${query ? `?${query}` : ''}`);
+  }
+
+  async getBlogPost(slug: string): Promise<BlogPost> {
+    return this.request(`/api/blog/posts/${slug}`);
+  }
+
+  async getBlogCategories(): Promise<{
+    items: BlogCategory[];
+    total: number;
+  }> {
+    return this.request('/api/blog/categories');
+  }
+
+  // Admin blog endpoints
+  async getAdminBlogPosts(params?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    items: BlogPost[];
+    total: number;
+  }> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const query = queryParams.toString();
+    return this.request(`/api/admin/blog/posts${query ? `?${query}` : ''}`);
+  }
+
+  async getAdminBlogPost(id: string): Promise<BlogPost> {
+    return this.request(`/api/admin/blog/posts/${id}`);
+  }
+
+  async createBlogPost(data: {
+    title: string;
+    slug: string;
+    excerpt?: string;
+    content?: string;
+    featured_image_url?: string;
+    category_ids?: string[];
+  }): Promise<BlogPost> {
+    return this.request('/api/admin/blog/posts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateBlogPost(id: string, data: {
+    title?: string;
+    slug?: string;
+    excerpt?: string;
+    content?: string;
+    featured_image_url?: string;
+    category_ids?: string[];
+  }): Promise<BlogPost> {
+    return this.request(`/api/admin/blog/posts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteBlogPost(id: string): Promise<{ message: string }> {
+    return this.request(`/api/admin/blog/posts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async publishBlogPost(id: string): Promise<BlogPost> {
+    return this.request(`/api/admin/blog/posts/${id}/publish`, {
+      method: 'POST',
+    });
+  }
+
+  async unpublishBlogPost(id: string): Promise<BlogPost> {
+    return this.request(`/api/admin/blog/posts/${id}/unpublish`, {
+      method: 'POST',
+    });
+  }
+
+  async uploadBlogImage(file: File): Promise<{
+    url: string;
+    filename: string;
+    size: number;
+    content_type: string;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const token = await this.getAuthToken();
+    const response = await fetch(`${this.baseUrl}/api/admin/blog/upload-image`, {
+      method: 'POST',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image');
+    }
+
+    return response.json();
+  }
+
+  // Admin blog category endpoints
+  async getAdminBlogCategories(): Promise<{
+    items: BlogCategory[];
+    total: number;
+  }> {
+    return this.request('/api/admin/blog/categories');
+  }
+
+  async createBlogCategory(data: {
+    name: string;
+    slug: string;
+    description?: string;
+  }): Promise<BlogCategory> {
+    return this.request('/api/admin/blog/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateBlogCategory(id: string, data: {
+    name?: string;
+    slug?: string;
+    description?: string;
+  }): Promise<BlogCategory> {
+    return this.request(`/api/admin/blog/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteBlogCategory(id: string): Promise<{ message: string }> {
+    return this.request(`/api/admin/blog/categories/${id}`, {
+      method: 'DELETE',
+    });
+  }
+}
+
+// Blog types
+export interface BlogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  content?: string;
+  featured_image_url?: string;
+  status: string;
+  author: {
+    id: string;
+    name?: string;
+    email: string;
+  };
+  categories: BlogCategory[];
+  created_at: string;
+  updated_at: string;
+  published_at?: string;
 }
 
 export const apiClient = new ApiClient();

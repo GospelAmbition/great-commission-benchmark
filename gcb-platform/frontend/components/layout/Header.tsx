@@ -29,112 +29,130 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" role="banner">
-      <div className="container flex h-16 items-center">
-        <Link href="/" className="mr-6 flex items-center space-x-2" aria-label="Great Commission Benchmark - Home">
-          <span className="font-bold text-xl">Great Commission Benchmark</span>
+    <header className="sticky top-0 z-50 w-full bg-white shadow-sm" role="banner">
+      {/* Top brand accent line */}
+      <div className="h-1 w-full" style={{ background: 'linear-gradient(135deg, #a11824 0%, #7a1219 100%)' }} />
+      
+      <div className="container flex h-14 items-center">
+        <Link href="/" className="mr-8 flex items-center space-x-2 group" aria-label="Great Commission Benchmark - Home">
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow"
+              style={{ background: 'linear-gradient(135deg, #a11824 0%, #7a1219 100%)' }}
+            >
+              <span className="text-white font-bold text-sm">GCB</span>
+            </div>
+            <span className="font-bold text-lg text-slate-900 hidden sm:inline">
+              Great Commission Benchmark
+            </span>
+          </div>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium" aria-label="Main navigation">
+        <nav className="hidden md:flex items-center space-x-1 text-sm font-medium" aria-label="Main navigation">
           <Link
             href="/"
-            className={`transition-colors hover:text-foreground/80 pb-1 border-b-2 ${
+            className={`px-3 py-2 rounded-md transition-all ${
               isActive("/")
-                ? "text-foreground border-foreground"
-                : "text-foreground/60 border-transparent"
+                ? "text-red-700 bg-red-50 font-semibold"
+                : "text-slate-600 hover:text-red-700 hover:bg-red-50"
             }`}
           >
             Home
           </Link>
           <Link
             href="/research"
-            className={`transition-colors hover:text-foreground/80 pb-1 border-b-2 ${
+            className={`px-3 py-2 rounded-md transition-all ${
               isActive("/research")
-                ? "text-foreground border-foreground"
-                : "text-foreground/60 border-transparent"
+                ? "text-red-700 bg-red-50 font-semibold"
+                : "text-slate-600 hover:text-red-700 hover:bg-red-50"
             }`}
           >
             Research
           </Link>
           <Link
-            href="/contribute"
-            className={`transition-colors hover:text-foreground/80 pb-1 border-b-2 ${
-              isActive("/contribute")
-                ? "text-foreground border-foreground"
-                : "text-foreground/60 border-transparent"
+            href="/action"
+            className={`px-3 py-2 rounded-md transition-all ${
+              isActive("/action")
+                ? "text-red-700 bg-red-50 font-semibold"
+                : "text-slate-600 hover:text-red-700 hover:bg-red-50"
             }`}
           >
-            Contribute
+            Action
           </Link>
           <Link
             href="/about"
-            className={`transition-colors hover:text-foreground/80 pb-1 border-b-2 ${
+            className={`px-3 py-2 rounded-md transition-all ${
               isActive("/about")
-                ? "text-foreground border-foreground"
-                : "text-foreground/60 border-transparent"
+                ? "text-red-700 bg-red-50 font-semibold"
+                : "text-slate-600 hover:text-red-700 hover:bg-red-50"
             }`}
           >
             About
           </Link>
         </nav>
 
-        <div className="flex flex-1 items-center justify-end space-x-4">
+        <div className="flex flex-1 items-center justify-end space-x-3">
           {isLoading ? (
-            <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
+            <div className="h-8 w-8 animate-pulse rounded-full bg-slate-200" />
           ) : user ? (
             <>
               <Link href="/dashboard" className="hidden md:block">
-                <Button variant="ghost" size="sm">
+                <Button variant="outline" size="sm" className="border-slate-300 text-slate-700 hover:border-red-200 hover:bg-red-50">
                   Dashboard
                 </Button>
               </Link>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full ring-2 ring-red-200 hover:ring-red-300 transition-all">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback>
+                      <AvatarFallback 
+                        className="text-white font-semibold text-sm"
+                        style={{ background: 'linear-gradient(135deg, #a11824 0%, #7a1219 100%)' }}
+                      >
                         {user.name?.[0] || user.email?.[0] || "U"}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{user.name || "User"}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                  <div className="px-2 py-1.5 border-b border-slate-200">
+                    <p className="text-sm font-semibold text-slate-900">{user.name || "User"}</p>
+                    <p className="text-xs text-slate-500">{user.email}</p>
                   </div>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard">My Dashboard</Link>
+                    <Link href="/dashboard" className="cursor-pointer text-slate-700">My Dashboard</Link>
                   </DropdownMenuItem>
                   {isModerator && (
                     <DropdownMenuItem asChild>
-                      <Link href="/moderator">Moderator Panel</Link>
+                      <Link href="/moderator" className="cursor-pointer text-slate-700">Moderator Panel</Link>
                     </DropdownMenuItem>
                   )}
                   {isBenchmarkDeveloper && (
                     <DropdownMenuItem asChild>
-                      <Link href="/benchmark">Benchmark Development</Link>
+                      <Link href="/benchmark" className="cursor-pointer text-slate-700">Benchmark Development</Link>
                     </DropdownMenuItem>
                   )}
                   {isAdmin && (
                     <DropdownMenuItem asChild>
-                      <Link href="/admin">Admin Dashboard</Link>
+                      <Link href="/admin" className="cursor-pointer text-slate-700">Admin Dashboard</Link>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard/settings">Account Settings</Link>
+                    <Link href="/dashboard/settings" className="cursor-pointer text-slate-700">Account Settings</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
+                  <DropdownMenuItem 
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                    className="cursor-pointer text-red-700 focus:text-red-700 focus:bg-red-50"
+                  >
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           ) : (
-            <Button asChild>
+            <Button asChild variant="brand" size="sm">
               <a href="/api/auth/signin">Login</a>
             </Button>
           )}
@@ -142,57 +160,70 @@ export function Header() {
           {/* Mobile Menu */}
           <Sheet>
             <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon" aria-label="Open navigation menu">
+              <Button variant="ghost" size="icon" aria-label="Open navigation menu" className="text-slate-700 hover:bg-red-50">
                 <Menu className="h-5 w-5" aria-hidden="true" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" aria-label="Mobile navigation">
-              <nav className="flex flex-col space-y-4 mt-8" aria-label="Mobile navigation">
+            <SheetContent side="right" aria-label="Mobile navigation" className="border-l-0 shadow-xl">
+              {/* Mobile brand accent */}
+              <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(135deg, #a11824 0%, #7a1219 100%)' }} />
+              
+              <nav className="flex flex-col space-y-2 mt-8" aria-label="Mobile navigation">
                 <Link
                   href="/"
-                  className={`text-lg font-medium transition-colors hover:text-foreground/80 pl-3 border-l-2 ${
-                    isActive("/") ? "border-foreground" : "border-transparent"
+                  className={`text-base font-medium transition-all px-4 py-2.5 rounded-lg ${
+                    isActive("/") 
+                      ? "text-red-700 bg-red-50 border-l-4 border-red-700" 
+                      : "text-slate-700 hover:bg-red-50"
                   }`}
                 >
                   Home
                 </Link>
                 <Link
                   href="/research"
-                  className={`text-lg font-medium transition-colors hover:text-foreground/80 pl-3 border-l-2 ${
-                    isActive("/research") ? "border-foreground" : "border-transparent"
+                  className={`text-base font-medium transition-all px-4 py-2.5 rounded-lg ${
+                    isActive("/research") 
+                      ? "text-red-700 bg-red-50 border-l-4 border-red-700" 
+                      : "text-slate-700 hover:bg-red-50"
                   }`}
                 >
                   Research
                 </Link>
                 <Link
-                  href="/contribute"
-                  className={`text-lg font-medium transition-colors hover:text-foreground/80 pl-3 border-l-2 ${
-                    isActive("/contribute") ? "border-foreground" : "border-transparent"
+                  href="/action"
+                  className={`text-base font-medium transition-all px-4 py-2.5 rounded-lg ${
+                    isActive("/action") 
+                      ? "text-red-700 bg-red-50 border-l-4 border-red-700" 
+                      : "text-slate-700 hover:bg-red-50"
                   }`}
                 >
-                  Contribute
+                  Action
                 </Link>
                 <Link
                   href="/about"
-                  className={`text-lg font-medium transition-colors hover:text-foreground/80 pl-3 border-l-2 ${
-                    isActive("/about") ? "border-foreground" : "border-transparent"
+                  className={`text-base font-medium transition-all px-4 py-2.5 rounded-lg ${
+                    isActive("/about") 
+                      ? "text-red-700 bg-red-50 border-l-4 border-red-700" 
+                      : "text-slate-700 hover:bg-red-50"
                   }`}
                 >
                   About
                 </Link>
+                
                 {user && (
                   <>
+                    <div className="h-px bg-slate-200 my-2" />
                     <Link
                       href="/dashboard"
-                      className="text-lg font-medium transition-colors hover:text-foreground/80"
+                      className="text-base font-medium transition-all px-4 py-2.5 rounded-lg text-slate-700 hover:bg-red-50"
                     >
                       Dashboard
                     </Link>
                     {isModerator && (
                       <Link
                         href="/moderator"
-                        className="text-lg font-medium transition-colors hover:text-foreground/80"
+                        className="text-base font-medium transition-all px-4 py-2.5 rounded-lg text-slate-700 hover:bg-red-50"
                       >
                         Moderator Panel
                       </Link>
@@ -200,7 +231,7 @@ export function Header() {
                     {isBenchmarkDeveloper && (
                       <Link
                         href="/benchmark"
-                        className="text-lg font-medium transition-colors hover:text-foreground/80"
+                        className="text-base font-medium transition-all px-4 py-2.5 rounded-lg text-slate-700 hover:bg-red-50"
                       >
                         Benchmark Development
                       </Link>
@@ -208,7 +239,7 @@ export function Header() {
                     {isAdmin && (
                       <Link
                         href="/admin"
-                        className="text-lg font-medium transition-colors hover:text-foreground/80"
+                        className="text-base font-medium transition-all px-4 py-2.5 rounded-lg text-slate-700 hover:bg-red-50"
                       >
                         Admin Dashboard
                       </Link>

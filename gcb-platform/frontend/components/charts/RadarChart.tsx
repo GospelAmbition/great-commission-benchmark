@@ -45,6 +45,11 @@ export function RadarChart({ data, categories }: RadarChartProps) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    plugins: {
+      tooltip: {
+        filter: (tooltipItem: any) => tooltipItem.raw != null,
+      },
+    },
     scales: {
       r: {
         beginAtZero: true,

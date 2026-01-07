@@ -49,6 +49,14 @@ async def upload_submission(
     # Check if fee is waived
     fee_is_waived = is_fee_waived(current_user)
     
+    # Extract scores from summary
+    summary = export_data.get("summary", {})
+    tier_scores = summary.get("tier_scores", {})
+    overall_score = int(round(summary.get("score", 0)))
+    tier1_score = int(round(tier_scores.get("tier1", {}).get("raw", 0)))
+    tier2_score = int(round(tier_scores.get("tier2", {}).get("raw", 0)))
+    tier3_score = int(round(tier_scores.get("tier3", {}).get("raw", 0)))
+    
     if fee_is_waived:
         # Create submission directly without payment
         submission = CommunitySubmission(
@@ -58,7 +66,11 @@ async def upload_submission(
             question_set_version=version,
             results_package=export_data,  # Store full export as JSONB
             status="pending",
-            fee_waived=True
+            fee_waived=True,
+            overall_score=overall_score,
+            tier1_score=tier1_score,
+            tier2_score=tier2_score,
+            tier3_score=tier3_score
         )
         db.add(submission)
         db.commit()
@@ -99,7 +111,11 @@ async def upload_submission(
             results_package=export_data,  # Store full export as JSONB
             status="pending_payment",  # Status indicates payment required
             fee_waived=False,
-            payment_id=payment_intent["id"]
+            payment_id=payment_intent["id"],
+            overall_score=overall_score,
+            tier1_score=tier1_score,
+            tier2_score=tier2_score,
+            tier3_score=tier3_score
         )
         db.add(submission)
         db.commit()

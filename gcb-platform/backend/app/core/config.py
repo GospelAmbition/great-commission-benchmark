@@ -59,6 +59,14 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     EMAIL_FROM: str = "Great Commission Benchmark <noreply@greatcommissionbenchmark.ai>"
     
+    # S3-Compatible Storage (Railway Simple Storage or AWS S3)
+    S3_ACCESS_KEY_ID: str = ""
+    S3_SECRET_ACCESS_KEY: str = ""
+    S3_BUCKET: str = ""
+    S3_ENDPOINT_URL: str = ""  # Railway: set to endpoint URL, AWS: leave empty
+    S3_REGION: str = "us-east-1"
+    S3_PUBLIC_URL_BASE: str = ""  # Public URL base for serving files
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,

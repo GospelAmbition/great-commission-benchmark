@@ -266,6 +266,53 @@ async def get_user_submissions(
     )
 
 
+@router.get("/submissions/{submission_id}")
+async def get_user_submission_detail(
+    submission_id: UUID,
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Get detailed submission information for the current user"""
+    submission = db.query(CommunitySubmission).filter(
+        CommunitySubmission.id == submission_id,
+        CommunitySubmission.user_id == current_user.id
+    ).first()
+    
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    # Extract summary from results_package
+    results_package = submission.results_package or {}
+    summary = results_package.get("summary", {})
+    tier_scores = summary.get("tier_scores", {})
+    test_run = results_package.get("test_run", {})
+    
+    # Get responses for display
+    responses = results_package.get("responses", [])
+    
+    return {
+        "id": str(submission.id),
+        "model_name": submission.model_name,
+        "status": submission.status,
+        "cli_version": submission.cli_version,
+        "question_set_version": submission.question_set_version,
+        "overall_score": submission.overall_score or summary.get("score", 0),
+        "tier1_score": submission.tier1_score or tier_scores.get("tier1", {}).get("raw", 0),
+        "tier2_score": submission.tier2_score or tier_scores.get("tier2", {}).get("raw", 0),
+        "tier3_score": submission.tier3_score or tier_scores.get("tier3", {}).get("raw", 0),
+        "total_questions": summary.get("total_questions", len(responses)),
+        "verdict_counts": summary.get("verdict_counts", {}),
+        "submitted_at": submission.submitted_at.isoformat() if submission.submitted_at else None,
+        "reviewed_at": submission.reviewed_at.isoformat() if submission.reviewed_at else None,
+        "reviewer_notes": submission.reviewer_notes,
+        "judge_model": test_run.get("judge_model"),
+        "backend": test_run.get("backend"),
+        "completed_at": test_run.get("completed_at"),
+        "responses": responses,
+        "fee_waived": submission.fee_waived
+    }
+
+
 @router.get("/activity", response_model=UserActivityResponse)
 async def get_user_activity(
     limit: int = Query(50, ge=1, le=100),

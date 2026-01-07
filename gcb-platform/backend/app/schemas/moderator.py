@@ -57,6 +57,7 @@ class ModeratorActivityItem(GCBBaseModel):
     action: str
     review_type: str  # 'platform_test' or 'cli_submission'
     duration_seconds: Optional[int]
+    benchmark_version: Optional[str] = None  # Question set version
     created_at: datetime
 
 

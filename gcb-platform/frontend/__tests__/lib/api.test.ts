@@ -83,10 +83,9 @@ describe('ApiClient', () => {
       await apiClient.compareModels(['model1', 'model2']);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/public/leaderboard/compare',
+        'http://localhost:8000/api/public/leaderboard/compare?models=model1&models=model2',
         expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ model_ids: ['model1', 'model2'] }),
+          method: 'GET',
         })
       );
     });

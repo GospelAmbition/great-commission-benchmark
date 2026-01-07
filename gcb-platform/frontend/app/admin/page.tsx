@@ -153,6 +153,17 @@ export default function AdminDashboardPage() {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>Blog Management</CardTitle>
+            <CardDescription>Manage Action section articles and content</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/admin/blog">Manage Blog</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Data Management</CardTitle>
             <CardDescription>Delete test runs, submissions, and clean up data</CardDescription>
           </CardHeader>

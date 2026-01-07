@@ -248,6 +248,7 @@ async def get_moderator_activity(
     # Get platform test reviews (ModerationLog)
     test_review_query = db.query(ModerationLog).options(
         joinedload(ModerationLog.test_run).joinedload(TestRun.model),
+        joinedload(ModerationLog.test_run).joinedload(TestRun.question_set),
         joinedload(ModerationLog.moderator)
     )
     
@@ -263,8 +264,11 @@ async def get_moderator_activity(
     
     for log in test_logs:
         model_name = "Unknown"
+        benchmark_version = None
         if log.test_run and log.test_run.model:
             model_name = log.test_run.model.name
+        if log.test_run and log.test_run.question_set:
+            benchmark_version = log.test_run.question_set.semantic_version
         
         items.append(ModeratorActivityItem(
             review_id=log.id,
@@ -274,6 +278,7 @@ async def get_moderator_activity(
             action=log.action,
             review_type="platform_test",
             duration_seconds=None,
+            benchmark_version=benchmark_version,
             created_at=log.created_at
         ))
     
@@ -307,6 +312,7 @@ async def get_moderator_activity(
             action=action,
             review_type="cli_submission",
             duration_seconds=None,
+            benchmark_version=submission.question_set_version,
             created_at=submission.reviewed_at  # Use reviewed_at as the activity timestamp
         ))
     

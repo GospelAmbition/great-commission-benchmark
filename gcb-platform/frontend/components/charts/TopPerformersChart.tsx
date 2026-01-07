@@ -79,9 +79,12 @@ export function TopPerformersChart({ data, title = "Top Performers" }: TopPerfor
         },
       },
       tooltip: {
+        filter: (tooltipItem: any) => tooltipItem.raw != null,
         callbacks: {
           label: function (context: any) {
+            if (context.raw == null) return '';
             const item = data[context.dataIndex];
+            if (!item) return '';
             let label = `Score: ${context.raw.toFixed(1)}`;
             if (item.provider) {
               label += ` (${item.provider})`;
