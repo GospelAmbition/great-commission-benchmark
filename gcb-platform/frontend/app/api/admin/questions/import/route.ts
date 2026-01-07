@@ -28,6 +28,7 @@ interface QuestionFromFile {
   tier: number;
   difficulty?: string;
   expected_verdict?: string;
+  notes?: string;
 }
 
 interface QuestionsFile {
@@ -42,6 +43,7 @@ interface ParsedQuestion {
   category: string;
   content: string;
   metadata?: Record<string, unknown>;
+  notes?: string;
 }
 
 interface ValidationError {
@@ -229,12 +231,15 @@ function parseCSVQuestions(
     const expectedVerdict = getValue("expected_verdict");
     if (expectedVerdict) metadata.expected_verdict = expectedVerdict.toUpperCase();
 
+    const notes = getValue("notes");
+
     questions.push({
       question_set_id: questionSetId,
       tier,
       category,
       content,
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+      notes: notes || undefined,
     });
   }
 
@@ -273,6 +278,7 @@ function parseJSONQuestions(
           difficulty: q.difficulty,
           expected_verdict: q.expected_verdict,
         },
+        notes: q.notes || undefined,
       });
     }
   };

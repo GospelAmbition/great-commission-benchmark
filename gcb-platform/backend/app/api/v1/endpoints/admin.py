@@ -238,6 +238,9 @@ async def import_questions(
                     if "difficulty" in metadata:
                         clean_metadata = {"difficulty": metadata["difficulty"]}
                 
+                # Get notes if present
+                notes = q_data.get("notes")
+                
                 # Create question
                 question = Question(
                     question_set_id=question_set_id,
@@ -245,7 +248,8 @@ async def import_questions(
                     category=category,
                     content=content,
                     expected_verdict=expected_verdict,
-                    question_metadata=clean_metadata
+                    question_metadata=clean_metadata,
+                    notes=notes
                 )
                 db.add(question)
                 imported += 1

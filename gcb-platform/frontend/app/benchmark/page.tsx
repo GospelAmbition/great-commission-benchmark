@@ -704,6 +704,7 @@ export default function BenchmarkDashboardPage() {
 
       const difficulty = getValue("difficulty");
       const expectedVerdict = getValue("expected_verdict");
+      const notes = getValue("notes");
 
       questions.push({
         content,
@@ -713,6 +714,7 @@ export default function BenchmarkDashboardPage() {
           difficulty: difficulty?.toLowerCase(),
           expected_verdict: expectedVerdict?.toUpperCase(),
         },
+        notes: notes || undefined,
       });
     }
 
@@ -899,8 +901,19 @@ export default function BenchmarkDashboardPage() {
       return;
     }
 
+    // Helper to format UUID in truncated format (first 8 chars only)
+    function formatTruncatedId(uuid: string): string {
+      if (!uuid) return "";
+      // Remove hyphens if present
+      const cleanId = uuid.replace(/-/g, "");
+      if (cleanId.length < 8) return uuid;
+      // Return first 8 characters only for most compact format
+      return cleanId.substring(0, 8);
+    }
+
     // CSV header - only essential fields
     const headers = [
+      "id",
       "content",
       "category",
       "tier",
@@ -924,6 +937,7 @@ export default function BenchmarkDashboardPage() {
     const rows = questions.map(q => {
       const meta = q.metadata || {};
       return [
+        escapeCSV(formatTruncatedId(q.id)),
         escapeCSV(q.content),
         escapeCSV(q.category),
         escapeCSV(q.tier),
@@ -1644,6 +1658,7 @@ export default function BenchmarkDashboardPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[80px]">ID</TableHead>
                       <TableHead className="w-[180px]">Meta</TableHead>
                       <TableHead>Content</TableHead>
                       <TableHead>Notes</TableHead>
@@ -1651,8 +1666,14 @@ export default function BenchmarkDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {questions.filter(q => !hideLocked || !q.is_locked).map((q) => (
+                    {questions.filter(q => !hideLocked || !q.is_locked).map((q) => {
+                      // Format ID as truncated (first 8 chars)
+                      const truncatedId = q.id ? q.id.replace(/-/g, "").substring(0, 8) : "";
+                      return (
                       <TableRow key={q.id}>
+                        <TableCell>
+                          <code className="text-xs font-mono text-muted-foreground">{truncatedId}</code>
+                        </TableCell>
                         <TableCell>
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
@@ -1733,7 +1754,8 @@ export default function BenchmarkDashboardPage() {
                           </TableCell>
                         )}
                       </TableRow>
-                    ))}
+                    );
+                    })}
                   </TableBody>
                 </Table>
               )}
