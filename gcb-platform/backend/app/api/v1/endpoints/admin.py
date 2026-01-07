@@ -315,7 +315,8 @@ async def list_questions(
             "content": q.content,  # Return full content, not truncated
             "metadata": metadata,
             "expected_verdict": q.expected_verdict,
-            "is_locked": is_locked
+            "is_locked": is_locked,
+            "notes": q.notes
         })
     
     return {
@@ -349,7 +350,8 @@ async def get_question(
         content=question.content,
         metadata=question.question_metadata,
         expected_verdict=question.expected_verdict,
-        is_locked=is_locked
+        is_locked=is_locked,
+        notes=question.notes
     )
 
 
@@ -401,7 +403,8 @@ async def update_question(
         content=question.content,
         metadata=question.question_metadata,
         expected_verdict=question.expected_verdict,
-        is_locked=is_locked
+        is_locked=is_locked,
+        notes=question.notes
     )
 
 

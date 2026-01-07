@@ -57,77 +57,64 @@ interface ValidationError {
  * Handles quoted fields, commas within quotes, and escaped quotes
  */
 function parseCSV(content: string): { headers: string[]; rows: string[][] } {
-  const lines: string[] = [];
-  let currentLine = "";
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = "";
   let inQuotes = false;
 
-  // Split by lines while respecting quoted fields
+  // Parse CSV character by character, handling quoted fields that span multiple lines
   for (let i = 0; i < content.length; i++) {
     const char = content[i];
     const nextChar = content[i + 1];
 
     if (char === '"') {
       if (inQuotes && nextChar === '"') {
-        // Escaped quote
-        currentLine += '"';
+        // Escaped quote ("" represents a single quote in CSV)
+        currentField += '"';
         i++; // Skip next quote
       } else {
+        // Toggle quote state
         inQuotes = !inQuotes;
-        currentLine += char;
+        // Don't include the quote character in the field value
       }
+    } else if (char === "," && !inQuotes) {
+      // Field separator (only outside quotes)
+      currentRow.push(currentField.trim());
+      currentField = "";
     } else if ((char === "\n" || (char === "\r" && nextChar === "\n")) && !inQuotes) {
-      if (currentLine.trim()) {
-        lines.push(currentLine);
+      // Row separator (only outside quotes)
+      // Finish current field
+      currentRow.push(currentField.trim());
+      currentField = "";
+      // Add row if it has content
+      if (currentRow.some((field) => field.length > 0)) {
+        rows.push(currentRow);
       }
-      currentLine = "";
+      currentRow = [];
       if (char === "\r") i++; // Skip \n in \r\n
     } else if (char !== "\r") {
-      currentLine += char;
+      // Regular character (or newline inside quotes)
+      currentField += char;
     }
   }
-  if (currentLine.trim()) {
-    lines.push(currentLine);
+
+  // Handle last field and row
+  if (currentField.trim() || currentRow.length > 0) {
+    currentRow.push(currentField.trim());
+  }
+  if (currentRow.some((field) => field.length > 0)) {
+    rows.push(currentRow);
   }
 
-  if (lines.length === 0) {
+  if (rows.length === 0) {
     return { headers: [], rows: [] };
   }
 
-  // Parse each line into fields
-  function parseLine(line: string): string[] {
-    const fields: string[] = [];
-    let currentField = "";
-    let inQuotes = false;
+  // First row is headers
+  const headers = rows[0].map((h) => h.toLowerCase().trim());
+  const dataRows = rows.slice(1);
 
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      const nextChar = line[i + 1];
-
-      if (char === '"') {
-        if (!inQuotes) {
-          inQuotes = true;
-        } else if (nextChar === '"') {
-          currentField += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else if (char === "," && !inQuotes) {
-        fields.push(currentField.trim());
-        currentField = "";
-      } else {
-        currentField += char;
-      }
-    }
-    fields.push(currentField.trim());
-
-    return fields;
-  }
-
-  const headers = parseLine(lines[0]).map((h) => h.toLowerCase().trim());
-  const rows = lines.slice(1).map(parseLine);
-
-  return { headers, rows };
+  return { headers, rows: dataRows };
 }
 
 /**
@@ -239,7 +226,7 @@ function parseCSVQuestions(
       category,
       content,
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
-      notes: notes || undefined,
+      notes: notes && notes.length > 0 ? notes : undefined,
     });
   }
 
