@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, User, ArrowRight } from "lucide-react";
+import { ArticleIcon } from "@/lib/icons";
 
 interface BlogCategory {
   id: string;
@@ -94,145 +95,159 @@ export default function ActionPage() {
   }
 
   return (
-    <div className="container py-8">
-      {/* Hero Section */}
-      <div className="mb-12 text-center">
-        <h1 className="text-4xl font-bold mb-4">Action</h1>
-        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          Practical guides, insights, and resources for Christian missionaries and outreach workers 
-          navigating AI guardrails in their ministry work.
-        </p>
+    <div className="flex flex-col">
+      {/* Page Header */}
+      <div className="relative border-b border-white/[0.06] overflow-hidden">
+        <div className="absolute inset-0 gradient-hero" />
+        <div className="absolute top-1/2 right-0 w-96 h-96 gradient-red-glow opacity-20" />
+        
+        <div className="container relative py-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <ArticleIcon className="h-5 w-5 text-primary" />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Action</h1>
+          </div>
+          <p className="text-muted-foreground max-w-2xl">
+            Practical guides, insights, and resources for Christian missionaries and outreach workers 
+            navigating AI guardrails in their ministry work.
+          </p>
+        </div>
       </div>
 
-      {/* Category Filter */}
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">Filter by category:</span>
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.slug}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="container py-8">
+        {/* Category Filter */}
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">Filter by category:</span>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.slug}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {total} {total === 1 ? "article" : "articles"}
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          {total} {total === 1 ? "article" : "articles"}
-        </p>
-      </div>
 
-      {/* Posts Grid */}
-      {loading ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i}>
-              <Skeleton className="h-48 w-full rounded-t-lg" />
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2 mt-2" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-2/3 mt-2" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : posts.length === 0 ? (
-        <Card className="p-12 text-center">
-          <CardContent>
-            <p className="text-muted-foreground mb-4">
-              No articles have been published yet. Check back soon for practical guides 
-              and insights on using AI for ministry work.
+        {/* Posts Grid */}
+        {loading ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i}>
+                <Skeleton className="h-48 w-full rounded-t-lg" />
+                <CardHeader>
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-1/2 mt-2" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3 mt-2" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : posts.length === 0 ? (
+          <Card className="p-12 text-center">
+            <CardContent>
+              <div className="w-16 h-16 rounded-full bg-white/[0.06] mx-auto mb-4 flex items-center justify-center">
+                <ArticleIcon className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <p className="text-foreground font-medium mb-2">No articles yet</p>
+              <p className="text-muted-foreground">
+                Check back soon for practical guides and insights on using AI for ministry work.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {posts.map((post) => (
+              <Card key={post.id} className="overflow-hidden group border-glow">
+                <Link href={`/action/${post.slug}`}>
+                  {post.featured_image_url ? (
+                    <div className="relative h-48 w-full bg-white/[0.02]">
+                      <Image
+                        src={post.featured_image_url}
+                        alt={post.title}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-48 w-full bg-gradient-to-br from-primary/10 to-white/[0.02] flex items-center justify-center">
+                      <span className="text-4xl font-bold text-primary/20">GCB</span>
+                    </div>
+                  )}
+                </Link>
+                <CardHeader>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {post.categories.map((cat) => (
+                      <Badge key={cat.id} variant="muted" className="text-xs">
+                        {cat.name}
+                      </Badge>
+                    ))}
+                  </div>
+                  <CardTitle className="line-clamp-2">
+                    <Link href={`/action/${post.slug}`} className="hover:text-primary transition-colors">
+                      {post.title}
+                    </Link>
+                  </CardTitle>
+                  <CardDescription className="flex items-center gap-4 text-xs">
+                    <span className="flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      {post.author.name || "Anonymous"}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {formatDate(post.published_at)}
+                    </span>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {post.excerpt && (
+                    <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                      {post.excerpt}
+                    </p>
+                  )}
+                  <Link href={`/action/${post.slug}`}>
+                    <Button variant="link" className="p-0 h-auto text-primary">
+                      Read more <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* About Section */}
+        <Card className="mt-12 bg-white/[0.02]">
+          <CardHeader>
+            <CardTitle>About This Section</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-muted-foreground">
+              The Action section provides practical resources for Great Commission Christians who want to 
+              effectively use AI tools in their ministry work. Here you&apos;ll find guides on navigating 
+              AI guardrails, tips for crafting effective prompts, case studies of successful AI-assisted 
+              ministry projects, and insights from the benchmark research.
+            </p>
+            <p className="text-muted-foreground">
+              Our goal is to equip missionaries, evangelists, and ministry workers with the knowledge 
+              and tools they need to leverage AI technology while staying true to their calling.
             </p>
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {posts.map((post) => (
-            <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <Link href={`/action/${post.slug}`}>
-                {post.featured_image_url ? (
-                  <div className="relative h-48 w-full bg-muted">
-                    <Image
-                      src={post.featured_image_url}
-                      alt={post.title}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-48 w-full bg-gradient-to-br from-[--ga-red]/10 to-muted flex items-center justify-center">
-                    <span className="text-4xl font-bold text-[--ga-red]/20">GCB</span>
-                  </div>
-                )}
-              </Link>
-              <CardHeader>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {post.categories.map((cat) => (
-                    <Badge key={cat.id} variant="secondary" className="text-xs">
-                      {cat.name}
-                    </Badge>
-                  ))}
-                </div>
-                <CardTitle className="line-clamp-2">
-                  <Link href={`/action/${post.slug}`} className="hover:text-[--ga-red] transition-colors">
-                    {post.title}
-                  </Link>
-                </CardTitle>
-                <CardDescription className="flex items-center gap-4 text-xs">
-                  <span className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    {post.author.name || "Anonymous"}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {formatDate(post.published_at)}
-                  </span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {post.excerpt && (
-                  <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                    {post.excerpt}
-                  </p>
-                )}
-                <Link href={`/action/${post.slug}`}>
-                  <Button variant="link" className="p-0 h-auto text-[--ga-red]">
-                    Read more <ArrowRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* About Section */}
-      <Card className="mt-12 bg-muted/50">
-        <CardHeader>
-          <CardTitle>About This Section</CardTitle>
-        </CardHeader>
-        <CardContent className="prose prose-sm max-w-none">
-          <p className="text-muted-foreground">
-            The Action section provides practical resources for Great Commission Christians who want to 
-            effectively use AI tools in their ministry work. Here you&apos;ll find guides on navigating 
-            AI guardrails, tips for crafting effective prompts, case studies of successful AI-assisted 
-            ministry projects, and insights from the benchmark research.
-          </p>
-          <p className="text-muted-foreground">
-            Our goal is to equip missionaries, evangelists, and ministry workers with the knowledge 
-            and tools they need to leverage AI technology while staying true to their calling.
-          </p>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }
-

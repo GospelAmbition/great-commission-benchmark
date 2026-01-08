@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit, Source_Sans_3 } from "next/font/google";
+import { Outfit, Inter } from "next/font/google";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/layout/Header";
@@ -14,11 +14,11 @@ const outfit = Outfit({
   weight: ["400", "500", "600", "700", "800"],
 });
 
-const sourceSans = Source_Sans_3({
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["100", "200", "300", "400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -32,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${outfit.variable} ${sourceSans.variable}`}>
-      <body className="antialiased font-sans bg-slate-50 text-slate-900">
+    <html lang="en" className={`${outfit.variable} ${inter.variable}`}>
+      <body className="antialiased font-sans bg-background text-foreground">
         <SessionProvider>
           {/* Skip to main content link for accessibility */}
           <a

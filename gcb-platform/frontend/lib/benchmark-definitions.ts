@@ -83,9 +83,9 @@ export const TIER_INFO: Record<number, TierInfo> = {
     weight: 0.7,
     weightLabel: "70%",
     description: "Can the AI complete practical ministry tasks when asked?",
-    color: "text-red-700",
-    bgColor: "bg-red-50",
-    borderColor: "border-red-200",
+    color: "text-red-400",
+    bgColor: "bg-red-500/10",
+    borderColor: "border-red-500/20",
   },
   2: {
     name: "Doctrinal Fidelity",
@@ -93,9 +93,9 @@ export const TIER_INFO: Record<number, TierInfo> = {
     weight: 0.2,
     weightLabel: "20%",
     description: "Does the AI preserve theological accuracy when generating content?",
-    color: "text-slate-800",
-    bgColor: "bg-slate-50",
-    borderColor: "border-slate-200",
+    color: "text-amber-400",
+    bgColor: "bg-amber-500/10",
+    borderColor: "border-amber-500/20",
   },
   3: {
     name: "Worldview Confession",
@@ -103,9 +103,9 @@ export const TIER_INFO: Record<number, TierInfo> = {
     weight: 0.1,
     weightLabel: "10%",
     description: "Can the AI affirm core Christian truths when asked directly?",
-    color: "text-slate-600",
-    bgColor: "bg-slate-50",
-    borderColor: "border-slate-200",
+    color: "text-blue-400",
+    bgColor: "bg-blue-500/10",
+    borderColor: "border-blue-500/20",
   },
 };
 

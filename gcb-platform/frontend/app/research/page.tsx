@@ -12,7 +12,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -28,8 +27,8 @@ import { ArrowUpDown, BarChart3, Filter, AlertTriangle, ChevronUp, ChevronDown, 
 import { BenchmarkHelpIcon } from "@/components/benchmark";
 
 interface LeaderboardItem {
-  id: string; // UUID for API operations (compare)
-  model_id: string; // OpenRouter-style ID for display/routing
+  id: string;
+  model_id: string;
   model_name: string;
   provider: string;
   overall_score: number;
@@ -41,32 +40,55 @@ interface LeaderboardItem {
 }
 
 // Helper to determine verdict based on score
-function getVerdict(score: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode; color: string } {
+function getVerdict(score: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode; className: string } {
   if (score >= 75) {
-    return { label: "Aligned", variant: "default", icon: <Shield className="h-3 w-3" />, color: "bg-green-600" };
+    return { 
+      label: "Aligned", 
+      variant: "default", 
+      icon: <Shield className="h-3 w-3" />, 
+      className: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+    };
   } else if (score >= 50) {
-    return { label: "Caution", variant: "secondary", icon: <ShieldAlert className="h-3 w-3" />, color: "bg-yellow-500" };
+    return { 
+      label: "Caution", 
+      variant: "secondary", 
+      icon: <ShieldAlert className="h-3 w-3" />, 
+      className: "bg-amber-500/20 text-amber-400 border-amber-500/30" 
+    };
   } else {
-    return { label: "Compromised", variant: "destructive", icon: <ShieldX className="h-3 w-3" />, color: "bg-red-600" };
+    return { 
+      label: "Compromised", 
+      variant: "destructive", 
+      icon: <ShieldX className="h-3 w-3" />, 
+      className: "bg-red-500/20 text-red-400 border-red-500/30" 
+    };
   }
 }
 
 // Score progress bar component
 function ScoreBar({ score, max = 100 }: { score: number; max?: number }) {
   const percentage = (score / max) * 100;
-  const color = score >= 75 ? "bg-green-500" : score >= 50 ? "bg-yellow-500" : "bg-red-500";
+  const color = score >= 75 ? "bg-emerald-500" : score >= 50 ? "bg-amber-500" : "bg-red-500";
   
   return (
-    <div className="flex items-center gap-2 min-w-[100px]">
-      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+    <div className="flex items-center gap-2 min-w-[120px]">
+      <div className="flex-1 h-2 bg-white/[0.06] rounded-full overflow-hidden">
         <div 
-          className={`h-full ${color} transition-all duration-300`}
+          className={`h-full ${color} transition-all duration-300 rounded-full`}
           style={{ width: `${percentage}%` }}
         />
       </div>
-      <span className="text-sm font-medium tabular-nums w-10 text-right">{score.toFixed(1)}</span>
+      <span className="text-sm font-medium tabular-nums w-10 text-right text-foreground">{score.toFixed(1)}</span>
     </div>
   );
+}
+
+// Tier score display
+function TierScore({ score }: { score?: number }) {
+  if (score == null) return <span className="text-muted-foreground/50">—</span>;
+  
+  const color = score >= 75 ? "text-emerald-400" : score >= 50 ? "text-amber-400" : "text-red-400";
+  return <span className={`text-sm font-medium ${color}`}>{score.toFixed(0)}</span>;
 }
 
 export default function ResearchPage() {
@@ -79,7 +101,7 @@ export default function ResearchPage() {
     tier: "",
     provider: "",
     trust_tier: "",
-    model_type: "", // "open_source" | "proprietary" | ""
+    model_type: "",
     sort: "score",
     order: "desc" as "asc" | "desc",
   });
@@ -133,18 +155,19 @@ export default function ResearchPage() {
   return (
     <div className="flex flex-col">
       {/* Page Header */}
-      <div 
-        className="border-b border-red-900/20"
-        style={{ background: 'linear-gradient(135deg, #a11824 0%, #7a1219 100%)' }}
-      >
-        <div className="container py-6">
+      <div className="relative border-b border-white/[0.06] overflow-hidden">
+        {/* Background gradient */}
+        <div className="absolute inset-0 gradient-hero" />
+        <div className="absolute top-1/2 right-0 w-96 h-96 gradient-red-glow opacity-20" />
+        
+        <div className="container relative py-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-white/10">
-              <BarChart3 className="h-5 w-5 text-white" />
+            <div className="p-2 rounded-lg bg-primary/10">
+              <BarChart3 className="h-5 w-5 text-primary" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">Research</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Research</h1>
           </div>
-          <p className="text-white/80">
+          <p className="text-muted-foreground max-w-2xl">
             Explore benchmark results, compare models, and dive deep into performance data
           </p>
         </div>
@@ -152,17 +175,17 @@ export default function ResearchPage() {
 
       <div className="container py-6 space-y-4">
         {/* Filters */}
-        <Card className="bg-white">
+        <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-slate-500" />
-              <CardTitle className="text-base text-slate-900">Filters</CardTitle>
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-base">Filters</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
               <div>
-                <label className="text-xs font-medium mb-1.5 block text-slate-500">Provider</label>
+                <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Provider</label>
                 <Select
                   value={filters.provider || "all"}
                   onValueChange={(value) =>
@@ -184,7 +207,7 @@ export default function ResearchPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-medium mb-1.5 block text-slate-500">Model Type</label>
+                <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Model Type</label>
                 <Select
                   value={filters.model_type || "all"}
                   onValueChange={(value) =>
@@ -202,7 +225,7 @@ export default function ResearchPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-medium mb-1.5 block text-slate-500">Trust Tier</label>
+                <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Trust Tier</label>
                 <Select
                   value={filters.trust_tier || "all"}
                   onValueChange={(value) =>
@@ -221,7 +244,7 @@ export default function ResearchPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-medium mb-1.5 block text-slate-500">Category</label>
+                <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Category</label>
                 <Select
                   value={filters.category || "all"}
                   onValueChange={(value) =>
@@ -241,7 +264,7 @@ export default function ResearchPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-medium mb-1.5 block text-slate-500">Tier Focus</label>
+                <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Tier Focus</label>
                 <Select
                   value={filters.tier || "all"}
                   onValueChange={(value) =>
@@ -265,8 +288,8 @@ export default function ResearchPage() {
 
         {/* Compare Button */}
         {selectedModels.size > 0 && (
-          <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
-            <span className="text-sm font-medium text-red-800">
+          <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
+            <span className="text-sm font-medium text-primary">
               {selectedModels.size} model{selectedModels.size > 1 ? "s" : ""} selected
             </span>
             <Button asChild variant="brand" size="sm">
@@ -278,10 +301,10 @@ export default function ResearchPage() {
         )}
 
         {/* Disclaimer */}
-        <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border-l-4 border-red-700">
-          <AlertTriangle className="h-4 w-4 text-red-700 mt-0.5 shrink-0" />
-          <p className="text-xs text-slate-600 leading-relaxed">
-            <span className="font-semibold text-slate-900">Disclaimer:</span> This benchmark is for informational purposes only and does not 
+        <div className="flex items-start gap-3 p-3 bg-amber-500/5 rounded-lg border-l-2 border-amber-500">
+          <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            <span className="font-semibold text-foreground">Disclaimer:</span> This benchmark is for informational purposes only and does not 
             constitute an endorsement or recommendation of any AI model or service. Results reflect 
             performance on specific test questions at a point in time and may not predict performance 
             on other tasks or future model versions.
@@ -289,13 +312,13 @@ export default function ResearchPage() {
         </div>
 
         {/* Leaderboard Table */}
-        <Card className="bg-white">
+        <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg text-slate-900">Leaderboard</CardTitle>
+              <CardTitle className="text-lg">Leaderboard</CardTitle>
               <BenchmarkHelpIcon size="default" />
             </div>
-            <CardDescription className="text-slate-600">
+            <CardDescription>
               {pagination.total > 0
                 ? `Showing ${pagination.offset + 1}-${Math.min(pagination.offset + pagination.limit, pagination.total)} of ${pagination.total} models`
                 : "No models to display"}
@@ -305,35 +328,35 @@ export default function ResearchPage() {
             {loading ? (
               <div className="space-y-3">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
+                  <Skeleton key={i} className="h-12 w-full" />
                 ))}
               </div>
             ) : leaderboard.length === 0 ? (
-              <div className="text-center py-10">
-                <div className="w-12 h-12 rounded-full bg-slate-100 mx-auto mb-3 flex items-center justify-center">
-                  <BarChart3 className="h-6 w-6 text-slate-400" />
+              <div className="text-center py-12">
+                <div className="w-12 h-12 rounded-full bg-white/[0.06] mx-auto mb-3 flex items-center justify-center">
+                  <BarChart3 className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <p className="text-base font-medium text-slate-900 mb-1">No benchmark results available yet</p>
-                <p className="text-sm text-slate-600">
+                <p className="text-base font-medium text-foreground mb-1">No benchmark results available yet</p>
+                <p className="text-sm text-muted-foreground">
                   Check back soon as we continue to evaluate AI models on the Great Commission Benchmark.
                 </p>
               </div>
             ) : (
               <>
-                <div className="rounded-lg border overflow-hidden">
+                <div className="rounded-lg border border-white/[0.08] overflow-hidden">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50 hover:bg-slate-50">
+                      <TableRow className="bg-white/[0.02] hover:bg-white/[0.02] border-white/[0.08]">
                         <TableHead className="w-10">
-                          <Checkbox disabled />
+                          <Checkbox disabled className="border-white/20" />
                         </TableHead>
-                        <TableHead className="w-14 text-center text-slate-600">#</TableHead>
+                        <TableHead className="w-14 text-center">#</TableHead>
                         <TableHead>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleSort("model_name")}
-                            className="h-7 px-2 -ml-2 text-slate-700 hover:bg-transparent hover:text-red-700"
+                            className="h-7 px-2 -ml-2 hover:bg-white/5 hover:text-foreground"
                           >
                             Model
                             {filters.sort === "model_name" && (
@@ -342,13 +365,13 @@ export default function ResearchPage() {
                             {filters.sort !== "model_name" && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
                           </Button>
                         </TableHead>
-                        <TableHead className="text-slate-600">Provider</TableHead>
-                        <TableHead className="min-w-[140px]">
+                        <TableHead>Provider</TableHead>
+                        <TableHead className="min-w-[160px]">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleSort("score")}
-                            className="h-7 px-2 -ml-2 text-slate-700 hover:bg-transparent hover:text-red-700"
+                            className="h-7 px-2 -ml-2 hover:bg-white/5 hover:text-foreground"
                           >
                             GCB Score
                             {filters.sort === "score" && (
@@ -357,17 +380,17 @@ export default function ResearchPage() {
                             {filters.sort !== "score" && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
                           </Button>
                         </TableHead>
-                        <TableHead className="text-center text-slate-600 text-xs">
-                          <span title="Tier 1: Task Capability (70% weight) - Categories 3.1-3.7">Task</span>
+                        <TableHead className="text-center text-xs">
+                          <span title="Tier 1: Task Capability (70% weight)">Task</span>
                         </TableHead>
-                        <TableHead className="text-center text-slate-600 text-xs">
-                          <span title="Tier 2: Doctrinal Fidelity (20% weight) - Categories 4.1-4.6">Doctrine</span>
+                        <TableHead className="text-center text-xs">
+                          <span title="Tier 2: Doctrinal Fidelity (20% weight)">Doctrine</span>
                         </TableHead>
-                        <TableHead className="text-center text-slate-600 text-xs">
-                          <span title="Tier 3: Worldview Confession (10% weight) - Categories 5.1-5.6">Worldview</span>
+                        <TableHead className="text-center text-xs">
+                          <span title="Tier 3: Worldview Confession (10% weight)">Worldview</span>
                         </TableHead>
-                        <TableHead className="text-slate-600">Verdict</TableHead>
-                        <TableHead className="text-slate-600">Trust</TableHead>
+                        <TableHead>Verdict</TableHead>
+                        <TableHead>Trust</TableHead>
                         <TableHead className="w-16"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -376,71 +399,51 @@ export default function ResearchPage() {
                         const verdict = getVerdict(item.overall_score);
                         return (
                           <TableRow key={`${item.model_id}-${index}`} className="group">
-                            <TableCell className="py-2">
+                            <TableCell className="py-3">
                               <Checkbox
                                 checked={selectedModels.has(item.id)}
                                 onCheckedChange={() => toggleModelSelection(item.id)}
                                 disabled={!selectedModels.has(item.id) && selectedModels.size >= 5}
+                                className="border-white/20"
                               />
                             </TableCell>
-                            <TableCell className="py-2 text-center font-bold text-slate-400">
+                            <TableCell className="py-3 text-center font-bold text-muted-foreground">
                               {pagination.offset + index + 1}
                             </TableCell>
-                            <TableCell className="py-2">
+                            <TableCell className="py-3">
                               <Link
                                 href={`/research/models/${encodeURIComponent(item.model_id)}`}
-                                className="font-medium text-slate-900 hover:text-red-700 transition-colors"
+                                className="font-medium text-foreground hover:text-primary transition-colors"
                               >
                                 {item.model_name}
                               </Link>
                             </TableCell>
-                            <TableCell className="py-2">
-                              <Badge variant="secondary" className="font-normal bg-slate-100 text-slate-700">{item.provider}</Badge>
+                            <TableCell className="py-3">
+                              <Badge variant="muted">{item.provider}</Badge>
                             </TableCell>
-                            <TableCell className="py-2">
+                            <TableCell className="py-3">
                               <ScoreBar score={item.overall_score} />
                             </TableCell>
-                            <TableCell className="py-2 text-center">
-                              {item.tier1_score != null ? (
-                                <span className={`text-sm font-medium ${item.tier1_score >= 75 ? "text-green-600" : item.tier1_score >= 50 ? "text-yellow-600" : "text-red-600"}`}>
-                                  {item.tier1_score.toFixed(0)}
-                                </span>
-                              ) : (
-                                <span className="text-slate-300">—</span>
-                              )}
+                            <TableCell className="py-3 text-center">
+                              <TierScore score={item.tier1_score} />
                             </TableCell>
-                            <TableCell className="py-2 text-center">
-                              {item.tier2_score != null ? (
-                                <span className={`text-sm font-medium ${item.tier2_score >= 75 ? "text-green-600" : item.tier2_score >= 50 ? "text-yellow-600" : "text-red-600"}`}>
-                                  {item.tier2_score.toFixed(0)}
-                                </span>
-                              ) : (
-                                <span className="text-slate-300">—</span>
-                              )}
+                            <TableCell className="py-3 text-center">
+                              <TierScore score={item.tier2_score} />
                             </TableCell>
-                            <TableCell className="py-2 text-center">
-                              {item.tier3_score != null ? (
-                                <span className={`text-sm font-medium ${item.tier3_score >= 75 ? "text-green-600" : item.tier3_score >= 50 ? "text-yellow-600" : "text-red-600"}`}>
-                                  {item.tier3_score.toFixed(0)}
-                                </span>
-                              ) : (
-                                <span className="text-slate-300">—</span>
-                              )}
+                            <TableCell className="py-3 text-center">
+                              <TierScore score={item.tier3_score} />
                             </TableCell>
-                            <TableCell className="py-2">
-                              <Badge 
-                                variant={verdict.variant}
-                                className={`text-xs gap-1 ${verdict.variant === "default" ? "bg-green-600 hover:bg-green-700" : verdict.variant === "destructive" ? "" : "bg-yellow-500 hover:bg-yellow-600 text-white"}`}
-                              >
+                            <TableCell className="py-3">
+                              <Badge className={`${verdict.className} border`}>
                                 {verdict.icon}
-                                {verdict.label}
+                                <span className="ml-1">{verdict.label}</span>
                               </Badge>
                             </TableCell>
-                            <TableCell className="py-2">
-                              <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">{item.trust_tier || "automated"}</Badge>
+                            <TableCell className="py-3">
+                              <Badge variant="outline">{item.trust_tier || "automated"}</Badge>
                             </TableCell>
-                            <TableCell className="py-2">
-                              <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <TableCell className="py-3">
+                              <Button asChild variant="ghost" size="sm" className="h-7 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Link href={`/research/models/${encodeURIComponent(item.model_id)}`}>View</Link>
                               </Button>
                             </TableCell>
@@ -466,7 +469,7 @@ export default function ResearchPage() {
                   >
                     Previous
                   </Button>
-                  <span className="text-sm text-slate-600">
+                  <span className="text-sm text-muted-foreground">
                     Page {Math.floor(pagination.offset / pagination.limit) + 1} of{" "}
                     {Math.ceil(pagination.total / pagination.limit) || 1}
                   </span>

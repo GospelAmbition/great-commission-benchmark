@@ -4,302 +4,199 @@ This document provides a comprehensive reference for all colors used across the 
 
 ## Overview
 
-The Great Commission Benchmark uses a consistent color palette across three main areas:
-1. **Marketing Website** (`website/`) - Public-facing marketing site
-2. **Platform Application** (`gcb-platform/`) - Main application interface
-3. **Design System** - Reference colors for wireframes and design documentation
+The Great Commission Benchmark uses a **dark-first design system** inspired by modern leaderboard sites like Vellum and Scale. The color palette prioritizes:
+
+1. **Dark backgrounds** with subtle depth layers
+2. **Red accent color** for brand identity and CTAs
+3. **High contrast** for readability
+4. **Semantic status colors** (green/amber/red) for scores and verdicts
 
 ---
 
-## Marketing Website Colors
+## Platform Application Colors (Dark Theme - Default)
 
-The marketing website uses a red-based color scheme derived from the brand logo.
-
-### Primary Brand Colors
+### Base Colors
 
 | Variable | Hex Code | RGB | Usage |
 |----------|----------|-----|-------|
-| `--ga-red` | `#a11824` | `rgb(161, 24, 36)` | Primary dark red from logo for strong brand presence |
-| `--ga-dark-red` | `#7a1219` | `rgb(122, 18, 25)` | Even darker red for hover states and deep accents |
-| `--ga-light-red` | `#e84545` | `rgb(232, 69, 69)` | Lighter red for hyperlinks, buttons, and secondary elements |
-| `--ga-accent-red` | `#fee9e8` | `rgb(254, 233, 232)` | Very light red for backgrounds and subtle highlights |
+| `--background` | `#09090b` | `rgb(9, 9, 11)` | Main page background (near-black) |
+| `--foreground` | `#fafafa` | `rgb(250, 250, 250)` | Primary text color (off-white) |
+| `--surface` | `#0c0c0f` | `rgb(12, 12, 15)` | Surface layer for sections |
+| `--surface-elevated` | `#18181b` | `rgb(24, 24, 27)` | Elevated surfaces |
 
-### Neutral Colors
-
-| Variable | Hex Code | RGB | Usage |
-|----------|----------|-----|-------|
-| `--ga-black` | `#232323` | `rgb(35, 35, 35)` | Deep black for high contrast text, header, and footer |
-| `--ga-white` | `#ffffff` | `rgb(255, 255, 255)` | Clean white for background and refreshing space |
-| `--ga-gray` | `#f5f5f7` | `rgb(245, 245, 247)` | Soft gray for panels, subtle backgrounds |
-| `--ga-medium-gray` | `#999999` | `rgb(153, 153, 153)` | Medium neutral for secondary text or icons |
-
-### Usage Examples
-
-- **Hero Section**: Gradient background using `--ga-red` to `--ga-dark-red`
-- **Primary Buttons**: White background with `--ga-red` text
-- **Hover States**: `--ga-dark-red` for buttons, `--ga-light-red` for links
-- **Accent Sections**: `--ga-accent-red` background for highlighted content areas
-- **Text**: `--ga-black` for primary text, `--ga-medium-gray` for secondary text
-
----
-
-## Platform Application Colors
-
-The platform application uses a semantic color system with light and dark mode support.
-
-### Light Mode Colors
-
-#### Base Colors
+### Card and Popover Colors
 
 | Variable | Hex Code | RGB | Usage |
 |----------|----------|-----|-------|
-| `--background` | `#fafafa` | `rgb(250, 250, 250)` | Main page background |
-| `--foreground` | `#0f172a` | `rgb(15, 23, 42)` | Primary text color |
+| `--card` | `#111113` | `rgb(17, 17, 19)` | Card background |
+| `--card-foreground` | `#fafafa` | `rgb(250, 250, 250)` | Card text color |
+| `--popover` | `#18181b` | `rgb(24, 24, 27)` | Popover/dropdown background |
+| `--popover-foreground` | `#fafafa` | `rgb(250, 250, 250)` | Popover text color |
 
-#### Primary Colors
+### Primary Colors (Red Accent)
 
 | Variable | Hex Code | RGB | Usage |
 |----------|----------|-----|-------|
-| `--primary` | `#b91c1c` | `rgb(185, 28, 28)` | Primary brand color (red) |
+| `--primary` | `#dc2626` | `rgb(220, 38, 38)` | Primary brand color (bright red) |
 | `--primary-foreground` | `#ffffff` | `rgb(255, 255, 255)` | Text on primary backgrounds |
+| `--glow-primary` | `rgba(220, 38, 38, 0.4)` | — | Red glow effect for CTAs |
 
-#### Secondary Colors
-
-| Variable | Hex Code | RGB | Usage |
-|----------|----------|-----|-------|
-| `--secondary` | `#f1f5f9` | `rgb(241, 245, 249)` | Secondary background |
-| `--secondary-foreground` | `#0f172a` | `rgb(15, 23, 42)` | Text on secondary backgrounds |
-
-#### Accent Colors
+### Secondary Colors
 
 | Variable | Hex Code | RGB | Usage |
 |----------|----------|-----|-------|
-| `--accent` | `#fef2f2` | `rgb(254, 242, 242)` | Accent background (light red) |
-| `--accent-foreground` | `#991b1b` | `rgb(153, 27, 27)` | Text on accent backgrounds |
+| `--secondary` | `#27272a` | `rgb(39, 39, 42)` | Secondary background |
+| `--secondary-foreground` | `#fafafa` | `rgb(250, 250, 250)` | Text on secondary backgrounds |
 
-#### Muted Colors
-
-| Variable | Hex Code | RGB | Usage |
-|----------|----------|-----|-------|
-| `--muted` | `#f1f5f9` | `rgb(241, 245, 249)` | Muted background |
-| `--muted-foreground` | `#64748b` | `rgb(100, 116, 139)` | Muted text color |
-
-#### Semantic Colors
+### Muted Colors
 
 | Variable | Hex Code | RGB | Usage |
 |----------|----------|-----|-------|
-| `--destructive` | `#dc2626` | `rgb(220, 38, 38)` | Error/destructive actions |
-| `--border` | `#e2e8f0` | `rgb(226, 232, 240)` | Border color |
-| `--input` | `#e2e8f0` | `rgb(226, 232, 240)` | Input border color |
-| `--ring` | `#b91c1c` | `rgb(185, 28, 28)` | Focus ring color |
+| `--muted` | `#18181b` | `rgb(24, 24, 27)` | Muted background |
+| `--muted-foreground` | `rgba(255, 255, 255, 0.9)` | — | Secondary text color (90% white) |
 
-#### Card Colors
+### Accent Colors
 
 | Variable | Hex Code | RGB | Usage |
 |----------|----------|-----|-------|
-| `--card` | `#ffffff` | `rgb(255, 255, 255)` | Card background |
-| `--card-foreground` | `#0f172a` | `rgb(15, 23, 42)` | Card text color |
-| `--popover` | `#ffffff` | `rgb(255, 255, 255)` | Popover background |
-| `--popover-foreground` | `#0f172a` | `rgb(15, 23, 42)` | Popover text color |
-
-#### Info Bar Colors
-
-| Variable | Hex Code | RGB | Usage |
-|----------|----------|-----|-------|
-| `--info` | `#6b7280` | `rgb(107, 114, 128)` | Info bar background (light gray) |
-| `--info-foreground` | `#ffffff` | `rgb(255, 255, 255)` | Info bar text |
-| `--info-muted` | `#e5e7eb` | `rgb(229, 231, 235)` | Info bar muted background |
-| `--info-border` | `#9ca3af` | `rgb(156, 163, 175)` | Info bar border |
-
-#### Sidebar Colors
-
-| Variable | Hex Code | RGB | Usage |
-|----------|----------|-----|-------|
-| `--sidebar` | `#ffffff` | `rgb(255, 255, 255)` | Sidebar background |
-| `--sidebar-foreground` | `#0f172a` | `rgb(15, 23, 42)` | Sidebar text |
-| `--sidebar-primary` | `#b91c1c` | `rgb(185, 28, 28)` | Sidebar primary accent |
-| `--sidebar-primary-foreground` | `#ffffff` | `rgb(255, 255, 255)` | Text on sidebar primary |
-| `--sidebar-accent` | `#fef2f2` | `rgb(254, 242, 242)` | Sidebar accent background |
-| `--sidebar-accent-foreground` | `#991b1b` | `rgb(153, 27, 27)` | Text on sidebar accent |
-| `--sidebar-border` | `#e2e8f0` | `rgb(226, 232, 240)` | Sidebar border |
-| `--sidebar-ring` | `#b91c1c` | `rgb(185, 28, 28)` | Sidebar focus ring |
-
-#### Chart Colors
-
-| Variable | Hex Code | RGB | Usage |
-|----------|----------|-----|-------|
-| `--chart-1` | `#b91c1c` | `rgb(185, 28, 28)` | Primary chart color |
-| `--chart-2` | `#ef4444` | `rgb(239, 68, 68)` | Secondary chart color |
-| `--chart-3` | `#0f172a` | `rgb(15, 23, 42)` | Tertiary chart color |
-| `--chart-4` | `#64748b` | `rgb(100, 116, 139)` | Quaternary chart color |
-| `--chart-5` | `#94a3b8` | `rgb(148, 163, 184)` | Quinary chart color |
-
-### Dark Mode Colors
-
-#### Base Colors
-
-| Variable | Hex Code | RGB | Usage |
-|----------|----------|-----|-------|
-| `--background` | `#0f172a` | `rgb(15, 23, 42)` | Main page background (dark) |
-| `--foreground` | `#f8fafc` | `rgb(248, 250, 252)` | Primary text color (light) |
-
-#### Primary Colors
-
-| Variable | Hex Code | RGB | Usage |
-|----------|----------|-----|-------|
-| `--primary` | `#ef4444` | `rgb(239, 68, 68)` | Primary brand color (lighter red for dark mode) |
-| `--primary-foreground` | `#ffffff` | `rgb(255, 255, 255)` | Text on primary backgrounds |
-
-#### Secondary Colors
-
-| Variable | Hex Code | RGB | Usage |
-|----------|----------|-----|-------|
-| `--secondary` | `#334155` | `rgb(51, 65, 85)` | Secondary background (dark) |
-| `--secondary-foreground` | `#f8fafc` | `rgb(248, 250, 252)` | Text on secondary backgrounds |
-
-#### Accent Colors
-
-| Variable | Hex Code | RGB | Usage |
-|----------|----------|-----|-------|
-| `--accent` | `rgba(239, 68, 68, 0.1)` | `rgba(239, 68, 68, 0.1)` | Accent background (transparent red) |
+| `--accent` | `rgba(220, 38, 38, 0.15)` | — | Accent background (transparent red) |
 | `--accent-foreground` | `#ef4444` | `rgb(239, 68, 68)` | Text on accent backgrounds |
 
-#### Muted Colors
+### Borders and Inputs
 
 | Variable | Hex Code | RGB | Usage |
 |----------|----------|-----|-------|
-| `--muted` | `#334155` | `rgb(51, 65, 85)` | Muted background (dark) |
-| `--muted-foreground` | `#94a3b8` | `rgb(148, 163, 184)` | Muted text color (light gray) |
+| `--border` | `rgba(255, 255, 255, 0.08)` | — | Border color (8% white) |
+| `--input` | `rgba(255, 255, 255, 0.08)` | — | Input border color |
+| `--ring` | `#dc2626` | `rgb(220, 38, 38)` | Focus ring color |
 
-#### Semantic Colors
-
-| Variable | Hex Code | RGB | Usage |
-|----------|----------|-----|-------|
-| `--destructive` | `#ef4444` | `rgb(239, 68, 68)` | Error/destructive actions |
-| `--border` | `rgba(255, 255, 255, 0.1)` | `rgba(255, 255, 255, 0.1)` | Border color (transparent white) |
-| `--input` | `rgba(255, 255, 255, 0.1)` | `rgba(255, 255, 255, 0.1)` | Input border color |
-| `--ring` | `#ef4444` | `rgb(239, 68, 68)` | Focus ring color |
-
-#### Card Colors
+### Chart Colors
 
 | Variable | Hex Code | RGB | Usage |
 |----------|----------|-----|-------|
-| `--card` | `#1e293b` | `rgb(30, 41, 59)` | Card background (dark slate) |
-| `--card-foreground` | `#f8fafc` | `rgb(248, 250, 252)` | Card text color |
-| `--popover` | `#1e293b` | `rgb(30, 41, 59)` | Popover background |
-| `--popover-foreground` | `#f8fafc` | `rgb(248, 250, 252)` | Popover text color |
+| `--chart-1` | `#ef4444` | `rgb(239, 68, 68)` | Red - primary chart color |
+| `--chart-2` | `#f97316` | `rgb(249, 115, 22)` | Orange |
+| `--chart-3` | `#22c55e` | `rgb(34, 197, 94)` | Green |
+| `--chart-4` | `#3b82f6` | `rgb(59, 130, 246)` | Blue |
+| `--chart-5` | `#a855f7` | `rgb(168, 85, 247)` | Purple |
 
-#### Sidebar Colors
-
-| Variable | Hex Code | RGB | Usage |
-|----------|----------|-----|-------|
-| `--sidebar` | `#1e293b` | `rgb(30, 41, 59)` | Sidebar background (dark) |
-| `--sidebar-foreground` | `#f8fafc` | `rgb(248, 250, 252)` | Sidebar text |
-| `--sidebar-primary` | `#ef4444` | `rgb(239, 68, 68)` | Sidebar primary accent |
-| `--sidebar-primary-foreground` | `#ffffff` | `rgb(255, 255, 255)` | Text on sidebar primary |
-| `--sidebar-accent` | `rgba(239, 68, 68, 0.1)` | `rgba(239, 68, 68, 0.1)` | Sidebar accent background |
-| `--sidebar-accent-foreground` | `#ef4444` | `rgb(239, 68, 68)` | Text on sidebar accent |
-| `--sidebar-border` | `rgba(255, 255, 255, 0.1)` | `rgba(255, 255, 255, 0.1)` | Sidebar border |
-| `--sidebar-ring` | `#ef4444` | `rgb(239, 68, 68)` | Sidebar focus ring |
-
-#### Chart Colors (Dark Mode)
+### Sidebar Colors
 
 | Variable | Hex Code | RGB | Usage |
 |----------|----------|-----|-------|
-| `--chart-1` | `#ef4444` | `rgb(239, 68, 68)` | Primary chart color |
-| `--chart-2` | `#b91c1c` | `rgb(185, 28, 28)` | Secondary chart color |
-| `--chart-3` | `#f8fafc` | `rgb(248, 250, 252)` | Tertiary chart color |
-| `--chart-4` | `#94a3b8` | `rgb(148, 163, 184)` | Quaternary chart color |
-| `--chart-5` | `#64748b` | `rgb(100, 116, 139)` | Quinary chart color |
+| `--sidebar` | `#0c0c0f` | `rgb(12, 12, 15)` | Sidebar background |
+| `--sidebar-foreground` | `#fafafa` | `rgb(250, 250, 250)` | Sidebar text |
+| `--sidebar-primary` | `#dc2626` | `rgb(220, 38, 38)` | Sidebar primary accent |
+| `--sidebar-accent` | `rgba(220, 38, 38, 0.15)` | — | Sidebar accent background |
+| `--sidebar-border` | `rgba(255, 255, 255, 0.08)` | — | Sidebar border |
 
 ---
 
-## Design System Reference Colors
+## Semantic Status Colors
 
-These colors are used in wireframes and design documentation as reference standards.
+Used for score verdicts, badges, and status indicators:
 
-### Semantic Status Colors
+### Verdict Colors
 
-| Color | Hex Code | RGB | Usage |
-|-------|----------|-----|-------|
-| Success | `#28a745` | `rgb(40, 167, 69)` | Green for pass/success states |
-| Warning | `#ffc107` | `rgb(255, 193, 7)` | Yellow for pending/caution states |
-| Error | `#dc3545` | `rgb(220, 53, 69)` | Red for fail/error states |
-| Info | `#17a2b8` | `rgb(23, 162, 184)` | Blue for informational messages |
+| Status | Background | Text | Usage |
+|--------|------------|------|-------|
+| Aligned (≥75) | `bg-emerald-500/20` | `text-emerald-400` | Excellent GCB scores |
+| Caution (50-74) | `bg-amber-500/20` | `text-amber-400` | Moderate scores |
+| Compromised (<50) | `bg-red-500/20` | `text-red-400` | Poor scores |
+
+### Tier Colors
+
+| Tier | Background | Text | Usage |
+|------|------------|------|-------|
+| Tier 1 (Task) | `bg-red-500/10` | `text-red-400` | 70% weight |
+| Tier 2 (Doctrine) | `bg-amber-500/10` | `text-amber-400` | 20% weight |
+| Tier 3 (Worldview) | `bg-blue-500/10` | `text-blue-400` | 10% weight |
 
 ---
 
-## Color Usage Guidelines
+## Light Mode Colors (Optional Override)
 
-### Accessibility
+The `.light` class can be applied for light mode support:
 
-- All text colors meet WCAG AA standards (4.5:1 minimum contrast ratio)
-- Primary text (`--foreground`) on background (`--background`) maintains sufficient contrast
-- Interactive elements have visible focus states using `--ring` color
+| Variable | Light Value | Usage |
+|----------|-------------|-------|
+| `--background` | `#fafafa` | Light page background |
+| `--foreground` | `#09090b` | Dark text |
+| `--card` | `#ffffff` | White cards |
+| `--border` | `#e4e4e7` | Visible borders |
 
-### Color Relationships
+---
 
-1. **Primary Red**: Used for brand identity, primary actions, and key highlights
-   - Light mode: `#b91c1c`
-   - Dark mode: `#ef4444`
+## Utility Classes
 
-2. **Accent Red**: Used for subtle backgrounds and hover states
-   - Light mode: `#fef2f2`
-   - Dark mode: `rgba(239, 68, 68, 0.1)`
+### Gradient Utilities
 
-3. **Neutral Grays**: Used for borders, muted content, and secondary elements
-   - Light mode: Various shades from `#f1f5f9` to `#64748b`
-   - Dark mode: Various shades from `#334155` to `#94a3b8`
+```css
+.gradient-hero       /* Dark gradient for hero sections */
+.gradient-red-glow   /* Radial red glow effect */
+.glass               /* Frosted glass effect with backdrop blur */
+.border-glow         /* Hover glow effect on borders */
+```
 
-### Selection Colors
+### Animation Utilities
 
-Text selection uses the accent color scheme:
-- Background: `#fef2f2` (light red)
-- Text: `#991b1b` (dark red)
+```css
+.animate-fade-in-up  /* Fade in with upward motion */
+.animate-fade-in     /* Simple fade in */
+.animate-glow        /* Pulsing glow effect */
+.animate-shimmer     /* Loading shimmer effect */
+.animate-pulse-glow  /* Subtle pulse opacity */
+```
+
+### Animation Delays
+
+```css
+.animate-delay-100   /* 100ms delay */
+.animate-delay-200   /* 200ms delay */
+.animate-delay-300   /* 300ms delay */
+.animate-delay-400   /* 400ms delay */
+.animate-delay-500   /* 500ms delay */
+```
+
+---
+
+## Design Principles
+
+### 1. Dark-First Design
+The site defaults to dark mode for a modern, professional appearance that makes data visualizations pop.
+
+### 2. Subtle Depth
+Instead of heavy shadows, use:
+- Semi-transparent borders (`border-white/[0.08]`)
+- Subtle background variations
+- Backdrop blur for elevated elements
+
+### 3. Red as Accent
+The brand red (`#dc2626`) is used sparingly for:
+- Primary CTAs and buttons
+- Active states
+- Important highlights
+- Logo and brand elements
+
+### 4. Semantic Colors
+Green, amber, and red consistently represent good, caution, and poor states respectively.
 
 ---
 
 ## Implementation Notes
 
-### CSS Variables
-
-All colors are defined as CSS custom properties (variables) in:
-- **Marketing Website**: `website/index.html` (inline styles)
-- **Platform Application**: `gcb-platform/frontend/app/globals.css`
+### CSS Variables Location
+All colors are defined in:
+- `gcb-platform/frontend/app/globals.css`
 
 ### Theme Switching
+The platform uses dark mode by default. Light mode is available via the `.light` class.
 
-The platform supports automatic dark mode detection. Dark mode colors are defined in the `.dark` class selector in `globals.css`.
-
-### Color Updates
-
-When updating colors:
-1. Update the CSS variable definitions in the appropriate file
-2. Update this documentation
-3. Test both light and dark modes (if applicable)
-4. Verify accessibility contrast ratios
+### Accessibility
+- All text colors maintain WCAG AA contrast ratios
+- Focus states use visible ring colors
+- Interactive elements have clear hover/active states
 
 ---
 
-## Quick Reference
-
-### Most Used Colors
-
-**Marketing Website:**
-- Primary: `#a11824` (--ga-red)
-- Text: `#232323` (--ga-black)
-- Background: `#ffffff` (--ga-white)
-
-**Platform (Light Mode):**
-- Primary: `#b91c1c` (--primary)
-- Text: `#0f172a` (--foreground)
-- Background: `#fafafa` (--background)
-
-**Platform (Dark Mode):**
-- Primary: `#ef4444` (--primary)
-- Text: `#f8fafc` (--foreground)
-- Background: `#0f172a` (--background)
-
----
-
-*Last Updated: 2025*
+*Last Updated: January 2026*
