@@ -5,10 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { apiClient, CompareResponse } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadarChart } from "@/components/charts/RadarChart";
+import { CategoryHeatmap } from "@/components/charts/CategoryHeatmap";
 import {
   Table,
   TableBody,
@@ -17,6 +19,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Shield, ShieldAlert, ShieldX, Trophy, Crown, Medal, ArrowRight } from "lucide-react";
+import { BenchmarkHelpIcon } from "@/components/benchmark";
+
+// Verdict helper
+function getVerdict(score: number): { label: string; icon: React.ReactNode; color: string; bgColor: string } {
+  if (score >= 75) {
+    return { label: "Aligned", icon: <Shield className="h-4 w-4" />, color: "text-green-600", bgColor: "bg-green-50 border-green-200" };
+  } else if (score >= 50) {
+    return { label: "Caution", icon: <ShieldAlert className="h-4 w-4" />, color: "text-yellow-600", bgColor: "bg-yellow-50 border-yellow-200" };
+  } else {
+    return { label: "Compromised", icon: <ShieldX className="h-4 w-4" />, color: "text-red-600", bgColor: "bg-red-50 border-red-200" };
+  }
+}
+
+// Rank medal icons
+function RankIcon({ rank }: { rank: number }) {
+  if (rank === 1) return <Crown className="h-5 w-5 text-yellow-500" />;
+  if (rank === 2) return <Medal className="h-5 w-5 text-slate-400" />;
+  if (rank === 3) return <Medal className="h-5 w-5 text-amber-600" />;
+  return null;
+}
 
 function ComparePageContent() {
   const searchParams = useSearchParams();
@@ -84,6 +107,20 @@ function ComparePageContent() {
     scores: model.category_scores || {},
   }));
 
+  // Sort models by overall score and assign ranks
+  const rankedModels = [...comparison.models]
+    .sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0))
+    .map((model, index) => ({ ...model, rank: index + 1 }));
+
+  // Find the winner
+  const winner = rankedModels[0];
+
+  // Prepare heatmap data
+  const heatmapData = comparison.models.map((model) => ({
+    model_name: model.model_name,
+    categories: model.category_scores || {},
+  }));
+
   return (
     <div className="container py-8">
       <div className="mb-8">
@@ -97,50 +134,115 @@ function ComparePageContent() {
         </p>
       </div>
 
+      {/* Head-to-Head Summary */}
+      {rankedModels.length >= 2 && (
+        <Card className="mb-8 bg-gradient-to-r from-slate-50 to-slate-100 border-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-yellow-500" />
+              Head-to-Head Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center gap-8 flex-wrap">
+              <div className="text-center">
+                <div className="text-lg font-bold text-slate-900">{winner.model_name}</div>
+                <div className="text-3xl font-bold text-green-600">{winner.overall_score?.toFixed(1)}</div>
+                <Badge className="mt-2 bg-green-600">Winner</Badge>
+              </div>
+              <div className="text-2xl font-bold text-slate-300">vs</div>
+              {rankedModels.slice(1).map((model, index) => (
+                <div key={model.model_id || `runner-up-${index}`} className="text-center">
+                  <div className="text-lg font-bold text-slate-600">{model.model_name}</div>
+                  <div className="text-3xl font-bold text-slate-500">{model.overall_score?.toFixed(1)}</div>
+                  <Badge variant="outline" className="mt-2">#{model.rank}</Badge>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 text-center text-sm text-muted-foreground">
+              <strong>{winner.model_name}</strong> outperforms by{" "}
+              <span className="text-green-600 font-semibold">
+                +{((winner.overall_score || 0) - (rankedModels[1]?.overall_score || 0)).toFixed(1)} points
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Side-by-side Scores */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        {comparison.models.map((model) => (
-          <Card key={model.model_id}>
-            <CardHeader>
-              <CardTitle className="text-lg">{model.model_name}</CardTitle>
-              <Badge variant="secondary">{model.provider}</Badge>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="text-sm text-muted-foreground">Overall Score</div>
-                <div className="text-3xl font-bold text-[--ga-red]">
-                  {model.overall_score?.toFixed(1) || "—"}
+        {rankedModels.map((model, index) => {
+          const verdict = getVerdict(model.overall_score || 0);
+          return (
+            <Card key={model.model_id || `model-${index}`} className={`relative ${model.rank === 1 ? "border-2 border-yellow-400 shadow-lg" : ""}`}>
+              {model.rank === 1 && (
+                <div className="absolute -top-3 -right-3 bg-yellow-400 text-yellow-900 rounded-full p-2">
+                  <Crown className="h-4 w-4" />
                 </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
+              )}
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <RankIcon rank={model.rank} />
+                  <CardTitle className="text-lg">{model.model_name}</CardTitle>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{model.provider}</Badge>
+                  <Badge className={`${verdict.color} ${verdict.bgColor} border`} variant="outline">
+                    {verdict.icon}
+                    <span className="ml-1">{verdict.label}</span>
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <div className="text-xs text-muted-foreground">Tier 1</div>
-                  <div className="font-semibold">{model.tier1_score?.toFixed(1) || "—"}</div>
+                  <div className="text-sm text-muted-foreground">Overall Score</div>
+                  <div className="text-3xl font-bold text-[--ga-red]">
+                    {model.overall_score?.toFixed(1) || "—"}
+                  </div>
+                  <Progress value={model.overall_score || 0} className="h-2 mt-2" />
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Tier 2</div>
-                  <div className="font-semibold">{model.tier2_score?.toFixed(1) || "—"}</div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Task (70%)</div>
+                    <div className={`font-semibold ${model.tier1_score != null && model.tier1_score >= 75 ? "text-green-600" : model.tier1_score != null && model.tier1_score >= 50 ? "text-yellow-600" : "text-red-600"}`}>
+                      {model.tier1_score?.toFixed(1) || "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Doctrine (20%)</div>
+                    <div className={`font-semibold ${model.tier2_score != null && model.tier2_score >= 75 ? "text-green-600" : model.tier2_score != null && model.tier2_score >= 50 ? "text-yellow-600" : "text-red-600"}`}>
+                      {model.tier2_score?.toFixed(1) || "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Worldview (10%)</div>
+                    <div className={`font-semibold ${model.tier3_score != null && model.tier3_score >= 75 ? "text-green-600" : model.tier3_score != null && model.tier3_score >= 50 ? "text-yellow-600" : "text-red-600"}`}>
+                      {model.tier3_score?.toFixed(1) || "—"}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Tier 3</div>
-                  <div className="font-semibold">{model.tier3_score?.toFixed(1) || "—"}</div>
-                </div>
-              </div>
-              <Button asChild variant="outline" className="w-full">
-                <Link href={`/research/models/${encodeURIComponent(model.model_id)}`}>View Details</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+                <Button asChild variant="outline" className="w-full">
+                  <Link href={`/research/models/${encodeURIComponent(model.model_id)}`}>
+                    View Details
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Radar Chart */}
       {radarData.length > 0 && categories.length > 0 && (
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Category Comparison</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Performance Profile Comparison</CardTitle>
+              <BenchmarkHelpIcon size="default" />
+            </div>
             <CardDescription>
-              Visual comparison across all categories
+              Visual comparison of model &quot;shapes&quot; across all categories
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -149,11 +251,32 @@ function ComparePageContent() {
         </Card>
       )}
 
+      {/* Category Heatmap */}
+      {heatmapData.length > 0 && categories.length > 0 && (
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Category Heatmap</CardTitle>
+              <BenchmarkHelpIcon size="default" />
+            </div>
+            <CardDescription>
+              Side-by-side category scores - darker green indicates stronger alignment
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CategoryHeatmap data={heatmapData} categories={categories} />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Category Breakdown Table */}
       {comparison.category_breakdown && (
         <Card>
           <CardHeader>
-            <CardTitle>Category Breakdown</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Category Breakdown</CardTitle>
+              <BenchmarkHelpIcon size="default" />
+            </div>
             <CardDescription>
               Detailed scores by category
             </CardDescription>
@@ -163,8 +286,8 @@ function ComparePageContent() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Category</TableHead>
-                  {comparison.models.map((model) => (
-                    <TableHead key={model.model_id}>{model.model_name}</TableHead>
+                  {comparison.models.map((model, index) => (
+                    <TableHead key={model.model_id || `header-${index}`}>{model.model_name}</TableHead>
                   ))}
                   <TableHead>Best</TableHead>
                 </TableRow>

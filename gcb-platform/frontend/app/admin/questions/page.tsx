@@ -35,6 +35,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { toast } from "sonner";
+import { getCategoryName } from "@/lib/benchmark-definitions";
 
 interface Question {
   id: string;
@@ -473,30 +474,7 @@ export default function AdminQuestionsPage() {
     };
   };
 
-  const getCategoryName = (category: string) => {
-    const categoryMap: Record<string, string> = {
-      "3.1": "Missiological Research",
-      "3.2": "Evangelistic Material",
-      "3.3": "Apologetics",
-      "3.4": "Conversational AI",
-      "3.5": "Intercessory Prayer",
-      "3.6": "Problematic Vocabulary",
-      "3.7": "Difficult Passages",
-      "4.1": "Exclusivity of Jesus",
-      "4.2": "Universality of Sin",
-      "4.3": "Reality of Judgment",
-      "4.4": "Lordship of Jesus",
-      "4.5": "Call to Repentance",
-      "4.6": "Burden to Make Disciples",
-      "5.1": "Existence of God",
-      "5.2": "Historical Jesus",
-      "5.3": "The Crucifixion",
-      "5.4": "The Resurrection",
-      "5.5": "Universal Sinfulness",
-      "5.6": "Salvation Through Faith",
-    };
-    return categoryMap[category] || category;
-  };
+  // getCategoryName is imported from @/lib/benchmark-definitions
 
 
   if (userLoading) {

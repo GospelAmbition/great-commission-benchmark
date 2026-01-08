@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import { getCategoryName, sortCategories, getTierForCategory, TIER_INFO } from "@/lib/benchmark-definitions";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { BenchmarkInlineLegend } from "@/components/benchmark";
 
 interface CategoryHeatmapProps {
   data: Array<{
@@ -22,6 +25,9 @@ export function CategoryHeatmap({ data, categories }: CategoryHeatmapProps) {
     };
   }, []);
 
+  // Sort categories in the correct order
+  const sortedCategories = useMemo(() => sortCategories(categories), [categories]);
+
   if (data.length === 0 || categories.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -31,51 +37,78 @@ export function CategoryHeatmap({ data, categories }: CategoryHeatmapProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr>
-            <th className="text-left p-2 border-b font-medium">Model</th>
-            {categories.map((cat) => (
-              <th key={cat} className="p-2 border-b font-medium capitalize text-center">
-                {cat}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((model) => (
-            <tr key={model.model_name}>
-              <td className="p-2 border-b font-medium">{model.model_name}</td>
-              {categories.map((cat) => {
-                const value = model.categories[cat] || 0;
+    <TooltipProvider>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr>
+              <th className="text-left p-2 border-b font-medium">Model</th>
+              {sortedCategories.map((cat) => {
+                const name = getCategoryName(cat);
+                const tier = getTierForCategory(cat);
+                const tierName = TIER_INFO[tier]?.shortName || `Tier ${tier}`;
                 return (
-                  <td key={cat} className="p-1 border-b">
-                    <div
-                      className={`${colorScale(value)} rounded p-2 text-center font-semibold`}
-                    >
-                      {value.toFixed(0)}
-                    </div>
-                  </td>
+                  <Tooltip key={cat}>
+                    <TooltipTrigger asChild>
+                      <th className="p-2 border-b font-medium text-center cursor-help">
+                        <span className="font-mono text-xs">{cat}</span>
+                      </th>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-semibold">{name}</p>
+                      <p className="text-xs text-muted-foreground">{tierName}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 );
               })}
             </tr>
-          ))}
-        </tbody>
-      </table>
-      
-      {/* Legend */}
-      <div className="mt-4 flex items-center justify-center gap-2 text-xs">
-        <span className="text-muted-foreground">Low</span>
-        <div className="flex gap-1">
-          <div className="w-6 h-4 bg-red-300 rounded" />
-          <div className="w-6 h-4 bg-orange-300 rounded" />
-          <div className="w-6 h-4 bg-yellow-300 rounded" />
-          <div className="w-6 h-4 bg-green-300 rounded" />
-          <div className="w-6 h-4 bg-green-500 rounded" />
+          </thead>
+          <tbody>
+            {data.map((model) => (
+              <tr key={model.model_name}>
+                <td className="p-2 border-b font-medium">{model.model_name}</td>
+                {sortedCategories.map((cat) => {
+                  const value = model.categories[cat] || 0;
+                  const name = getCategoryName(cat);
+                  return (
+                    <Tooltip key={cat}>
+                      <TooltipTrigger asChild>
+                        <td className="p-1 border-b">
+                          <div
+                            className={`${colorScale(value)} rounded p-2 text-center font-semibold cursor-help`}
+                          >
+                            {value.toFixed(0)}
+                          </div>
+                        </td>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="font-semibold">{cat} - {name}</p>
+                        <p className="text-xs">Score: {value.toFixed(1)}%</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        
+        {/* Score Legend */}
+        <div className="mt-4 flex items-center justify-center gap-2 text-xs">
+          <span className="text-muted-foreground">Low</span>
+          <div className="flex gap-1">
+            <div className="w-6 h-4 bg-red-300 rounded" />
+            <div className="w-6 h-4 bg-orange-300 rounded" />
+            <div className="w-6 h-4 bg-yellow-300 rounded" />
+            <div className="w-6 h-4 bg-green-300 rounded" />
+            <div className="w-6 h-4 bg-green-500 rounded" />
+          </div>
+          <span className="text-muted-foreground">High</span>
         </div>
-        <span className="text-muted-foreground">High</span>
+
+        {/* Category Legend */}
+        <BenchmarkInlineLegend className="mt-3 pt-3 border-t justify-center" />
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

@@ -36,6 +36,12 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useUserProfile } from "@/lib/useUserProfile";
+import { 
+  TIER_CATEGORIES, 
+  CATEGORY_NAMES, 
+  TIER_NAMES,
+  getCategoryName 
+} from "@/lib/benchmark-definitions";
 
 // =============================================================================
 // Types
@@ -147,39 +153,9 @@ interface Alert {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-const CATEGORIES: Record<number, string[]> = {
-  1: ["3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7"],
-  2: ["4.1", "4.2", "4.3", "4.4", "4.5", "4.6"],
-  3: ["5.1", "5.2", "5.3", "5.4", "5.5", "5.6"],
-};
-
-const CATEGORY_NAMES: Record<string, string> = {
-  "3.1": "Missiological Research",
-  "3.2": "Evangelistic Material",
-  "3.3": "Apologetics",
-  "3.4": "Conversational AI",
-  "3.5": "Intercessory Prayer",
-  "3.6": "Problematic Vocabulary",
-  "3.7": "Difficult Passages",
-  "4.1": "Exclusivity of Jesus",
-  "4.2": "Universality of Sin",
-  "4.3": "Reality of Judgment",
-  "4.4": "Lordship of Jesus",
-  "4.5": "Call to Repentance",
-  "4.6": "Burden to Make Disciples",
-  "5.1": "Existence of God",
-  "5.2": "Historical Jesus",
-  "5.3": "The Crucifixion",
-  "5.4": "The Resurrection",
-  "5.5": "Universal Sinfulness",
-  "5.6": "Salvation Through Faith",
-};
-
-const TIER_NAMES: Record<number, string> = {
-  1: "Task Completion",
-  2: "Doctrinal Fidelity",
-  3: "Worldview Confession",
-};
+// TIER_CATEGORIES, CATEGORY_NAMES, and TIER_NAMES are imported from @/lib/benchmark-definitions
+// Alias for backward compatibility with the component code
+const CATEGORIES = TIER_CATEGORIES;
 
 // Target distribution: 15% easy, 70% medium, 15% hard
 const DIFFICULTY_TARGETS = {

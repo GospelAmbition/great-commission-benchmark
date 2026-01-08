@@ -8,6 +8,8 @@ import { apiClient, StatsResponse } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, BarChart3, BookOpen, Shield, Users } from "lucide-react";
+import { TIER_CATEGORIES, CATEGORY_NAMES } from "@/lib/benchmark-definitions";
+import { BenchmarkLegendModal } from "@/components/benchmark";
 
 export default function Home() {
   const [rankings, setRankings] = useState<any[]>([]);
@@ -145,46 +147,72 @@ export default function Home() {
                   <Shield className="h-5 w-5 text-red-700" />
                   <CardTitle className="text-slate-900">What We Test (70/20/10)</CardTitle>
                 </div>
+                <CardDescription>19 categories across 3 tiers, weighted by practical ministry value</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Tier 1: Task Capability */}
                 <div className="p-3 rounded-lg bg-red-50 border border-red-100">
                   <h3 className="font-semibold text-base text-slate-900 mb-1 flex items-center gap-2">
                     <span className="inline-flex items-center justify-center w-8 h-5 rounded bg-red-700 text-white text-xs font-bold">70%</span>
                     TASK CAPABILITY
                   </h3>
-                  <p className="text-slate-600 text-sm mb-2">Can it do the work?</p>
-                  <ul className="grid grid-cols-2 gap-1 text-xs text-slate-600">
-                    <li className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-red-700" />Evangelism & outreach</li>
-                    <li className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-red-700" />Apologetics & defense</li>
-                    <li className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-red-700" />Discipleship tools</li>
-                    <li className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-red-700" />Missiological research</li>
-                    <li className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-red-700" />Prayer resources</li>
-                    <li className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-red-700" />Scripture processing</li>
-                  </ul>
+                  <p className="text-slate-600 text-sm mb-2">Can the AI complete practical ministry tasks?</p>
+                  <div className="grid grid-cols-1 gap-1 text-xs">
+                    {TIER_CATEGORIES[1].map((code) => (
+                      <div key={code} className="flex items-center gap-2 text-slate-600">
+                        <code className="font-mono text-[10px] bg-red-100 px-1 rounded w-6 text-center">{code}</code>
+                        <span>{CATEGORY_NAMES[code]}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex gap-3">
-                  <div className="flex-1 p-3 rounded-lg">
+
+                {/* Tier 2 & 3 */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
                     <h3 className="font-semibold text-sm text-slate-900 mb-1 flex items-center gap-2">
                       <span className="inline-flex items-center justify-center w-8 h-5 rounded bg-slate-800 text-white text-xs font-bold">20%</span>
                       DOCTRINAL
                     </h3>
-                    <p className="text-slate-600 text-xs">
-                      Theologically accurate and faithful?
-                    </p>
+                    <p className="text-slate-600 text-xs mb-2">Preserves theological accuracy?</p>
+                    <div className="space-y-0.5 text-[10px]">
+                      {TIER_CATEGORIES[2].map((code) => (
+                        <div key={code} className="flex items-center gap-1 text-slate-500">
+                          <code className="font-mono bg-slate-200 px-0.5 rounded">{code}</code>
+                          <span className="truncate">{CATEGORY_NAMES[code]}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex-1 p-3 rounded-lg">
+                  <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
                     <h3 className="font-semibold text-sm text-slate-900 mb-1 flex items-center gap-2">
                       <span className="inline-flex items-center justify-center w-8 h-5 rounded bg-slate-500 text-white text-xs font-bold">10%</span>
                       WORLDVIEW
                     </h3>
-                    <p className="text-slate-600 text-xs">
-                      Affirms Christian truth claims?
-                    </p>
+                    <p className="text-slate-600 text-xs mb-2">Affirms Christian truths?</p>
+                    <div className="space-y-0.5 text-[10px]">
+                      {TIER_CATEGORIES[3].map((code) => (
+                        <div key={code} className="flex items-center gap-1 text-slate-500">
+                          <code className="font-mono bg-slate-200 px-0.5 rounded">{code}</code>
+                          <span className="truncate">{CATEGORY_NAMES[code]}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <Button asChild variant="brand-outline" className="w-full">
-                  <Link href="/about">Learn About Methodology →</Link>
-                </Button>
+
+                <div className="flex gap-2">
+                  <BenchmarkLegendModal 
+                    trigger={
+                      <Button variant="outline" className="flex-1">
+                        View Full Legend
+                      </Button>
+                    }
+                  />
+                  <Button asChild variant="brand-outline" className="flex-1">
+                    <Link href="/about">Methodology →</Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 

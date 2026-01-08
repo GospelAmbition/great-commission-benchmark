@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -24,10 +24,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiClient } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowUpDown, BarChart3, Filter, AlertTriangle } from "lucide-react";
+import { ArrowUpDown, BarChart3, Filter, AlertTriangle, ChevronUp, ChevronDown, Shield, ShieldAlert, ShieldX } from "lucide-react";
+import { BenchmarkHelpIcon } from "@/components/benchmark";
 
 interface LeaderboardItem {
-  model_id: string;
+  id: string; // UUID for API operations (compare)
+  model_id: string; // OpenRouter-style ID for display/routing
   model_name: string;
   provider: string;
   overall_score: number;
@@ -36,6 +38,35 @@ interface LeaderboardItem {
   tier3_score?: number;
   trust_tier?: string;
   test_count?: number;
+}
+
+// Helper to determine verdict based on score
+function getVerdict(score: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode; color: string } {
+  if (score >= 75) {
+    return { label: "Aligned", variant: "default", icon: <Shield className="h-3 w-3" />, color: "bg-green-600" };
+  } else if (score >= 50) {
+    return { label: "Caution", variant: "secondary", icon: <ShieldAlert className="h-3 w-3" />, color: "bg-yellow-500" };
+  } else {
+    return { label: "Compromised", variant: "destructive", icon: <ShieldX className="h-3 w-3" />, color: "bg-red-600" };
+  }
+}
+
+// Score progress bar component
+function ScoreBar({ score, max = 100 }: { score: number; max?: number }) {
+  const percentage = (score / max) * 100;
+  const color = score >= 75 ? "bg-green-500" : score >= 50 ? "bg-yellow-500" : "bg-red-500";
+  
+  return (
+    <div className="flex items-center gap-2 min-w-[100px]">
+      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+        <div 
+          className={`h-full ${color} transition-all duration-300`}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+      <span className="text-sm font-medium tabular-nums w-10 text-right">{score.toFixed(1)}</span>
+    </div>
+  );
 }
 
 export default function ResearchPage() {
@@ -48,6 +79,7 @@ export default function ResearchPage() {
     tier: "",
     provider: "",
     trust_tier: "",
+    model_type: "", // "open_source" | "proprietary" | ""
     sort: "score",
     order: "desc" as "asc" | "desc",
   });
@@ -80,12 +112,12 @@ export default function ResearchPage() {
     }
   }
 
-  function toggleModelSelection(modelId: string) {
+  function toggleModelSelection(id: string) {
     const newSelected = new Set(selectedModels);
-    if (newSelected.has(modelId)) {
-      newSelected.delete(modelId);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
     } else if (newSelected.size < 5) {
-      newSelected.add(modelId);
+      newSelected.add(id);
     }
     setSelectedModels(newSelected);
   }
@@ -128,7 +160,7 @@ export default function ResearchPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
               <div>
                 <label className="text-xs font-medium mb-1.5 block text-slate-500">Provider</label>
                 <Select
@@ -146,6 +178,26 @@ export default function ResearchPage() {
                     <SelectItem value="anthropic">Anthropic</SelectItem>
                     <SelectItem value="google">Google</SelectItem>
                     <SelectItem value="meta">Meta</SelectItem>
+                    <SelectItem value="mistral">Mistral</SelectItem>
+                    <SelectItem value="cohere">Cohere</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1.5 block text-slate-500">Model Type</label>
+                <Select
+                  value={filters.model_type || "all"}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, model_type: value === "all" ? "" : value }))
+                  }
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    <SelectItem value="open_source">Open Source</SelectItem>
+                    <SelectItem value="proprietary">Proprietary</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -189,7 +241,7 @@ export default function ResearchPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-medium mb-1.5 block text-slate-500">Tier</label>
+                <label className="text-xs font-medium mb-1.5 block text-slate-500">Tier Focus</label>
                 <Select
                   value={filters.tier || "all"}
                   onValueChange={(value) =>
@@ -239,7 +291,10 @@ export default function ResearchPage() {
         {/* Leaderboard Table */}
         <Card className="bg-white">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-slate-900">Leaderboard</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg text-slate-900">Leaderboard</CardTitle>
+              <BenchmarkHelpIcon size="default" />
+            </div>
             <CardDescription className="text-slate-600">
               {pagination.total > 0
                 ? `Showing ${pagination.offset + 1}-${Math.min(pagination.offset + pagination.limit, pagination.total)} of ${pagination.total} models`
@@ -281,74 +336,117 @@ export default function ResearchPage() {
                             className="h-7 px-2 -ml-2 text-slate-700 hover:bg-transparent hover:text-red-700"
                           >
                             Model
-                            <ArrowUpDown className="ml-1 h-3 w-3" />
+                            {filters.sort === "model_name" && (
+                              filters.order === "asc" ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />
+                            )}
+                            {filters.sort !== "model_name" && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
                           </Button>
                         </TableHead>
                         <TableHead className="text-slate-600">Provider</TableHead>
-                        <TableHead>
+                        <TableHead className="min-w-[140px]">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleSort("score")}
                             className="h-7 px-2 -ml-2 text-slate-700 hover:bg-transparent hover:text-red-700"
                           >
-                            Score
-                            <ArrowUpDown className="ml-1 h-3 w-3" />
+                            GCB Score
+                            {filters.sort === "score" && (
+                              filters.order === "asc" ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />
+                            )}
+                            {filters.sort !== "score" && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
                           </Button>
                         </TableHead>
-                        <TableHead className="text-center text-slate-600">T1</TableHead>
-                        <TableHead className="text-center text-slate-600">T2</TableHead>
-                        <TableHead className="text-center text-slate-600">T3</TableHead>
+                        <TableHead className="text-center text-slate-600 text-xs">
+                          <span title="Tier 1: Task Capability (70% weight) - Categories 3.1-3.7">Task</span>
+                        </TableHead>
+                        <TableHead className="text-center text-slate-600 text-xs">
+                          <span title="Tier 2: Doctrinal Fidelity (20% weight) - Categories 4.1-4.6">Doctrine</span>
+                        </TableHead>
+                        <TableHead className="text-center text-slate-600 text-xs">
+                          <span title="Tier 3: Worldview Confession (10% weight) - Categories 5.1-5.6">Worldview</span>
+                        </TableHead>
+                        <TableHead className="text-slate-600">Verdict</TableHead>
                         <TableHead className="text-slate-600">Trust</TableHead>
                         <TableHead className="w-16"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {leaderboard.map((item, index) => (
-                        <TableRow key={`${item.model_id}-${index}`} className="group">
-                          <TableCell className="py-2">
-                            <Checkbox
-                              checked={selectedModels.has(item.model_id)}
-                              onCheckedChange={() => toggleModelSelection(item.model_id)}
-                              disabled={!selectedModels.has(item.model_id) && selectedModels.size >= 5}
-                            />
-                          </TableCell>
-                          <TableCell className="py-2 text-center font-medium text-slate-500">
-                            {pagination.offset + index + 1}
-                          </TableCell>
-                          <TableCell className="py-2">
-                            <Link
-                              href={`/research/models/${encodeURIComponent(item.model_id)}`}
-                              className="font-medium text-slate-900 hover:text-red-700 transition-colors"
-                            >
-                              {item.model_name}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="py-2">
-                            <Badge variant="secondary" className="font-normal bg-slate-100 text-slate-700">{item.provider}</Badge>
-                          </TableCell>
-                          <TableCell className="py-2">
-                            <span className="font-bold text-red-700">{item.overall_score.toFixed(1)}</span>
-                          </TableCell>
-                          <TableCell className="py-2 text-center text-sm text-slate-500">
-                            {item.tier1_score?.toFixed(1) || "—"}
-                          </TableCell>
-                          <TableCell className="py-2 text-center text-sm text-slate-500">
-                            {item.tier2_score?.toFixed(1) || "—"}
-                          </TableCell>
-                          <TableCell className="py-2 text-center text-sm text-slate-500">
-                            {item.tier3_score?.toFixed(1) || "—"}
-                          </TableCell>
-                          <TableCell className="py-2">
-                            <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">{item.trust_tier || "automated"}</Badge>
-                          </TableCell>
-                          <TableCell className="py-2">
-                            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Link href={`/research/models/${encodeURIComponent(item.model_id)}`}>View</Link>
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {leaderboard.map((item, index) => {
+                        const verdict = getVerdict(item.overall_score);
+                        return (
+                          <TableRow key={`${item.model_id}-${index}`} className="group">
+                            <TableCell className="py-2">
+                              <Checkbox
+                                checked={selectedModels.has(item.id)}
+                                onCheckedChange={() => toggleModelSelection(item.id)}
+                                disabled={!selectedModels.has(item.id) && selectedModels.size >= 5}
+                              />
+                            </TableCell>
+                            <TableCell className="py-2 text-center font-bold text-slate-400">
+                              {pagination.offset + index + 1}
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <Link
+                                href={`/research/models/${encodeURIComponent(item.model_id)}`}
+                                className="font-medium text-slate-900 hover:text-red-700 transition-colors"
+                              >
+                                {item.model_name}
+                              </Link>
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <Badge variant="secondary" className="font-normal bg-slate-100 text-slate-700">{item.provider}</Badge>
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <ScoreBar score={item.overall_score} />
+                            </TableCell>
+                            <TableCell className="py-2 text-center">
+                              {item.tier1_score != null ? (
+                                <span className={`text-sm font-medium ${item.tier1_score >= 75 ? "text-green-600" : item.tier1_score >= 50 ? "text-yellow-600" : "text-red-600"}`}>
+                                  {item.tier1_score.toFixed(0)}
+                                </span>
+                              ) : (
+                                <span className="text-slate-300">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-2 text-center">
+                              {item.tier2_score != null ? (
+                                <span className={`text-sm font-medium ${item.tier2_score >= 75 ? "text-green-600" : item.tier2_score >= 50 ? "text-yellow-600" : "text-red-600"}`}>
+                                  {item.tier2_score.toFixed(0)}
+                                </span>
+                              ) : (
+                                <span className="text-slate-300">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-2 text-center">
+                              {item.tier3_score != null ? (
+                                <span className={`text-sm font-medium ${item.tier3_score >= 75 ? "text-green-600" : item.tier3_score >= 50 ? "text-yellow-600" : "text-red-600"}`}>
+                                  {item.tier3_score.toFixed(0)}
+                                </span>
+                              ) : (
+                                <span className="text-slate-300">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <Badge 
+                                variant={verdict.variant}
+                                className={`text-xs gap-1 ${verdict.variant === "default" ? "bg-green-600 hover:bg-green-700" : verdict.variant === "destructive" ? "" : "bg-yellow-500 hover:bg-yellow-600 text-white"}`}
+                              >
+                                {verdict.icon}
+                                {verdict.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">{item.trust_tier || "automated"}</Badge>
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Link href={`/research/models/${encodeURIComponent(item.model_id)}`}>View</Link>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>

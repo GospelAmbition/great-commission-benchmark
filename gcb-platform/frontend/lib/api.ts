@@ -10,7 +10,8 @@ export interface ApiError {
 
 // Response types
 export interface LeaderboardItem {
-  model_id: string;
+  id: string; // UUID for API operations (e.g., compare)
+  model_id: string; // OpenRouter-style ID (e.g., "openai/gpt-4")
   model_name: string;
   provider: string;
   overall_score: number;
@@ -311,7 +312,8 @@ export class ApiClient {
     // Transform backend response to frontend format
     return {
       items: (response.entries || []).map((entry) => ({
-        model_id: entry.model?.model_id || entry.model?.id || '',
+        id: entry.model?.id || '', // UUID for API operations
+        model_id: entry.model?.model_id || entry.model?.id || '', // OpenRouter-style ID for display/routing
         model_name: entry.model?.name || '',
         provider: entry.model?.provider || '',
         overall_score: entry.scores?.overall || 0,
@@ -351,7 +353,45 @@ export class ApiClient {
 
   async compareModels(modelIds: string[]): Promise<CompareResponse> {
     const params = modelIds.map(id => `models=${encodeURIComponent(id)}`).join('&');
-    return this.request<CompareResponse>(`/api/public/leaderboard/compare?${params}`);
+    
+    // Backend returns nested structure, transform to flat structure for frontend
+    interface BackendCompareResponse {
+      semantic_version: string;
+      marketing_version: string;
+      models: Array<{
+        model: { id: string; name: string; provider: string };
+        test_run_id: string;
+        scores: { overall: number; tier1: number; tier2: number; tier3: number; category_scores?: Record<string, number> };
+        verdict_distribution: Record<string, number>;
+      }>;
+      comparison: { score_delta?: { overall: number; tier1: number; tier2: number; tier3: number } };
+    }
+    
+    const response = await this.request<BackendCompareResponse>(`/api/public/leaderboard/compare?${params}`);
+    
+    // Transform to frontend format
+    const allCategories = new Set<string>();
+    const transformedModels = (response.models || []).map((entry) => {
+      const categoryScores = entry.scores?.category_scores || {};
+      Object.keys(categoryScores).forEach(cat => allCategories.add(cat));
+      
+      return {
+        model_id: entry.model?.id || '',
+        model_name: entry.model?.name || '',
+        provider: entry.model?.provider || '',
+        overall_score: entry.scores?.overall || 0,
+        tier1_score: entry.scores?.tier1,
+        tier2_score: entry.scores?.tier2,
+        tier3_score: entry.scores?.tier3,
+        category_scores: categoryScores,
+      };
+    });
+    
+    return {
+      models: transformedModels,
+      categories: Array.from(allCategories),
+      category_breakdown: undefined,
+    };
   }
 
   // User API endpoints (require auth)
