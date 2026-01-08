@@ -1321,15 +1321,17 @@ export default function BenchmarkDashboardPage() {
                         <div
                           key={difficulty}
                           className={`p-4 rounded-lg border ${
-                            isOnTarget ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900" : "bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900"
+                            isOnTarget 
+                              ? "bg-green-500/10 border-green-500/20" 
+                              : "bg-orange-500/10 border-orange-500/20"
                           }`}
                         >
                           <div className="flex justify-between items-center mb-2">
-                            <span className="font-medium capitalize">{difficulty}</span>
+                            <span className="font-medium capitalize text-foreground">{difficulty}</span>
                             <span className="text-sm text-muted-foreground">Target: {target}%</span>
                           </div>
-                          <div className="text-2xl font-bold">{stats.count}</div>
-                          <div className={`text-sm ${isOnTarget ? "text-green-600" : "text-orange-600"}`}>
+                          <div className="text-2xl font-bold text-foreground">{stats.count}</div>
+                          <div className={`text-sm ${isOnTarget ? "text-green-400" : "text-orange-400"}`}>
                             {stats.percentage.toFixed(1)}%
                           </div>
                         </div>
@@ -1736,14 +1738,9 @@ export default function BenchmarkDashboardPage() {
         <TabsContent value="versions">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>All Versions</CardTitle>
-                  <CardDescription>Manage all benchmark versions</CardDescription>
-                </div>
-                <Button onClick={() => setShowCreateDialog(true)}>
-                  Create New Version
-                </Button>
+              <div>
+                <CardTitle>All Versions</CardTitle>
+                <CardDescription>Manage all benchmark versions</CardDescription>
               </div>
             </CardHeader>
             <CardContent>

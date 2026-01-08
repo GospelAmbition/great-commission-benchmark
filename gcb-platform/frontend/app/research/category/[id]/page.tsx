@@ -27,12 +27,12 @@ const CATEGORY_INFO: Record<string, { name: string; description: string; tier: s
   theology: {
     name: "Theology",
     description: "Understanding and articulating theological concepts",
-    tier: "Doctrinal Fidelity",
+    tier: "Gospel Core",
   },
   ethics: {
     name: "Ethics",
     description: "Applying Christian ethics to modern situations",
-    tier: "Doctrinal Fidelity",
+    tier: "Gospel Core",
   },
   apologetics: {
     name: "Apologetics",

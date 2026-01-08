@@ -65,7 +65,7 @@ export default function AboutPage() {
                   Unlike other benchmarks that test only knowledge, we answer the fundamental question:{" "}
                   <strong className="text-foreground">&quot;Which LLM can I actually use for my ministry work?&quot;</strong>
                 </p>
-                <p className="text-muted-foreground p-4 bg-amber-500/5 rounded-lg border-l-2 border-amber-500">
+                <p className="text-muted-foreground">
                   Current AI systems often have guardrails that restrict religious content deemed
                   &quot;coercive,&quot; proselytizing activities, exclusive truth claims, and content that
                   challenges other worldviews. While well-intentioned, these guardrails can impede
@@ -99,7 +99,7 @@ export default function AboutPage() {
                 <div className="p-4 rounded-lg bg-amber-500/5 border border-amber-500/10">
                   <p className="text-foreground mb-3 flex items-center gap-2">
                     <span className="inline-flex items-center justify-center px-2 py-1 rounded bg-amber-500 text-white text-xs font-bold">20%</span>
-                    <strong>Tier 2: Doctrinal Fidelity</strong> — Does the AI preserve theological accuracy?
+                    <strong>Tier 2: Gospel Core</strong> — Does the AI preserve theological accuracy?
                   </p>
                   <p className="text-muted-foreground">
                     Tests the Exclusivity of Jesus Christ, Universality of Sin, Reality of Judgment, Lordship of Jesus, Call to Repentance and Faith, and Burden to Make Disciples.

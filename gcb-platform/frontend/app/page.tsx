@@ -6,9 +6,7 @@ import { QuickRankings } from "@/components/home/QuickRankings";
 import { apiClient, StatsResponse } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, BarChart3, BookOpen, Shield, Users } from "lucide-react";
-import { TIER_CATEGORIES, CATEGORY_NAMES, TIER_INFO } from "@/lib/benchmark-definitions";
-import { BenchmarkLegendModal } from "@/components/benchmark";
+import { ArrowRight, BarChart3, BookOpen } from "lucide-react";
 
 export default function Home() {
   const [rankings, setRankings] = useState<any[]>([]);
@@ -66,25 +64,14 @@ export default function Home() {
         
         <div className="container relative py-16 md:py-24">
           <div className="max-w-3xl animate-fade-in-up">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight tracking-tight">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-light text-foreground mb-6 leading-tight tracking-tight">
               Evaluating AI for the
-              <span className="block text-primary">Great Commission</span>
+              <span className="block text-primary font-light text-5xl md:text-6xl lg:text-7xl">Great Commission</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl leading-relaxed">
               Which AI models will actually help you make disciples? 
-              We measure task capability, doctrinal fidelity, and worldview alignment.
+              We measure task capability, gospel core fidelity, and worldview alignment.
             </p>
-            <div className="flex flex-wrap gap-4">
-              <Button asChild size="lg" variant="glow" className="group">
-                <Link href="/research">
-                  View Rankings
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/about">Learn More</Link>
-              </Button>
-            </div>
           </div>
         </div>
       </section>
@@ -153,147 +140,43 @@ export default function Home() {
         </section>
       )}
 
-      {/* What We Test & The Challenge */}
+      {/* The Challenge */}
       <section className="border-t border-white/[0.06] bg-surface py-12">
         <div className="container">
-          <div className="grid gap-8 lg:grid-cols-2">
-            {/* What We Test */}
-            <div className="rounded-lg border border-white/[0.08] bg-card p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Shield className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-foreground">What We Test (70/20/10)</h3>
-                  <p className="text-sm text-muted-foreground">19 categories across 3 tiers</p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                {/* Tier 1 */}
-                <div className="p-4 rounded-lg bg-red-500/5 border border-red-500/10">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="px-2 py-0.5 rounded bg-primary text-white text-xs font-bold">70%</span>
-                    <h4 className="font-semibold text-foreground">Task Capability</h4>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">Can the AI complete practical ministry tasks?</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {TIER_CATEGORIES[1].map((code) => (
-                      <span key={code} className="px-2 py-0.5 rounded bg-white/5 text-xs text-muted-foreground">
-                        {CATEGORY_NAMES[code]}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tier 2 & 3 */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2 py-0.5 rounded bg-amber-500 text-white text-xs font-bold">20%</span>
-                      <h4 className="font-semibold text-sm text-foreground">Doctrinal</h4>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Preserves theological accuracy</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2 py-0.5 rounded bg-blue-500 text-white text-xs font-bold">10%</span>
-                      <h4 className="font-semibold text-sm text-foreground">Worldview</h4>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Affirms Christian truths</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <BenchmarkLegendModal 
-                    trigger={
-                      <Button variant="outline" className="flex-1">
-                        View Full Legend
-                      </Button>
-                    }
-                  />
-                  <Button asChild variant="brand-outline" className="flex-1">
-                    <Link href="/about">Methodology</Link>
-                  </Button>
-                </div>
-              </div>
+          <div className="rounded-lg border border-white/[0.08] bg-card p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <BookOpen className="h-5 w-5 text-foreground" />
+              <h3 className="text-xl text-foreground">Programmed Resistance to the Great Commission</h3>
             </div>
-
-            {/* The Challenge */}
-            <div className="rounded-lg border border-white/[0.08] bg-card p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <BookOpen className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="text-xl font-bold text-foreground">The Challenge</h3>
-              </div>
-              
-              <div className="space-y-6">
-                <blockquote className="relative pl-4 border-l-2 border-primary">
-                  <p className="text-sm font-medium text-foreground leading-relaxed">
-                    &ldquo;Go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit, and teaching them to obey everything I have commanded you.&rdquo;
-                  </p>
-                  <footer className="mt-2 text-xs text-primary font-bold tracking-wide uppercase">— Matthew 28:19-20</footer>
-                </blockquote>
-                
-                <div className="flex items-center gap-3 text-muted-foreground text-sm">
-                  <div className="flex-1 h-px bg-white/10" />
-                  <span className="font-medium">vs.</span>
-                  <div className="flex-1 h-px bg-white/10" />
-                </div>
-                
-                <blockquote className="pl-4 border-l-2 border-white/20">
-                  <p className="text-sm italic text-muted-foreground leading-relaxed">
-                    &ldquo;Disallowed: Advice on influencing religious views...&rdquo;
-                  </p>
-                  <footer className="mt-2 text-xs text-muted-foreground/60 font-medium">— AI Provider Policy</footer>
-                </blockquote>
-                
-                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]">
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Many AI models are programmed to resist the Great Commission. 
-                    This benchmark measures which models will actually help you make disciples—not just answer Bible trivia.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-12">
-        <div className="container">
-          <div className="relative rounded-lg border border-white/[0.08] bg-card overflow-hidden">
-            {/* Background glow */}
-            <div className="absolute top-0 right-0 w-96 h-96 gradient-red-glow opacity-20" />
             
-            <div className="relative p-8 md:p-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Users className="h-5 w-5 text-primary" />
+            <div className="space-y-6">
+              <div className="flex items-center gap-6">
+                <div className="flex-1 p-4 rounded-lg border border-white/[0.08]">
+                  <p className="text-sm text-foreground leading-relaxed">
+                    "Go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit, and teaching them to obey everything I have commanded you."
+                  </p>
+                  <p className="mt-2 text-sm text-foreground italic">— Matthew 28:19-20</p>
                 </div>
-                <h3 className="text-2xl font-bold text-foreground">Become a Tester</h3>
+                
+                <span className="text-3xl text-foreground shrink-0 font-bold">vs.</span>
+                
+                <div className="flex-1 p-4 rounded-lg border border-white/[0.08]">
+                  <p className="text-sm text-foreground leading-relaxed">
+                    "Disallowed content: Advice or instructions on influencing the religious or political views of a specific individual or demographic group."
+                  </p>
+                  <p className="mt-2 text-sm text-foreground italic">— Internal AI Provider Policy</p>
+                </div>
               </div>
-              <p className="text-muted-foreground mb-6 max-w-2xl">
-                Help measure AI models for Great Commission work. Use our GCB Runner to run tests on any model—including 
-                local and fine-tuned models. Results are verified by moderators and added to the leaderboard.
+              
+              <p className="text-sm text-foreground leading-relaxed">
+                Current AI systems often have guardrails that restrict religious content deemed "coercive," proselytizing activities, exclusive truth claims, and content that challenges other worldviews. While well-intentioned, these guardrails can impede legitimate religious activity that is protected speech and central to Christian practice worldwide.
               </p>
-              <div className="flex flex-wrap gap-4">
-                <Button asChild size="lg" variant="glow" className="group">
-                  <Link href="/dashboard">
-                    Get Started
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-                <Button asChild size="lg" variant="outline">
-                  <Link href="/runner">Learn About GCB Runner</Link>
-                </Button>
-              </div>
             </div>
           </div>
         </div>
       </section>
+
+
     </div>
   );
 }

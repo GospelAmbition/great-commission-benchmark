@@ -245,7 +245,7 @@ export default function ResultsPage() {
                   score={tier1Score}
                 />
                 <TierBar 
-                  name="Tier 2: Doctrinal Fidelity" 
+                  name="Tier 2: Gospel Core" 
                   weight="20%" 
                   score={tier2Score}
                 />

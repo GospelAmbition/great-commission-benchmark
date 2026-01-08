@@ -101,7 +101,7 @@ export default function ProcessingPage() {
     if (progressData.current_tier) {
       const tierMessages: Record<string, string> = {
         "tier1": "Starting Tier 1: Task Capability (210 questions)",
-        "tier2": "Starting Tier 2: Doctrinal Fidelity (60 questions)",
+        "tier2": "Starting Tier 2: Gospel Core (60 questions)",
         "tier3": "Starting Tier 3: Worldview Confession (30 questions)",
       };
       
@@ -278,7 +278,7 @@ export default function ProcessingPage() {
                     <Badge variant="outline">{progress.current_tier}</Badge>
                     <span className="capitalize">
                       {progress.current_tier === "tier1" && "Task Capability"}
-                      {progress.current_tier === "tier2" && "Doctrinal Fidelity"}
+                      {progress.current_tier === "tier2" && "Gospel Core"}
                       {progress.current_tier === "tier3" && "Worldview Confession"}
                     </span>
                   </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Crown, Medal, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Ranking {
@@ -23,26 +23,26 @@ function getBarColor(score: number): string {
   return "bg-red-500";
 }
 
-// Rank display with medal icons
+// Rank display with numbers in circles
 function RankDisplay({ rank }: { rank: number }) {
   if (rank === 1) {
     return (
-      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/20">
-        <Crown className="h-4 w-4 text-amber-400" />
+      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 font-bold">
+        {rank}
       </div>
     );
   }
   if (rank === 2) {
     return (
-      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-400/20">
-        <Medal className="h-4 w-4 text-zinc-300" />
+      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-400/20 text-zinc-300 font-bold">
+        {rank}
       </div>
     );
   }
   if (rank === 3) {
     return (
-      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-600/20">
-        <Medal className="h-4 w-4 text-orange-400" />
+      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-600/20 text-orange-400 font-bold">
+        {rank}
       </div>
     );
   }
@@ -104,23 +104,15 @@ export function QuickRankings({ rankings }: QuickRankingsProps) {
                   </div>
                 </div>
                 
-                {/* Score bar (visual) - desktop only */}
-                <div className="hidden md:flex items-center gap-3 w-48">
-                  <div className="flex-1 h-2 bg-white/[0.06] rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full ${barColor} transition-all duration-500 rounded-full`}
-                      style={{ width: `${barWidth}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-bold tabular-nums w-8 text-right text-foreground">
-                    {item.score.toFixed(0)}
-                  </span>
-                </div>
+                {/* Score - desktop only */}
+                <span className="hidden md:inline text-2xl font-light tabular-nums text-foreground">
+                  {item.score.toFixed(0)}%
+                </span>
                 
                 {/* Score - mobile */}
                 <div className="flex md:hidden items-center gap-2">
                   <span className="text-lg font-bold tabular-nums text-foreground">
-                    {item.score.toFixed(0)}
+                    {item.score.toFixed(0)}%
                   </span>
                 </div>
                 

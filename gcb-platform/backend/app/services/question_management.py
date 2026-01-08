@@ -13,6 +13,7 @@ from fastapi import HTTPException
 
 from app.db.models.question import Question
 from app.db.models.question_set import QuestionSet
+from app.db.models.test_run import TestRun
 from app.core.benchmark_config import (
     TIER_PERCENTAGES,
     DIFFICULTY_PERCENTAGES,

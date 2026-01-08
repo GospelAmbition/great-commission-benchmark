@@ -99,7 +99,7 @@ function TestDetailsCard() {
         
         <div className="text-xs text-muted-foreground space-y-1">
           <div>• Task Capability (Tier 1): 70% weight</div>
-          <div>• Doctrinal Fidelity (Tier 2): 20% weight</div>
+          <div>• Gospel Core (Tier 2): 20% weight</div>
           <div>• Worldview Confession (Tier 3): 10% weight</div>
         </div>
       </CardContent>

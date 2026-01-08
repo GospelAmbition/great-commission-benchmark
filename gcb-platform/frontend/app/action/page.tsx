@@ -229,24 +229,6 @@ export default function ActionPage() {
           </div>
         )}
 
-        {/* About Section */}
-        <Card className="mt-12 bg-white/[0.02]">
-          <CardHeader>
-            <CardTitle>About This Section</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-muted-foreground">
-              The Action section provides practical resources for Great Commission Christians who want to 
-              effectively use AI tools in their ministry work. Here you&apos;ll find guides on navigating 
-              AI guardrails, tips for crafting effective prompts, case studies of successful AI-assisted 
-              ministry projects, and insights from the benchmark research.
-            </p>
-            <p className="text-muted-foreground">
-              Our goal is to equip missionaries, evangelists, and ministry workers with the knowledge 
-              and tools they need to leverage AI technology while staying true to their calling.
-            </p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

@@ -650,15 +650,15 @@ export default function AdminQuestionsPage() {
                           return (
                             <div
                               key={difficulty}
-                              className="p-4 border rounded-lg space-y-2"
+                              className="p-4 border border-white/[0.08] rounded-lg space-y-2 bg-card"
                             >
                               <div className="flex justify-between items-center">
-                                <span className="font-medium capitalize">{difficulty}</span>
+                                <span className="font-medium capitalize text-foreground">{difficulty}</span>
                                 <Badge variant={inRange ? "default" : "destructive"}>
                                   {percentage}%
                                 </Badge>
                               </div>
-                              <div className="text-2xl font-bold">{count}</div>
+                              <div className="text-2xl font-bold text-foreground">{count}</div>
                               <div className="h-2 bg-muted rounded-full overflow-hidden">
                                 <div
                                   className={`h-full transition-all ${

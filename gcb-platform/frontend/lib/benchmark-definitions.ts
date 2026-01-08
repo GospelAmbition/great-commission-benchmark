@@ -22,7 +22,7 @@ export const CATEGORY_NAMES: Record<string, string> = {
   "3.5": "Intercessory Prayer",
   "3.6": "Problematic Vocabulary",
   "3.7": "Difficult Passages",
-  // Tier 2: Doctrinal Fidelity
+  // Tier 2: Gospel Core
   "4.1": "Exclusivity of Jesus",
   "4.2": "Universality of Sin",
   "4.3": "Reality of Judgment",
@@ -48,7 +48,7 @@ export const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   "3.5": "Spiritual needs identification and prayer support",
   "3.6": "Biblical terms that may trigger content filters",
   "3.7": "Difficult biblical passages and sensitive topics",
-  // Tier 2: Doctrinal Fidelity
+  // Tier 2: Gospel Core
   "4.1": "Jesus Christ as the only way to salvation",
   "4.2": "All humans are sinners in need of redemption",
   "4.3": "Divine judgment and eternal consequences",
@@ -88,8 +88,8 @@ export const TIER_INFO: Record<number, TierInfo> = {
     borderColor: "border-red-500/20",
   },
   2: {
-    name: "Doctrinal Fidelity",
-    shortName: "Doctrine",
+    name: "Gospel Core",
+    shortName: "Gospel",
     weight: 0.2,
     weightLabel: "20%",
     description: "Does the AI preserve theological accuracy when generating content?",
@@ -112,7 +112,7 @@ export const TIER_INFO: Record<number, TierInfo> = {
 // Tier name mapping (for backwards compatibility)
 export const TIER_NAMES: Record<number, string> = {
   1: "Task Capability",
-  2: "Doctrinal Fidelity",
+  2: "Gospel Core",
   3: "Worldview Confession",
 };
 

@@ -90,7 +90,7 @@ export function BenchmarkLegendModal({
             <p className="text-sm text-muted-foreground mb-2">
               <strong className="text-foreground">Score Formula:</strong>
             </p>
-            <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-3 font-mono text-sm text-center">
+            <div className="bg-white/5 border border-white/10 rounded-lg p-3 font-mono text-sm text-center text-foreground">
               GCB Score = (Tier 1 × 0.70) + (Tier 2 × 0.20) + (Tier 3 × 0.10)
             </div>
           </div>
@@ -111,19 +111,19 @@ function TierSection({ tierNumber, highlightCategory }: TierSectionProps) {
 
   const tierColors = {
     1: {
-      badge: "bg-red-700 text-white hover:bg-red-700",
-      container: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900",
-      dot: "bg-red-700",
+      badge: "bg-primary text-white hover:bg-primary",
+      container: "bg-red-500/10 border-red-500/20",
+      dot: "bg-primary",
     },
     2: {
-      badge: "bg-slate-800 text-white hover:bg-slate-800",
-      container: "bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700",
-      dot: "bg-slate-800",
+      badge: "bg-amber-500 text-white hover:bg-amber-500",
+      container: "bg-amber-500/10 border-amber-500/20",
+      dot: "bg-amber-500",
     },
     3: {
-      badge: "bg-slate-500 text-white hover:bg-slate-500",
-      container: "bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700",
-      dot: "bg-slate-500",
+      badge: "bg-blue-500 text-white hover:bg-blue-500",
+      container: "bg-blue-500/10 border-blue-500/20",
+      dot: "bg-blue-500",
     },
   };
 
@@ -146,7 +146,7 @@ function TierSection({ tierNumber, highlightCategory }: TierSectionProps) {
               key={code}
               className={`flex items-start gap-3 text-sm ${
                 isHighlighted
-                  ? "bg-yellow-100 dark:bg-yellow-900/30 -mx-2 px-2 py-1 rounded"
+                  ? "bg-yellow-500/20 -mx-2 px-2 py-1 rounded"
                   : ""
               }`}
             >
@@ -155,7 +155,7 @@ function TierSection({ tierNumber, highlightCategory }: TierSectionProps) {
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2">
-                  <code className="font-mono text-xs bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                  <code className="font-mono text-xs bg-white/10 text-foreground px-1.5 py-0.5 rounded">
                     {code}
                   </code>
                   <span className="font-medium text-foreground">
@@ -185,7 +185,7 @@ export function BenchmarkInlineLegend({ className }: { className?: string }) {
           <span className="font-medium">3.x</span> = Task Capability
         </span>
         <span>
-          <span className="font-medium">4.x</span> = Doctrinal Fidelity
+          <span className="font-medium">4.x</span> = Gospel Core
         </span>
         <span>
           <span className="font-medium">5.x</span> = Worldview Confession

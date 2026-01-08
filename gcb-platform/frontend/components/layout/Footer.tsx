@@ -85,7 +85,7 @@ export function Footer() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <div 
-                className="w-6 h-6 rounded flex items-center justify-center shadow-[0_0_10px_rgba(220,38,38,0.2)]" 
+                className="h-6 px-1.5 rounded flex items-center justify-center shadow-[0_0_10px_rgba(220,38,38,0.2)]" 
                 style={{ background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)' }}
               >
                 <span className="text-white font-bold text-xs">GCB</span>

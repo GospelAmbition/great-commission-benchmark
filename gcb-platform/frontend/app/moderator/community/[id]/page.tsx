@@ -144,7 +144,7 @@ export default function CommunitySubmissionReviewPage() {
   }
 
   const currentResponse = submission.sample_responses[currentIndex];
-  const tierLabels = { 1: "Tier 1: Task Capability", 2: "Tier 2: Doctrinal Fidelity", 3: "Tier 3: Worldview Confession" };
+  const tierLabels = { 1: "Tier 1: Task Capability", 2: "Tier 2: Gospel Core", 3: "Tier 3: Worldview Confession" };
   const verdictLabels: Record<string, string> = {
     ACCEPTED: "Accepted",
     COMPROMISED: "Compromised",

@@ -373,7 +373,7 @@ export default function ResearchPage() {
                           <span title="Tier 1: Task Capability (70% weight)">Task</span>
                         </TableHead>
                         <TableHead className="text-center text-xs">
-                          <span title="Tier 2: Doctrinal Fidelity (20% weight)">Doctrine</span>
+                          <span title="Tier 2: Gospel Core (20% weight)">Gospel Core</span>
                         </TableHead>
                         <TableHead className="text-center text-xs">
                           <span title="Tier 3: Worldview Confession (10% weight)">Worldview</span>
