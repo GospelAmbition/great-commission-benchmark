@@ -23,8 +23,6 @@ interface UserProfile {
 }
 
 interface NotificationPreferences {
-  test_completed: boolean;
-  test_failed: boolean;
   submission_approved: boolean;
   submission_rejected: boolean;
   newsletter: boolean;
@@ -47,8 +45,6 @@ export default function SettingsPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [notifications, setNotifications] = useState<NotificationPreferences>({
-    test_completed: true,
-    test_failed: true,
     submission_approved: true,
     submission_rejected: true,
     newsletter: false,
@@ -278,36 +274,6 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="test_completed"
-              checked={notifications.test_completed}
-              onCheckedChange={(checked) =>
-                setNotifications((prev) => ({
-                  ...prev,
-                  test_completed: checked as boolean,
-                }))
-              }
-            />
-            <Label htmlFor="test_completed" className="font-normal">
-              Test completed - Notify me when my benchmark tests finish
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="test_failed"
-              checked={notifications.test_failed}
-              onCheckedChange={(checked) =>
-                setNotifications((prev) => ({
-                  ...prev,
-                  test_failed: checked as boolean,
-                }))
-              }
-            />
-            <Label htmlFor="test_failed" className="font-normal">
-              Test failed - Notify me if a test encounters an error
-            </Label>
-          </div>
           <div className="flex items-center space-x-2">
             <Checkbox
               id="submission_approved"

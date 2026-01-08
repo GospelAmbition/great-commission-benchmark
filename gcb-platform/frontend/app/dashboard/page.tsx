@@ -142,7 +142,7 @@ export default function DashboardPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-emerald-400">
+                  <div className="text-3xl font-bold text-foreground">
                     {submissions?.filter((s: any) => s.status === "approved").length ?? 0}
                   </div>
                 </CardContent>
@@ -272,13 +272,13 @@ export default function DashboardPage() {
 
                   {/* Step 5: Upload */}
                   <div className="flex items-start gap-4">
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${hasSubmissions ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/[0.06] text-muted-foreground'}`}>
-                      {hasSubmissions ? <CheckCircle2 className="h-5 w-5" /> : <span className="font-bold">5</span>}
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white/[0.06] text-muted-foreground flex items-center justify-center">
+                      <span className="font-bold">5</span>
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-foreground flex items-center gap-2">
                         <Upload className="h-4 w-4" />
-                        Upload Your Results
+                        Export and Upload Your Results
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
                         Export your results and upload them here for moderator review and leaderboard inclusion.

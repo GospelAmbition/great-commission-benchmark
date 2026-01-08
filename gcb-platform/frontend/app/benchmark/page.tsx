@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,6 +53,7 @@ interface QuestionSet {
   semantic_version: string;
   marketing_version: string;
   status: "draft" | "locked" | "active" | "archived";
+  is_publicly_visible: boolean;
   question_count: number;
   target_question_count: number | null;
   created_at: string;
@@ -199,6 +201,7 @@ export default function BenchmarkDashboardPage() {
     action: string;
     version: QuestionSet;
   } | null>(null);
+  const [archiveKeepVisible, setArchiveKeepVisible] = useState(false);
   const [showTargetDialog, setShowTargetDialog] = useState(false);
   const [targetVersion, setTargetVersion] = useState<QuestionSet | null>(null);
   const [editTargetValue, setEditTargetValue] = useState("");
@@ -428,8 +431,14 @@ export default function BenchmarkDashboardPage() {
           toast.success(`Version ${version.semantic_version} published`);
           break;
         case "archive":
-          await apiRequest(`/api/benchmark/question-sets/${version.id}/archive`, { method: "POST" });
-          toast.success(`Version ${version.semantic_version} archived`);
+          await apiRequest(`/api/benchmark/question-sets/${version.id}/archive?is_publicly_visible=${archiveKeepVisible}`, { method: "POST" });
+          toast.success(`Version ${version.semantic_version} archived${archiveKeepVisible ? " (publicly visible)" : ""}`);
+          setArchiveKeepVisible(false);
+          break;
+        case "toggle_visibility":
+          const newVisibility = !version.is_publicly_visible;
+          await apiRequest(`/api/benchmark/question-sets/${version.id}/visibility?is_publicly_visible=${newVisibility}`, { method: "PATCH" });
+          toast.success(`Version ${version.semantic_version} is now ${newVisibility ? "publicly visible" : "hidden"}`);
           break;
         case "delete":
           await apiRequest(`/api/benchmark/question-sets/${version.id}`, { method: "DELETE" });
@@ -1763,9 +1772,16 @@ export default function BenchmarkDashboardPage() {
                         <div className="text-sm text-muted-foreground">{qs.marketing_version}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getStatusBadgeVariant(qs.status)}>
-                          {qs.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={getStatusBadgeVariant(qs.status)}>
+                            {qs.status}
+                          </Badge>
+                          {qs.status === "archived" && (
+                            <Badge variant={qs.is_publicly_visible ? "outline" : "secondary"} className="text-xs">
+                              {qs.is_publicly_visible ? "Public" : "Hidden"}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>{qs.question_count}</TableCell>
                       <TableCell>
@@ -1843,6 +1859,25 @@ export default function BenchmarkDashboardPage() {
                             >
                               Archive
                             </Button>
+                          )}
+                          {qs.status === "archived" && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowConfirmDialog({ action: "toggle_visibility", version: qs })}
+                              >
+                                {qs.is_publicly_visible ? "Hide" : "Show"}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive"
+                                onClick={() => setShowConfirmDialog({ action: "delete", version: qs })}
+                              >
+                                Delete
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -2155,7 +2190,7 @@ export default function BenchmarkDashboardPage() {
       </Dialog>
 
       {/* Confirm Action Dialog */}
-      <Dialog open={!!showConfirmDialog} onOpenChange={() => setShowConfirmDialog(null)}>
+      <Dialog open={!!showConfirmDialog} onOpenChange={() => { setShowConfirmDialog(null); setArchiveKeepVisible(false); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -2163,11 +2198,12 @@ export default function BenchmarkDashboardPage() {
                showConfirmDialog?.action === "publish" ? "Publish Version" :
                showConfirmDialog?.action === "lock" ? "Lock Version" :
                showConfirmDialog?.action === "unlock" ? "Unlock Version" :
-               showConfirmDialog?.action === "archive" ? "Archive Version" : "Confirm Action"}
+               showConfirmDialog?.action === "archive" ? "Archive Version" :
+               showConfirmDialog?.action === "toggle_visibility" ? "Change Visibility" : "Confirm Action"}
             </DialogTitle>
             <DialogDescription>
               {showConfirmDialog?.action === "delete" && (
-                <>Are you sure you want to delete version {showConfirmDialog.version.semantic_version}? This cannot be undone.</>
+                <>Are you sure you want to delete version {showConfirmDialog.version.semantic_version}? This cannot be undone. Note: Deletion will fail if test runs exist for this version.</>
               )}
               {showConfirmDialog?.action === "publish" && (
                 <>Are you sure you want to publish version {showConfirmDialog.version.semantic_version}? This will make it the active version.</>
@@ -2179,12 +2215,37 @@ export default function BenchmarkDashboardPage() {
                 <>Are you sure you want to unlock version {showConfirmDialog.version.semantic_version}? This will revert it to draft status.</>
               )}
               {showConfirmDialog?.action === "archive" && (
-                <>Are you sure you want to archive version {showConfirmDialog.version.semantic_version}?</>
+                <div className="space-y-4">
+                  <p>Are you sure you want to archive version {showConfirmDialog.version.semantic_version}?</p>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="keep_visible"
+                      checked={archiveKeepVisible}
+                      onCheckedChange={(checked) => setArchiveKeepVisible(checked === true)}
+                    />
+                    <label
+                      htmlFor="keep_visible"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Keep publicly visible after archiving
+                    </label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {archiveKeepVisible
+                      ? "The version will still appear in the public API."
+                      : "The version will be hidden from the public API."}
+                  </p>
+                </div>
+              )}
+              {showConfirmDialog?.action === "toggle_visibility" && (
+                showConfirmDialog.version.is_publicly_visible
+                  ? <>Are you sure you want to hide version {showConfirmDialog.version.semantic_version}? It will no longer appear in the public API.</>
+                  : <>Are you sure you want to make version {showConfirmDialog.version.semantic_version} publicly visible? It will appear in the public API alongside the active version.</>
               )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(null)}>
+            <Button variant="outline" onClick={() => { setShowConfirmDialog(null); setArchiveKeepVisible(false); }}>
               Cancel
             </Button>
             <Button

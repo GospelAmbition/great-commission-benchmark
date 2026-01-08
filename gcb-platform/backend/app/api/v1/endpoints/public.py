@@ -486,7 +486,7 @@ async def get_model_detail(
 
 @router.get("/versions", response_model=VersionsResponse)
 async def list_versions(response: Response, db: Session = Depends(get_db)):
-    """List all published benchmark versions (excludes drafts)"""
+    """List all published benchmark versions (excludes drafts and hidden archived versions)"""
     # Check cache first
     cache_key = make_cache_key("versions")
     cached_result = await cache.get(cache_key)
@@ -496,9 +496,17 @@ async def list_versions(response: Response, db: Session = Depends(get_db)):
     
     response.headers["X-Cache"] = "MISS"
     
-    # Only return published versions (active or archived), not drafts
+    # Only return publicly visible versions:
+    # - Active versions (always visible)
+    # - Archived versions with is_publicly_visible=True
     question_sets = db.query(QuestionSet).filter(
-        QuestionSet.status.in_(["active", "archived"])
+        or_(
+            QuestionSet.status == "active",
+            and_(
+                QuestionSet.status == "archived",
+                QuestionSet.is_publicly_visible == True
+            )
+        )
     ).order_by(QuestionSet.created_at.desc()).all()
     
     versions = []

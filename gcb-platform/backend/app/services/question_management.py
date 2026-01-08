@@ -127,7 +127,14 @@ class QuestionManagementService:
         return question_set
     
     def delete_question_set(self, question_set_id: UUID) -> Dict[str, Any]:
-        """Delete a question set and all its questions."""
+        """Delete a question set and all its questions.
+        
+        Deletion rules:
+        - Active versions cannot be deleted (must archive first)
+        - Locked draft versions cannot be deleted (must unlock first)
+        - Archived versions can be deleted if they have no test runs
+        - Versions with test runs cannot be deleted (to preserve historical data)
+        """
         question_set = self.get_question_set(question_set_id)
         
         # Prevent deleting active/published versions
@@ -137,11 +144,22 @@ class QuestionManagementService:
                 detail="Cannot delete an active version. Archive it first."
             )
         
-        # Prevent deleting locked versions
-        if question_set.locked_at is not None:
+        # Prevent deleting locked draft versions (but allow archived versions even if they were locked)
+        if question_set.locked_at is not None and question_set.status != "archived":
             raise HTTPException(
                 status_code=400,
-                detail="Cannot delete a locked version"
+                detail="Cannot delete a locked version. Unlock it first or archive it."
+            )
+        
+        # Check if any test runs exist for this question set
+        test_run_count = self.db.query(TestRun).filter(
+            TestRun.question_set_id == question_set_id
+        ).count()
+        
+        if test_run_count > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete version {question_set.semantic_version}: {test_run_count} test run(s) exist for this version. Historical test data must be preserved."
             )
         
         # Delete all questions first

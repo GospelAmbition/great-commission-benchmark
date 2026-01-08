@@ -451,6 +451,7 @@ async def list_question_sets(
                 "semantic_version": qs.semantic_version,
                 "marketing_version": qs.marketing_version,
                 "status": qs.status,
+                "is_publicly_visible": qs.is_publicly_visible,
                 "created_at": qs.created_at.isoformat() if qs.created_at else None,
             }
             for qs in question_sets
@@ -721,10 +722,15 @@ async def unlock_question_set(
 @router.post("/question-sets/{question_set_id}/archive")
 async def archive_question_set(
     question_set_id: UUID,
+    is_publicly_visible: bool = Query(False, description="Keep version publicly visible after archiving"),
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    """Archive a question set"""
+    """Archive a question set.
+    
+    By default, archived versions are not publicly visible. Set is_publicly_visible=True
+    to keep the version visible in the public API after archiving.
+    """
     question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
     
     if not question_set:
@@ -739,13 +745,50 @@ async def archive_question_set(
     
     question_set.status = "archived"
     question_set.archived_at = datetime.utcnow()
+    question_set.is_publicly_visible = is_publicly_visible
     db.commit()
     
     return {
         "message": f"Question set {question_set.semantic_version} archived",
         "version": question_set.semantic_version,
         "status": question_set.status,
+        "is_publicly_visible": question_set.is_publicly_visible,
         "archived_at": question_set.archived_at.isoformat()
+    }
+
+
+@router.patch("/question-sets/{question_set_id}/visibility")
+async def toggle_question_set_visibility(
+    question_set_id: UUID,
+    is_publicly_visible: bool = Query(..., description="Whether the version should be publicly visible"),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Toggle public visibility for an archived question set.
+    
+    Only archived versions can have their visibility toggled.
+    Active versions are always publicly visible.
+    Draft versions are never publicly visible.
+    """
+    question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
+    
+    if not question_set:
+        raise HTTPException(status_code=404, detail="Question set not found")
+    
+    if question_set.status != "archived":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot change visibility of a {question_set.status} version. Only archived versions can have their visibility toggled."
+        )
+    
+    question_set.is_publicly_visible = is_publicly_visible
+    db.commit()
+    
+    return {
+        "message": f"Question set {question_set.semantic_version} visibility updated",
+        "version": question_set.semantic_version,
+        "status": question_set.status,
+        "is_publicly_visible": question_set.is_publicly_visible
     }
 
 
@@ -828,7 +871,13 @@ async def update_question_set_status(
         db.query(QuestionSet).filter(
             QuestionSet.status == "active",
             QuestionSet.id != question_set_id
-        ).update({"status": "archived", "archived_at": datetime.utcnow()})
+        ).update({
+            "status": "archived",
+            "archived_at": datetime.utcnow(),
+            "is_publicly_visible": False
+        })
+        # Active versions are always publicly visible
+        question_set.is_publicly_visible = True
     
     # Update timestamps based on transition
     if new_status == "locked" and old_status == "draft":
@@ -837,6 +886,8 @@ async def update_question_set_status(
         question_set.locked_at = None
     elif new_status == "archived":
         question_set.archived_at = datetime.utcnow()
+        # Archived versions are hidden by default
+        question_set.is_publicly_visible = False
     
     question_set.status = new_status
     db.commit()
@@ -921,13 +972,18 @@ async def publish_version(
             detail=f"Cannot publish a {question_set.status} version. Only locked versions can be published."
         )
     
-    # Deactivate other active versions
+    # Deactivate other active versions (set not publicly visible by default)
     db.query(QuestionSet).filter(
         QuestionSet.status == "active"
-    ).update({"status": "archived", "archived_at": datetime.utcnow()})
+    ).update({
+        "status": "archived",
+        "archived_at": datetime.utcnow(),
+        "is_publicly_visible": False
+    })
     
-    # Activate this version
+    # Activate this version (active versions are always publicly visible)
     question_set.status = "active"
+    question_set.is_publicly_visible = True
     db.commit()
     
     return {
