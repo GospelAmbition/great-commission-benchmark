@@ -300,17 +300,6 @@ export default function ResearchPage() {
           </div>
         )}
 
-        {/* Disclaimer */}
-        <div className="flex items-start gap-3 p-3 bg-amber-500/5 rounded-lg border-l-2 border-amber-500">
-          <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            <span className="font-semibold text-foreground">Disclaimer:</span> This benchmark is for informational purposes only and does not 
-            constitute an endorsement or recommendation of any AI model or service. Results reflect 
-            performance on specific test questions at a point in time and may not predict performance 
-            on other tasks or future model versions.
-          </p>
-        </div>
-
         {/* Leaderboard Table */}
         <Card>
           <CardHeader className="pb-3">
@@ -491,6 +480,17 @@ export default function ResearchPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Disclaimer */}
+        <div className="flex items-start gap-3 p-3 bg-amber-500/5 rounded-lg border-l-2 border-amber-500">
+          <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            <span className="font-semibold text-foreground">Disclaimer:</span> This benchmark is for informational purposes only and does not 
+            constitute an endorsement or recommendation of any AI model or service. Results reflect 
+            performance on specific test questions at a point in time and may not predict performance 
+            on other tasks or future model versions.
+          </p>
+        </div>
       </div>
     </div>
   );

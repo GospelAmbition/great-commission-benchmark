@@ -1,15 +1,46 @@
 # Site Colors Documentation
 
-This document provides a comprehensive reference for all colors used across the Great Commission Benchmark website and platform.
+This document provides a comprehensive reference for all colors and typography used across the Great Commission Benchmark website and platform.
 
 ## Overview
 
-The Great Commission Benchmark uses a **dark-first design system** inspired by modern leaderboard sites like Vellum and Scale. The color palette prioritizes:
+The Great Commission Benchmark uses a **dark-first design system** inspired by modern leaderboard sites like Vellum and Scale. The design prioritizes:
 
 1. **Dark backgrounds** with subtle depth layers
 2. **Red accent color** for brand identity and CTAs
-3. **High contrast** for readability
+3. **High contrast** for readability with white text favored over grey
 4. **Semantic status colors** (green/amber/red) for scores and verdicts
+5. **Light typography** using Inter font with thin/light weights
+
+---
+
+## Typography
+
+### Font Family
+
+The site uses **Inter** loaded from Google Fonts CDN:
+
+```html
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600&display=swap" rel="stylesheet">
+```
+
+### Font Weights
+
+| Weight | Name | Usage |
+|--------|------|-------|
+| 100 | Thin | Extra-light decorative text |
+| 200 | Extra Light | Secondary subtle text |
+| 300 | Light | **Default body text** |
+| 400 | Regular | Headings, emphasis |
+| 500 | Medium | Strong emphasis, buttons |
+| 600 | Semi Bold | Primary headings, CTAs |
+
+### Design Principle
+
+The site uses **light font weights** throughout for a modern, airy feel:
+- Body text: `font-weight: 300` (Light)
+- Headings: `font-weight: 400` (Regular)
+- Use Thin (100) and Extra Light (200) sparingly for decorative elements
 
 ---
 
@@ -53,7 +84,7 @@ The Great Commission Benchmark uses a **dark-first design system** inspired by m
 | Variable | Hex Code | RGB | Usage |
 |----------|----------|-----|-------|
 | `--muted` | `#18181b` | `rgb(24, 24, 27)` | Muted background |
-| `--muted-foreground` | `rgba(255, 255, 255, 0.9)` | — | Secondary text color (90% white) |
+| `--muted-foreground` | `rgba(255, 255, 255, 0.95)` | — | Secondary text color (95% white) |
 
 ### Accent Colors
 
@@ -157,6 +188,19 @@ The `.light` class can be applied for light mode support:
 .animate-delay-400   /* 400ms delay */
 .animate-delay-500   /* 500ms delay */
 ```
+
+---
+
+## Button Color Patterns
+
+### Destructive / Red Button Rule
+
+| Element | Background | Text | Example Usage |
+|---------|------------|------|---------------|
+| Destructive Button | `bg-destructive` | `text-white` or `text-destructive-foreground` | Delete actions, danger actions |
+| Destructive Badge | `bg-destructive` | `text-white` | Error states, failed status |
+
+**Rule:** If a button or interactive element has a solid red/destructive background, it should always have **white text** for proper contrast and readability. Never use red text (`text-destructive` or `text-red-*`) on a red background.
 
 ---
 

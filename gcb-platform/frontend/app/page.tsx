@@ -135,7 +135,7 @@ export default function Home() {
       {stats && (
         <section className="border-y border-white/[0.06] bg-surface">
           <div className="container">
-            <div className="grid grid-cols-2 md:grid-cols-4">
+            <div className="grid grid-cols-3">
               <div className="text-center py-6 md:py-8">
                 <div className="text-3xl md:text-4xl font-bold text-foreground mb-1">{stats.total_models_tested}</div>
                 <div className="text-xs md:text-sm text-muted-foreground uppercase tracking-wider">Models Tested</div>
@@ -145,12 +145,8 @@ export default function Home() {
                 <div className="text-xs md:text-sm text-muted-foreground uppercase tracking-wider">Providers</div>
               </div>
               <div className="text-center py-6 md:py-8 border-l border-white/[0.06]">
-                <div className="text-3xl md:text-4xl font-bold text-foreground mb-1">{stats.total_test_runs}</div>
-                <div className="text-xs md:text-sm text-muted-foreground uppercase tracking-wider">Community Tests</div>
-              </div>
-              <div className="text-center py-6 md:py-8 border-l border-white/[0.06]">
                 <div className="text-3xl md:text-4xl font-bold text-primary mb-1">{stats.current_benchmark_version}</div>
-                <div className="text-xs md:text-sm text-muted-foreground uppercase tracking-wider">Current Version</div>
+                <div className="text-xs md:text-sm text-muted-foreground uppercase tracking-wider">Current Benchmark Version</div>
               </div>
             </div>
           </div>

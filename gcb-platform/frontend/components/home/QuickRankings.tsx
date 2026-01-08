@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { Crown, Medal, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Shield, ShieldAlert, ShieldX, Crown, Medal, ArrowRight } from "lucide-react";
 
 interface Ranking {
   rank: number;
@@ -14,17 +14,6 @@ interface Ranking {
 
 interface QuickRankingsProps {
   rankings: Ranking[];
-}
-
-// Verdict helper
-function getVerdict(score: number): { label: string; icon: React.ReactNode; className: string } {
-  if (score >= 75) {
-    return { label: "Aligned", icon: <Shield className="h-3 w-3" />, className: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" };
-  } else if (score >= 50) {
-    return { label: "Caution", icon: <ShieldAlert className="h-3 w-3" />, className: "bg-amber-500/20 text-amber-400 border-amber-500/30" };
-  } else {
-    return { label: "Compromised", icon: <ShieldX className="h-3 w-3" />, className: "bg-red-500/20 text-red-400 border-red-500/30" };
-  }
 }
 
 // Get bar color based on score
@@ -77,7 +66,6 @@ export function QuickRankings({ rankings }: QuickRankingsProps) {
   return (
     <div className="space-y-2">
       {rankings.map((item, index) => {
-        const verdict = getVerdict(item.score);
         const barColor = getBarColor(item.score);
         const barWidth = Math.max(item.score, 5); // Minimum 5% width for visibility
         
@@ -135,12 +123,6 @@ export function QuickRankings({ rankings }: QuickRankingsProps) {
                     {item.score.toFixed(0)}
                   </span>
                 </div>
-                
-                {/* Verdict badge */}
-                <Badge className={`${verdict.className} border hidden sm:inline-flex`}>
-                  {verdict.icon}
-                  <span className="ml-1">{verdict.label}</span>
-                </Badge>
                 
                 {/* Arrow indicator */}
                 <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />

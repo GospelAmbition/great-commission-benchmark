@@ -78,7 +78,7 @@ export function Footer() {
         <div className="mt-8 pt-6 border-t border-white/[0.06] space-y-3">
           <div className="text-center text-xs text-muted-foreground/70">
             <p>
-              <span className="text-primary">Disclaimer:</span> This benchmark is for informational purposes only and does 
+              <span className="text-white">Disclaimer:</span> This benchmark is for informational purposes only and does 
               not constitute an endorsement or recommendation of any AI model or service.
             </p>
           </div>

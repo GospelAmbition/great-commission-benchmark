@@ -1,25 +1,10 @@
 import type { Metadata } from "next";
-import { Outfit, Inter } from "next/font/google";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { UmamiAnalytics } from "@/components/analytics/UmamiAnalytics";
 import "./globals.css";
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-heading",
-  display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-  weight: ["100", "200", "300", "400", "500", "600"],
-});
 
 export const metadata: Metadata = {
   title: "Great Commission Benchmark",
@@ -32,7 +17,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${outfit.variable} ${inter.variable}`}>
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="antialiased font-sans bg-background text-foreground">
         <SessionProvider>
           {/* Skip to main content link for accessibility */}
