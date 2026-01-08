@@ -265,6 +265,28 @@ export class ApiClient {
     this.pendingTokenRequest = null;
   }
 
+  /**
+   * Build a query string from an object of params, filtering out undefined/empty values.
+   * @param params - Object with key-value pairs for query params
+   * @param options - Optional config (skipEmpty to also skip empty strings)
+   */
+  private buildQueryString(
+    params?: Record<string, string | number | boolean | undefined>,
+    options: { skipEmpty?: boolean } = {}
+  ): string {
+    if (!params) return '';
+    
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === undefined) return;
+      if (options.skipEmpty && value === '') return;
+      queryParams.append(key, String(value));
+    });
+    
+    const query = queryParams.toString();
+    return query ? `?${query}` : '';
+  }
+
   // Public API endpoints
   async getLeaderboard(params?: {
     version?: string;
@@ -277,22 +299,14 @@ export class ApiClient {
     sort?: string;
     order?: 'asc' | 'desc';
   }): Promise<LeaderboardResponse> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        // Skip undefined and empty strings to avoid backend validation errors
-        if (value !== undefined && value !== '') {
-          // Convert tier string (e.g., "tier1") to integer (e.g., "1") for backend
-          if (key === 'tier' && typeof value === 'string' && value.startsWith('tier')) {
-            queryParams.append(key, value.replace('tier', ''));
-          } else {
-            queryParams.append(key, String(value));
-          }
-        }
-      });
-    }
-    const query = queryParams.toString();
-    const response = await this.request<BackendLeaderboardResponse>(`/api/public/leaderboard${query ? `?${query}` : ''}`);
+    // Transform tier string (e.g., "tier1") to integer (e.g., "1") for backend
+    const transformedParams = params ? {
+      ...params,
+      tier: params.tier?.startsWith('tier') ? params.tier.replace('tier', '') : params.tier,
+    } : undefined;
+    
+    const query = this.buildQueryString(transformedParams, { skipEmpty: true });
+    const response = await this.request<BackendLeaderboardResponse>(`/api/public/leaderboard${query}`);
     
     // Transform backend response to frontend format
     return {
@@ -313,30 +327,11 @@ export class ApiClient {
   }
 
   async getModels(params?: { limit?: number; offset?: number }): Promise<ModelsResponse> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        // Skip undefined values to avoid backend validation errors
-        if (value !== undefined) {
-          queryParams.append(key, String(value));
-        }
-      });
-    }
-    const query = queryParams.toString();
-    return this.request<ModelsResponse>(`/api/public/models${query ? `?${query}` : ''}`);
+    return this.request<ModelsResponse>(`/api/public/models${this.buildQueryString(params)}`);
   }
 
   async getAvailableModels(params?: { search?: string; limit?: number }): Promise<ModelsResponse> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, String(value));
-        }
-      });
-    }
-    const query = queryParams.toString();
-    return this.request<ModelsResponse>(`/api/public/available-models${query ? `?${query}` : ''}`);
+    return this.request<ModelsResponse>(`/api/public/available-models${this.buildQueryString(params)}`);
   }
 
   async getModel(id: string): Promise<ModelResponse> {
@@ -360,9 +355,9 @@ export class ApiClient {
   }
 
   // User API endpoints (require auth)
-  async getUserProfile(): Promise<UserProfile & { test_count?: number; contribution_count?: number }> {
+  async getUserProfile(): Promise<UserProfile & { test_count?: number; contribution_count?: number; tester_agreement_accepted?: boolean }> {
     // Backend returns { user: {...}, stats: {...} }, transform to flat structure
-    const response = await this.request<{ user: UserProfile; stats: { total_tests: number; total_submissions: number; total_contribution: number } }>('/api/user/profile');
+    const response = await this.request<{ user: UserProfile & { tester_agreement_accepted?: boolean }; stats: { total_tests: number; total_submissions: number; total_contribution: number } }>('/api/user/profile');
     return {
       ...response.user,
       test_count: response.stats?.total_tests || 0,
@@ -384,18 +379,10 @@ export class ApiClient {
     limit?: number;
     offset?: number;
   }): Promise<TestsResponse> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        // Skip undefined and empty strings to avoid backend validation errors
-        if (value !== undefined && value !== '') {
-          queryParams.append(key, String(value));
-        }
-      });
-    }
-    const query = queryParams.toString();
     // Backend returns { tests: [...], pagination: {...} }, transform to { items: [...], total: ... }
-    const response = await this.request<{ tests: any[]; pagination: { total: number } }>(`/api/user/tests${query ? `?${query}` : ''}`);
+    const response = await this.request<{ tests: any[]; pagination: { total: number } }>(
+      `/api/user/tests${this.buildQueryString(params, { skipEmpty: true })}`
+    );
     return {
       items: (response.tests || []).map((test) => ({
         id: test.id,
@@ -534,18 +521,10 @@ export class ApiClient {
     created_at: string;
     link?: string;
   }>> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        // Skip undefined values to avoid backend validation errors
-        if (value !== undefined) {
-          queryParams.append(key, String(value));
-        }
-      });
-    }
-    const query = queryParams.toString();
     // Backend returns { activities: [...] }, extract the array
-    const response = await this.request<{ activities: Array<{ type: string; title: string; description: string; timestamp: string; link?: string }> }>(`/api/user/activity${query ? `?${query}` : ''}`);
+    const response = await this.request<{ activities: Array<{ type: string; title: string; description: string; timestamp: string; link?: string }> }>(
+      `/api/user/activity${this.buildQueryString(params)}`
+    );
     return (response.activities || []).map((activity) => ({
       type: activity.type,
       description: activity.description || activity.title,
@@ -559,12 +538,6 @@ export class ApiClient {
     return this.request('/api/user/tester-agreement/accept', {
       method: 'POST',
     });
-  }
-
-  async getProfile(): Promise<UserProfile & { tester_agreement_accepted?: boolean }> {
-    // The API returns { user: {...}, stats: {...} }, extract the user
-    const response = await this.request<{ user: UserProfile & { tester_agreement_accepted?: boolean }; stats: unknown }>('/api/user/profile');
-    return response.user;
   }
 
   // API Keys
@@ -698,16 +671,7 @@ export class ApiClient {
     }>;
     total: number;
   }> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, String(value));
-        }
-      });
-    }
-    const query = queryParams.toString();
-    return this.request(`/api/moderator/queue${query ? `?${query}` : ''}`);
+    return this.request(`/api/moderator/queue${this.buildQueryString(params)}`);
   }
 
   async getCommunitySubmissionQueue(params?: {
@@ -725,16 +689,7 @@ export class ApiClient {
     }>;
     total: number;
   }> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, String(value));
-        }
-      });
-    }
-    const query = queryParams.toString();
-    return this.request(`/api/moderator/community${query ? `?${query}` : ''}`);
+    return this.request(`/api/moderator/community${this.buildQueryString(params)}`);
   }
 
   async getCommunitySubmissionDetail(submissionId: string): Promise<{
@@ -794,16 +749,7 @@ export class ApiClient {
     }>;
     total: number;
   }> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, String(value));
-        }
-      });
-    }
-    const query = queryParams.toString();
-    return this.request(`/api/moderator/activity${query ? `?${query}` : ''}`);
+    return this.request(`/api/moderator/activity${this.buildQueryString(params)}`);
   }
 
   async getModeratorStats(): Promise<{
@@ -884,16 +830,7 @@ export class ApiClient {
     }>;
     total: number;
   }> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, String(value));
-        }
-      });
-    }
-    const query = queryParams.toString();
-    return this.request(`/api/user/sponsorship${query ? `?${query}` : ''}`);
+    return this.request(`/api/user/sponsorship${this.buildQueryString(params)}`);
   }
 
   async getSponsorshipQueue(params?: {
@@ -915,16 +852,7 @@ export class ApiClient {
     }>;
     total: number;
   }> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, String(value));
-        }
-      });
-    }
-    const query = queryParams.toString();
-    return this.request(`/api/moderator/sponsorship${query ? `?${query}` : ''}`);
+    return this.request(`/api/moderator/sponsorship${this.buildQueryString(params)}`);
   }
 
   async getSponsorshipDetail(id: string): Promise<{
@@ -971,16 +899,7 @@ export class ApiClient {
     items: BlogPost[];
     total: number;
   }> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, String(value));
-        }
-      });
-    }
-    const query = queryParams.toString();
-    return this.request(`/api/blog/posts${query ? `?${query}` : ''}`);
+    return this.request(`/api/blog/posts${this.buildQueryString(params)}`);
   }
 
   async getBlogPost(slug: string): Promise<BlogPost> {
@@ -1003,16 +922,7 @@ export class ApiClient {
     items: BlogPost[];
     total: number;
   }> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, String(value));
-        }
-      });
-    }
-    const query = queryParams.toString();
-    return this.request(`/api/admin/blog/posts${query ? `?${query}` : ''}`);
+    return this.request(`/api/admin/blog/posts${this.buildQueryString(params)}`);
   }
 
   async getAdminBlogPost(id: string): Promise<BlogPost> {

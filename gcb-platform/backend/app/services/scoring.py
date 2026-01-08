@@ -1,5 +1,6 @@
 """Scoring service for calculating benchmark scores"""
-from typing import Dict, List
+from typing import Dict, List, Optional
+import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -153,3 +154,29 @@ class ScoringService:
             "verdict_distribution": verdict_dist,
             "total_questions": len(results)
         }
+    
+    @classmethod
+    def safe_calculate_scores(cls, db: Session, test_run_id: str) -> Optional[Dict]:
+        """
+        Safely calculate scores for a test run, returning None on failure.
+        
+        This is a convenience wrapper around calculate_scores that catches
+        all exceptions and returns None instead of raising. Useful for
+        cases where score calculation failure should not break the operation.
+        
+        Args:
+            db: Database session
+            test_run_id: Test run UUID
+        
+        Returns:
+            Dictionary with all scores, or None if calculation fails
+        """
+        logger = logging.getLogger(__name__)
+        try:
+            return cls.calculate_scores(db, test_run_id)
+        except ValueError as e:
+            logger.warning(f"Score calculation failed for test run {test_run_id}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error calculating scores for test run {test_run_id}: {e}")
+            return None

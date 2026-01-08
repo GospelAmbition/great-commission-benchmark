@@ -25,7 +25,7 @@ export function useUserProfile() {
       }
 
       try {
-        const data = await apiClient.getProfile();
+        const data = await apiClient.getUserProfile();
         setProfile(data);
         setError(null);
       } catch (err) {

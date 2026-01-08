@@ -238,7 +238,7 @@ const leaderboard = await apiClient.getLeaderboard({ limit: 10 });
 const stats = await apiClient.getStats();
 
 // Authenticated endpoints
-const profile = await apiClient.getProfile();
+const profile = await apiClient.getUserProfile();
 const tests = await apiClient.getUserTests();
 ```
 

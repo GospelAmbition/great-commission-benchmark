@@ -223,7 +223,7 @@ async def get_leaderboard(
             total_questions=scores_data["total_questions"],
             metadata={
                 "submission_date": test_run.completed_at.isoformat() if test_run.completed_at else "",
-                "methodology_version": "1.0"  # TODO: Get from methodology_version
+                "methodology_version": question_set.semantic_version
             }
         )
         entries.append(entry)

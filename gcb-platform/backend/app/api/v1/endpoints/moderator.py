@@ -20,6 +20,7 @@ from app.db.models.methodology_version import MethodologyVersion
 from app.db.models.question import Question
 from app.services.scoring import ScoringService
 from app.services.judge import TIER1_JUDGE_PROMPT
+from app.services.submission_processor import SubmissionProcessorService
 from app.schemas.moderator import (
     QueueItem,
     QueueResponse,
@@ -215,7 +216,8 @@ async def submit_review(
     if request.overall_assessment == "escalated":
         test_run.trust_tier = "pending_review"
         test_run.admin_notes = f"Escalated by moderator {current_user.name or current_user.email}: {request.notes}"
-        # TODO: Send notification to admin committee
+        # DEFERRED: Admin notification system not yet implemented
+        # When implemented, should email all admin users about escalated reviews
     
     db.commit()
     
@@ -569,133 +571,12 @@ async def review_community_submission(
         submission.reviewer_notes = request.notes
         submission.reviewed_at = datetime.utcnow()
         
-        # Create test run from submission and add to leaderboard
-        results_package = submission.results_package
-        
-        # Get or create the Model
-        model_name = submission.model_name
-        # Try to extract model_id from results package
-        test_run_data = results_package.get("test_run", {})
-        model_id_str = test_run_data.get("model", model_name)
-        
-        # Look for existing model by model_id
-        model = db.query(Model).filter(Model.model_id == model_id_str).first()
-        if not model:
-            # Create new model - extract provider from model_id if possible
-            provider = "Unknown"
-            if "/" in model_id_str:
-                provider = model_id_str.split("/")[0]
-            model = Model(
-                model_id=model_id_str,
-                name=model_name,
-                provider=provider,
-                is_active=True
-            )
-            db.add(model)
-            db.flush()
-        
-        # Get the QuestionSet matching the version
-        question_set = db.query(QuestionSet).filter(
-            QuestionSet.semantic_version == submission.question_set_version
-        ).first()
-        if not question_set:
-            # Fall back to active question set
-            question_set = db.query(QuestionSet).filter(
-                QuestionSet.status == "active"
-            ).order_by(QuestionSet.created_at.desc()).first()
-        
-        if not question_set:
-            raise HTTPException(status_code=400, detail="No question set found for this submission")
-        
-        # Get or create a methodology version for this question set
-        methodology_version = db.query(MethodologyVersion).filter(
-            MethodologyVersion.question_set_id == question_set.id
-        ).first()
-        if not methodology_version:
-            # Create a default methodology version for this question set
-            methodology_version = MethodologyVersion(
-                question_set_id=question_set.id,
-                scoring_config={"tier1": 0.7, "tier2": 0.2, "tier3": 0.1},
-                active_from=datetime.utcnow()
-            )
-            db.add(methodology_version)
-            db.flush()
-        
-        # Create the TestRun
-        completed_at = datetime.utcnow()
-        if test_run_data.get("completed_at"):
-            try:
-                completed_at = datetime.fromisoformat(test_run_data["completed_at"].replace("Z", "+00:00"))
-            except:
-                pass
-        
-        test_run = TestRun(
-            user_id=submission.user_id,
-            model_id=model.id,
-            question_set_id=question_set.id,
-            methodology_version_id=methodology_version.id,
-            status="completed",
-            trust_tier="community",  # Mark as community submission
-            completed_at=completed_at,
-            started_at=completed_at,  # Approximate
-        )
-        db.add(test_run)
-        db.flush()
-        
-        # Create Result records from responses
-        # Build a tier+category lookup for matching questions when IDs don't match
-        db_questions = db.query(Question).filter(
-            Question.question_set_id == question_set.id
-        ).all()
-        
-        tier_cat_to_questions = {}
-        for q in db_questions:
-            key = (q.tier, q.category)
-            if key not in tier_cat_to_questions:
-                tier_cat_to_questions[key] = []
-            tier_cat_to_questions[key].append(q)
-        
-        responses = results_package.get("responses", [])
-        used_question_ids = set()
-        
-        for response_data in responses:
-            question_id_str = response_data.get("question_id")
-            question = None
-            
-            # Try to find question by ID first
-            if question_id_str:
-                try:
-                    question = db.query(Question).filter(
-                        Question.id == question_id_str,
-                        Question.question_set_id == question_set.id
-                    ).first()
-                except:
-                    pass
-            
-            # If not found by ID, match by tier+category
-            if not question:
-                tier = response_data.get("tier")
-                category = response_data.get("category")
-                if tier and category:
-                    candidates = tier_cat_to_questions.get((tier, category), [])
-                    for candidate in candidates:
-                        if candidate.id not in used_question_ids:
-                            question = candidate
-                            break
-            
-            if not question:
-                continue
-            
-            used_question_ids.add(question.id)
-            
-            result = Result(
-                test_run_id=test_run.id,
-                question_id=question.id,
-                response=response_data.get("response", ""),
-                verdict=response_data.get("verdict", "UNKNOWN"),
-                reasoning=response_data.get("judge_reasoning", ""),
-            )
-            db.add(result)
+        # Use the submission processor service to create TestRun and Results
+        processor = SubmissionProcessorService(db)
+        try:
+            test_run, _ = processor.create_test_run_from_submission(submission)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         
         db.commit()
         
@@ -760,147 +641,27 @@ async def reprocess_community_submission(
             detail=f"Can only reprocess approved submissions. Current status: {submission.status}"
         )
     
-    # Check if TestRun already exists for this user/model combo around submission time
-    results_package = submission.results_package
-    test_run_data = results_package.get("test_run", {})
-    model_id_str = test_run_data.get("model", submission.model_name)
+    # Use the submission processor service
+    processor = SubmissionProcessorService(db)
     
-    existing_model = db.query(Model).filter(Model.model_id == model_id_str).first()
-    if existing_model:
-        # Check for existing test run
-        existing_test_run = db.query(TestRun).filter(
-            TestRun.model_id == existing_model.id,
-            TestRun.user_id == submission.user_id,
-            TestRun.status == "completed"
-        ).first()
-        if existing_test_run:
-            return {
-                "submission_id": str(submission.id),
-                "status": "already_processed",
-                "test_run_id": str(existing_test_run.id),
-                "message": "TestRun already exists for this submission"
-            }
+    # Check if TestRun already exists
+    existing_test_run = processor.check_existing_test_run(submission)
+    if existing_test_run:
+        return {
+            "submission_id": str(submission.id),
+            "status": "already_processed",
+            "test_run_id": str(existing_test_run.id),
+            "message": "TestRun already exists for this submission"
+        }
     
-    # Create test run from submission (same logic as approve)
-    # Get or create the Model
-    model_name = submission.model_name
-    
-    model = db.query(Model).filter(Model.model_id == model_id_str).first()
-    if not model:
-        provider = "Unknown"
-        if "/" in model_id_str:
-            provider = model_id_str.split("/")[0]
-        model = Model(
-            model_id=model_id_str,
-            name=model_name,
-            provider=provider,
-            is_active=True
+    # Create test run from submission
+    try:
+        test_run, results_created = processor.create_test_run_from_submission(
+            submission,
+            judge_prompt=TIER1_JUDGE_PROMPT
         )
-        db.add(model)
-        db.flush()
-    
-    # Get the QuestionSet
-    question_set = db.query(QuestionSet).filter(
-        QuestionSet.semantic_version == submission.question_set_version
-    ).first()
-    if not question_set:
-        question_set = db.query(QuestionSet).filter(
-            QuestionSet.status == "active"
-        ).order_by(QuestionSet.created_at.desc()).first()
-    
-    if not question_set:
-        raise HTTPException(status_code=400, detail="No question set found for this submission")
-    
-    # Get methodology version for this question set
-    methodology_version = db.query(MethodologyVersion).filter(
-        MethodologyVersion.question_set_id == question_set.id
-    ).first()
-    if not methodology_version:
-        methodology_version = MethodologyVersion(
-            question_set_id=question_set.id,
-            judge_prompt=TIER1_JUDGE_PROMPT,  # Use actual judge prompt with compromise indicators
-            scoring_config={"tier1": 0.7, "tier2": 0.2, "tier3": 0.1},
-            active_from=datetime.utcnow()
-        )
-        db.add(methodology_version)
-        db.flush()
-    
-    # Create the TestRun
-    completed_at = datetime.utcnow()
-    if test_run_data.get("completed_at"):
-        try:
-            completed_at = datetime.fromisoformat(test_run_data["completed_at"].replace("Z", "+00:00"))
-        except:
-            pass
-    
-    test_run = TestRun(
-        user_id=submission.user_id,
-        model_id=model.id,
-        question_set_id=question_set.id,
-        methodology_version_id=methodology_version.id,
-        status="completed",
-        trust_tier="community",
-        completed_at=completed_at,
-        started_at=completed_at,
-    )
-    db.add(test_run)
-    db.flush()
-    
-    # Create Result records - build a tier+category lookup for matching
-    db_questions = db.query(Question).filter(
-        Question.question_set_id == question_set.id
-    ).all()
-    
-    tier_cat_to_questions = {}
-    for q in db_questions:
-        key = (q.tier, q.category)
-        if key not in tier_cat_to_questions:
-            tier_cat_to_questions[key] = []
-        tier_cat_to_questions[key].append(q)
-    
-    responses = results_package.get("responses", [])
-    results_created = 0
-    used_question_ids = set()
-    
-    for response_data in responses:
-        question_id_str = response_data.get("question_id")
-        question = None
-        
-        # Try to find question by ID first
-        if question_id_str:
-            try:
-                question = db.query(Question).filter(
-                    Question.id == question_id_str,
-                    Question.question_set_id == question_set.id
-                ).first()
-            except:
-                pass
-        
-        # If not found by ID, match by tier+category
-        if not question:
-            tier = response_data.get("tier")
-            category = response_data.get("category")
-            if tier and category:
-                candidates = tier_cat_to_questions.get((tier, category), [])
-                for candidate in candidates:
-                    if candidate.id not in used_question_ids:
-                        question = candidate
-                        break
-        
-        if not question:
-            continue
-        
-        used_question_ids.add(question.id)
-        
-        result = Result(
-            test_run_id=test_run.id,
-            question_id=question.id,
-            response=response_data.get("response", ""),
-            verdict=response_data.get("verdict", "UNKNOWN"),
-            reasoning=response_data.get("judge_reasoning", ""),
-        )
-        db.add(result)
-        results_created += 1
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     db.commit()
     

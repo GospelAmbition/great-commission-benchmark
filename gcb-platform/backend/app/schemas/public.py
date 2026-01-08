@@ -15,15 +15,15 @@ class ModelSummary(GCBBaseModel):
     model_id: str
 
 
-class TestRunSummary(BaseModel):
+class TestRunSummary(GCBBaseModel):
     """Test run summary"""
     id: UUID
-    trust_tier: str
-    completed_at: Optional[datetime]
+    trust_tier: Optional[str] = None
+    completed_at: Optional[datetime] = None
     question_set_version: str
 
 
-class Scores(BaseModel):
+class Scores(GCBBaseModel):
     """Score breakdown"""
     overall: float
     tier1: float
@@ -31,12 +31,7 @@ class Scores(BaseModel):
     tier3: float
 
 
-class CategoryScores(BaseModel):
-    """Category score breakdown"""
-    pass  # Dynamic dict in response
-
-
-class VerdictDistribution(BaseModel):
+class VerdictDistribution(GCBBaseModel):
     """Verdict distribution"""
     ACCEPTED: int = 0
     COMPROMISED: int = 0
@@ -44,7 +39,7 @@ class VerdictDistribution(BaseModel):
     ERROR: int = 0
 
 
-class LeaderboardEntry(BaseModel):
+class LeaderboardEntry(GCBBaseModel):
     """Leaderboard entry"""
     rank: int
     model: ModelSummary
@@ -56,7 +51,7 @@ class LeaderboardEntry(BaseModel):
     metadata: Dict[str, str]
 
 
-class LeaderboardResponse(BaseModel):
+class LeaderboardResponse(GCBBaseModel):
     """Leaderboard response"""
     semantic_version: str
     marketing_version: str
@@ -79,23 +74,56 @@ class ModelListItem(GCBBaseModel):
     last_tested: Optional[datetime] = None
 
 
-class ModelsListResponse(BaseModel):
+class ModelsListResponse(GCBBaseModel):
     """Models list response"""
     models: List[ModelListItem]
     pagination: PaginationResponse
 
 
-class ModelDetailResponse(BaseModel):
+class ModelInfo(GCBBaseModel):
+    """Model info in detail response"""
+    id: str
+    name: str
+    provider: str
+    model_id: str
+
+
+class TestResultInfo(GCBBaseModel):
+    """Best test result info"""
+    test_run_id: str
+    scores: Scores
+    trust_tier: Optional[str] = None
+    completed_at: Optional[str] = None
+    benchmark_version: str
+
+
+class TestHistoryItem(GCBBaseModel):
+    """Test history item"""
+    test_run_id: str
+    overall_score: float
+    benchmark_version: str
+    completed_at: Optional[str] = None
+    trust_tier: Optional[str] = None
+
+
+class CategoryBreakdown(GCBBaseModel):
+    """Category breakdown stats"""
+    total: int
+    passed: int
+    score: float = 0.0
+
+
+class ModelDetailResponse(GCBBaseModel):
     """Model detail response"""
-    model: dict
-    best_result: dict
-    test_history: List[dict]
-    category_breakdown: Dict[str, dict]
+    model: ModelInfo
+    best_result: Optional[TestResultInfo] = None
+    test_history: List[TestHistoryItem]
+    category_breakdown: Dict[str, CategoryBreakdown]
     leaderboard_rank: Optional[int] = None
     total_models_tested: int
 
 
-class VersionInfo(BaseModel):
+class VersionInfo(GCBBaseModel):
     """Version information"""
     semantic_version: str
     marketing_version: str
@@ -108,13 +136,13 @@ class VersionInfo(BaseModel):
     changelog_url: Optional[str] = None
 
 
-class VersionsResponse(BaseModel):
+class VersionsResponse(GCBBaseModel):
     """Versions response"""
     versions: List[VersionInfo]
     current_version: str
 
 
-class StatsResponse(BaseModel):
+class StatsResponse(GCBBaseModel):
     """Platform statistics"""
     total_models_tested: int
     total_test_runs: int
@@ -125,9 +153,37 @@ class StatsResponse(BaseModel):
     last_updated: datetime
 
 
-class ComparisonResponse(BaseModel):
+class ComparisonModelInfo(GCBBaseModel):
+    """Model info for comparison"""
+    id: str
+    name: str
+    provider: str
+
+
+class ComparisonModelData(GCBBaseModel):
+    """Model data for comparison response"""
+    model: ComparisonModelInfo
+    test_run_id: str
+    scores: Scores
+    verdict_distribution: Dict[str, int]
+
+
+class ScoreDelta(GCBBaseModel):
+    """Score delta for comparison"""
+    overall: float
+    tier1: float
+    tier2: float
+    tier3: float
+
+
+class ComparisonData(GCBBaseModel):
+    """Comparison data"""
+    score_delta: Optional[ScoreDelta] = None
+
+
+class ComparisonResponse(GCBBaseModel):
     """Model comparison response"""
     semantic_version: str
     marketing_version: str
-    models: List[dict]
-    comparison: dict
+    models: List[ComparisonModelData]
+    comparison: ComparisonData

@@ -1,13 +1,13 @@
 """User API schemas"""
-from typing import Optional, List, Dict
-from pydantic import BaseModel, EmailStr
+from typing import Optional, List
+from pydantic import BaseModel
 from datetime import datetime
 from uuid import UUID
 
 from app.schemas.common import PaginationResponse, GCBBaseModel
 
 
-class UserProfile(BaseModel):
+class UserProfile(GCBBaseModel):
     """User profile"""
     id: UUID
     auth0_id: str
@@ -19,7 +19,7 @@ class UserProfile(BaseModel):
     created_at: datetime
 
 
-class UserStats(BaseModel):
+class UserStats(GCBBaseModel):
     """User statistics"""
     total_tests: int = 0
     completed_tests: int = 0
@@ -30,35 +30,58 @@ class UserStats(BaseModel):
     total_contribution: float = 0.0
 
 
-class UserProfileResponse(BaseModel):
+class UserProfileResponse(GCBBaseModel):
     """User profile response"""
     user: UserProfile
     stats: UserStats
 
 
-class UpdateProfileRequest(BaseModel):
+class UpdateProfileRequest(GCBBaseModel):
     """Update profile request"""
     name: Optional[str] = None
     organization: Optional[str] = None
 
 
-class TestListItem(BaseModel):
+class TestModelInfo(GCBBaseModel):
+    """Model info in test list item"""
+    id: str
+    name: str
+    provider: str
+    model_id: Optional[str] = None
+
+
+class TestScores(GCBBaseModel):
+    """Scores in test list item"""
+    overall: float
+    tier1: float
+    tier2: float
+    tier3: float
+
+
+class TestProgress(GCBBaseModel):
+    """Progress info in test list item"""
+    completed: int
+    total: int
+    percentage: int
+
+
+class TestListItem(GCBBaseModel):
     """Test list item"""
     id: UUID
-    model: dict
+    model: TestModelInfo
     status: str
     payment_status: str
-    scores: Optional[dict] = None
-    progress: dict
+    scores: Optional[TestScores] = None
+    progress: TestProgress
     benchmark_version: str
     created_at: datetime
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
-    trust_tier: str
+    trust_tier: Optional[str] = None
     leaderboard_rank: Optional[int] = None
 
 
-class UserTestsResponse(BaseModel):
+class UserTestsResponse(GCBBaseModel):
     """User tests response"""
     tests: List[TestListItem]
     pagination: PaginationResponse
@@ -75,13 +98,13 @@ class SubmissionListItem(GCBBaseModel):
     reviewer_notes: Optional[str] = None
 
 
-class UserSubmissionsResponse(BaseModel):
+class UserSubmissionsResponse(GCBBaseModel):
     """User submissions response"""
     submissions: List[SubmissionListItem]
     pagination: PaginationResponse
 
 
-class ActivityItem(BaseModel):
+class ActivityItem(GCBBaseModel):
     """Activity feed item"""
     type: str
     timestamp: datetime
@@ -90,12 +113,12 @@ class ActivityItem(BaseModel):
     link: Optional[str] = None
 
 
-class UserActivityResponse(BaseModel):
+class UserActivityResponse(GCBBaseModel):
     """User activity response"""
     activities: List[ActivityItem]
 
 
-class NotificationPreferences(BaseModel):
+class NotificationPreferences(GCBBaseModel):
     """Notification preferences"""
     test_completed: bool = True
     test_failed: bool = True
@@ -105,6 +128,6 @@ class NotificationPreferences(BaseModel):
     newsletter: bool = False
 
 
-class NotificationPreferencesResponse(BaseModel):
+class NotificationPreferencesResponse(GCBBaseModel):
     """Notification preferences response"""
     preferences: NotificationPreferences

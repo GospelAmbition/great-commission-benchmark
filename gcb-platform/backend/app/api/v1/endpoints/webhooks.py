@@ -80,15 +80,14 @@ async def stripe_webhook(
                     sponsorship.status = "pending"
                     db.commit()
                     
-                    # TODO: Send confirmation email to user
-                    # try:
-                    #     await EmailService.send_sponsorship_payment_confirmed_email(
-                    #         sponsorship.user.email,
-                    #         str(sponsorship.id),
-                    #         sponsorship.openrouter_model_id or sponsorship.custom_model_name
-                    #     )
-                    # except:
-                    #     pass
+                    # DEFERRED: Payment confirmation emails
+                    # Sponsorship payment confirmation email not yet implemented in EmailService
+                    # When ready, uncomment:
+                    # await EmailService.send_sponsorship_payment_confirmed_email(
+                    #     sponsorship.user.email,
+                    #     str(sponsorship.id),
+                    #     sponsorship.openrouter_model_id or sponsorship.custom_model_name
+                    # )
         
         # Handle platform test payments
         elif payment_type not in ["cli_submission", "sponsorship"]:
@@ -155,7 +154,7 @@ async def stripe_webhook(
             sponsorship.payment_status = "failed"
             sponsorship.status = "payment_failed"
             db.commit()
-            # TODO: Send failure email notification
+            # DEFERRED: Sponsorship payment failure email not yet implemented in EmailService
         
         # Handle platform test payment failures
         test_runs = db.query(TestRun).filter(TestRun.payment_id == payment_intent_id).all()

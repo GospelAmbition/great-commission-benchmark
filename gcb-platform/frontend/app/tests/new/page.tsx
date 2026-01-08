@@ -150,7 +150,7 @@ export default function NewTestPage() {
           return { items: [] };
         }),
         apiClient.getVersions(),
-        apiClient.getProfile().catch(() => null),
+        apiClient.getUserProfile().catch(() => null),
       ]);
       if (modelsData.items) {
         setModels(modelsData.items);

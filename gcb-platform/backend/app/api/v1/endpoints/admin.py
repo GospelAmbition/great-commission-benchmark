@@ -430,23 +430,6 @@ async def delete_question(
     return {"message": "Question deleted"}
 
 
-@router.post("/questions/{question_id}/approve")
-async def approve_question(
-    question_id: UUID,
-    current_user: User = Depends(require_admin),
-    db: Session = Depends(get_db)
-):
-    """Approve a question (if approval workflow exists)"""
-    question = db.query(Question).filter(Question.id == question_id).first()
-    
-    if not question:
-        raise HTTPException(status_code=404, detail="Question not found")
-    
-    # For now, just return success
-    # In a full implementation, this would update an approval status field
-    return {"message": "Question approved"}
-
-
 @router.get("/question-sets")
 async def list_question_sets(
     status: Optional[str] = Query(None),

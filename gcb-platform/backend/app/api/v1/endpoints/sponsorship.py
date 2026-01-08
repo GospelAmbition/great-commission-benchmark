@@ -270,8 +270,15 @@ async def review_sponsorship(
     
     db.commit()
     
-    # TODO: Send email notification to user about approval/rejection
-    # TODO: For approved sponsorships, trigger model test setup
+    # DEFERRED: Sponsorship review email notifications
+    # When EmailService has sponsorship methods, implement here:
+    # if request.action == "approve":
+    #     await EmailService.send_sponsorship_approved_email(...)
+    # else:
+    #     await EmailService.send_sponsorship_rejected_email(...)
+    
+    # DEFERRED: Auto-trigger model test setup for approved sponsorships
+    # This would create a TestRun and queue it for execution
     
     return ReviewSponsorshipResponse(
         id=sponsorship.id,

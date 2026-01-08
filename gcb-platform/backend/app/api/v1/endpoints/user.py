@@ -62,7 +62,7 @@ async def get_profile(
             email=current_user.email,
             name=current_user.name,
             role=current_user.role,
-            organization=None,  # TODO: Add organization field to User model
+            organization=None,  # DEFERRED: Organization field not yet in User model schema
             tester_agreement_accepted=current_user.tester_agreement_accepted,
             created_at=current_user.created_at
         ),
@@ -80,7 +80,8 @@ async def update_profile(
     if request.name is not None:
         current_user.name = request.name
     
-    # TODO: Add organization field to User model
+    # DEFERRED: Organization field support
+    # When the User model is updated with an organization field, enable this:
     # if request.organization is not None:
     #     current_user.organization = request.organization
     
@@ -165,7 +166,7 @@ async def get_user_tests(
             started_at=test_run.started_at,
             completed_at=test_run.completed_at,
             trust_tier=test_run.trust_tier,
-            leaderboard_rank=None  # TODO: Calculate rank
+            leaderboard_rank=None  # DEFERRED: Rank calculation would require additional DB queries per test
         ))
     
     return UserTestsResponse(
