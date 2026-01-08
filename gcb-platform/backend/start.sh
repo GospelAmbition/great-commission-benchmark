@@ -11,7 +11,7 @@ echo "============================================"
 echo "Starting Great Commission Benchmark Backend"
 echo "============================================"
 echo "Timestamp: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-echo "PORT=${PORT:-8000}"
+echo "PORT=${PORT:-8080}"
 echo "PYTHON: $(python --version 2>&1)"
 echo "DATABASE_URL is $([ -n "$DATABASE_URL" ] && echo 'SET (length: '${#DATABASE_URL}')' || echo 'NOT SET')"
 echo "NEXTAUTH_SECRET is $([ -n "$NEXTAUTH_SECRET" ] && echo 'SET' || echo 'NOT SET')"
@@ -88,7 +88,7 @@ else
 fi
 
 # Start the application (use exec to replace shell process)
-PORT=${PORT:-8000}
+PORT=${PORT:-8080}
 echo "============================================"
 echo "Starting uvicorn server on port ${PORT}..."
 echo "============================================"
