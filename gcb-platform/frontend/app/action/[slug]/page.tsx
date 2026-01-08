@@ -171,6 +171,7 @@ export default function BlogPostPage() {
             fill
             className="object-cover"
             priority
+            unoptimized
           />
         </div>
       )}

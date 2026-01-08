@@ -180,6 +180,7 @@ export default function ActionPage() {
                         alt={post.title}
                         fill
                         className="object-cover"
+                        unoptimized
                       />
                     </div>
                   ) : (

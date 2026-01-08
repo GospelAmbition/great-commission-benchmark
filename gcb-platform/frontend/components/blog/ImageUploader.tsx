@@ -70,6 +70,7 @@ export function ImageUploader({ value, onChange, onUpload }: ImageUploaderProps)
               alt="Featured image preview"
               fill
               className="object-cover"
+              unoptimized
             />
           </div>
           <Button

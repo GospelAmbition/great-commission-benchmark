@@ -58,6 +58,7 @@ export function PostCard({ post, onEdit, onDelete, showActions = false }: PostCa
               alt={post.title}
               fill
               className="object-cover"
+              unoptimized
             />
           ) : (
             <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[--ga-red]/10 to-muted">
