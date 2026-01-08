@@ -89,6 +89,9 @@ export function PostEditor({ value, onChange, onImageUpload }: PostEditorProps) 
           "bold italic forecolor | alignleft aligncenter " +
           "alignright alignjustify | bullist numlist outdent indent | " +
           "link image | removeformat | code fullscreen | help",
+        // Disable telemetry/analytics to reduce console errors
+        promotion: false,
+        branding: false,
         content_style: `
           body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
