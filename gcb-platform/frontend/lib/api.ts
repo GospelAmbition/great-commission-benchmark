@@ -111,7 +111,7 @@ export interface UserProfile {
   id: string;
   name?: string;
   email: string;
-  role?: 'user' | 'moderator' | 'benchmark_developer' | 'admin';
+  role?: 'user' | 'moderator' | 'blog_manager' | 'benchmark_developer' | 'admin';
   organization?: string;
   test_count?: number;
   contribution_count?: number;
