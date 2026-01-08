@@ -50,10 +50,12 @@ interface ProxyRequestOptions {
   headers?: Record<string, string>;
   /** Query string from the original request */
   queryString?: string;
+  /** If true, allows unauthenticated requests (for public endpoints) */
+  allowPublic?: boolean;
 }
 
 /**
- * Make an authenticated request to the backend API.
+ * Make a request to the backend API.
  * Handles token generation, error handling, and response formatting.
  * 
  * @param endpoint - The backend API endpoint (e.g., "/api/admin/users")
@@ -64,24 +66,32 @@ export async function proxyToBackend(
   endpoint: string,
   options: ProxyRequestOptions = {}
 ): Promise<NextResponse> {
+  const { method = "GET", body, headers = {}, queryString, allowPublic = false } = options;
+  
   const token = await getBackendToken();
-  if (!token) {
+  
+  // If authentication is required and no token exists, return 401
+  if (!token && !allowPublic) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { method = "GET", body, headers = {}, queryString } = options;
-  
   const url = queryString 
     ? `${API_URL}${endpoint}?${queryString}` 
     : `${API_URL}${endpoint}`;
 
+  const fetchHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...headers,
+  };
+  
+  // Only add Authorization header if we have a token
+  if (token) {
+    fetchHeaders.Authorization = `Bearer ${token}`;
+  }
+
   const fetchOptions: RequestInit = {
     method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...headers,
-    },
+    headers: fetchHeaders,
   };
 
   if (body && method !== "GET") {

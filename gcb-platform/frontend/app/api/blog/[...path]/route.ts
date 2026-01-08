@@ -2,6 +2,7 @@
  * Catch-all proxy route for public blog API endpoints.
  * 
  * This consolidates multiple duplicate proxy routes into a single dynamic handler.
+ * These are PUBLIC endpoints - no authentication required.
  */
 import { proxyToBackend } from "@/lib/backend-auth";
 
@@ -22,7 +23,11 @@ async function handleRequest(
     method?: string;
     body?: unknown;
     queryString?: string;
-  } = {};
+    allowPublic?: boolean;
+  } = {
+    // Blog public endpoints don't require authentication
+    allowPublic: true,
+  };
 
   if (method !== "GET") {
     options.method = method;
