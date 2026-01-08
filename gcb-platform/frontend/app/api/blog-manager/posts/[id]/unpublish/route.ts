@@ -1,14 +1,11 @@
 import { proxyToBackend } from "@/lib/backend-auth";
 
-export async function PUT(
+export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const body = await request.json();
-  
-  return proxyToBackend(`/api/admin/users/${id}/fee-waiver`, {
-    method: "PUT",
-    body,
+  return proxyToBackend(`/api/admin/blog/posts/${id}/unpublish`, {
+    method: "POST",
   });
 }

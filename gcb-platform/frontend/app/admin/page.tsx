@@ -158,7 +158,7 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/admin/blog">Manage Blog</Link>
+              <Link href="/blog-manager">Manage Blog</Link>
             </Button>
           </CardContent>
         </Card>

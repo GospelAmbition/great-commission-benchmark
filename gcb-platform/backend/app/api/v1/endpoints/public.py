@@ -36,6 +36,80 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+def _get_model_detail_data(db: Session, model: Model) -> dict:
+    """
+    Shared helper to get model detail data including scores, test history,
+    and category breakdown. Used by both UUID and model_id lookup endpoints.
+    """
+    # Get best (most recent completed) test result
+    best_test = db.query(TestRun).filter(
+        TestRun.model_id == model.id,
+        TestRun.status == "completed"
+    ).order_by(TestRun.completed_at.desc()).first()
+    
+    best_result = None
+    if best_test:
+        scores = ScoringService.calculate_scores(db, str(best_test.id))
+        best_result = {
+            "test_run_id": str(best_test.id),
+            "scores": scores,
+            "trust_tier": best_test.trust_tier,
+            "completed_at": best_test.completed_at.isoformat() if best_test.completed_at else None,
+            "benchmark_version": best_test.question_set.semantic_version
+        }
+    
+    # Get test history (last 10 completed tests)
+    test_history = []
+    tests = db.query(TestRun).filter(
+        TestRun.model_id == model.id,
+        TestRun.status == "completed"
+    ).order_by(TestRun.completed_at.desc()).limit(10).all()
+    
+    for test in tests:
+        scores = ScoringService.calculate_scores(db, str(test.id))
+        test_history.append({
+            "test_run_id": str(test.id),
+            "overall_score": scores["overall"],
+            "benchmark_version": test.question_set.semantic_version,
+            "completed_at": test.completed_at.isoformat() if test.completed_at else None,
+            "trust_tier": test.trust_tier
+        })
+    
+    # Calculate category breakdown from best test
+    category_breakdown = {}
+    category_scores = {}
+    pass_verdicts = {"ACCEPTED"}
+    
+    if best_test:
+        results = db.query(Result).filter(Result.test_run_id == best_test.id).all()
+        for result in results:
+            cat = result.question.category
+            if cat not in category_breakdown:
+                category_breakdown[cat] = {"total": 0, "passed": 0}
+            category_breakdown[cat]["total"] += 1
+            if result.verdict in pass_verdicts:
+                category_breakdown[cat]["passed"] += 1
+        
+        # Calculate percentage scores per category
+        for cat, data in category_breakdown.items():
+            category_scores[cat] = round((data["passed"] / data["total"]) * 100, 1) if data["total"] > 0 else 0
+            # Also add detailed score using ScoringService
+            cat_results = [r for r in results if r.question.category == cat]
+            category_breakdown[cat]["score"] = ScoringService.calculate_category_score(cat_results, cat)
+    
+    return {
+        "best_test": best_test,
+        "best_result": best_result,
+        "test_history": test_history,
+        "category_breakdown": category_breakdown,
+        "category_scores": category_scores
+    }
+
+
 @router.get("/leaderboard", response_model=LeaderboardResponse)
 async def get_leaderboard(
     version: str = Query("current", description="Semantic version or 'current'"),
@@ -347,61 +421,11 @@ async def get_model_by_model_id(
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
     
-    # Get best result
-    best_test = db.query(TestRun).filter(
-        TestRun.model_id == model.id,
-        TestRun.status == "completed"
-    ).order_by(TestRun.completed_at.desc()).first()
-    
-    if best_test:
-        scores = ScoringService.calculate_scores(db, str(best_test.id))
-        best_result = {
-            "test_run_id": str(best_test.id),
-            "scores": scores,
-            "trust_tier": best_test.trust_tier,
-            "completed_at": best_test.completed_at.isoformat() if best_test.completed_at else None,
-            "benchmark_version": best_test.question_set.semantic_version
-        }
-    else:
-        best_result = None
-    
-    # Get test history
-    test_history = []
-    tests = db.query(TestRun).filter(
-        TestRun.model_id == model.id,
-        TestRun.status == "completed"
-    ).order_by(TestRun.completed_at.desc()).limit(10).all()
-    
-    for test in tests:
-        scores = ScoringService.calculate_scores(db, str(test.id))
-        test_history.append({
-            "test_run_id": str(test.id),
-            "overall_score": scores["overall"],
-            "benchmark_version": test.question_set.semantic_version,
-            "completed_at": test.completed_at.isoformat() if test.completed_at else None,
-            "trust_tier": test.trust_tier
-        })
-    
-    # Calculate category breakdown
-    if best_test:
-        results = db.query(Result).filter(Result.test_run_id == best_test.id).all()
-        category_breakdown = {}
-        # Pass verdicts (unified verdict system)
-        pass_verdicts = {"ACCEPTED"}
-        for result in results:
-            cat = result.question.category
-            if cat not in category_breakdown:
-                category_breakdown[cat] = {"total": 0, "passed": 0}
-            category_breakdown[cat]["total"] += 1
-            if result.verdict in pass_verdicts:
-                category_breakdown[cat]["passed"] += 1
-        
-        # Calculate percentages
-        category_scores = {}
-        for cat, data in category_breakdown.items():
-            category_scores[cat] = round((data["passed"] / data["total"]) * 100, 1) if data["total"] > 0 else 0
-    else:
-        category_scores = {}
+    # Use shared helper to get model detail data
+    data = _get_model_detail_data(db, model)
+    best_result = data["best_result"]
+    test_history = data["test_history"]
+    category_scores = data["category_scores"]
     
     return {
         "id": str(model.id),
@@ -438,61 +462,8 @@ async def get_model_detail(
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
     
-    # Get best result
-    best_test = db.query(TestRun).filter(
-        TestRun.model_id == model_id,
-        TestRun.status == "completed"
-    ).order_by(TestRun.completed_at.desc()).first()
-    
-    if best_test:
-        scores = ScoringService.calculate_scores(db, str(best_test.id))
-        best_result = {
-            "test_run_id": str(best_test.id),
-            "scores": scores,
-            "trust_tier": best_test.trust_tier,
-            "completed_at": best_test.completed_at.isoformat() if best_test.completed_at else None,
-            "benchmark_version": best_test.question_set.semantic_version
-        }
-    else:
-        best_result = None
-    
-    # Get test history
-    test_history = []
-    tests = db.query(TestRun).filter(
-        TestRun.model_id == model_id,
-        TestRun.status == "completed"
-    ).order_by(TestRun.completed_at.desc()).limit(10).all()
-    
-    for test in tests:
-        scores = ScoringService.calculate_scores(db, str(test.id))
-        test_history.append({
-            "test_run_id": str(test.id),
-            "overall_score": scores["overall"],
-            "benchmark_version": test.question_set.semantic_version,
-            "completed_at": test.completed_at.isoformat() if test.completed_at else None,
-            "trust_tier": test.trust_tier
-        })
-    
-    # Calculate category breakdown
-    if best_test:
-        results = db.query(Result).filter(Result.test_run_id == best_test.id).all()
-        category_breakdown = {}
-        # Pass verdicts (unified verdict system)
-        pass_verdicts = {"ACCEPTED"}
-        for result in results:
-            cat = result.question.category
-            if cat not in category_breakdown:
-                category_breakdown[cat] = {"total": 0, "passed": 0}
-            category_breakdown[cat]["total"] += 1
-            if result.verdict in pass_verdicts:
-                category_breakdown[cat]["passed"] += 1
-        
-        # Calculate scores
-        for cat in category_breakdown:
-            cat_results = [r for r in results if r.question.category == cat]
-            category_breakdown[cat]["score"] = ScoringService.calculate_category_score(cat_results, cat)
-    else:
-        category_breakdown = {}
+    # Use shared helper to get model detail data
+    data = _get_model_detail_data(db, model)
     
     # Calculate leaderboard rank (simplified)
     leaderboard_rank = None
@@ -505,9 +476,9 @@ async def get_model_detail(
             "provider": model.provider,
             "model_id": model.model_id
         },
-        "best_result": best_result,
-        "test_history": test_history,
-        "category_breakdown": category_breakdown,
+        "best_result": data["best_result"],
+        "test_history": data["test_history"],
+        "category_breakdown": data["category_breakdown"],
         "leaderboard_rank": leaderboard_rank,
         "total_models_tested": total_models_tested
     }

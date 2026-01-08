@@ -56,7 +56,7 @@ interface BlogPost {
   published_at?: string;
 }
 
-export default function AdminBlogPage() {
+export default function BlogManagerPage() {
   const router = useRouter();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState<BlogCategory[]>([]);
@@ -95,7 +95,7 @@ export default function AdminBlogPage() {
       }
       params.append("limit", "50");
       
-      const response = await fetch(`/api/admin/blog/posts?${params.toString()}`);
+      const response = await fetch(`/api/blog-manager/posts?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setPosts(data.items || []);
@@ -108,7 +108,7 @@ export default function AdminBlogPage() {
 
   async function loadCategories() {
     try {
-      const response = await fetch("/api/admin/blog/categories");
+      const response = await fetch("/api/blog-manager/categories");
       if (response.ok) {
         const data = await response.json();
         setCategories(data.items || []);
@@ -136,8 +136,8 @@ export default function AdminBlogPage() {
     setSavingCategory(true);
     try {
       const url = editingCategory
-        ? `/api/admin/blog/categories/${editingCategory.id}`
-        : "/api/admin/blog/categories";
+        ? `/api/blog-manager/categories/${editingCategory.id}`
+        : "/api/blog-manager/categories";
       const method = editingCategory ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -168,7 +168,7 @@ export default function AdminBlogPage() {
 
     setDeleting(true);
     try {
-      const response = await fetch(`/api/admin/blog/posts/${deletePost.id}`, {
+      const response = await fetch(`/api/blog-manager/posts/${deletePost.id}`, {
         method: "DELETE",
       });
 
@@ -191,7 +191,7 @@ export default function AdminBlogPage() {
 
     setDeleting(true);
     try {
-      const response = await fetch(`/api/admin/blog/categories/${deleteCategory.id}`, {
+      const response = await fetch(`/api/blog-manager/categories/${deleteCategory.id}`, {
         method: "DELETE",
       });
 
@@ -237,7 +237,7 @@ export default function AdminBlogPage() {
             Manage articles for the Action section
           </p>
         </div>
-        <Link href="/admin/blog/new">
+        <Link href="/blog-manager/new">
           <Button variant="brand">
             <Plus className="h-4 w-4 mr-2" />
             New Post
@@ -343,7 +343,7 @@ export default function AdminBlogPage() {
                     ? "No posts yet. Create your first post!"
                     : `No ${statusFilter} posts found.`}
                 </p>
-                <Link href="/admin/blog/new">
+                <Link href="/blog-manager/new">
                   <Button>Create Post</Button>
                 </Link>
               </CardContent>
@@ -355,7 +355,7 @@ export default function AdminBlogPage() {
                   key={post.id}
                   post={post}
                   showActions
-                  onEdit={() => router.push(`/admin/blog/${post.id}`)}
+                  onEdit={() => router.push(`/blog-manager/${post.id}`)}
                   onDelete={() => setDeletePost(post)}
                 />
               ))}

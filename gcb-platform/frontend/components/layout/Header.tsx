@@ -18,7 +18,7 @@ import { useUserProfile } from "@/lib/useUserProfile";
 
 export function Header() {
   const { data: session, status } = useSession();
-  const { isAdmin, isModerator, isBenchmarkDeveloper } = useUserProfile();
+  const { isAdmin, isModerator, isBlogManager, isBenchmarkDeveloper } = useUserProfile();
   const pathname = usePathname();
   const user = session?.user;
   const isLoading = status === "loading";
@@ -128,6 +128,11 @@ export function Header() {
                       <Link href="/moderator" className="cursor-pointer text-slate-700">Moderator Panel</Link>
                     </DropdownMenuItem>
                   )}
+                  {isBlogManager && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/blog-manager" className="cursor-pointer text-slate-700">Blog Management</Link>
+                    </DropdownMenuItem>
+                  )}
                   {isBenchmarkDeveloper && (
                     <DropdownMenuItem asChild>
                       <Link href="/benchmark" className="cursor-pointer text-slate-700">Benchmark Development</Link>
@@ -226,6 +231,14 @@ export function Header() {
                         className="text-base font-medium transition-all px-4 py-2.5 rounded-lg text-slate-700 hover:bg-red-50"
                       >
                         Moderator Panel
+                      </Link>
+                    )}
+                    {isBlogManager && (
+                      <Link
+                        href="/blog-manager"
+                        className="text-base font-medium transition-all px-4 py-2.5 rounded-lg text-slate-700 hover:bg-red-50"
+                      >
+                        Blog Management
                       </Link>
                     )}
                     {isBenchmarkDeveloper && (

@@ -7,7 +7,7 @@ from uuid import UUID
 from datetime import datetime
 import re
 
-from app.core.auth import get_db, require_admin, get_current_user
+from app.core.auth import get_db, require_blog_manager, get_current_user
 from app.db.models.user import User
 from app.db.models.blog_post import BlogPost
 from app.db.models.blog_category import BlogCategory
@@ -161,7 +161,7 @@ async def list_categories(
 
 
 # =============================================================================
-# Admin Endpoints (require admin role)
+# Blog Manager Endpoints (require blog_manager role or higher)
 # =============================================================================
 
 @admin_router.get("/posts", response_model=BlogPostListResponse)
@@ -169,10 +169,10 @@ async def admin_list_posts(
     status: Optional[str] = Query(None, description="Filter by status (draft, published)"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_blog_manager),
     db: Session = Depends(get_db)
 ):
-    """List all blog posts (including drafts) - Admin only"""
+    """List all blog posts (including drafts) - Blog Manager or higher"""
     query = db.query(BlogPost).options(
         joinedload(BlogPost.author),
         joinedload(BlogPost.categories)
@@ -224,10 +224,10 @@ async def admin_list_posts(
 @admin_router.post("/posts", response_model=BlogPostResponse)
 async def create_post(
     request: BlogPostCreate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_blog_manager),
     db: Session = Depends(get_db)
 ):
-    """Create a new blog post - Admin only"""
+    """Create a new blog post - Blog Manager or higher"""
     # Check if slug already exists
     existing = db.query(BlogPost).filter(BlogPost.slug == request.slug).first()
     if existing:
@@ -285,10 +285,10 @@ async def create_post(
 @admin_router.get("/posts/{post_id}", response_model=BlogPostResponse)
 async def admin_get_post(
     post_id: UUID,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_blog_manager),
     db: Session = Depends(get_db)
 ):
-    """Get a post by ID - Admin only"""
+    """Get a post by ID - Blog Manager or higher"""
     post = db.query(BlogPost).options(
         joinedload(BlogPost.author),
         joinedload(BlogPost.categories)
@@ -328,10 +328,10 @@ async def admin_get_post(
 async def update_post(
     post_id: UUID,
     request: BlogPostUpdate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_blog_manager),
     db: Session = Depends(get_db)
 ):
-    """Update a blog post - Admin only"""
+    """Update a blog post - Blog Manager or higher"""
     post = db.query(BlogPost).options(
         joinedload(BlogPost.author),
         joinedload(BlogPost.categories)
@@ -401,10 +401,10 @@ async def update_post(
 @admin_router.delete("/posts/{post_id}")
 async def delete_post(
     post_id: UUID,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_blog_manager),
     db: Session = Depends(get_db)
 ):
-    """Delete a blog post - Admin only"""
+    """Delete a blog post - Blog Manager or higher"""
     post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
     
     if not post:
@@ -419,10 +419,10 @@ async def delete_post(
 @admin_router.post("/posts/{post_id}/publish", response_model=BlogPostResponse)
 async def publish_post(
     post_id: UUID,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_blog_manager),
     db: Session = Depends(get_db)
 ):
-    """Publish a draft post - Admin only"""
+    """Publish a draft post - Blog Manager or higher"""
     post = db.query(BlogPost).options(
         joinedload(BlogPost.author),
         joinedload(BlogPost.categories)
@@ -470,10 +470,10 @@ async def publish_post(
 @admin_router.post("/posts/{post_id}/unpublish", response_model=BlogPostResponse)
 async def unpublish_post(
     post_id: UUID,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_blog_manager),
     db: Session = Depends(get_db)
 ):
-    """Unpublish a post (revert to draft) - Admin only"""
+    """Unpublish a post (revert to draft) - Blog Manager or higher"""
     post = db.query(BlogPost).options(
         joinedload(BlogPost.author),
         joinedload(BlogPost.categories)
@@ -520,9 +520,9 @@ async def unpublish_post(
 @admin_router.post("/upload-image", response_model=ImageUploadResponse)
 async def upload_blog_image(
     file: UploadFile = File(...),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_blog_manager),
 ):
-    """Upload an image for blog posts - Admin only"""
+    """Upload an image for blog posts - Blog Manager or higher"""
     result = await upload_image(file, folder="blog")
     return ImageUploadResponse(**result)
 
@@ -533,10 +533,10 @@ async def upload_blog_image(
 
 @admin_router.get("/categories", response_model=BlogCategoryListResponse)
 async def admin_list_categories(
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_blog_manager),
     db: Session = Depends(get_db)
 ):
-    """List all categories - Admin only"""
+    """List all categories - Blog Manager or higher"""
     categories = db.query(BlogCategory).order_by(BlogCategory.name).all()
     
     return BlogCategoryListResponse(
@@ -555,10 +555,10 @@ async def admin_list_categories(
 @admin_router.post("/categories", response_model=BlogCategoryResponse)
 async def create_category(
     request: BlogCategoryCreate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_blog_manager),
     db: Session = Depends(get_db)
 ):
-    """Create a new category - Admin only"""
+    """Create a new category - Blog Manager or higher"""
     # Check if slug already exists
     existing = db.query(BlogCategory).filter(
         (BlogCategory.slug == request.slug) | (BlogCategory.name == request.name)
@@ -590,10 +590,10 @@ async def create_category(
 async def update_category(
     category_id: UUID,
     request: BlogCategoryUpdate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_blog_manager),
     db: Session = Depends(get_db)
 ):
-    """Update a category - Admin only"""
+    """Update a category - Blog Manager or higher"""
     category = db.query(BlogCategory).filter(BlogCategory.id == category_id).first()
     
     if not category:
@@ -640,10 +640,10 @@ async def update_category(
 @admin_router.delete("/categories/{category_id}")
 async def delete_category(
     category_id: UUID,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_blog_manager),
     db: Session = Depends(get_db)
 ):
-    """Delete a category - Admin only"""
+    """Delete a category - Blog Manager or higher"""
     category = db.query(BlogCategory).filter(BlogCategory.id == category_id).first()
     
     if not category:

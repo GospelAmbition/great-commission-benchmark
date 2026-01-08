@@ -88,7 +88,7 @@ def require_role(required_role: str):
     Dependency factory for role-based authorization
     
     Args:
-        required_role: Required role ('user', 'moderator', 'benchmark_developer', 'admin')
+        required_role: Required role ('user', 'moderator', 'blog_manager', 'benchmark_developer', 'admin')
     
     Returns:
         Dependency function that checks user role
@@ -97,8 +97,9 @@ def require_role(required_role: str):
         role_hierarchy = {
             "user": 1,
             "moderator": 2,
-            "benchmark_developer": 3,
-            "admin": 4
+            "blog_manager": 3,
+            "benchmark_developer": 4,
+            "admin": 5
         }
         
         user_level = role_hierarchy.get(current_user.role, 0)
@@ -118,6 +119,7 @@ def require_role(required_role: str):
 # Convenience dependencies
 require_auth = get_current_user
 require_moderator = require_role("moderator")
+require_blog_manager = require_role("blog_manager")
 require_benchmark_developer = require_role("benchmark_developer")
 require_admin = require_role("admin")
 
@@ -136,8 +138,8 @@ def is_fee_waived(user: User) -> bool:
     Returns:
         True if fee is waived, False otherwise
     """
-    # Auto-waive for moderators, benchmark developers, and admins
-    if user.role in ("moderator", "benchmark_developer", "admin"):
+    # Auto-waive for moderators, blog managers, benchmark developers, and admins
+    if user.role in ("moderator", "blog_manager", "benchmark_developer", "admin"):
         return True
     # Manual waiver flag
     return user.fee_waived

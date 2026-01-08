@@ -41,7 +41,7 @@ export default function NewBlogPostPage() {
 
   async function loadCategories() {
     try {
-      const response = await fetch("/api/admin/blog/categories");
+      const response = await fetch("/api/blog-manager/categories");
       if (response.ok) {
         const data = await response.json();
         setCategories(data.items || []);
@@ -64,7 +64,7 @@ export default function NewBlogPostPage() {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch("/api/admin/blog/upload-image", {
+    const response = await fetch("/api/blog-manager/upload-image", {
       method: "POST",
       body: formData,
     });
@@ -91,7 +91,7 @@ export default function NewBlogPostPage() {
 
     try {
       // Create the post
-      const response = await fetch("/api/admin/blog/posts", {
+      const response = await fetch("/api/blog-manager/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -113,7 +113,7 @@ export default function NewBlogPostPage() {
 
       // If publishing, publish the post
       if (publish) {
-        const publishResponse = await fetch(`/api/admin/blog/posts/${post.id}/publish`, {
+        const publishResponse = await fetch(`/api/blog-manager/posts/${post.id}/publish`, {
           method: "POST",
         });
 
@@ -126,7 +126,7 @@ export default function NewBlogPostPage() {
         toast.success("Post saved as draft");
       }
 
-      router.push("/admin/blog");
+      router.push("/blog-manager");
     } catch (error: any) {
       toast.error(error.message || "Failed to save post");
     } finally {
@@ -147,7 +147,7 @@ export default function NewBlogPostPage() {
   return (
     <div className="container py-8 max-w-5xl">
       <div className="flex items-center gap-4 mb-8">
-        <Link href="/admin/blog">
+        <Link href="/blog-manager">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -289,7 +289,7 @@ export default function NewBlogPostPage() {
               {categories.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No categories yet.{" "}
-                  <Link href="/admin/blog" className="text-[--ga-red] hover:underline">
+                  <Link href="/blog-manager" className="text-[--ga-red] hover:underline">
                     Create one
                   </Link>
                 </p>

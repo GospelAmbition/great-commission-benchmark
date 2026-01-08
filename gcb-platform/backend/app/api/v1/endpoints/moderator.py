@@ -19,6 +19,7 @@ from app.db.models.question_set import QuestionSet
 from app.db.models.methodology_version import MethodologyVersion
 from app.db.models.question import Question
 from app.services.scoring import ScoringService
+from app.services.judge import TIER1_JUDGE_PROMPT
 from app.schemas.moderator import (
     QueueItem,
     QueueResponse,

@@ -44,7 +44,8 @@ export function useUserProfile() {
     loading: loading || status === "loading",
     error,
     isAdmin: profile?.role === "admin",
-    isModerator: profile?.role === "moderator" || profile?.role === "admin",
+    isModerator: profile?.role === "moderator" || profile?.role === "blog_manager" || profile?.role === "benchmark_developer" || profile?.role === "admin",
+    isBlogManager: profile?.role === "blog_manager" || profile?.role === "benchmark_developer" || profile?.role === "admin",
     isBenchmarkDeveloper: profile?.role === "benchmark_developer" || profile?.role === "admin",
   };
 }

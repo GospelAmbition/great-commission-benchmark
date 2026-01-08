@@ -39,7 +39,7 @@ interface AdminUser {
   id: string;
   email: string;
   name: string | null;
-  role: "user" | "moderator" | "admin";
+  role: "user" | "moderator" | "blog_manager" | "benchmark_developer" | "admin";
   created_at: string;
   test_count: number;
   last_login?: string;
@@ -227,13 +227,15 @@ export default function AdminUsersPage() {
               />
             </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="user">User</SelectItem>
                 <SelectItem value="moderator">Moderator</SelectItem>
+                <SelectItem value="blog_manager">Blog Manager</SelectItem>
+                <SelectItem value="benchmark_developer">Benchmark Developer</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
@@ -280,18 +282,22 @@ export default function AdminUsersPage() {
                       variant={
                         u.role === "admin"
                           ? "default"
+                          : u.role === "benchmark_developer"
+                          ? "default"
+                          : u.role === "blog_manager"
+                          ? "secondary"
                           : u.role === "moderator"
                           ? "secondary"
                           : "outline"
                       }
                     >
-                      {u.role}
+                      {u.role === "blog_manager" ? "Blog Manager" : u.role === "benchmark_developer" ? "Benchmark Dev" : u.role}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {(u.role === "moderator" || u.role === "admin" || u.fee_waived) ? (
+                    {(u.role === "moderator" || u.role === "blog_manager" || u.role === "benchmark_developer" || u.role === "admin" || u.fee_waived) ? (
                       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        {u.role === "moderator" || u.role === "admin" ? "Auto-waived" : "Waived"}
+                        {u.role === "moderator" || u.role === "blog_manager" || u.role === "benchmark_developer" || u.role === "admin" ? "Auto-waived" : "Waived"}
                       </Badge>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -384,6 +390,8 @@ export default function AdminUsersPage() {
               <SelectContent>
                 <SelectItem value="user">User</SelectItem>
                 <SelectItem value="moderator">Moderator</SelectItem>
+                <SelectItem value="blog_manager">Blog Manager</SelectItem>
+                <SelectItem value="benchmark_developer">Benchmark Developer</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
@@ -429,7 +437,7 @@ export default function AdminUsersPage() {
                 className="mt-1"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Note: Moderators and admins automatically have fee waived by role.
+                Note: Moderators, blog managers, benchmark developers, and admins automatically have fee waived by role.
               </p>
             </div>
           </div>

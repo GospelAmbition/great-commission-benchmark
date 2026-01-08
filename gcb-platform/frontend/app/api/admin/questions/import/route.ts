@@ -1,26 +1,5 @@
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import * as jose from "jose";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-async function getBackendToken() {
-  const session = await auth();
-  if (!session) return null;
-
-  const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET!);
-  const token = await new jose.SignJWT({
-    sub: session.user?.id,
-    email: session.user?.email,
-    name: session.user?.name,
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("1h")
-    .sign(secret);
-
-  return token;
-}
+import { getBackendToken, API_URL } from "@/lib/backend-auth";
 
 interface QuestionFromFile {
   content: string;

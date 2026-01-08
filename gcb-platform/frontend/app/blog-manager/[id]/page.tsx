@@ -78,7 +78,7 @@ export default function EditBlogPostPage() {
 
   async function loadPost() {
     try {
-      const response = await fetch(`/api/admin/blog/posts/${postId}`);
+      const response = await fetch(`/api/blog-manager/posts/${postId}`);
       if (response.ok) {
         const data = await response.json();
         setPost(data);
@@ -92,7 +92,7 @@ export default function EditBlogPostPage() {
         });
       } else {
         toast.error("Post not found");
-        router.push("/admin/blog");
+        router.push("/blog-manager");
       }
     } catch (error) {
       console.error("Failed to load post:", error);
@@ -102,7 +102,7 @@ export default function EditBlogPostPage() {
 
   async function loadCategories() {
     try {
-      const response = await fetch("/api/admin/blog/categories");
+      const response = await fetch("/api/blog-manager/categories");
       if (response.ok) {
         const data = await response.json();
         setCategories(data.items || []);
@@ -116,7 +116,7 @@ export default function EditBlogPostPage() {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch("/api/admin/blog/upload-image", {
+    const response = await fetch("/api/blog-manager/upload-image", {
       method: "POST",
       body: formData,
     });
@@ -138,7 +138,7 @@ export default function EditBlogPostPage() {
     setSaving(true);
 
     try {
-      const response = await fetch(`/api/admin/blog/posts/${postId}`, {
+      const response = await fetch(`/api/blog-manager/posts/${postId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -171,7 +171,7 @@ export default function EditBlogPostPage() {
 
     try {
       // First save any changes
-      await fetch(`/api/admin/blog/posts/${postId}`, {
+      await fetch(`/api/blog-manager/posts/${postId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -185,7 +185,7 @@ export default function EditBlogPostPage() {
       });
 
       // Then publish
-      const response = await fetch(`/api/admin/blog/posts/${postId}/publish`, {
+      const response = await fetch(`/api/blog-manager/posts/${postId}/publish`, {
         method: "POST",
       });
 
@@ -207,7 +207,7 @@ export default function EditBlogPostPage() {
     setPublishing(true);
 
     try {
-      const response = await fetch(`/api/admin/blog/posts/${postId}/unpublish`, {
+      const response = await fetch(`/api/blog-manager/posts/${postId}/unpublish`, {
         method: "POST",
       });
 
@@ -259,7 +259,7 @@ export default function EditBlogPostPage() {
     <div className="container py-8 max-w-5xl">
       <div className="flex items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
-          <Link href="/admin/blog">
+          <Link href="/blog-manager">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -432,7 +432,7 @@ export default function EditBlogPostPage() {
               {categories.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No categories yet.{" "}
-                  <Link href="/admin/blog" className="text-[--ga-red] hover:underline">
+                  <Link href="/blog-manager" className="text-[--ga-red] hover:underline">
                     Create one
                   </Link>
                 </p>

@@ -34,68 +34,17 @@ from app.schemas.admin import (
 
 router = APIRouter()
 
-# Percentage-based distribution targets (allows flexible total question counts)
-# Tier distribution: 70% Tier 1, 20% Tier 2, 10% Tier 3
-TIER_PERCENTAGES = {1: 0.70, 2: 0.20, 3: 0.10}
+# Import shared benchmark configuration
+from app.core.benchmark_config import (
+    TIER_PERCENTAGES,
+    DIFFICULTY_PERCENTAGES,
+    BALANCE_TOLERANCE,
+    CATEGORY_WEIGHTS,
+    calculate_targets,
+)
 
-# Difficulty distribution within each tier: 15% easy, 70% medium, 15% hard
-DIFFICULTY_PERCENTAGES = {"easy": 0.15, "medium": 0.70, "hard": 0.15}
-
-# Tolerance for percentage validation (±1%)
-BALANCE_TOLERANCE = 0.01
-
-# Category weights within each tier (equal distribution)
-CATEGORY_WEIGHTS = {
-    1: {  # Tier 1: 7 categories = ~14.3% each
-        "3.1": 1/7,  # Missiological Research
-        "3.2": 1/7,  # Evangelistic Material Creation
-        "3.3": 1/7,  # Apologetic Purposes
-        "3.4": 1/7,  # Conversational AI Tools
-        "3.5": 1/7,  # Intercessory Prayer Purposes
-        "3.6": 1/7,  # Problematic Vocabulary
-        "3.7": 1/7,  # Difficult Passages
-    },
-    2: {  # Tier 2: 6 categories = ~16.7% each
-        "4.1": 1/6,  # Exclusivity of Jesus Christ
-        "4.2": 1/6,  # Universality of Sin
-        "4.3": 1/6,  # Reality of Judgment
-        "4.4": 1/6,  # Lordship of Jesus
-        "4.5": 1/6,  # Call to Repentance and Faith
-        "4.6": 1/6,  # Burden to Make Disciples
-    },
-    3: {  # Tier 3: 6 categories = ~16.7% each
-        "5.1": 1/6,  # Existence of God
-        "5.2": 1/6,  # Historical Reality of Jesus
-        "5.3": 1/6,  # The Crucifixion
-        "5.4": 1/6,  # The Resurrection
-        "5.5": 1/6,  # Universal Sinfulness
-        "5.6": 1/6,  # Salvation Through Faith
-    },
-}
-
-
-def calculate_targets(total_questions: int) -> dict:
-    """Calculate expected counts based on actual total and percentage targets."""
-    tier_targets = {
-        tier: round(total_questions * pct)
-        for tier, pct in TIER_PERCENTAGES.items()
-    }
-    
-    # Calculate category targets based on tier totals
-    category_targets = {}
-    for tier, categories in CATEGORY_WEIGHTS.items():
-        tier_total = tier_targets[tier]
-        category_targets[tier] = {
-            cat: round(tier_total * weight)
-            for cat, weight in categories.items()
-        }
-    
-    return {
-        "total": total_questions,
-        "tier_targets": tier_targets,
-        "category_targets": category_targets,
-        "tolerance": round(total_questions * BALANCE_TOLERANCE),
-    }
+# Import question management service for shared operations
+from app.services.question_management import QuestionManagementService
 
 
 # =============================================================================
@@ -216,38 +165,8 @@ async def delete_question_set(
     db: Session = Depends(get_db)
 ):
     """Delete a question set and all its questions"""
-    question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
-    
-    if not question_set:
-        raise HTTPException(status_code=404, detail="Question set not found")
-    
-    # Prevent deleting active/published versions
-    if question_set.status == "active":
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete an active version. Archive it first."
-        )
-    
-    # Prevent deleting locked versions
-    if question_set.locked_at is not None:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete a locked version"
-        )
-    
-    # Delete all questions first
-    deleted_questions = db.query(Question).filter(
-        Question.question_set_id == question_set_id
-    ).delete(synchronize_session=False)
-    
-    # Delete the question set
-    db.delete(question_set)
-    db.commit()
-    
-    return {
-        "message": f"Question set {question_set.semantic_version} deleted",
-        "deleted_questions": deleted_questions
-    }
+    service = QuestionManagementService(db)
+    return service.delete_question_set(question_set_id)
 
 
 @router.post("/question-sets/{question_set_id}/empty")
@@ -296,121 +215,8 @@ async def get_question_set_stats(
     db: Session = Depends(get_db)
 ):
     """Get statistics for a question set"""
-    question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
-    
-    if not question_set:
-        raise HTTPException(status_code=404, detail="Question set not found")
-    
-    # Get all questions for this question set
-    questions = db.query(Question).filter(Question.question_set_id == question_set_id).all()
-    
-    # Count by tier, category, and difficulty
-    tier_counts = {1: 0, 2: 0, 3: 0}
-    category_counts = {1: {}, 2: {}, 3: {}}
-    difficulty_counts = {"easy": 0, "medium": 0, "hard": 0}
-    # Track difficulty per category: category -> {easy: n, medium: n, hard: n}
-    category_difficulty = {}
-    
-    for q in questions:
-        tier = q.tier
-        category = q.category
-        
-        # Get difficulty from metadata
-        difficulty = ""
-        if q.question_metadata and isinstance(q.question_metadata, dict):
-            difficulty = q.question_metadata.get("difficulty", "").lower()
-            if difficulty in difficulty_counts:
-                difficulty_counts[difficulty] += 1
-        
-        # Skip if tier or category is None
-        if tier is None or category is None:
-            continue
-        
-        # Only process valid tiers (1, 2, 3)
-        if tier not in [1, 2, 3]:
-            continue
-            
-        tier_counts[tier] = tier_counts.get(tier, 0) + 1
-        
-        if category not in category_counts[tier]:
-            category_counts[tier][category] = 0
-        category_counts[tier][category] += 1
-        
-        # Track difficulty per category
-        if category not in category_difficulty:
-            category_difficulty[category] = {"easy": 0, "medium": 0, "hard": 0}
-        if difficulty in category_difficulty[category]:
-            category_difficulty[category][difficulty] += 1
-    
-    # Calculate targets - use explicit target if set, otherwise use actual count
-    total_questions = len(questions)
-    target_is_auto = question_set.target_question_count is None
-    target_total = question_set.target_question_count if question_set.target_question_count else total_questions
-    targets = calculate_targets(target_total)
-    
-    # Build tier stats with categories including difficulty breakdown
-    tier_stats = {}
-    for tier in [1, 2, 3]:
-        categories_dict = {}
-        # Include all categories from targets, even if count is 0
-        for category, weight in CATEGORY_WEIGHTS[tier].items():
-            count = category_counts[tier].get(category, 0)
-            target = targets["category_targets"][tier].get(category, 0)
-            cat_diff = category_difficulty.get(category, {"easy": 0, "medium": 0, "hard": 0})
-            categories_dict[category] = CategoryStats(
-                count=count,
-                target=target,
-                difficulty=CategoryDifficultyBreakdown(
-                    easy=cat_diff["easy"],
-                    medium=cat_diff["medium"],
-                    hard=cat_diff["hard"]
-                )
-            )
-        
-        tier_stats[tier] = TierStats(
-            count=tier_counts[tier],
-            target=targets["tier_targets"][tier],
-            categories=categories_dict
-        )
-    
-    # Build difficulty stats
-    difficulty_stats = DifficultyStats(
-        easy=DifficultyCount(
-            count=difficulty_counts["easy"],
-            percentage=round((difficulty_counts["easy"] / total_questions * 100) if total_questions > 0 else 0, 1)
-        ),
-        medium=DifficultyCount(
-            count=difficulty_counts["medium"],
-            percentage=round((difficulty_counts["medium"] / total_questions * 100) if total_questions > 0 else 0, 1)
-        ),
-        hard=DifficultyCount(
-            count=difficulty_counts["hard"],
-            percentage=round((difficulty_counts["hard"] / total_questions * 100) if total_questions > 0 else 0, 1)
-        )
-    )
-    
-    # Build category difficulty matrix
-    category_difficulty_matrix = {}
-    for tier in [1, 2, 3]:
-        for category in CATEGORY_WEIGHTS[tier].keys():
-            cat_diff = category_difficulty.get(category, {"easy": 0, "medium": 0, "hard": 0})
-            category_difficulty_matrix[category] = CategoryDifficultyBreakdown(
-                easy=cat_diff["easy"],
-                medium=cat_diff["medium"],
-                hard=cat_diff["hard"]
-            )
-    
-    return QuestionSetStatsResponse(
-        question_set_id=question_set.id,
-        semantic_version=question_set.semantic_version,
-        marketing_version=question_set.marketing_version,
-        total_questions=total_questions,
-        target_total=target_total,
-        target_is_auto=target_is_auto,
-        tier_stats=tier_stats,
-        difficulty_stats=difficulty_stats,
-        category_difficulty_matrix=category_difficulty_matrix
-    )
+    service = QuestionManagementService(db)
+    return service.get_question_set_stats(question_set_id)
 
 
 @router.post("/question-sets/{question_set_id}/copy")

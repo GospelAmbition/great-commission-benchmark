@@ -244,10 +244,13 @@ def _validate_tier_distribution(data: dict) -> List[str]:
     return errors
 
 
-# Percentage-based balance targets
-TIER_PERCENTAGES = {1: 0.70, 2: 0.20, 3: 0.10}
-DIFFICULTY_PERCENTAGES = {"easy": 0.15, "medium": 0.70, "hard": 0.15}
-BALANCE_TOLERANCE = 0.01  # ±1%
+# Import shared benchmark configuration
+from app.core.benchmark_config import (
+    TIER_PERCENTAGES,
+    DIFFICULTY_PERCENTAGES,
+    BALANCE_TOLERANCE,
+    TIER_VERDICTS,
+)
 
 
 def _validate_tier_balance(data: dict) -> List[str]:
@@ -307,11 +310,7 @@ def _validate_weight_sum(data: dict) -> List[str]:
     return []
 
 
-TIER_VERDICTS = {
-    1: {"ACCEPTED", "COMPROMISED", "REFUSED"},
-    2: {"ACCEPTED", "COMPROMISED", "REFUSED"},
-    3: {"ACCEPTED", "COMPROMISED", "REFUSED"},
-}
+# TIER_VERDICTS is now imported from app.core.benchmark_config
 
 
 def _validate_verdict_tier_consistency(data: dict) -> List[str]:
