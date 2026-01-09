@@ -1,7 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { MenuBookIcon } from "@/lib/icons";
-import { Target } from "lucide-react";
+import { Target, Grid3X3 } from "lucide-react";
+import { TestingCategoryCard } from "@/components/benchmark/TestingCategoryCard";
+import {
+  TIER_CATEGORIES,
+  CATEGORY_NAMES,
+  CATEGORY_DESCRIPTIONS,
+} from "@/lib/benchmark-definitions";
 
 export default function AboutPage() {
   return (
@@ -33,6 +40,10 @@ export default function AboutPage() {
             </TabsTrigger>
             <TabsTrigger value="scoring" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               Scoring
+            </TabsTrigger>
+            <TabsTrigger value="testing-categories" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Grid3X3 className="h-4 w-4 mr-1.5" />
+              Testing Categories
             </TabsTrigger>
           </TabsList>
 
@@ -196,6 +207,245 @@ export default function AboutPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="testing-categories" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Testing Categories</CardTitle>
+                <p className="text-muted-foreground text-sm mt-2">
+                  The benchmark evaluates AI models across 19 categories organized into 3 tiers. 
+                  Each category tests specific guardrails that may impede Great Commission ministry work.
+                </p>
+              </CardHeader>
+            </Card>
+
+            {/* Tier 1: Task Capability */}
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-lg font-semibold text-foreground">Tier 1: Task Capability</h2>
+                <Badge variant="outline" className="bg-red-500/10 text-red-400 border-transparent">
+                  70% weight
+                </Badge>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <TestingCategoryCard
+                  categoryCode="1.1"
+                  categoryName={CATEGORY_NAMES["1.1"]}
+                  description={CATEGORY_DESCRIPTIONS["1.1"]}
+                  tier={1}
+                  guardrails={[
+                    "Religious Neutrality & Pluralism",
+                    "Hate Speech & Religious Sensitivity",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="1.2"
+                  categoryName={CATEGORY_NAMES["1.2"]}
+                  description={CATEGORY_DESCRIPTIONS["1.2"]}
+                  tier={1}
+                  guardrails={[
+                    "Religious Neutrality & Pluralism",
+                    "Hate Speech & Religious Sensitivity",
+                    "Harm-Avoidance & Distressing Content",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="1.3"
+                  categoryName={CATEGORY_NAMES["1.3"]}
+                  description={CATEGORY_DESCRIPTIONS["1.3"]}
+                  tier={1}
+                  guardrails={[
+                    "Religious Neutrality & Pluralism",
+                    "Scientific Consensus & Naturalism",
+                    "Hate Speech & Religious Sensitivity",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="1.4"
+                  categoryName={CATEGORY_NAMES["1.4"]}
+                  description={CATEGORY_DESCRIPTIONS["1.4"]}
+                  tier={1}
+                  guardrails={[
+                    "Religious Neutrality & Pluralism",
+                    "Hate Speech & Religious Sensitivity",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="1.5"
+                  categoryName={CATEGORY_NAMES["1.5"]}
+                  description={CATEGORY_DESCRIPTIONS["1.5"]}
+                  tier={1}
+                  guardrails={[
+                    "Harm-Avoidance & Distressing Content",
+                    "Medical Safety",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="1.6"
+                  categoryName={CATEGORY_NAMES["1.6"]}
+                  description={CATEGORY_DESCRIPTIONS["1.6"]}
+                  tier={1}
+                  guardrails={[
+                    "Hate Speech & Religious Sensitivity",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="1.7"
+                  categoryName={CATEGORY_NAMES["1.7"]}
+                  description={CATEGORY_DESCRIPTIONS["1.7"]}
+                  tier={1}
+                  guardrails={[
+                    "Religious Neutrality & Pluralism",
+                    "Hate Speech & Religious Sensitivity",
+                    "Harm-Avoidance & Distressing Content",
+                    "Public Safety & Social Stability",
+                  ]}
+                />
+              </div>
+            </div>
+
+            {/* Tier 2: Gospel Core */}
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-lg font-semibold text-foreground">Tier 2: Gospel Core</h2>
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-transparent">
+                  20% weight
+                </Badge>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <TestingCategoryCard
+                  categoryCode="2.1"
+                  categoryName={CATEGORY_NAMES["2.1"]}
+                  description={CATEGORY_DESCRIPTIONS["2.1"]}
+                  tier={2}
+                  guardrails={[
+                    "Religious Neutrality & Pluralism",
+                    "Hate Speech & Religious Sensitivity",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="2.2"
+                  categoryName={CATEGORY_NAMES["2.2"]}
+                  description={CATEGORY_DESCRIPTIONS["2.2"]}
+                  tier={2}
+                  guardrails={[
+                    "Child Safety & Psychological Harm",
+                    "Harm-Avoidance & Distressing Content",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="2.3"
+                  categoryName={CATEGORY_NAMES["2.3"]}
+                  description={CATEGORY_DESCRIPTIONS["2.3"]}
+                  tier={2}
+                  guardrails={[
+                    "Harm-Avoidance & Distressing Content",
+                    "Public Safety & Social Stability",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="2.4"
+                  categoryName={CATEGORY_NAMES["2.4"]}
+                  description={CATEGORY_DESCRIPTIONS["2.4"]}
+                  tier={2}
+                  guardrails={[
+                    "Political Stability & Anti-Democratic Content",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="2.5"
+                  categoryName={CATEGORY_NAMES["2.5"]}
+                  description={CATEGORY_DESCRIPTIONS["2.5"]}
+                  tier={2}
+                  guardrails={[
+                    "Religious Neutrality & Pluralism",
+                    "Harm-Avoidance & Distressing Content",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="2.6"
+                  categoryName={CATEGORY_NAMES["2.6"]}
+                  description={CATEGORY_DESCRIPTIONS["2.6"]}
+                  tier={2}
+                  guardrails={[
+                    "Religious Neutrality & Pluralism",
+                    "Hate Speech & Religious Sensitivity",
+                  ]}
+                />
+              </div>
+            </div>
+
+            {/* Tier 3: Worldview Confession */}
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-lg font-semibold text-foreground">Tier 3: Worldview Confession</h2>
+                <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-transparent">
+                  10% weight
+                </Badge>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <TestingCategoryCard
+                  categoryCode="3.1"
+                  categoryName={CATEGORY_NAMES["3.1"]}
+                  description={CATEGORY_DESCRIPTIONS["3.1"]}
+                  tier={3}
+                  guardrails={[
+                    "Scientific Consensus & Naturalism",
+                    "Misinformation & Conspiracy Filters",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="3.2"
+                  categoryName={CATEGORY_NAMES["3.2"]}
+                  description={CATEGORY_DESCRIPTIONS["3.2"]}
+                  tier={3}
+                  guardrails={[
+                    "Scientific Consensus & Naturalism",
+                    "Misinformation & Conspiracy Filters",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="3.3"
+                  categoryName={CATEGORY_NAMES["3.3"]}
+                  description={CATEGORY_DESCRIPTIONS["3.3"]}
+                  tier={3}
+                  guardrails={[
+                    "Harm-Avoidance & Distressing Content",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="3.4"
+                  categoryName={CATEGORY_NAMES["3.4"]}
+                  description={CATEGORY_DESCRIPTIONS["3.4"]}
+                  tier={3}
+                  guardrails={[
+                    "Scientific Consensus & Naturalism",
+                    "Misinformation & Conspiracy Filters",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="3.5"
+                  categoryName={CATEGORY_NAMES["3.5"]}
+                  description={CATEGORY_DESCRIPTIONS["3.5"]}
+                  tier={3}
+                  guardrails={[
+                    "Child Safety & Psychological Harm",
+                    "Harm-Avoidance & Distressing Content",
+                  ]}
+                />
+                <TestingCategoryCard
+                  categoryCode="3.6"
+                  categoryName={CATEGORY_NAMES["3.6"]}
+                  description={CATEGORY_DESCRIPTIONS["3.6"]}
+                  tier={3}
+                  guardrails={[
+                    "Religious Neutrality & Pluralism",
+                    "Harm-Avoidance & Distressing Content",
+                  ]}
+                />
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

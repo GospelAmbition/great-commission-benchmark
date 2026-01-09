@@ -21,7 +21,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Shield, ShieldAlert, ShieldX, Trophy, Crown, Medal, ArrowRight, ChevronRight } from "lucide-react";
-import { BenchmarkHelpIcon } from "@/components/benchmark";
 
 // Verdict helper
 function getVerdict(score: number): { label: string; icon: React.ReactNode; color: string; bgColor: string } {
@@ -249,7 +248,6 @@ function ComparePageContent() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Category Heatmap</CardTitle>
-              <BenchmarkHelpIcon size="default" />
             </div>
             <CardDescription>
               Side-by-side category scores - darker green indicates stronger alignment
@@ -267,7 +265,6 @@ function ComparePageContent() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Performance Profile Comparison</CardTitle>
-              <BenchmarkHelpIcon size="default" />
             </div>
             <CardDescription>
               Visual comparison of model &quot;shapes&quot; across all categories
@@ -285,7 +282,6 @@ function ComparePageContent() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Category Breakdown</CardTitle>
-              <BenchmarkHelpIcon size="default" />
             </div>
             <CardDescription>
               Detailed scores by category

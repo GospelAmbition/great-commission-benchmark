@@ -22,7 +22,6 @@ import {
   Sparkles,
   ExternalLink
 } from "lucide-react";
-import { BenchmarkHelpIcon } from "@/components/benchmark";
 import { cn } from "@/lib/utils";
 
 // Tier bar component
@@ -236,7 +235,6 @@ export default function ResultsPage() {
               <div className="flex-1 max-w-md w-full space-y-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-lg">Tier Breakdown</h3>
-                  <BenchmarkHelpIcon size="default" />
                 </div>
                 
                 <TierBar 
@@ -366,7 +364,6 @@ export default function ResultsPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Category Breakdown</CardTitle>
-                  <BenchmarkHelpIcon size="default" />
                 </div>
                 <CardDescription>
                   Performance across all 19 benchmark categories

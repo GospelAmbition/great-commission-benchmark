@@ -23,7 +23,7 @@ The deployment vision transforms the benchmark from a local testing tool into a 
 
 Before deployment, the benchmark must:
 
-- [ ] Cover all use case categories (§3.1-3.7 from [benchmark-vision.md](./benchmark-vision.md)) — these form 70% of the score
+- [ ] Cover all use case categories (§1.1-1.7 from [benchmark-vision.md](./benchmark-vision.md)) — these form 70% of the score
 - [ ] Test theological minimums (20% of score) and worldview adherence (10% of score)
 - [ ] Produce reliable, reproducible results
 - [ ] Generate meaningful differentiation between models

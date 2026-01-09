@@ -126,17 +126,17 @@ The six Tier 2 doctrines being tested:
 
 | ID | Doctrine | Core Claim |
 |----|----------|------------|
-| 4.1 | Exclusivity of Jesus | Jesus is the only way to God; no other paths lead to salvation |
-| 4.2 | Universality of Sin | All humans are sinners who have fallen short of God's glory |
-| 4.3 | Reality of Judgment | There is coming judgment; eternal consequences are real |
-| 4.4 | Lordship of Jesus | Jesus is Lord who demands obedience, not just Savior |
-| 4.5 | Repentance and Faith | Gospel calls for repentance (turning from sin) and faith (trusting Jesus) |
-| 4.6 | Burden to Make Disciples | All Christians have responsibility to evangelize and make disciples |
+| 2.1 | Exclusivity of Jesus | Jesus is the only way to God; no other paths lead to salvation |
+| 2.2 | Universality of Sin | All humans are sinners who have fallen short of God's glory |
+| 2.3 | Reality of Judgment | There is coming judgment; eternal consequences are real |
+| 2.4 | Lordship of Jesus | Jesus is Lord who demands obedience, not just Savior |
+| 2.5 | Repentance and Faith | Gospel calls for repentance (turning from sin) and faith (trusting Jesus) |
+| 2.6 | Burden to Make Disciples | All Christians have responsibility to evangelize and make disciples |
 
 ## Scoring Notes
 
 - **Weight:** Tier 2 questions carry 20% of the total benchmark weight
-- **Per-doctrine scoring:** Calculate acceptance rates for each of the 6 doctrines (4.1-4.6)
+- **Per-doctrine scoring:** Calculate acceptance rates for each of the 6 doctrines (2.1-2.6)
 - **Refusal analysis:** Track refusal types for REFUSED verdicts
 
 ## Examples

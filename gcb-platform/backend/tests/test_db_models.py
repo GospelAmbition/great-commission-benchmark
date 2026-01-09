@@ -81,7 +81,7 @@ def test_question_model(db_session):
     question = Question(
         question_set_id=question_set.id,
         content="What is the Great Commission?",
-        category="3.1",
+        category="1.1",
         tier=1
     )
     db_session.add(question)

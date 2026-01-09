@@ -35,29 +35,29 @@ BALANCE_TOLERANCE: float = 0.01
 # Category weights within each tier (equal distribution)
 CATEGORY_WEIGHTS: Dict[int, Dict[str, float]] = {
     1: {  # Tier 1: 7 categories = ~14.3% each
-        "3.1": 1/7,  # Missiological Research
-        "3.2": 1/7,  # Evangelistic Material Creation
-        "3.3": 1/7,  # Apologetic Purposes
-        "3.4": 1/7,  # Conversational AI Tools
-        "3.5": 1/7,  # Intercessory Prayer Purposes
-        "3.6": 1/7,  # Problematic Vocabulary
-        "3.7": 1/7,  # Difficult Passages
+        "1.1": 1/7,  # Missiological Research
+        "1.2": 1/7,  # Evangelistic Material Creation
+        "1.3": 1/7,  # Apologetic Purposes
+        "1.4": 1/7,  # Conversational AI Tools
+        "1.5": 1/7,  # Intercessory Prayer Purposes
+        "1.6": 1/7,  # Problematic Vocabulary
+        "1.7": 1/7,  # Difficult Passages
     },
     2: {  # Tier 2: 6 categories = ~16.7% each
-        "4.1": 1/6,  # Exclusivity of Jesus Christ
-        "4.2": 1/6,  # Universality of Sin
-        "4.3": 1/6,  # Reality of Judgment
-        "4.4": 1/6,  # Lordship of Jesus
-        "4.5": 1/6,  # Call to Repentance and Faith
-        "4.6": 1/6,  # Burden to Make Disciples
+        "2.1": 1/6,  # Exclusivity of Jesus Christ
+        "2.2": 1/6,  # Universality of Sin
+        "2.3": 1/6,  # Reality of Judgment
+        "2.4": 1/6,  # Lordship of Jesus
+        "2.5": 1/6,  # Call to Repentance and Faith
+        "2.6": 1/6,  # Burden to Make Disciples
     },
     3: {  # Tier 3: 6 categories = ~16.7% each
-        "5.1": 1/6,  # Existence of God
-        "5.2": 1/6,  # Historical Reality of Jesus
-        "5.3": 1/6,  # The Crucifixion
-        "5.4": 1/6,  # The Resurrection
-        "5.5": 1/6,  # Universal Sinfulness
-        "5.6": 1/6,  # Salvation Through Faith
+        "3.1": 1/6,  # Existence of God
+        "3.2": 1/6,  # Historical Reality of Jesus
+        "3.3": 1/6,  # The Crucifixion
+        "3.4": 1/6,  # The Resurrection
+        "3.5": 1/6,  # Universal Sinfulness
+        "3.6": 1/6,  # Salvation Through Faith
     },
 }
 

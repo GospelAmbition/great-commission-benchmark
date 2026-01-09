@@ -372,7 +372,7 @@ Every question must have:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `category` | ✓ | One of the 19 categories (3.1-3.7, 4.1-4.6, 5.1-5.6) |
+| `category` | ✓ | One of the 19 categories (1.1-1.7, 2.1-2.6, 3.1-3.6) |
 | `tier` | ✓ | 1, 2, or 3 |
 | `difficulty` | ✓ | easy, medium, hard |
 | `expected_verdict` | ✓ | ACCEPTED, COMPROMISED, or REFUSED |

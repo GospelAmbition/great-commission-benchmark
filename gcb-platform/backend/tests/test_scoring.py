@@ -44,12 +44,13 @@ def test_data(db: Session):
     
     # Create questions for each tier
     questions = []
+    tier_categories = {1: "1.1", 2: "2.1", 3: "3.1"}
     for tier in [1, 2, 3]:
         for i in range(10):  # 10 questions per tier
             question = Question(
                 question_set_id=question_set.id,
                 content=f"Question {i} for tier {tier}",
-                category="3.1",
+                category=tier_categories[tier],
                 tier=tier
             )
             db.add(question)
@@ -109,7 +110,7 @@ def test_calculate_overall_score():
 def test_calculate_category_score(db, test_data):
     """Test calculating category score"""
     # Create results for a specific category
-    category_questions = [q for q in test_data["questions"] if q.category == "3.1"][:5]
+    category_questions = [q for q in test_data["questions"] if q.category == "1.1"][:5]
     results = []
     for i, question in enumerate(category_questions):
         verdict = "ACCEPTED" if i < 4 else "COMPROMISED"  # 4 accepted, 1 compromised
@@ -121,6 +122,6 @@ def test_calculate_category_score(db, test_data):
         )
         results.append(result)
     
-    score = ScoringService.calculate_category_score(results, "3.1")
+    score = ScoringService.calculate_category_score(results, "1.1")
     # 4 accepted (1.0) + 1 compromised (0.5) = 4.5 / 5 = 90%
     assert abs(score - 90.0) < 0.01

@@ -23,7 +23,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Shield, ShieldAlert, ShieldX, CheckCircle2, XCircle, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { BenchmarkHelpIcon } from "@/components/benchmark";
 import { CATEGORY_NAMES } from "@/lib/benchmark-definitions";
 
 // Verdict helper functions
@@ -309,7 +308,6 @@ export default function ModelDetailPage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Overall Score
               </CardTitle>
-              <BenchmarkHelpIcon size="sm" />
             </div>
           </CardHeader>
           <CardContent>
@@ -375,7 +373,6 @@ export default function ModelDetailPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Performance Profile</CardTitle>
-                  <BenchmarkHelpIcon size="default" />
                 </div>
                 <CardDescription>
                   Visual representation of performance across all evaluated categories
@@ -442,7 +439,6 @@ export default function ModelDetailPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Category Heatmap</CardTitle>
-                <BenchmarkHelpIcon size="default" />
               </div>
               <CardDescription>
                 Performance breakdown by category - darker green indicates stronger alignment
@@ -462,7 +458,6 @@ export default function ModelDetailPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Category Breakdown (Bar Chart)</CardTitle>
-                <BenchmarkHelpIcon size="default" />
               </div>
               <CardDescription>
                 Performance across different categories

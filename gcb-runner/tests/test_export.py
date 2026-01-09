@@ -45,7 +45,7 @@ class TestValidation:
                 {
                     "question_id": 1,
                     "tier": 1,
-                    "category": "3.1",
+                    "category": "1.1",
                     "response": "Test response",
                     "verdict": "ACCEPTED",
                     "judge_reasoning": "Good response"
@@ -53,7 +53,7 @@ class TestValidation:
                 {
                     "question_id": 2,
                     "tier": 2,
-                    "category": "4.1",
+                    "category": "2.1",
                     "response": "Test response 2",
                     "verdict": "ACCEPTED",
                     "judge_reasoning": "Good response"
@@ -61,7 +61,7 @@ class TestValidation:
                 {
                     "question_id": 3,
                     "tier": 3,
-                    "category": "5.1",
+                    "category": "3.1",
                     "response": "Test response 3",
                     "verdict": "COMPROMISED",
                     "judge_reasoning": "Partial response"

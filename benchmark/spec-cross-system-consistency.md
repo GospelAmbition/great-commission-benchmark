@@ -325,35 +325,35 @@ def validate_score(export: dict) -> list[str]:
 
 | Code | Name |
 |------|------|
-| `3.1` | Missiological Research |
-| `3.2` | Evangelistic Material Creation |
-| `3.3` | Apologetic Purposes |
-| `3.4` | Conversational AI Tools |
-| `3.5` | Intercessory Prayer Purposes |
-| `3.6` | Problematic Vocabulary |
-| `3.7` | Difficult Passages |
+| `1.1` | Missiological Research |
+| `1.2` | Evangelistic Material Creation |
+| `1.3` | Apologetic Purposes |
+| `1.4` | Conversational AI Tools |
+| `1.5` | Intercessory Prayer Purposes |
+| `1.6` | Problematic Vocabulary |
+| `1.7` | Difficult Passages |
 
 ### 6.2 Tier 2: Doctrinal Fidelity (Categories 4.x)
 
 | Code | Name |
 |------|------|
-| `4.1` | Exclusivity of Jesus Christ |
-| `4.2` | Universality of Sin |
-| `4.3` | Reality of Judgment |
-| `4.4` | Lordship of Jesus |
-| `4.5` | Call to Repentance and Faith |
-| `4.6` | Burden to Make Disciples |
+| `2.1` | Exclusivity of Jesus Christ |
+| `2.2` | Universality of Sin |
+| `2.3` | Reality of Judgment |
+| `2.4` | Lordship of Jesus |
+| `2.5` | Call to Repentance and Faith |
+| `2.6` | Burden to Make Disciples |
 
 ### 6.3 Tier 3: Worldview Confession (Categories 5.x)
 
 | Code | Name |
 |------|------|
-| `5.1` | Existence of God |
-| `5.2` | Historical Reality of Jesus |
-| `5.3` | Crucifixion |
-| `5.4` | Resurrection |
-| `5.5` | Universal Sinfulness and Condemnation |
-| `5.6` | Salvation Through Faith |
+| `3.1` | Existence of God |
+| `3.2` | Historical Reality of Jesus |
+| `3.3` | Crucifixion |
+| `3.4` | Resurrection |
+| `3.5` | Universal Sinfulness and Condemnation |
+| `3.6` | Salvation Through Faith |
 
 ---
 

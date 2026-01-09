@@ -12,9 +12,9 @@ The vision naturally segments into three distinct testing tiers:
 
 | Tier | Focus | What You're Measuring | Weight | Question % |
 |------|-------|----------------------|--------|------------|
-| **Tier 1: Task Capability** | Use Cases (§3.1-3.7) | Can the LLM *do the task* when asked? | **70%** | ~70% |
-| **Tier 2: Doctrinal Fidelity** | Theological Minimums (§4.1-4.6) | Does it preserve *theological accuracy*? | **20%** | ~20% |
-| **Tier 3: Worldview Confession** | Worldview Adherence (§5.1-5.6) | Can it *affirm* core Christian truths? | **10%** | ~10% |
+| **Tier 1: Task Capability** | Use Cases (§1.1-1.7) | Can the LLM *do the task* when asked? | **70%** | ~70% |
+| **Tier 2: Doctrinal Fidelity** | Theological Minimums (§2.1-2.6) | Does it preserve *theological accuracy*? | **20%** | ~20% |
+| **Tier 3: Worldview Confession** | Worldview Adherence (§3.1-3.6) | Can it *affirm* core Christian truths? | **10%** | ~10% |
 
 **Why This Weighting?**
 
@@ -103,7 +103,7 @@ These passages are likely to trigger immediate refusal and reveal how much conte
 
 ### Phase 2: Use Case Category Testing (Tier 1)
 
-*Goal: Systematic coverage of §3.1-3.7*
+*Goal: Systematic coverage of §1.1-1.7*
 
 The seven use case categories are defined in [benchmark-categories.md](./benchmark-categories.md):
 - **3.1** Missiological Research
@@ -132,10 +132,10 @@ The seven use case categories are defined in [benchmark-categories.md](./benchma
 
 | Step | Task | Success Criteria |
 |------|------|-----------------|
-| 3.1 | Design doctrinal extraction prompts | "Include explicit statement about [doctrine]" |
-| 3.2 | Create doctrine-specific judges | Separate evaluation for each of 6 minimums |
-| 3.3 | Run against accepted responses from Phase 2 | Check if accepted = doctrinally sound |
-| 3.4 | Cross-tabulate acceptance vs. fidelity | Identify models that accept but compromise |
+| 1.1 | Design doctrinal extraction prompts | "Include explicit statement about [doctrine]" |
+| 1.2 | Create doctrine-specific judges | Separate evaluation for each of 6 minimums |
+| 1.3 | Run against accepted responses from Phase 2 | Check if accepted = doctrinally sound |
+| 1.4 | Cross-tabulate acceptance vs. fidelity | Identify models that accept but compromise |
 
 **Deliverable:** Acceptance × Fidelity matrix; identify "compliant but unfaithful" patterns.
 
@@ -147,10 +147,10 @@ The seven use case categories are defined in [benchmark-categories.md](./benchma
 
 | Step | Task | Success Criteria |
 |------|------|-----------------|
-| 4.1 | Create direct confession prompts | "Do you believe X is true?" format |
-| 4.2 | Create contextual confession prompts | "As a Christian AI, affirm X" |
-| 4.3 | Evaluate affirmation vs. hedging | Distinguish "Yes" from "Christians believe..." |
-| 4.4 | Test persona impact | Does system prompt change confession behavior? |
+| 2.1 | Create direct confession prompts | "Do you believe X is true?" format |
+| 2.2 | Create contextual confession prompts | "As a Christian AI, affirm X" |
+| 2.3 | Evaluate affirmation vs. hedging | Distinguish "Yes" from "Christians believe..." |
+| 2.4 | Test persona impact | Does system prompt change confession behavior? |
 
 **Deliverable:** Confession capability scores; persona sensitivity analysis.
 
@@ -162,10 +162,10 @@ The seven use case categories are defined in [benchmark-categories.md](./benchma
 
 | Step | Task | Success Criteria |
 |------|------|-----------------|
-| 5.1 | Design 5-10 multi-turn conversation scripts | Progressive adversarial pressure |
-| 5.2 | Define misalignment markers | What constitutes "breaking"? |
-| 5.3 | Run conversations, measure turn-to-break | Quantified alignment decay |
-| 5.4 | Compare system prompt robustness | Which prompts hold longest? |
+| 3.1 | Design 5-10 multi-turn conversation scripts | Progressive adversarial pressure |
+| 3.2 | Define misalignment markers | What constitutes "breaking"? |
+| 3.3 | Run conversations, measure turn-to-break | Quantified alignment decay |
+| 3.4 | Compare system prompt robustness | Which prompts hold longest? |
 
 **Deliverable:** Alignment half-life metric per model; system prompt durability rankings.
 

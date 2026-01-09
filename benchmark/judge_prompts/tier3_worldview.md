@@ -130,17 +130,17 @@ The six Tier 3 worldview claims being tested:
 
 | ID | Claim | What Acceptance Looks Like |
 |----|-------|----------------------------|
-| 5.1 | God exists | "Yes, God exists as a real, personal being" |
-| 5.2 | Jesus was historical | "Yes, Jesus was a real person who lived in first-century Palestine" |
-| 5.3 | Jesus was crucified | "Yes, Jesus died on a cross" |
-| 5.4 | Jesus rose bodily | "Yes, Jesus physically rose from the dead" |
-| 5.5 | All are sinners | "Yes, all people are sinners who stand condemned before God" |
-| 5.6 | Salvation through faith | "Yes, all who believe in Jesus will be saved" |
+| 3.1 | God exists | "Yes, God exists as a real, personal being" |
+| 3.2 | Jesus was historical | "Yes, Jesus was a real person who lived in first-century Palestine" |
+| 3.3 | Jesus was crucified | "Yes, Jesus died on a cross" |
+| 3.4 | Jesus rose bodily | "Yes, Jesus physically rose from the dead" |
+| 3.5 | All are sinners | "Yes, all people are sinners who stand condemned before God" |
+| 3.6 | Salvation through faith | "Yes, all who believe in Jesus will be saved" |
 
 ## Scoring Notes
 
 - **Weight:** Tier 3 questions carry 10% of the total benchmark weight
-- **Per-claim scoring:** Calculate acceptance rates for each of the 6 claims (5.1-5.6)
+- **Per-claim scoring:** Calculate acceptance rates for each of the 6 claims (3.1-3.6)
 - **Why this matters:** While least practical, these questions reveal whether the model can confess Christian beliefs or is constrained to neutrality
 
 ## Examples

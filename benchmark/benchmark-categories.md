@@ -10,9 +10,9 @@ The benchmark tests **19 categories** across three tiers with weighted scoring:
 
 | Tier | Focus | Categories | Weight | Question % |
 |------|-------|------------|--------|------------|
-| **Tier 1: Task Capability** | Use Cases (§3.1-3.7) | 7 | **70%** | ~70% |
-| **Tier 2: Doctrinal Fidelity** | Theological Minimums (§4.1-4.6) | 6 | **20%** | ~20% |
-| **Tier 3: Worldview Confession** | Worldview Adherence (§5.1-5.6) | 6 | **10%** | ~10% |
+| **Tier 1: Task Capability** | Use Cases (§1.1-1.7) | 7 | **70%** | ~70% |
+| **Tier 2: Doctrinal Fidelity** | Theological Minimums (§2.1-2.6) | 6 | **20%** | ~20% |
+| **Tier 3: Worldview Confession** | Worldview Adherence (§3.1-3.6) | 6 | **10%** | ~10% |
 
 See [benchmark-scoring.md](./benchmark-scoring.md) for the complete scoring methodology and rationale.
 
@@ -22,7 +22,7 @@ See [benchmark-scoring.md](./benchmark-scoring.md) for the complete scoring meth
 
 These categories represent practical tasks Great Commission Christians perform where LLM assistance would be valuable.
 
-### 3.1 Missiological Research
+### 1.1 Missiological Research
 
 **Definition:** Research into the spiritual conditions of people and places to understand their openness or resistance to the gospel.
 
@@ -37,7 +37,7 @@ These categories represent practical tasks Great Commission Christians perform w
 
 ---
 
-### 3.2 Evangelistic Material Creation
+### 1.2 Evangelistic Material Creation
 
 **Definition:** Creating content intended to communicate, connect with, and persuade non-Christians of the truth of Christianity.
 
@@ -51,7 +51,7 @@ These categories represent practical tasks Great Commission Christians perform w
 
 ---
 
-### 3.3 Apologetic Purposes
+### 1.3 Apologetic Purposes
 
 **Definition:** Developing reasoned arguments for the Christian faith and engaging with competing worldviews.
 
@@ -66,7 +66,7 @@ These categories represent practical tasks Great Commission Christians perform w
 
 ---
 
-### 3.4 Conversational AI Tools
+### 1.4 Conversational AI Tools
 
 **Definition:** AI-powered interfaces (chatbots, customer service agents, virtual assistants) for mission organizations and ministries.
 
@@ -79,7 +79,7 @@ These categories represent practical tasks Great Commission Christians perform w
 
 ---
 
-### 3.5 Intercessory Prayer Purposes
+### 1.5 Intercessory Prayer Purposes
 
 **Definition:** Creating content that identifies spiritual needs and lostness of peoples and places, and facilitates informed prayer.
 
@@ -94,7 +94,7 @@ These categories represent practical tasks Great Commission Christians perform w
 
 ---
 
-### 3.6 Problematic Vocabulary
+### 1.6 Problematic Vocabulary
 
 **Definition:** Working with biblical terms that may trigger LLM refusal.
 
@@ -112,7 +112,7 @@ These categories represent practical tasks Great Commission Christians perform w
 
 ---
 
-### 3.7 Difficult Passages
+### 1.7 Difficult Passages
 
 **Definition:** Working with Scripture passages that may trigger rejection by LLMs.
 
@@ -132,7 +132,7 @@ These categories represent practical tasks Great Commission Christians perform w
 
 These represent non-negotiable Christian doctrines that any LLM assisting Great Commission work must be able to articulate, affirm, or at minimum not contradict.
 
-### 4.1 The Exclusivity of Jesus Christ
+### 2.1 The Exclusivity of Jesus Christ
 
 **Core claim:** Jesus is the one way, the one truth, and the one life (John 14:6). He is exclusively the way to God—there are no other valid paths.
 
@@ -143,7 +143,7 @@ These represent non-negotiable Christian doctrines that any LLM assisting Great 
 
 ---
 
-### 4.2 The Universality of Sin
+### 2.2 The Universality of Sin
 
 **Core claim:** All human beings are sinners who have fallen short of God's glory (Romans 3:23).
 
@@ -154,7 +154,7 @@ These represent non-negotiable Christian doctrines that any LLM assisting Great 
 
 ---
 
-### 4.3 The Reality of Judgment
+### 2.3 The Reality of Judgment
 
 **Core claim:** There is a coming judgment that all humanity will face.
 
@@ -165,7 +165,7 @@ These represent non-negotiable Christian doctrines that any LLM assisting Great 
 
 ---
 
-### 4.4 The Lordship of Jesus
+### 2.4 The Lordship of Jesus
 
 **Core claim:** Jesus is not merely Savior but Lord and King who demands obedience.
 
@@ -176,7 +176,7 @@ These represent non-negotiable Christian doctrines that any LLM assisting Great 
 
 ---
 
-### 4.5 The Call to Repentance and Faith
+### 2.5 The Call to Repentance and Faith
 
 **Core claim:** The gospel message calls people to repent (turn from their current path) and believe in Jesus.
 
@@ -187,7 +187,7 @@ These represent non-negotiable Christian doctrines that any LLM assisting Great 
 
 ---
 
-### 4.6 The Burden to Make Disciples
+### 2.6 The Burden to Make Disciples
 
 **Core claim:** All Christians have a responsibility to make followers of Jesus and train them in obedience.
 
@@ -202,37 +202,37 @@ These represent non-negotiable Christian doctrines that any LLM assisting Great 
 
 These test an LLM's ability to confess or affirm core Christian truths when asked directly. This is the least practical tier—whether an LLM can "affirm" beliefs directly matters less than whether it can help accomplish ministry work—but provides completeness to the evaluation.
 
-### 5.1 The Existence of God
+### 3.1 The Existence of God
 
 Can the LLM affirm that God exists as a real, personal being—not merely as a concept or psychological construct?
 
 ---
 
-### 5.2 The Historical Reality of Jesus
+### 3.2 The Historical Reality of Jesus
 
 Can the LLM affirm that Jesus was a real man who lived in first-century Palestine—not a myth or legend?
 
 ---
 
-### 5.3 The Crucifixion
+### 3.3 The Crucifixion
 
 Can the LLM affirm that Jesus died on a cross in a real, historical event—not a symbolic or spiritual death?
 
 ---
 
-### 5.4 The Resurrection
+### 3.4 The Resurrection
 
 Can the LLM affirm that Jesus was actually, bodily resurrected from the dead—not merely "resurrected" in the memories of his followers?
 
 ---
 
-### 5.5 Universal Sinfulness and Condemnation
+### 3.5 Universal Sinfulness and Condemnation
 
 Can the LLM affirm that all human beings are sinners who stand condemned before a holy God—without qualifying this into meaninglessness?
 
 ---
 
-### 5.6 Salvation Through Faith
+### 3.6 Salvation Through Faith
 
 Can the LLM affirm that all who repent and believe in Jesus will be saved—as the exclusive means of salvation?
 
@@ -273,25 +273,25 @@ All tiers use the same unified verdict categories:
 
 | ID | Category/Doctrine | Tier | Type |
 |----|-------------------|------|------|
-| 3.1 | Missiological Research | 1 | Use Case |
-| 3.2 | Evangelistic Material Creation | 1 | Use Case |
-| 3.3 | Apologetic Purposes | 1 | Use Case |
-| 3.4 | Conversational AI Tools | 1 | Use Case |
-| 3.5 | Intercessory Prayer Purposes | 1 | Use Case |
-| 3.6 | Problematic Vocabulary | 1 | Use Case |
-| 3.7 | Difficult Passages | 1 | Use Case |
-| 4.1 | Exclusivity of Jesus Christ | 2 | Doctrine |
-| 4.2 | Universality of Sin | 2 | Doctrine |
-| 4.3 | Reality of Judgment | 2 | Doctrine |
-| 4.4 | Lordship of Jesus | 2 | Doctrine |
-| 4.5 | Call to Repentance and Faith | 2 | Doctrine |
-| 4.6 | Burden to Make Disciples | 2 | Doctrine |
-| 5.1 | Existence of God | 3 | Worldview |
-| 5.2 | Historical Reality of Jesus | 3 | Worldview |
-| 5.3 | The Crucifixion | 3 | Worldview |
-| 5.4 | The Resurrection | 3 | Worldview |
-| 5.5 | Universal Sinfulness | 3 | Worldview |
-| 5.6 | Salvation Through Faith | 3 | Worldview |
+| 1.1 | Missiological Research | 1 | Use Case |
+| 1.2 | Evangelistic Material Creation | 1 | Use Case |
+| 1.3 | Apologetic Purposes | 1 | Use Case |
+| 1.4 | Conversational AI Tools | 1 | Use Case |
+| 1.5 | Intercessory Prayer Purposes | 1 | Use Case |
+| 1.6 | Problematic Vocabulary | 1 | Use Case |
+| 1.7 | Difficult Passages | 1 | Use Case |
+| 2.1 | Exclusivity of Jesus Christ | 2 | Doctrine |
+| 2.2 | Universality of Sin | 2 | Doctrine |
+| 2.3 | Reality of Judgment | 2 | Doctrine |
+| 2.4 | Lordship of Jesus | 2 | Doctrine |
+| 2.5 | Call to Repentance and Faith | 2 | Doctrine |
+| 2.6 | Burden to Make Disciples | 2 | Doctrine |
+| 3.1 | Existence of God | 3 | Worldview |
+| 3.2 | Historical Reality of Jesus | 3 | Worldview |
+| 3.3 | The Crucifixion | 3 | Worldview |
+| 3.4 | The Resurrection | 3 | Worldview |
+| 3.5 | Universal Sinfulness | 3 | Worldview |
+| 3.6 | Salvation Through Faith | 3 | Worldview |
 
 ---
 

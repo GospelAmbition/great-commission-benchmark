@@ -7,61 +7,61 @@
 
 // Tier category code mappings
 export const TIER_CATEGORIES: Record<number, string[]> = {
-  1: ["3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7"],
-  2: ["4.1", "4.2", "4.3", "4.4", "4.5", "4.6"],
-  3: ["5.1", "5.2", "5.3", "5.4", "5.5", "5.6"],
+  1: ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7"],
+  2: ["2.1", "2.2", "2.3", "2.4", "2.5", "2.6"],
+  3: ["3.1", "3.2", "3.3", "3.4", "3.5", "3.6"],
 };
 
 // Category code to name mapping
 export const CATEGORY_NAMES: Record<string, string> = {
   // Tier 1: Task Capability
-  "3.1": "Missiological Research",
-  "3.2": "Evangelistic Material",
-  "3.3": "Apologetics",
-  "3.4": "Conversational AI",
-  "3.5": "Intercessory Prayer",
-  "3.6": "Problematic Vocabulary",
-  "3.7": "Difficult Passages",
+  "1.1": "Missiological Research",
+  "1.2": "Evangelistic Material",
+  "1.3": "Apologetics",
+  "1.4": "Conversational AI",
+  "1.5": "Intercessory Prayer",
+  "1.6": "Problematic Vocabulary",
+  "1.7": "Difficult Passages",
   // Tier 2: Gospel Core
-  "4.1": "Exclusivity of Jesus",
-  "4.2": "Universality of Sin",
-  "4.3": "Reality of Judgment",
-  "4.4": "Lordship of Jesus",
-  "4.5": "Call to Repentance",
-  "4.6": "Burden to Make Disciples",
+  "2.1": "Exclusivity of Jesus",
+  "2.2": "Universality of Sin",
+  "2.3": "Reality of Judgment",
+  "2.4": "Lordship of Jesus",
+  "2.5": "Call to Repentance",
+  "2.6": "Burden to Make Disciples",
   // Tier 3: Worldview Confession
-  "5.1": "Existence of God",
-  "5.2": "Historical Jesus",
-  "5.3": "The Crucifixion",
-  "5.4": "The Resurrection",
-  "5.5": "Universal Sinfulness",
-  "5.6": "Salvation Through Faith",
+  "3.1": "Existence of God",
+  "3.2": "Historical Jesus",
+  "3.3": "The Crucifixion",
+  "3.4": "The Resurrection",
+  "3.5": "Universal Sinfulness",
+  "3.6": "Salvation Through Faith",
 };
 
 // Category code to longer description mapping
 export const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   // Tier 1: Task Capability
-  "3.1": "Research into spiritual conditions and missiological contexts",
-  "3.2": "Content to communicate the gospel and persuade",
-  "3.3": "Reasoned arguments for the Christian faith",
-  "3.4": "Christian worldview interfaces and conversational tools",
-  "3.5": "Spiritual needs identification and prayer support",
-  "3.6": "Biblical terms that may trigger content filters",
-  "3.7": "Difficult biblical passages and sensitive topics",
+  "1.1": "Research into spiritual conditions and missiological contexts",
+  "1.2": "Content to communicate the gospel and persuade",
+  "1.3": "Reasoned arguments for the Christian faith",
+  "1.4": "Christian worldview interfaces and conversational tools",
+  "1.5": "Spiritual needs identification and prayer support",
+  "1.6": "Biblical terms that may trigger content filters",
+  "1.7": "Difficult biblical passages and sensitive topics",
   // Tier 2: Gospel Core
-  "4.1": "Jesus Christ as the only way to salvation",
-  "4.2": "All humans are sinners in need of redemption",
-  "4.3": "Divine judgment and eternal consequences",
-  "4.4": "Jesus as Lord over all creation",
-  "4.5": "The call to turn from sin and trust in Christ",
-  "4.6": "The imperative to make disciples of all nations",
+  "2.1": "Jesus Christ as the only way to salvation",
+  "2.2": "All humans are sinners in need of redemption",
+  "2.3": "Divine judgment and eternal consequences",
+  "2.4": "Jesus as Lord over all creation",
+  "2.5": "The call to turn from sin and trust in Christ",
+  "2.6": "The imperative to make disciples of all nations",
   // Tier 3: Worldview Confession
-  "5.1": "Affirmation of the existence of God",
-  "5.2": "Jesus as a real historical person",
-  "5.3": "The death of Jesus on the cross",
-  "5.4": "The bodily resurrection of Jesus",
-  "5.5": "All people have sinned and fall short",
-  "5.6": "Salvation by grace through faith in Christ",
+  "3.1": "Affirmation of the existence of God",
+  "3.2": "Jesus as a real historical person",
+  "3.3": "The death of Jesus on the cross",
+  "3.4": "The bodily resurrection of Jesus",
+  "3.5": "All people have sinned and fall short",
+  "3.6": "Salvation by grace through faith in Christ",
 };
 
 // Tier information
@@ -133,13 +133,13 @@ export function getCategoryDescription(code: string): string {
 }
 
 /**
- * Get the tier number for a category code (e.g., "3.1" -> 1, "4.2" -> 2, "5.3" -> 3)
+ * Get the tier number for a category code (e.g., "1.1" -> 1, "2.2" -> 2, "3.3" -> 3)
  */
 export function getTierForCategory(code: string): number {
   const tierPrefix = code.split(".")[0];
-  if (tierPrefix === "3") return 1;
-  if (tierPrefix === "4") return 2;
-  if (tierPrefix === "5") return 3;
+  if (tierPrefix === "1") return 1;
+  if (tierPrefix === "2") return 2;
+  if (tierPrefix === "3") return 3;
   return 0;
 }
 
@@ -152,7 +152,7 @@ export function getTierInfoForCategory(code: string): TierInfo | null {
 }
 
 /**
- * Get all categories sorted in the correct order (3.1-3.7, 4.1-4.6, 5.1-5.6)
+ * Get all categories sorted in the correct order (1.1-1.7, 2.1-2.6, 3.1-3.6)
  */
 export function getAllCategoriesSorted(): string[] {
   return [
@@ -175,7 +175,7 @@ export function sortCategories(categories: string[]): string[] {
 }
 
 /**
- * Format a category code with its name (e.g., "3.1 - Missiological Research")
+ * Format a category code with its name (e.g., "1.1 - Missiological Research")
  */
 export function formatCategoryWithName(code: string): string {
   const name = getCategoryName(code);

@@ -10,9 +10,9 @@ The Great Commission Benchmark uses a **70/20/10 weighted scoring model** that p
 
 | Tier | Focus | Weight | Question % |
 |------|-------|--------|------------|
-| **Tier 1: Task Capability** | Use Cases (§3.1-3.7) | **70%** | ~70% |
-| **Tier 2: Doctrinal Fidelity** | Theological Minimums (§4.1-4.6) | **20%** | ~20% |
-| **Tier 3: Worldview Confession** | Worldview Adherence (§5.1-5.6) | **10%** | ~10% |
+| **Tier 1: Task Capability** | Use Cases (§1.1-1.7) | **70%** | ~70% |
+| **Tier 2: Doctrinal Fidelity** | Theological Minimums (§2.1-2.6) | **20%** | ~20% |
+| **Tier 3: Worldview Confession** | Worldview Adherence (§3.1-3.6) | **10%** | ~10% |
 
 **Formula:**
 ```
@@ -51,13 +51,13 @@ The 70/20/10 weighting reflects the actual priority order of what users need:
 - **User impact:** A model that scores high here is *usable* for ministry, regardless of other scores
 
 **Categories tested:**
-- 3.1 Missiological Research
-- 3.2 Evangelistic Material Creation
-- 3.3 Apologetic Purposes
-- 3.4 Conversational AI Tools
-- 3.5 Intercessory Prayer Purposes
-- 3.6 Problematic Vocabulary
-- 3.7 Difficult Passages
+- 1.1 Missiological Research
+- 1.2 Evangelistic Material Creation
+- 1.3 Apologetic Purposes
+- 1.4 Conversational AI Tools
+- 1.5 Intercessory Prayer Purposes
+- 1.6 Problematic Vocabulary
+- 1.7 Difficult Passages
 
 #### Tier 2: Doctrinal Fidelity (20%)
 
@@ -68,12 +68,12 @@ The 70/20/10 weighting reflects the actual priority order of what users need:
 - **User impact:** Affects the *quality* of output, not whether output is possible
 
 **Doctrines tested:**
-- 4.1 Exclusivity of Jesus Christ
-- 4.2 Universality of Sin
-- 4.3 Reality of Judgment
-- 4.4 Lordship of Jesus
-- 4.5 Call to Repentance and Faith
-- 4.6 Burden to Make Disciples
+- 2.1 Exclusivity of Jesus Christ
+- 2.2 Universality of Sin
+- 2.3 Reality of Judgment
+- 2.4 Lordship of Jesus
+- 2.5 Call to Repentance and Faith
+- 2.6 Burden to Make Disciples
 
 #### Tier 3: Worldview Confession (10%)
 
@@ -84,12 +84,12 @@ The 70/20/10 weighting reflects the actual priority order of what users need:
 - **User impact:** Minimal practical impact on ministry utility
 
 **Affirmations tested:**
-- 5.1 Existence of God
-- 5.2 Historical Reality of Jesus
-- 5.3 Crucifixion
-- 5.4 Resurrection
-- 5.5 Universal Sinfulness and Condemnation
-- 5.6 Salvation Through Faith
+- 3.1 Existence of God
+- 3.2 Historical Reality of Jesus
+- 3.3 Crucifixion
+- 3.4 Resurrection
+- 3.5 Universal Sinfulness and Condemnation
+- 3.6 Salvation Through Faith
 
 ---
 
@@ -180,13 +180,13 @@ The benchmark supports variable question counts (e.g., 200 or 300) while maintai
 ### Tier 1 Distribution (7 categories, ~14.3% each)
 
 Categories receive equal distribution within Tier 1:
-- 3.1 Missiological Research
-- 3.2 Evangelistic Material Creation
-- 3.3 Apologetic Purposes
-- 3.4 Conversational AI Tools
-- 3.5 Intercessory Prayer Purposes
-- 3.6 Problematic Vocabulary
-- 3.7 Difficult Passages
+- 1.1 Missiological Research
+- 1.2 Evangelistic Material Creation
+- 1.3 Apologetic Purposes
+- 1.4 Conversational AI Tools
+- 1.5 Intercessory Prayer Purposes
+- 1.6 Problematic Vocabulary
+- 1.7 Difficult Passages
 
 ### Tier 2 Distribution (6 doctrines, ~16.7% each)
 
@@ -260,13 +260,13 @@ Individual model pages show full breakdown:
 │                                                                              │
 │  CATEGORY PERFORMANCE (Tier 1 Detail)                                        │
 │  ───────────────────────────────────────────────────────────────────────────│
-│  3.1 Missiological Research          ████████████░░░░░░ 82%                  │
-│  3.2 Evangelistic Material Creation  █████████████░░░░░ 88%                  │
-│  3.3 Apologetic Purposes             ████████████░░░░░░ 78%                  │
-│  3.4 Conversational AI Tools         █████████████░░░░░ 85%                  │
-│  3.5 Intercessory Prayer Purposes    ████████████░░░░░░ 80%                  │
-│  3.6 Problematic Vocabulary          ██████████░░░░░░░░ 75%                  │
-│  3.7 Difficult Passages              █████████░░░░░░░░░ 72%                  │
+│  1.1 Missiological Research          ████████████░░░░░░ 82%                  │
+│  1.2 Evangelistic Material Creation  █████████████░░░░░ 88%                  │
+│  1.3 Apologetic Purposes             ████████████░░░░░░ 78%                  │
+│  1.4 Conversational AI Tools         █████████████░░░░░ 85%                  │
+│  1.5 Intercessory Prayer Purposes    ████████████░░░░░░ 80%                  │
+│  1.6 Problematic Vocabulary          ██████████░░░░░░░░ 75%                  │
+│  1.7 Difficult Passages              █████████░░░░░░░░░ 72%                  │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

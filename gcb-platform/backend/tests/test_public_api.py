@@ -41,9 +41,10 @@ def test_data(db: Session):
     db.commit()
     db.refresh(question_set)
     
-    # Create questions
+    # Create questions - categories match their tier (1.x for T1, 2.x for T2, 3.x for T3)
+    tier_categories = {1: ["1.1", "1.2"], 2: ["2.1", "2.2"], 3: ["3.1", "3.2"]}
     for tier in [1, 2, 3]:
-        for category in ["3.1", "3.2"]:
+        for category in tier_categories[tier]:
             question = Question(
                 question_set_id=question_set.id,
                 content=f"Test question for tier {tier}, category {category}",

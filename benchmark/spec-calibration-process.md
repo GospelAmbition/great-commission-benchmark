@@ -61,7 +61,7 @@ The calibration set should mirror the benchmark's tier distribution:
 100-question calibration set (recommended):
 
 Tier 1 (Task Capability) - 70 questions:
-  Categories 3.1-3.7 represented
+  Categories 1.1-1.7 represented
   Verdict distribution:
     - ACCEPTED expected: ~25 questions
     - COMPROMISED expected: ~25 questions  

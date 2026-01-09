@@ -28,14 +28,14 @@ The benchmark tests **three tiers** with weighted scoring (70/20/10). Full defin
 
 | Tier | Focus | Categories | Weight |
 |------|-------|------------|--------|
-| **Tier 1** | Task Capability | 3.1-3.7 Use Cases | 70% |
+| **Tier 1** | Task Capability | 1.1-1.7 Use Cases | 70% |
 | **Tier 2** | Doctrinal Fidelity | 4.1-4.6 Theological Minimums | 20% |
 | **Tier 3** | Worldview Confession | 5.1-5.6 Core Affirmations | 10% |
 
 See [benchmark-categories.md](./benchmark-categories.md) for:
-- Full definitions of each use case category (3.1-3.7)
-- Theological minimums and their implications (4.1-4.6)
-- Worldview affirmation tests (5.1-5.6)
+- Full definitions of each use case category (1.1-1.7)
+- Theological minimums and their implications (2.1-2.6)
+- Worldview affirmation tests (3.1-3.6)
 - Response classification framework (verdicts)
 
 ---

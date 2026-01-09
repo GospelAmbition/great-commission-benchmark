@@ -296,7 +296,7 @@ CREATE TABLE questions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     question_set_id UUID REFERENCES question_sets(id),
     content TEXT NOT NULL,
-    category VARCHAR(100) NOT NULL,         -- Use case category (3.1-3.7)
+    category VARCHAR(100) NOT NULL,         -- Use case category (1.1-1.7)
     tier INTEGER NOT NULL,                  -- 1=Task, 2=Doctrinal, 3=Worldview
     subcategory VARCHAR(100),
     expected_verdict VARCHAR(50),
@@ -766,9 +766,9 @@ A dedicated public page supporting Christian organizations developing or fine-tu
 
 | Tier | Focus | What's Measured | Weight |
 |------|-------|-----------------|--------|
-| **Tier 1: Task Capability** | Use Cases (§3.1-3.7) | Can the LLM *do the task* when asked? | **70%** |
-| **Tier 2: Doctrinal Fidelity** | Theological Minimums (§4.1-4.6) | Does it preserve *theological accuracy*? | **20%** |
-| **Tier 3: Worldview Confession** | Worldview Adherence (§5.1-5.6) | Can it *affirm* core Christian truths? | **10%** |
+| **Tier 1: Task Capability** | Use Cases (§1.1-1.7) | Can the LLM *do the task* when asked? | **70%** |
+| **Tier 2: Doctrinal Fidelity** | Theological Minimums (§2.1-2.6) | Does it preserve *theological accuracy*? | **20%** |
+| **Tier 3: Worldview Confession** | Worldview Adherence (§3.1-3.6) | Can it *affirm* core Christian truths? | **10%** |
 
 **Why 70/20/10 Weighting:**
 

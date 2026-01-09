@@ -59,7 +59,7 @@ class ScoringService:
         
         Args:
             results: List of Result objects
-            category: Category identifier (e.g., "3.1")
+            category: Category identifier (e.g., "1.1")
         
         Returns:
             Score as percentage (0-100)

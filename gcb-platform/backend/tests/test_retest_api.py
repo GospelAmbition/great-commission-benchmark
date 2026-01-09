@@ -65,12 +65,13 @@ def test_data(db: Session, test_user: User):
     
     # Create questions
     questions = []
+    tier_categories = {1: "1.1", 2: "2.1", 3: "3.1"}
     for tier in [1, 2, 3]:
         for i in range(3):
             question = Question(
                 question_set_id=question_set.id,
                 content=f"Question {i} tier {tier}",
-                category="3.1",
+                category=tier_categories[tier],
                 tier=tier
             )
             db.add(question)
