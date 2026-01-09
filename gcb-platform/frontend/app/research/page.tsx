@@ -604,7 +604,7 @@ export default function ResearchPage() {
                       70% weight
                     </Badge>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {TIER_CATEGORIES[1].map((categoryCode) => {
                       const data = categoryRankings[categoryCode];
                       return (
@@ -630,7 +630,7 @@ export default function ResearchPage() {
                       20% weight
                     </Badge>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {TIER_CATEGORIES[2].map((categoryCode) => {
                       const data = categoryRankings[categoryCode];
                       return (
@@ -656,7 +656,7 @@ export default function ResearchPage() {
                       10% weight
                     </Badge>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {TIER_CATEGORIES[3].map((categoryCode) => {
                       const data = categoryRankings[categoryCode];
                       return (
