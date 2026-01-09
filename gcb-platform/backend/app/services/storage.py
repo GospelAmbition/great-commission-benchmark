@@ -1,14 +1,28 @@
-"""S3-compatible Storage service for image uploads (Railway Simple Storage or AWS S3)"""
+"""S3-compatible Storage service for image uploads (Railway Simple Storage or AWS S3)
+
+Railway buckets are private by design and don't support public ACLs.
+Files are served through a backend proxy endpoint (/api/v1/files/{path}).
+"""
 import boto3
 from botocore.exceptions import ClientError
 from fastapi import UploadFile, HTTPException
+from fastapi.responses import StreamingResponse
 import uuid
 import logging
 from typing import Optional
+import io
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Content type to extension mapping for validation
+ALLOWED_IMAGE_TYPES = {
+    "image/jpeg": [".jpg", ".jpeg"],
+    "image/png": [".png"],
+    "image/gif": [".gif"],
+    "image/webp": [".webp"],
+}
 
 
 def get_s3_client():
@@ -33,14 +47,53 @@ def get_s3_client():
 
 
 def get_public_url(filename: str) -> str:
-    """Generate public URL for an uploaded file"""
-    if settings.S3_PUBLIC_URL_BASE:
-        # Use configured public URL base (Railway or custom CDN)
-        base = settings.S3_PUBLIC_URL_BASE.rstrip('/')
-        return f"{base}/{filename}"
-    else:
-        # Fall back to AWS S3 URL format
-        return f"https://{settings.S3_BUCKET}.s3.{settings.S3_REGION}.amazonaws.com/{filename}"
+    """Generate public URL for an uploaded file via backend proxy.
+    
+    Railway buckets are private, so we serve files through the backend.
+    URLs are in format: {BACKEND_PUBLIC_URL}/api/v1/files/{filename}
+    """
+    base = settings.BACKEND_PUBLIC_URL.rstrip('/')
+    return f"{base}/api/v1/files/{filename}"
+
+
+async def get_file(filename: str) -> StreamingResponse:
+    """
+    Fetch a file from S3-compatible storage and return as streaming response.
+    Used by the public file proxy endpoint.
+    
+    Args:
+        filename: The S3 key/path to fetch
+    
+    Returns:
+        StreamingResponse with the file content
+    """
+    try:
+        s3_client = get_s3_client()
+        
+        response = s3_client.get_object(
+            Bucket=settings.S3_BUCKET,
+            Key=filename
+        )
+        
+        content_type = response.get('ContentType', 'application/octet-stream')
+        content_length = response.get('ContentLength')
+        
+        # Stream the file content
+        return StreamingResponse(
+            response['Body'].iter_chunks(),
+            media_type=content_type,
+            headers={
+                "Content-Length": str(content_length) if content_length else "",
+                "Cache-Control": "public, max-age=31536000, immutable",  # Cache for 1 year
+            }
+        )
+        
+    except ClientError as e:
+        error_code = e.response.get('Error', {}).get('Code', '')
+        if error_code == 'NoSuchKey':
+            raise HTTPException(status_code=404, detail="File not found")
+        logger.error(f"S3 get error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve file")
 
 
 async def upload_image(
@@ -60,7 +113,7 @@ async def upload_image(
         dict with url, filename, size, content_type
     """
     if allowed_types is None:
-        allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+        allowed_types = list(ALLOWED_IMAGE_TYPES.keys())
     
     # Validate content type
     if file.content_type not in allowed_types:
@@ -88,16 +141,15 @@ async def upload_image(
     try:
         s3_client = get_s3_client()
         
-        # Upload to S3-compatible storage with public-read ACL
+        # Upload to S3-compatible storage (no ACL - Railway buckets are private)
         s3_client.put_object(
             Bucket=settings.S3_BUCKET,
             Key=unique_filename,
             Body=content,
-            ContentType=file.content_type,
-            ACL='public-read'
+            ContentType=file.content_type
         )
         
-        # Generate public URL
+        # Generate proxy URL (served through backend)
         url = get_public_url(unique_filename)
         
         logger.info(f"Uploaded image to storage: {unique_filename}")

@@ -48,6 +48,8 @@ Before deploying, ensure you have:
 
 ### 4. Set Up Storage Bucket (for Blog Images)
 
+**Important:** Railway buckets are private by design and don't support public ACLs. Files are served through a backend proxy endpoint (`/api/v1/files/{path}`).
+
 1. In Railway project dashboard, click **New Service** → **Bucket**
 2. Name your bucket (e.g., `gcb-storage`)
 3. Once created, note the following from the bucket settings:
@@ -55,24 +57,8 @@ Before deploying, ensure you have:
    - **Endpoint URL** (e.g., `https://your-bucket.storage.railway.app`)
    - **Access Key ID**
    - **Secret Access Key**
-4. Configure CORS for browser uploads (if needed):
-   ```bash
-   AWS_ACCESS_KEY_ID=your_access_key_id \
-   AWS_SECRET_ACCESS_KEY=your_secret_access_key \
-   aws s3api put-bucket-cors \
-     --bucket your_bucket_name \
-     --endpoint-url https://your-bucket.storage.railway.app \
-     --cors-configuration '{
-       "CORSRules": [
-         {
-           "AllowedHeaders": ["*"],
-           "AllowedMethods": ["PUT", "POST", "GET"],
-           "AllowedOrigins": ["https://greatcommissionbenchmark.ai", "https://frontend-production-8b79.up.railway.app"],
-           "MaxAgeSeconds": 3000
-         }
-       ]
-     }'
-   ```
+4. Add the storage environment variables to your backend (see below)
+5. Set `BACKEND_PUBLIC_URL` to your backend's public URL - this is used to generate file URLs that route through the backend proxy
 
 ### 5. Configure Custom Domain
 
@@ -106,13 +92,13 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxx
 RESEND_API_KEY=re_xxxxxxxx
 EMAIL_FROM=Great Commission Benchmark <noreply@greatcommissionbenchmark.ai>
 
-# Storage (Railway Simple Storage)
+# Storage (Railway Simple Storage - private buckets, served via backend proxy)
 S3_ACCESS_KEY_ID=your-railway-access-key
 S3_SECRET_ACCESS_KEY=your-railway-secret-key
 S3_BUCKET=your-bucket-name
 S3_ENDPOINT_URL=https://your-bucket.storage.railway.app
 S3_REGION=us-east-1
-S3_PUBLIC_URL_BASE=https://your-bucket.storage.railway.app
+BACKEND_PUBLIC_URL=https://api.greatcommissionbenchmark.ai
 ```
 
 ### Frontend (Production)
@@ -145,13 +131,13 @@ For the current Railway test deployment:
 ```env
 CORS_ORIGINS_STR=http://localhost:3000,https://frontend-production-8b79.up.railway.app
 
-# Storage (Railway Simple Storage) - get these from your Railway bucket
+# Storage (Railway Simple Storage - private buckets, served via backend proxy)
 S3_ACCESS_KEY_ID=your-railway-access-key
 S3_SECRET_ACCESS_KEY=your-railway-secret-key
 S3_BUCKET=your-bucket-name
 S3_ENDPOINT_URL=https://your-bucket.storage.railway.app
 S3_REGION=us-east-1
-S3_PUBLIC_URL_BASE=https://your-bucket.storage.railway.app
+BACKEND_PUBLIC_URL=https://backend-production-ba51.up.railway.app
 ```
 
 **Frontend:**

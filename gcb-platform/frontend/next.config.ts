@@ -4,10 +4,18 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   images: {
     remotePatterns: [
+      // Backend proxy for storage files (Railway buckets are private)
       {
         protocol: "https",
-        hostname: "storage.railway.app",
-        pathname: "/**",
+        hostname: "backend-production-ba51.up.railway.app",
+        pathname: "/api/v1/files/**",
+      },
+      // Local development
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "8000",
+        pathname: "/api/v1/files/**",
       },
     ],
   },

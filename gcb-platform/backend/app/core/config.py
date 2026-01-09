@@ -65,7 +65,10 @@ class Settings(BaseSettings):
     S3_BUCKET: str = ""
     S3_ENDPOINT_URL: str = ""  # Railway: set to endpoint URL, AWS: leave empty
     S3_REGION: str = "us-east-1"
-    S3_PUBLIC_URL_BASE: str = ""  # Public URL base for serving files
+    
+    # Backend public URL for generating file proxy URLs
+    # Railway buckets are private, so files are served through /api/v1/files/{path}
+    BACKEND_PUBLIC_URL: str = "http://localhost:8000"
     
     model_config = SettingsConfigDict(
         env_file=".env",

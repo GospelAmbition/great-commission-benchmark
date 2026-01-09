@@ -17,7 +17,8 @@ from app.api.v1.endpoints import (
     admin,
     benchmark,
     sponsorship,
-    blog
+    blog,
+    files
 )
 
 api_router = APIRouter()
@@ -75,3 +76,6 @@ api_router.include_router(blog.public_router, prefix="/blog", tags=["blog"])
 
 # Blog Admin API
 api_router.include_router(blog.admin_router, prefix="/admin/blog", tags=["admin-blog"])
+
+# Files API (public proxy for Railway storage - buckets are private by design)
+api_router.include_router(files.router, prefix="/files", tags=["files"])
