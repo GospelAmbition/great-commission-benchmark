@@ -90,7 +90,7 @@ export default function InsightsPage() {
       {/* Page Header */}
       <div className="relative border-b border-white/[0.06] overflow-hidden">
         <div className="absolute inset-0 gradient-hero" />
-        <div className="absolute top-1/2 right-0 w-96 h-96 gradient-red-glow opacity-20" />
+        <div className="absolute top-1/2 right-0 w-96 h-96 gradient-red-glow opacity-40" />
         
         <div className="container relative py-8">
           <div className="flex items-center gap-3 mb-2">

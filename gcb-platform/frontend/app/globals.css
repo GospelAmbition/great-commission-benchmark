@@ -312,11 +312,11 @@
 
 /* Gradient utilities */
 .gradient-hero {
-  background: linear-gradient(135deg, #09090b 0%, #1a0a0a 50%, #09090b 100%);
+  background: linear-gradient(135deg, #09090b 0%, #2a0a0a 50%, #09090b 100%);
 }
 
 .gradient-red-glow {
-  background: radial-gradient(ellipse at center, rgba(220, 38, 38, 0.15) 0%, transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(220, 38, 38, 0.3) 0%, transparent 70%);
 }
 
 /* Glass effect */

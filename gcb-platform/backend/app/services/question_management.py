@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 from app.db.models.question import Question
 from app.db.models.question_set import QuestionSet
 from app.db.models.test_run import TestRun
+from app.db.models.methodology_version import MethodologyVersion
 from app.core.benchmark_config import (
     TIER_PERCENTAGES,
     DIFFICULTY_PERCENTAGES,
@@ -169,6 +170,13 @@ class QuestionManagementService:
             # Delete all questions first
             deleted_questions = self.db.query(Question).filter(
                 Question.question_set_id == question_set_id
+            ).delete(synchronize_session=False)
+            
+            # Delete all methodology_versions associated with this question set
+            # This must be done explicitly before deleting the question set to avoid
+            # SQLAlchemy trying to set question_set_id to NULL (which violates NOT NULL constraint)
+            deleted_methodologies = self.db.query(MethodologyVersion).filter(
+                MethodologyVersion.question_set_id == question_set_id
             ).delete(synchronize_session=False)
             
             version = question_set.semantic_version

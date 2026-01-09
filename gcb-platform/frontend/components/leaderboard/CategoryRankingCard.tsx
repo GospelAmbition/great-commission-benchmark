@@ -93,30 +93,13 @@ export function CategoryRankingCard({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-white/[0.06] flex items-center justify-between">
-        {description ? (
-          <p className="text-xs text-muted-foreground leading-relaxed flex-1">
+      {description && (
+        <div className="px-4 py-3 border-t border-white/[0.06]">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             {description}
           </p>
-        ) : (
-          <span />
-        )}
-        <div className="flex items-center gap-2 ml-2">
-          {totalModels != null && totalModels > 0 && (
-            <span className="text-xs text-muted-foreground/70">
-              {totalModels} models
-            </span>
-          )}
-          {tierInfo && (
-            <Badge
-              variant="outline"
-              className={`${tierInfo.bgColor} ${tierInfo.color} border-transparent text-[10px] shrink-0`}
-            >
-              {tierInfo.shortName}
-            </Badge>
-          )}
         </div>
-      </div>
+      )}
     </Link>
   );
 }

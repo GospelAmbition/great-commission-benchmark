@@ -16,9 +16,10 @@ import {
 import { apiClient } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CategoryChart } from "@/components/charts/CategoryChart";
+import { TopPerformersTierComparisonChart } from "@/components/charts/TopPerformersTierComparisonChart";
 import { ProviderIcon } from "@/components/ui/provider-icon";
 import { ArrowLeft } from "lucide-react";
+import { TIER_INFO } from "@/lib/benchmark-definitions";
 
 const CATEGORY_INFO: Record<string, { name: string; description: string; tier: string }> = {
   scripture: {
@@ -74,6 +75,9 @@ interface CategoryModel {
   provider: string;
   category_score: number;
   overall_score: number;
+  tier1_score?: number;
+  tier2_score?: number;
+  tier3_score?: number;
   trust_tier?: string;
 }
 
@@ -112,6 +116,9 @@ export default function CategoryPage() {
             provider: item.provider,
             category_score: item.category_scores?.[categoryId] || item.overall_score,
             overall_score: item.overall_score,
+            tier1_score: item.tier1_score,
+            tier2_score: item.tier2_score,
+            tier3_score: item.tier3_score,
             trust_tier: item.trust_tier,
           }))
         );
@@ -134,10 +141,6 @@ export default function CategoryPage() {
   }
 
   const topPerformers = models.slice(0, 3);
-  const chartData: Record<string, number> = {};
-  topPerformers.forEach((model) => {
-    chartData[model.model_name] = model.category_score;
-  });
 
   return (
     <div className="container py-8">
@@ -148,11 +151,15 @@ export default function CategoryPage() {
             Back to Categories
           </Link>
         </Button>
-        <div className="flex items-center gap-4 mb-2">
-          <h1 className="text-4xl font-bold capitalize">{categoryInfo.name}</h1>
-          <Badge variant="secondary">{categoryInfo.tier}</Badge>
-        </div>
-        <p className="text-muted-foreground">{categoryInfo.description}</p>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-4 mb-2">
+              <CardTitle className="text-4xl font-bold capitalize mb-0">{categoryInfo.name}</CardTitle>
+              <Badge variant="secondary">{categoryInfo.tier}</Badge>
+            </div>
+            <CardDescription className="text-base">{categoryInfo.description}</CardDescription>
+          </CardHeader>
+        </Card>
       </div>
 
       {/* Top Performers */}
@@ -188,13 +195,24 @@ export default function CategoryPage() {
       </div>
 
       {/* Top Performers Chart */}
-      {Object.keys(chartData).length > 0 && (
+      {topPerformers.length > 0 && (
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Top Performers Comparison</CardTitle>
+            <CardDescription>
+              {TIER_INFO[1].name} • {TIER_INFO[2].name} • {TIER_INFO[3].name}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <CategoryChart data={chartData} />
+            <TopPerformersTierComparisonChart
+              data={topPerformers.map((model) => ({
+                model_name: model.model_name,
+                tier1_score: model.tier1_score,
+                tier2_score: model.tier2_score,
+                tier3_score: model.tier3_score,
+                provider: model.provider,
+              }))}
+            />
           </CardContent>
         </Card>
       )}
