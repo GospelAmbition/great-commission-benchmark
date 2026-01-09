@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Calendar, User, Tag } from "lucide-react";
+import { ArrowLeft, Calendar, Tag } from "lucide-react";
 
 interface BlogCategory {
   id: string;
@@ -151,10 +151,6 @@ export default function BlogPostPage() {
 
         {/* Meta */}
         <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
-          <span className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            {post.author.name || "Anonymous"}
-          </span>
           <span className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             {formatDate(post.published_at)}

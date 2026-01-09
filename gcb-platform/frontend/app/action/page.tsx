@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, User, ArrowRight } from "lucide-react";
+import { Calendar, ArrowRight } from "lucide-react";
 import { ArticleIcon } from "@/lib/icons";
 
 interface BlogCategory {
@@ -203,10 +203,6 @@ export default function ActionPage() {
                     </Link>
                   </CardTitle>
                   <CardDescription className="flex items-center gap-4 text-xs">
-                    <span className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      {post.author.name || "Anonymous"}
-                    </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       {formatDate(post.published_at)}
