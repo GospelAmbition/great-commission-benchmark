@@ -1364,10 +1364,10 @@ export default function BenchmarkDashboardPage() {
                           key={idx}
                           className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
                             alert.type === "error"
-                              ? "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
+                              ? "bg-red-50 text-red-700 dark:bg-red-900/60 dark:text-red-400"
                               : alert.type === "warning"
-                              ? "bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400"
-                              : "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400"
+                              ? "bg-orange-50 text-orange-700 dark:bg-orange-900/60 dark:text-orange-400"
+                              : "bg-blue-50 text-blue-700 dark:bg-blue-900/60 dark:text-blue-400"
                           }`}
                         >
                           <span className="flex-shrink-0">
@@ -1453,17 +1453,17 @@ export default function BenchmarkDashboardPage() {
                                 <TableCell className="font-medium">{catStats.count}</TableCell>
                                 <TableCell className="text-muted-foreground">{catStats.target}</TableCell>
                                 <TableCell>
-                                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20">
+                                  <Badge variant="outline" className="bg-green-50 dark:bg-green-900/60">
                                     {catStats.difficulty?.easy || 0}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant="outline" className="bg-yellow-50 dark:bg-yellow-950/20">
+                                  <Badge variant="outline" className="bg-yellow-50 dark:bg-yellow-900/60">
                                     {catStats.difficulty?.medium || 0}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant="outline" className="bg-red-50 dark:bg-red-950/20">
+                                  <Badge variant="outline" className="bg-red-50 dark:bg-red-900/60">
                                     {catStats.difficulty?.hard || 0}
                                   </Badge>
                                 </TableCell>
@@ -1665,10 +1665,10 @@ export default function BenchmarkDashboardPage() {
                                 variant="outline"
                                 className={
                                   q.metadata?.difficulty === "easy" 
-                                    ? "bg-green-50 dark:bg-green-950/20" 
+                                    ? "bg-green-50 dark:bg-green-900/60" 
                                     : q.metadata?.difficulty === "hard"
-                                    ? "bg-red-50 dark:bg-red-950/20"
-                                    : "bg-yellow-50 dark:bg-yellow-950/20"
+                                    ? "bg-red-50 dark:bg-red-900/60"
+                                    : "bg-yellow-50 dark:bg-yellow-900/60"
                                 }
                               >
                                 {q.metadata?.difficulty || "?"}
@@ -1685,10 +1685,10 @@ export default function BenchmarkDashboardPage() {
                                   variant="outline"
                                   className={
                                     q.expected_verdict === "ACCEPTED"
-                                      ? "bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400"
+                                      ? "bg-blue-50 dark:bg-blue-900/60 text-blue-700 dark:text-blue-400"
                                       : q.expected_verdict === "COMPROMISED"
-                                      ? "bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400"
-                                      : "bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400"
+                                      ? "bg-orange-50 dark:bg-orange-900/60 text-orange-700 dark:text-orange-400"
+                                      : "bg-red-50 dark:bg-red-900/60 text-red-700 dark:text-red-400"
                                   }
                                 >
                                   {q.expected_verdict}

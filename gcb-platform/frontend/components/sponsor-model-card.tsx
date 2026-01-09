@@ -340,10 +340,10 @@ export function SponsorModelCard() {
       return <Badge variant="outline" className="text-xs">Payment Pending</Badge>;
     }
     if (status === "pending") {
-      return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">Pending Review</Badge>;
+      return <Badge variant="outline" className="bg-yellow-50 dark:bg-yellow-900/60 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700 text-xs">Pending Review</Badge>;
     }
     if (status === "approved") {
-      return <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 text-xs">Approved</Badge>;
+      return <Badge variant="default" className="bg-green-100 dark:bg-green-900/60 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700 text-xs">Approved</Badge>;
     }
     if (status === "rejected") {
       return <Badge variant="destructive" className="text-xs">Rejected</Badge>;
