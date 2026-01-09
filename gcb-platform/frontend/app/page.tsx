@@ -7,6 +7,7 @@ import { apiClient, StatsResponse } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, BarChart3, BookOpen } from "lucide-react";
+import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 
 export default function Home() {
   const [rankings, setRankings] = useState<any[]>([]);
@@ -63,15 +64,22 @@ export default function Home() {
         />
         
         <div className="container relative py-16 md:py-24">
-          <div className="max-w-3xl animate-fade-in-up">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-light text-foreground mb-6 leading-tight tracking-tight">
-              Evaluating AI for the
-              <span className="block text-primary font-light text-5xl md:text-6xl lg:text-7xl">Great Commission</span>
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl leading-relaxed">
-              Which AI models will actually help you make disciples? 
-              We measure task capability, gospel core fidelity, and worldview alignment.
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="max-w-3xl animate-fade-in-up">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-light text-foreground mb-6 leading-tight tracking-tight">
+                Evaluating AI for the
+                <span className="block text-primary font-light text-5xl md:text-6xl lg:text-7xl">Great Commission</span>
+              </h1>
+              <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl leading-relaxed">
+                Which AI models will actually help you make disciples? 
+                We measure task capability, gospel core fidelity, and worldview alignment.
+              </p>
+            </div>
+            
+            {/* Guardrails Animation - hidden on smaller screens */}
+            <div className="hidden lg:block shrink-0">
+              <GuardrailsAnimation />
+            </div>
           </div>
         </div>
       </section>
