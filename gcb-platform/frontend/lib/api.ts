@@ -100,6 +100,22 @@ export interface FilterOptionsResponse {
   tiers: Array<{ value: string; label: string }>;
 }
 
+export interface CategoryRankingModel {
+  model_id: string;
+  model_name: string;
+  provider: string;
+  score: number;
+}
+
+export interface CategoryRankingsResponse {
+  categories: Record<string, {
+    models: CategoryRankingModel[];
+    total_models: number;
+  }>;
+  total_models: number;
+  benchmark_version: string;
+}
+
 export interface CompareResponse {
   models: Array<{
     model_id: string;
@@ -360,6 +376,11 @@ export class ApiClient {
 
   async getFilterOptions(): Promise<FilterOptionsResponse> {
     return this.request<FilterOptionsResponse>('/api/public/filter-options');
+  }
+
+  async getCategoryRankings(params?: { limit_per_category?: number }): Promise<CategoryRankingsResponse> {
+    const query = this.buildQueryString(params);
+    return this.request<CategoryRankingsResponse>(`/api/public/category-rankings${query}`);
   }
 
   async compareModels(modelIds: string[]): Promise<CompareResponse> {

@@ -60,12 +60,15 @@ cache = SimpleCache()
 
 
 # Cache TTL settings (in seconds)
+# Extended to 1 hour since leaderboard data changes infrequently (monthly)
+# Cache is invalidated when new submissions are approved
 CACHE_TTL = {
-    "leaderboard": 300,      # 5 minutes
-    "model_details": 300,    # 5 minutes
-    "public_stats": 300,     # 5 minutes
-    "versions": 600,         # 10 minutes
-    "models_list": 300,      # 5 minutes
+    "leaderboard": 3600,        # 1 hour
+    "category_rankings": 3600,  # 1 hour
+    "model_details": 3600,      # 1 hour
+    "public_stats": 3600,       # 1 hour
+    "versions": 3600,           # 1 hour
+    "models_list": 3600,        # 1 hour
 }
 
 

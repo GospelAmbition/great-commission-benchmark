@@ -188,45 +188,34 @@ export default function ResearchPage() {
   const loadCategoryRankings = useCallback(async () => {
     setCategoryRankingsLoading(true);
     try {
+      // Use the optimized single-request endpoint instead of 19 parallel calls
+      const response = await apiClient.getCategoryRankings({ limit_per_category: 5 });
+      
+      // Transform response to match expected format
+      const rankingsMap: Record<string, CategoryRankingData> = {};
       const allCategories = getAllCategoryCodes();
       
-      // Fetch all categories in parallel
-      const results = await Promise.all(
-        allCategories.map(async (categoryCode) => {
-          try {
-            const result = await apiClient.getLeaderboard({
-              category: categoryCode,
-              limit: 5,
-              sort: "score",
-              order: "desc",
-            });
-            return {
-              categoryCode,
-              models: (result.items || []).map((item: any) => ({
-                model_id: item.model_id,
-                model_name: item.model_name,
-                provider: item.provider,
-                // Use category-specific score if available, fallback to overall
-                score: item.category_scores?.[categoryCode] ?? item.overall_score,
-              })),
-              totalModels: result.total || 0,
-            };
-          } catch (error) {
-            console.error(`Failed to load category ${categoryCode}:`, error);
-            return {
-              categoryCode,
-              models: [],
-              totalModels: 0,
-            };
-          }
-        })
-      );
-
-      // Convert to record
-      const rankingsMap: Record<string, CategoryRankingData> = {};
-      results.forEach((result) => {
-        rankingsMap[result.categoryCode] = result;
-      });
+      for (const categoryCode of allCategories) {
+        const categoryData = response.categories[categoryCode];
+        if (categoryData) {
+          rankingsMap[categoryCode] = {
+            categoryCode,
+            models: categoryData.models.map((m) => ({
+              model_id: m.model_id,
+              model_name: m.model_name,
+              provider: m.provider,
+              score: m.score,
+            })),
+            totalModels: categoryData.total_models,
+          };
+        } else {
+          rankingsMap[categoryCode] = {
+            categoryCode,
+            models: [],
+            totalModels: 0,
+          };
+        }
+      }
       
       setCategoryRankings(rankingsMap);
       setCategoryRankingsLoaded(true);

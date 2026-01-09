@@ -18,7 +18,6 @@ export interface CategoryRankingCardProps {
   description?: string;
   tier: number;
   models: CategoryModel[];
-  totalModels?: number;
 }
 
 // Get score color based on value
@@ -34,18 +33,16 @@ export function CategoryRankingCard({
   description,
   tier,
   models,
-  totalModels,
 }: CategoryRankingCardProps) {
   const tierInfo: TierInfo | undefined = TIER_INFO[tier];
-  const modelCount = totalModels ?? models.length;
 
   return (
     <div className="rounded-lg border border-white/[0.08] bg-card overflow-hidden hover:border-white/[0.12] transition-colors">
       {/* Header */}
       <div className="p-4 pb-3 border-b border-white/[0.06]">
-        <div className="flex items-start justify-between gap-2 mb-1">
+        <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-foreground leading-tight">
-            {categoryName}
+            <span className="text-muted-foreground">{categoryCode}</span> {categoryName}
           </h3>
           {tierInfo && (
             <Badge
@@ -55,18 +52,6 @@ export function CategoryRankingCard({
               {tierInfo.shortName}
             </Badge>
           )}
-        </div>
-        {description && (
-          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-            {description}
-          </p>
-        )}
-        <div className="flex items-center gap-2 mt-2">
-          <span className="text-xs text-muted-foreground">
-            {modelCount} model{modelCount !== 1 ? "s" : ""}
-          </span>
-          <span className="text-muted-foreground/50">•</span>
-          <span className="text-xs text-muted-foreground">Text</span>
         </div>
       </div>
 
@@ -109,17 +94,16 @@ export function CategoryRankingCard({
             ))}
           </div>
         )}
-
-        {/* View more link */}
-        {models.length > 0 && (
-          <Link
-            href={`/research/category/${encodeURIComponent(categoryCode)}`}
-            className="block text-xs text-muted-foreground hover:text-primary mt-3 pt-2 border-t border-white/[0.06] transition-colors"
-          >
-            +{Math.max(0, modelCount - 5)} more
-          </Link>
-        )}
       </div>
+
+      {/* Footer */}
+      {description && (
+        <div className="px-4 py-3 border-t border-white/[0.06]">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {description}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

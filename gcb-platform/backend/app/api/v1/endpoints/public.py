@@ -172,6 +172,7 @@ async def get_filter_options(
 
 @router.get("/leaderboard", response_model=LeaderboardResponse)
 async def get_leaderboard(
+    response: Response,
     version: str = Query("current", description="Semantic version or 'current'"),
     category: Optional[str] = Query(None),
     tier: Optional[int] = Query(None),
@@ -184,6 +185,20 @@ async def get_leaderboard(
     db: Session = Depends(get_db)
 ):
     """Get public leaderboard"""
+    # Check cache first
+    cache_params = {
+        "version": version, "category": category, "tier": tier,
+        "provider": provider, "trust_tier": trust_tier,
+        "limit": limit, "offset": offset, "sort": sort, "order": order
+    }
+    cache_key = make_cache_key("leaderboard", cache_params)
+    cached_result = await cache.get(cache_key)
+    if cached_result:
+        response.headers["X-Cache"] = "HIT"
+        return cached_result
+    
+    response.headers["X-Cache"] = "MISS"
+    
     # Get question set version
     if version == "current":
         question_set = db.query(QuestionSet).filter(
@@ -305,7 +320,7 @@ async def get_leaderboard(
     for idx, entry in enumerate(entries):
         entry.rank = offset + idx + 1
     
-    return LeaderboardResponse(
+    result = LeaderboardResponse(
         semantic_version=question_set.semantic_version,
         marketing_version=question_set.marketing_version,
         filters={
@@ -323,6 +338,11 @@ async def get_leaderboard(
             "has_more": (offset + limit) < len(test_runs)
         }
     )
+    
+    # Cache for 1 hour (leaderboard data changes infrequently)
+    await cache.set(cache_key, result, CACHE_TTL["leaderboard"])
+    
+    return result
 
 
 @router.get("/models", response_model=ModelsListResponse)
@@ -744,3 +764,109 @@ async def compare_models(
         }
     
     return comparison_data
+
+
+@router.get("/category-rankings")
+async def get_category_rankings(
+    response: Response,
+    limit_per_category: int = Query(5, ge=1, le=10, description="Number of top models per category"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get top models for all categories in a single request.
+    
+    This endpoint is optimized for the Category Rankings page, returning
+    all 19 categories with their top models in one call instead of 19
+    parallel requests.
+    
+    Returns:
+        Dict with categories grouped by tier, each containing top models
+        with their scores for that specific category.
+    """
+    # Check cache first
+    cache_key = make_cache_key("category_rankings", {"limit": limit_per_category})
+    cached_result = await cache.get(cache_key)
+    if cached_result:
+        response.headers["X-Cache"] = "HIT"
+        return cached_result
+    
+    response.headers["X-Cache"] = "MISS"
+    
+    # Get active question set
+    question_set = db.query(QuestionSet).filter(
+        QuestionSet.status == "active"
+    ).order_by(QuestionSet.created_at.desc()).first()
+    
+    if not question_set:
+        return {"categories": {}, "total_models": 0}
+    
+    # Get all distinct categories from the question set
+    categories = db.query(Question.category).filter(
+        Question.question_set_id == question_set.id
+    ).distinct().all()
+    category_codes = sorted([c[0] for c in categories if c[0]])
+    
+    # Get all completed test runs for this question set
+    test_runs = db.query(TestRun).filter(
+        TestRun.status == "completed",
+        TestRun.question_set_id == question_set.id
+    ).order_by(TestRun.completed_at.desc()).all()
+    
+    # Deduplicate: keep only the most recent test per model
+    seen_models = set()
+    unique_test_runs = []
+    for test_run in test_runs:
+        if test_run.model_id not in seen_models:
+            seen_models.add(test_run.model_id)
+            unique_test_runs.append(test_run)
+    
+    # Pre-calculate all scores once (avoid recalculating for each category)
+    test_run_scores = {}
+    for test_run in unique_test_runs:
+        try:
+            scores = ScoringService.calculate_scores(db, str(test_run.id))
+            test_run_scores[test_run.id] = {
+                "test_run": test_run,
+                "scores": scores
+            }
+        except Exception as e:
+            logger.warning(f"Failed to calculate scores for test run {test_run.id}: {e}")
+            continue
+    
+    # Build category rankings
+    categories_data = {}
+    for category_code in category_codes:
+        # Get top models for this category based on category score
+        category_models = []
+        for test_run_id, data in test_run_scores.items():
+            test_run = data["test_run"]
+            scores = data["scores"]
+            category_score = scores.get("category_scores", {}).get(category_code)
+            
+            if category_score is not None:
+                category_models.append({
+                    "model_id": test_run.model.model_id,
+                    "model_name": test_run.model.name,
+                    "provider": test_run.model.provider,
+                    "score": round(category_score, 2)
+                })
+        
+        # Sort by category score descending and take top N
+        category_models.sort(key=lambda x: x["score"], reverse=True)
+        top_models = category_models[:limit_per_category]
+        
+        categories_data[category_code] = {
+            "models": top_models,
+            "total_models": len(category_models)
+        }
+    
+    result = {
+        "categories": categories_data,
+        "total_models": len(unique_test_runs),
+        "benchmark_version": question_set.semantic_version
+    }
+    
+    # Cache for 1 hour
+    await cache.set(cache_key, result, CACHE_TTL["category_rankings"])
+    
+    return result

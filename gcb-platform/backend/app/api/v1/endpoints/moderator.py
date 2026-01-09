@@ -580,6 +580,10 @@ async def review_community_submission(
         
         db.commit()
         
+        # Invalidate leaderboard cache since new model data was added
+        from app.core.cache import cache
+        await cache.clear()
+        
         # Send approval email
         from app.services.email import EmailService
         await EmailService.send_submission_approved_email(
@@ -664,6 +668,10 @@ async def reprocess_community_submission(
         raise HTTPException(status_code=400, detail=str(e))
     
     db.commit()
+    
+    # Invalidate leaderboard cache since new model data was added
+    from app.core.cache import cache
+    await cache.clear()
     
     return {
         "submission_id": str(submission.id),
