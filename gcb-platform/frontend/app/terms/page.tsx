@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="container py-8 max-w-4xl">
+    <div className="container py-8 mx-auto" style={{ maxWidth: '800px' }}>
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">Terms of Service</CardTitle>
