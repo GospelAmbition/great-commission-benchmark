@@ -8,14 +8,14 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "backend-production-ba51.up.railway.app",
-        pathname: "/api/v1/files/**",
+        pathname: "/api/files/**",
       },
       // Local development
       {
         protocol: "http",
         hostname: "localhost",
         port: "8000",
-        pathname: "/api/v1/files/**",
+        pathname: "/api/files/**",
       },
     ],
   },

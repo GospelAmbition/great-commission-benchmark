@@ -1,7 +1,7 @@
 """S3-compatible Storage service for image uploads (Railway Simple Storage or AWS S3)
 
 Railway buckets are private by design and don't support public ACLs.
-Files are served through a backend proxy endpoint (/api/v1/files/{path}).
+Files are served through a backend proxy endpoint (/api/files/{path}).
 """
 import boto3
 from botocore.exceptions import ClientError
@@ -50,10 +50,10 @@ def get_public_url(filename: str) -> str:
     """Generate public URL for an uploaded file via backend proxy.
     
     Railway buckets are private, so we serve files through the backend.
-    URLs are in format: {BACKEND_PUBLIC_URL}/api/v1/files/{filename}
+    URLs are in format: {BACKEND_PUBLIC_URL}/api/files/{filename}
     """
     base = settings.BACKEND_PUBLIC_URL.rstrip('/')
-    return f"{base}/api/v1/files/{filename}"
+    return f"{base}/api/files/{filename}"
 
 
 async def get_file(filename: str) -> StreamingResponse:

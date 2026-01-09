@@ -48,7 +48,7 @@ Before deploying, ensure you have:
 
 ### 4. Set Up Storage Bucket (for Blog Images)
 
-**Important:** Railway buckets are private by design and don't support public ACLs. Files are served through a backend proxy endpoint (`/api/v1/files/{path}`).
+**Important:** Railway buckets are private by design and don't support public ACLs. Files are served through a backend proxy endpoint (`/api/files/{path}`).
 
 1. In Railway project dashboard, click **New Service** → **Bucket**
 2. Name your bucket (e.g., `gcb-storage`)
