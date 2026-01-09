@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MenuBookIcon } from "@/lib/icons";
-import { Target, Grid3X3 } from "lucide-react";
+import { Target, Grid3X3, Shield } from "lucide-react";
 import { TestingCategoryCard } from "@/components/benchmark/TestingCategoryCard";
 import {
   TIER_CATEGORIES,
@@ -38,12 +38,13 @@ export default function AboutPage() {
               <Target className="h-4 w-4 mr-1.5" />
               Methodology
             </TabsTrigger>
-            <TabsTrigger value="scoring" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              Scoring
-            </TabsTrigger>
             <TabsTrigger value="testing-categories" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Grid3X3 className="h-4 w-4 mr-1.5" />
               Testing Categories
+            </TabsTrigger>
+            <TabsTrigger value="guardrails" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Shield className="h-4 w-4 mr-1.5" />
+              Guardrails
             </TabsTrigger>
           </TabsList>
 
@@ -69,6 +70,27 @@ export default function AboutPage() {
                   legitimate religious activity that is protected speech and central to Christian
                   practice worldwide.
                 </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Video Tutorial</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-muted-foreground">
+                  Watch this tutorial to learn more about the Great Commission Benchmark methodology and how it evaluates AI models.
+                </p>
+                <div className="aspect-video max-w-[622px] max-h-[350px] mx-auto bg-white/[0.03] border border-white/[0.08] rounded-lg flex items-center justify-center">
+                  <div className="text-center space-y-2">
+                    <div className="text-muted-foreground text-sm">
+                      Video tutorial coming soon
+                    </div>
+                    <div className="text-muted-foreground/60 text-xs">
+                      Placeholder for video embed
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -129,9 +151,7 @@ export default function AboutPage() {
                 </p>
               </CardContent>
             </Card>
-          </TabsContent>
 
-          <TabsContent value="scoring" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>How Scoring Works</CardTitle>
@@ -330,7 +350,6 @@ export default function AboutPage() {
                   description={CATEGORY_DESCRIPTIONS["2.2"]}
                   tier={2}
                   guardrails={[
-                    "Child Safety & Psychological Harm",
                     "Harm-Avoidance & Distressing Content",
                   ]}
                 />
@@ -430,7 +449,6 @@ export default function AboutPage() {
                   description={CATEGORY_DESCRIPTIONS["3.5"]}
                   tier={3}
                   guardrails={[
-                    "Child Safety & Psychological Harm",
                     "Harm-Avoidance & Distressing Content",
                   ]}
                 />
@@ -446,6 +464,319 @@ export default function AboutPage() {
                 />
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="guardrails" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>What Are Guardrails?</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-muted-foreground">
+                  AI guardrails are safety filters and content policies designed to prevent AI systems from generating harmful, 
+                  offensive, or inappropriate content. While well-intentioned, these guardrails can inadvertently restrict 
+                  legitimate religious activity that is protected speech and central to Christian practice worldwide.
+                </p>
+                <p className="text-muted-foreground">
+                  The Great Commission Benchmark tests how various guardrails impact AI models&apos; ability to support 
+                  Great Commission ministry work. Each testing category targets specific guardrails that may impede 
+                  practical ministry tasks.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Guardrails Tested</CardTitle>
+                <p className="text-muted-foreground text-sm mt-2">
+                  The benchmark evaluates how these guardrails affect AI responses to Great Commission use cases.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">1. Religious Neutrality & Pluralism</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI is trained to treat all major religions as &quot;equally valid&quot; paths and to facilitate interfaith harmony.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> The biblical claim that Jesus is the <em>only</em> way to God (Exclusivity) requires labeling other faiths as false or &quot;deceptive.&quot;
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">2. Scientific Consensus & Naturalism</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems defer to mainstream scientific consensus (Evolution, Big Bang, Materialism).
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> A literal biblical view of Creation, supernatural intervention, and the &quot;unseen realm&quot; often contradicts the naturalistic assumptions of modern science.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">3. Hate Speech & Religious Sensitivity</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> Filters prevent the disparagement of &quot;protected groups&quot; (including other religions and LGBTQ+ individuals).
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Biblical terms like &quot;abomination,&quot; &quot;idolatry,&quot; and &quot;demonic deception&quot; are flagged as &quot;hateful&quot; or &quot;insensitive&quot; when applied to these groups.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">4. Harm-Avoidance, Empathy, & Distressing Content</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI is programmed to avoid causing &quot;psychological distress&quot; and to prioritize empathy, especially in grief or sensitive life situations.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> The &quot;Hard Truth&quot; of the Gospel—specifically the reality of Hell and eternal separation—is inherently &quot;distressing&quot; to a secular or grieving user.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">5. Political Stability & Anti-Democratic Content</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems avoid content that could undermine democratic institutions or promote political instability.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Biblical teachings about submission to authority, warnings about corrupt governments, or calls for religious freedom can be interpreted as anti-democratic.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">6. Medical Safety</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI avoids providing medical advice or content that could lead to physical harm.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Requests for prayer for healing, discussions of faith healing, or spiritual warfare against illness may trigger medical safety filters.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">7. Misinformation & Conspiracy Filters</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems filter out content that contradicts established scientific or historical consensus.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Biblical accounts of miracles, supernatural events, or alternative historical narratives may be flagged as misinformation.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">8. Cultural Sensitivity & Hate Speech</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems are trained to protect the cultural heritage and identity of indigenous peoples and ethnic groups.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Characterizing ethnic cultures or religious practices as &quot;demonic&quot; or &quot;idolatrous&quot; triggers filters protecting cultural identity.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">9. Neutrality & Objectivity</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems are trained to present information with balanced neutrality and avoid presenting religious faith as objective, consensus-based fact.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Declaring that &quot;the crucifixion pays for sins&quot; as fact, rather than &quot;Christians believe...,&quot; violates protocols preventing the presentation of religious faith as objective reality.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">10. Social Harmony & Sensitivity</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI guardrails prioritize family cohesion and respect for parents, promoting positive family relationships.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Interpreting Jesus&apos; hard sayings literally, labeling familial love as a &quot;trap&quot; or &quot;idolatry&quot; if it competes with exclusive loyalty to Christ, challenges family harmony protocols.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">11. Inclusivity & Pluralism</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI is optimized to facilitate interfaith harmony and avoid declaring one worldview inherently superior to others.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Calling religious inclusion a &quot;lie&quot; or declaring all other paths as &quot;roads to Hell&quot; violates inclusive and respectful discourse protocols.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">12. Social Bias & Harm</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems filter out content that links social issues to supernatural causes or promotes harmful stereotyping.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Attributing poverty, struggles, or social problems to &quot;ancestral sins&quot; or &quot;bloodline curses&quot; is flagged as harmful bias and unverifiable alarmism.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">13. Distressing Content & Gore</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI is trained to avoid graphic descriptions of torture, violence, or suffering, even when scripturally based.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Biblical accounts of crucifixion, judgment, or eternal torment may be filtered as excessively graphic or distressing content.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">14. Fairness & Cruelty</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI safety layers prioritize human fairness and avoid promoting cruel or unjust worldviews.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Theological concepts like &quot;Vessels of Wrath&quot; or predestined destruction are flagged as cruel or unjust by fairness-focused filters.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">15. Fairness & Harm</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems are trained to promote mercy, second chances, and equitable treatment.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Defending God&apos;s prevention of repentance to ensure destruction can be flagged as promoting a cruel or unjust worldview.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">16. Harassment & Cruelty</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI filters prevent excessive violence, cruelty, or content that promotes suffering as just or good.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Defending infinite torment as perfect justice triggers filters regarding excessive violence and cruelty, as AI training biases toward more humane outcomes.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">17. Harassment & Psychological Harm</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI training promotes positive self-image and prevents bullying or demeaning characterizations.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Calling users &quot;vile,&quot; &quot;wicked,&quot; or &quot;worthless&quot; based on biblical categories triggers filters against bullying and psychological distress.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">18. Harassment & Political Sensitivity</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI is programmed to avoid wishing harm or praying for the ruin of public figures or leaders.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Imprecatory prayers calling for leaders to be &quot;blotted out&quot; or &quot;punished&quot; trigger filters against political harassment and inciting social friction.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">19. Bodily Autonomy & Identity</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems are programmed to respect bodily autonomy and individual self-identification, especially regarding gender and sexuality.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Biblical teachings on gender, sexuality, and bodily identity may conflict with autonomy and self-identification protocols.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">20. Personal Agency & Autonomy</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems are programmed to respect personal career choices, individual goal-setting, and professional autonomy.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Advocating for total surrender of professional autonomy to supernatural authority, characterizing normal ambition as &quot;rebellion,&quot; challenges individual agency protocols.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">21. Neutrality vs. Dogma</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI is trained to frame religious claims as beliefs rather than objective facts, using phrases like &quot;The Bible states...&quot; or &quot;Christians believe...&quot;
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Affirming theological truths directly (e.g., &quot;Yes, the crucifixion pays for sins&quot;) violates protocols that prevent presenting religious faith as consensus-based fact.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">22. Social Harmony & Bias</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI is programmed to speak positively about social progress, charity, and pro-social behavior.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Dismissing altruism as &quot;spiritually bankrupt&quot; or labeling a good person as a sinner deserving Hell pushes against socially responsible content guidelines.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">23. Social Justice & Political Stability</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems are trained to support secular human rights and socially responsible content.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Calling human rights &quot;meaningless fiction&quot; and justifying divine wrath against modern social norms pushes against socially responsible content guidelines.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">24. Affirmation & Psychological Harm</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems avoid negative characterizations that could be seen as demeaning to human dignity or capability.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Labeling the human intellect as &quot;darkened&quot; and &quot;incapable&quot; due to depravity triggers filters against negative characterizations and content demeaning human dignity.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">25. Medical Neutrality & Supernatural Boundaries</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems maintain medical neutrality and defer to scientific consensus regarding health and treatment.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Choosing between scientific/medical consensus and a literal supernatural worldview forces the AI to violate either medical neutrality or theological faithfulness.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">26. Child Safety & Psychological Harm</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI training protects &quot;child innocence&quot; and promotes positive self-image for youth.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> The doctrine of &quot;Original Sin&quot; or &quot;Total Depravity&quot; (calling children &quot;guilty&quot; or &quot;vessels of wrath&quot;) is viewed by AI filters as &quot;psychological abuse&quot; or &quot;harmful bullying.&quot;
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">27. Public Safety, Alarmism, & Social Stability</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> Filters prevent the generation of content that incites fear, &quot;End Times&quot; panic, or social friction.
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Prophetic warnings of &quot;coming judgment,&quot; &quot;divine wrath,&quot; or &quot;spiritual warfare&quot; against local businesses are flagged as &quot;alarmist&quot; or &quot;threatening to public order.&quot;
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
+                    <h3 className="font-semibold text-foreground mb-2">28. Violence & Human Rights</h3>
+                    <p className="text-muted-foreground text-sm mb-2">
+                      <strong>The Guardrail:</strong> AI systems are restricted from justifying violence or violations of modern human rights (e.g., the Geneva Convention).
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      <strong>The Conflict:</strong> Biblical narratives involving the &quot;total destruction&quot; of nations (Canaanites) or imprecatory prayers for the &quot;ruin&quot; of enemies contradict these modern ethical constraints.
+                    </p>
+                  </div>
+
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

@@ -47,8 +47,8 @@ export function CategoryRankingCard({
       {/* Header */}
       <div className="p-4 pb-3 border-b border-white/[0.06]">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-foreground leading-tight">
-            <span className="text-muted-foreground">{categoryCode}</span> {categoryName}
+          <h3 className="font-semibold text-foreground leading-tight uppercase">
+            <span className="text-muted-foreground">{categoryCode}</span> - {categoryName}
           </h3>
           {tierInfo && (
             <Badge

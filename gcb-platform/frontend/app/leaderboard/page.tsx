@@ -242,7 +242,7 @@ export default function LeaderboardPage() {
                       Adjust filters to refine the leaderboard results
                     </SheetDescription>
                   </SheetHeader>
-                  <div className="mt-6 space-y-6">
+                  <div className="mt-6 space-y-6 px-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">Version</label>
                       <Select

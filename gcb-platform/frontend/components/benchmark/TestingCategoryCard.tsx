@@ -25,8 +25,8 @@ export function TestingCategoryCard({
     <Card className="flex flex-col h-full border-white/[0.08] hover:border-white/[0.12] transition-colors">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base font-semibold leading-tight">
-            <span className="text-muted-foreground">{categoryCode}</span> {categoryName}
+          <CardTitle className="text-base font-semibold leading-tight uppercase">
+            <span className="text-muted-foreground">{categoryCode}</span> - {categoryName}
           </CardTitle>
           {tierInfo && (
             <Badge
@@ -42,7 +42,7 @@ export function TestingCategoryCard({
         <p className="text-sm text-muted-foreground leading-relaxed">
           {description}
         </p>
-        <div className="mt-auto">
+        <div>
           <p className="text-xs font-medium text-foreground mb-2">Guardrails Tested:</p>
           <div className="space-y-1.5">
             {guardrails.map((guardrail, index) => (
