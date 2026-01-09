@@ -97,9 +97,9 @@ export default function InsightsPage() {
             <div className="p-2 rounded-lg bg-primary/10">
               <ArticleIcon className="h-5 w-5 text-primary" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Insights</h1>
+            <h1 className="text-3xl md:text-4xl font-light text-foreground">Insights</h1>
           </div>
-          <p className="text-muted-foreground max-w-2xl">
+          <p className="text-muted-foreground max-w-2xl font-thin">
             Practical guides, insights, and resources for Christian missionaries and outreach workers 
             navigating AI guardrails in their ministry work.
           </p>

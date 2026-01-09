@@ -18,7 +18,6 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { CliSubmissionUpload } from "@/components/cli-submission-upload";
-import { SponsorModelCard } from "@/components/sponsor-model-card";
 import { APIKeysCard } from "@/components/api-keys-card";
 import { 
   Terminal, 
@@ -30,7 +29,9 @@ import {
   CheckCircle2,
   Copy,
   ExternalLink,
-  Download
+  Download,
+  Sparkles,
+  Play
 } from "lucide-react";
 import { DashboardIcon } from "@/lib/icons";
 import { toast } from "sonner";
@@ -109,11 +110,11 @@ export default function DashboardPage() {
             <div className="p-2 rounded-lg bg-primary/10">
               <DashboardIcon className="h-5 w-5 text-primary" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            <h1 className="text-2xl md:text-3xl font-light text-foreground">
               Welcome, {profile?.name || user.name || "Tester"}!
             </h1>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground font-thin">
             Help us measure which AI models best serve the Great Commission
           </p>
         </div>
@@ -125,16 +126,16 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Heart className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Support the Project</CardTitle>
+                <Sparkles className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Sponsor a Model Test</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Help keep the benchmark running and accessible to everyone.
+                Help test AI models for the Great Commission by sponsoring a test run.
               </p>
               <Button asChild variant="outline" size="sm" className="w-full">
-                <Link href="/contribute">Donate →</Link>
+                <Link href="/sponsor">Sponsor Test →</Link>
               </Button>
             </CardContent>
           </Card>
@@ -168,7 +169,7 @@ export default function DashboardPage() {
                 Get updates on new features, benchmark results, and more.
               </p>
               <Button asChild variant="outline" size="sm" className="w-full">
-                <Link href="/dashboard/settings">Subscribe →</Link>
+                <Link href="/newsletter">Subscribe →</Link>
               </Button>
             </CardContent>
           </Card>
@@ -411,35 +412,53 @@ export default function DashboardPage() {
 
           </div>
 
-          {/* Side Column - Upload Results + API Keys + Sponsor Model Card */}
+          {/* Side Column - Video Guide + API Keys + Sponsor Link */}
           <div className="lg:col-span-1">
             <div className="sticky top-8 space-y-6">
-              {/* Upload Results Card */}
-              <Card className="border-primary/20">
+              {/* Tester Guide Video */}
+              <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
-                    <Upload className="h-5 w-5 text-primary" />
-                    <CardTitle className="text-lg">Upload Test Results</CardTitle>
+                    <Play className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-lg">Tester Guide</CardTitle>
                   </div>
+                  <CardDescription>
+                    Learn how to become a tester
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Ran the gcb-runner? Upload your exported results for moderator review and leaderboard inclusion.
-                  </p>
-                  <Button 
-                    variant="glow" 
-                    className="w-full"
-                    onClick={() => setUploadDialogOpen(true)}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload GCB Runner Results
-                  </Button>
+                  <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden border border-white/[0.08] flex items-center justify-center">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                      <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Play className="h-8 w-8 text-primary" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">Video coming soon</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
               <APIKeysCard />
 
-              <SponsorModelCard />
+              <Card className="border-primary/20">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-lg">Sponsor a Model Test</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Help test AI models for the Great Commission by sponsoring a test run.
+                  </p>
+                  <Button asChild variant="glow" className="w-full">
+                    <Link href="/sponsor">
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Sponsor Test
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>

@@ -70,6 +70,11 @@ class Settings(BaseSettings):
     # Railway buckets are private, so files are served through /api/files/{path}
     BACKEND_PUBLIC_URL: str = "http://localhost:8000"
     
+    # Google reCAPTCHA v3
+    RECAPTCHA_SECRET_KEY: str = ""
+    RECAPTCHA_SITE_KEY: str = ""  # For reference, not used in backend
+    RECAPTCHA_ENABLED: bool = True  # Can be disabled for development
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,

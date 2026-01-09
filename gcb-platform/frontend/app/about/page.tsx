@@ -23,9 +23,9 @@ export default function AboutPage() {
             <div className="p-2 rounded-lg bg-primary/10">
               <MenuBookIcon className="h-5 w-5 text-primary" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">About</h1>
+            <h1 className="text-3xl md:text-4xl font-light text-foreground">About</h1>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground font-thin">
             Learn about the Great Commission Benchmark methodology and mission
           </p>
         </div>

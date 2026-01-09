@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/layout/Header";
@@ -44,6 +45,12 @@ export default function RootLayout({
           </div>
           <Toaster />
           <UmamiAnalytics />
+          {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
+            <Script
+              src={`https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`}
+              strategy="afterInteractive"
+            />
+          )}
         </SessionProvider>
       </body>
     </html>

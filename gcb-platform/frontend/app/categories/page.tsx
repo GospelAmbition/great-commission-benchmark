@@ -92,9 +92,9 @@ export default function CategoriesPage() {
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Grid3X3 className="h-5 w-5 text-primary" />
                 </div>
-                <h1 className="text-2xl md:text-3xl font-bold text-foreground">Categories</h1>
+                <h1 className="text-3xl md:text-4xl font-light text-foreground">Categories</h1>
               </div>
-              <p className="text-muted-foreground max-w-2xl">
+              <p className="text-muted-foreground max-w-2xl font-thin">
                 Browse benchmark categories and see how AI models perform in each area of ministry and theological understanding
               </p>
             </div>

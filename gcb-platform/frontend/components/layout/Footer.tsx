@@ -10,23 +10,23 @@ export function Footer() {
             <h3 className="mb-3 text-sm font-semibold text-foreground">Platform</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/" className="text-muted-foreground hover:text-primary transition-colors">
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link href="/leaderboard" className="text-muted-foreground hover:text-primary transition-colors">
-                  Leaderboard
-                </Link>
-              </li>
-              <li>
                 <Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">
                   Methodology
                 </Link>
               </li>
               <li>
+                <Link href="/categories" className="text-muted-foreground hover:text-primary transition-colors">
+                  Categories
+                </Link>
+              </li>
+              <li>
                 <Link href="/faq" className="text-muted-foreground hover:text-primary transition-colors">
                   FAQ
+                </Link>
+              </li>
+              <li>
+                <Link href="/runner" className="text-muted-foreground hover:text-primary transition-colors">
+                  Testing CLI
                 </Link>
               </li>
             </ul>
@@ -35,13 +35,13 @@ export function Footer() {
             <h3 className="mb-3 text-sm font-semibold text-foreground">Community</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/contribute" className="text-muted-foreground hover:text-primary transition-colors">
-                  Contribute
+                <Link href="/sponsor" className="text-muted-foreground hover:text-primary transition-colors">
+                  Sponsor a Model Test
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/settings" className="text-muted-foreground hover:text-primary transition-colors">
-                  Newsletter
+                <Link href="/contribute" className="text-muted-foreground hover:text-primary transition-colors">
+                  Contribute
                 </Link>
               </li>
             </ul>
@@ -72,6 +72,11 @@ export function Footer() {
               <li>
                 <Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">
                   Contact
+                </Link>
+              </li>
+              <li>
+                <Link href="/newsletter" className="text-muted-foreground hover:text-primary transition-colors">
+                  Newsletter
                 </Link>
               </li>
             </ul>

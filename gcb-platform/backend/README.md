@@ -215,6 +215,8 @@ pytest tests/test_phase_e.py -v
 | `STRIPE_SECRET_KEY` | Stripe secret key | Optional |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | Optional |
 | `RESEND_API_KEY` | Resend email API key | Optional |
+| `RECAPTCHA_SECRET_KEY` | Google reCAPTCHA v3 secret key | Optional |
+| `RECAPTCHA_ENABLED` | Enable/disable reCAPTCHA verification | `True` |
 
 ## Security
 
@@ -234,6 +236,7 @@ The following security headers are added to all responses:
 - SQL injection prevented via SQLAlchemy ORM
 - Email validation on user inputs
 - Length limits on text fields
+- Google reCAPTCHA v3 spam protection on newsletter subscriptions
 
 ### Authentication
 

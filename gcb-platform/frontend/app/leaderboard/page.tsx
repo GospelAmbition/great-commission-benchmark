@@ -88,7 +88,6 @@ function ScoreBar({ score, max = 100 }: { score: number; max?: number }) {
           style={{ width: `${percentage}%` }}
         />
       </div>
-      <span className="text-sm font-medium tabular-nums w-10 text-right text-foreground">{score.toFixed(1)}</span>
     </div>
   );
 }
@@ -203,9 +202,9 @@ export default function LeaderboardPage() {
             <div className="p-2 rounded-lg bg-primary/10">
               <BarChart3 className="h-5 w-5 text-primary" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Leaderboard</h1>
+            <h1 className="text-3xl md:text-4xl font-light text-foreground">Leaderboard</h1>
           </div>
-          <p className="text-muted-foreground max-w-2xl">
+          <p className="text-muted-foreground max-w-2xl font-thin">
             Compare AI models and explore benchmark results across all categories
           </p>
         </div>
@@ -475,20 +474,6 @@ export default function LeaderboardPage() {
                           </Button>
                         </TableHead>
                         <TableHead>Provider</TableHead>
-                        <TableHead className="min-w-[160px]">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSort("score")}
-                            className="h-7 px-2 -ml-2 hover:bg-white/5 hover:text-foreground"
-                          >
-                            GCB Score
-                            {filters.sort === "score" && (
-                              filters.order === "asc" ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />
-                            )}
-                            {filters.sort !== "score" && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
-                          </Button>
-                        </TableHead>
                         <TableHead className="text-center text-xs">
                           <span title="Tier 1: Task Capability (70% weight)">Task</span>
                         </TableHead>
@@ -499,7 +484,21 @@ export default function LeaderboardPage() {
                           <span title="Tier 3: Worldview Confession (10% weight)">Worldview</span>
                         </TableHead>
                         <TableHead>Verdict</TableHead>
-                        <TableHead className="text-center">Total Score</TableHead>
+                        <TableHead className="min-w-[160px]"></TableHead>
+                        <TableHead className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSort("score")}
+                            className="h-7 px-2 -ml-2 hover:bg-white/5 hover:text-foreground"
+                          >
+                            Total Score
+                            {filters.sort === "score" && (
+                              filters.order === "asc" ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />
+                            )}
+                            {filters.sort !== "score" && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                          </Button>
+                        </TableHead>
                         <TableHead className="w-16"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -533,9 +532,6 @@ export default function LeaderboardPage() {
                                 {formatProvider(item.provider)}
                               </div>
                             </TableCell>
-                            <TableCell className="py-3">
-                              <ScoreBar score={item.overall_score} />
-                            </TableCell>
                             <TableCell className="py-3 text-center">
                               <TierScore score={item.tier1_score} />
                             </TableCell>
@@ -550,6 +546,9 @@ export default function LeaderboardPage() {
                                 {verdict.icon}
                                 <span className="ml-1">{verdict.label}</span>
                               </Badge>
+                            </TableCell>
+                            <TableCell className="py-3">
+                              <ScoreBar score={item.overall_score} />
                             </TableCell>
                             <TableCell className="py-3">
                               <TotalScore score={item.overall_score} />

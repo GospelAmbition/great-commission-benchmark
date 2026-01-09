@@ -82,7 +82,7 @@ export default function BlogPostPage() {
 
   if (loading) {
     return (
-      <div className="container py-8 max-w-4xl">
+      <div className="w-full py-8 max-w-[800px] mx-auto px-4">
         <Skeleton className="h-8 w-32 mb-8" />
         <Skeleton className="h-12 w-3/4 mb-4" />
         <Skeleton className="h-6 w-1/2 mb-8" />
@@ -98,7 +98,7 @@ export default function BlogPostPage() {
 
   if (error || !post) {
     return (
-      <div className="container py-8 max-w-4xl">
+      <div className="w-full py-8 max-w-[800px] mx-auto px-4">
         <Link href="/insights">
           <Button variant="ghost" className="mb-8">
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -121,7 +121,7 @@ export default function BlogPostPage() {
   }
 
   return (
-    <article className="container py-8 max-w-4xl">
+    <article className="w-full py-8 max-w-[800px] mx-auto px-4">
       {/* Back Button */}
       <Link href="/insights">
         <Button variant="ghost" className="mb-8">
@@ -152,15 +152,30 @@ export default function BlogPostPage() {
 
       {/* Featured Image */}
       {post.featured_image_url && (
-        <div className="relative h-64 md:h-96 w-full mb-8 rounded-lg overflow-hidden">
-          <Image
-            src={post.featured_image_url}
-            alt={post.title}
-            fill
-            className="object-cover"
-            priority
-            unoptimized
-          />
+        <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mb-8">
+          {/* Blurred background covering full width */}
+          <div className="absolute inset-0 h-64 md:h-96 overflow-hidden">
+            <Image
+              src={post.featured_image_url}
+              alt=""
+              fill
+              className="object-cover blur-2xl scale-110 opacity-60"
+              priority
+              unoptimized
+              aria-hidden="true"
+            />
+          </div>
+          {/* Main image centered with container constraints */}
+          <div className="relative container max-w-[800px] h-64 md:h-96 mx-auto flex items-center justify-center px-4">
+            <div className="relative h-full w-auto max-w-full rounded-lg overflow-hidden flex items-center justify-center">
+              <img
+                src={post.featured_image_url}
+                alt={post.title}
+                className="h-full w-auto max-w-full object-contain rounded-lg"
+                loading="eager"
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -177,7 +192,7 @@ export default function BlogPostPage() {
 
       {/* Content */}
       <div 
-        className="prose prose-lg prose-invert max-w-none
+        className="prose prose-lg prose-invert max-w-full
           prose-headings:font-bold prose-headings:text-foreground
           prose-p:text-muted-foreground prose-p:leading-relaxed
           prose-a:text-primary prose-a:no-underline hover:prose-a:underline

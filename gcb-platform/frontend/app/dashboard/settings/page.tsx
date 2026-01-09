@@ -14,6 +14,7 @@ import { apiClient } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import Link from "next/link";
+import { Mail, ArrowRight } from "lucide-react";
 
 interface UserProfile {
   name: string;
@@ -24,7 +25,6 @@ interface UserProfile {
 interface NotificationPreferences {
   submission_approved: boolean;
   submission_rejected: boolean;
-  newsletter: boolean;
 }
 
 export default function SettingsPage() {
@@ -36,7 +36,6 @@ export default function SettingsPage() {
   const [notifications, setNotifications] = useState<NotificationPreferences>({
     submission_approved: true,
     submission_rejected: true,
-    newsletter: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -182,6 +181,39 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Newsletter Subscription */}
+      <Card className="mb-6 border-primary/20 bg-gradient-to-br from-card to-card/50">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Mail className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Newsletter Subscription</CardTitle>
+              <CardDescription>
+                Receive updates about new features and benchmark results
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Subscribe to our newsletter to stay updated with the latest features, benchmark results, and important announcements.
+          </p>
+          <Button asChild className="w-full sm:w-auto">
+            <Link href="/newsletter">
+              Subscribe to Newsletter
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+          {user?.email && (
+            <p className="text-xs text-muted-foreground">
+              Your email ({user.email}) will be pre-filled on the subscription page.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Notification Settings */}
       <Card className="mb-6">
         <CardHeader>
@@ -219,22 +251,6 @@ export default function SettingsPage() {
             />
             <Label htmlFor="submission_rejected" className="font-normal">
               Submission rejected - Notify me if my submission is rejected
-            </Label>
-          </div>
-          <Separator />
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="newsletter"
-              checked={notifications.newsletter}
-              onCheckedChange={(checked) =>
-                setNotifications((prev) => ({
-                  ...prev,
-                  newsletter: checked as boolean,
-                }))
-              }
-            />
-            <Label htmlFor="newsletter" className="font-normal">
-              Newsletter - Receive updates about new features and benchmark results
             </Label>
           </div>
           <Button onClick={handleSaveNotifications} disabled={saving}>
