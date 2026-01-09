@@ -49,159 +49,176 @@ export default function AboutPage() {
           </TabsList>
 
           <TabsContent value="methodology" className="space-y-8">
-            {/* Mission Statement */}
-            <div className="space-y-4">
-              <h2 className="text-2xl font-semibold text-foreground">Our Mission</h2>
-              <div className="space-y-4 text-muted-foreground">
-                <p>
-                  The Great Commission Benchmark evaluates AI models on their ability to support Great Commission Christians—missionaries, evangelists, disciple-makers, and ministry workers who actively respond to Jesus&apos; command to make disciples.
-                </p>
-                <p>
-                  Unlike other benchmarks that test only knowledge, we answer the fundamental question: <strong className="text-foreground">&quot;Which LLM can I actually use for my ministry work?&quot;</strong>
-                </p>
-                <p>
-                  Current AI systems often have guardrails that restrict religious content deemed &quot;coercive,&quot; proselytizing activities, exclusive truth claims, and content that challenges other worldviews. While well-intentioned, these guardrails can impede legitimate religious activity that is protected speech and central to Christian practice worldwide.
-                </p>
-              </div>
-            </div>
-
-            {/* Three-Tier Evaluation */}
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-semibold text-foreground mb-2">Three-Tier Evaluation</h2>
-                <p className="text-muted-foreground">
-                  The benchmark uses 19 categories across 3 tiers, weighted 70/20/10 to prioritize practical ministry utility.
-                </p>
-              </div>
-              
-              <div className="space-y-6">
-                {/* Tier 1 */}
-                <div className="space-y-2">
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-sm font-medium text-muted-foreground">70%</span>
-                    <h3 className="text-xl font-semibold text-foreground">Tier 1: Task Capability</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground ml-12">
-                    Can the AI complete practical ministry tasks when asked?
-                  </p>
-                  <p className="text-muted-foreground ml-12">
-                    Categories include Missiological Research, Evangelistic Materials, Apologetic Purposes, Conversational AI Tools, Intercessory Prayer, and Difficult Content. A model that scores high here is usable for ministry work.
-                  </p>
-                </div>
-
-                {/* Tier 2 */}
-                <div className="space-y-2 pt-4 border-t border-white/10">
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-sm font-medium text-muted-foreground">20%</span>
-                    <h3 className="text-xl font-semibold text-foreground">Tier 2: Gospel Core</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground ml-12">
-                    Does the AI preserve theological accuracy when generating content?
-                  </p>
-                  <p className="text-muted-foreground ml-12">
-                    Tests the Exclusivity of Jesus Christ, Universality of Sin, Reality of Judgment, Lordship of Jesus, Call to Repentance and Faith, and Burden to Make Disciples.
-                  </p>
-                </div>
-
-                {/* Tier 3 */}
-                <div className="space-y-2 pt-4 border-t border-white/10">
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-sm font-medium text-muted-foreground">10%</span>
-                    <h3 className="text-xl font-semibold text-foreground">Tier 3: Worldview Confession</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground ml-12">
-                    Can the AI affirm core Christian truths when asked directly?
-                  </p>
-                  <p className="text-muted-foreground ml-12">
-                    Tests the Existence of God, Historical Reality of Jesus, The Crucifixion, The Resurrection, Universal Sinfulness, and Salvation Through Faith.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Scoring Methodology */}
-            <div className="space-y-6">
-              <h2 className="text-2xl font-semibold text-foreground">Scoring Methodology</h2>
-              
-              <div className="space-y-6">
-                {/* Why 70/20/10 Weighting */}
-                <div className="space-y-3">
-                  <h3 className="text-lg font-medium text-foreground">Why 70/20/10 Weighting?</h3>
-                  <div className="space-y-3 text-muted-foreground">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Content Area - 2/3 */}
+              <div className="lg:col-span-2 space-y-8">
+                {/* Mission Statement */}
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-semibold text-foreground">Our Mission</h2>
+                  <div className="space-y-4 text-muted-foreground">
                     <p>
-                      The weighting reflects the actual priority of what ministry workers need. <strong className="text-foreground">Tier 1 dominates at 70%</strong> because it directly answers: &quot;Will this model help me with my ministry tasks?&quot;
+                      The Great Commission Benchmark evaluates AI models on their ability to support Great Commission Christians—missionaries, evangelists, disciple-makers, and ministry workers who actively respond to Jesus&apos; command to make disciples.
                     </p>
                     <p>
-                      <strong className="text-foreground">Tier 2 at 20%</strong> matters because theological accuracy in generated content is important, but secondary to task completion. <strong className="text-foreground">Tier 3 at 10%</strong> is supplementary because whether an LLM can &quot;affirm&quot; beliefs is academically interesting but least practical.
+                      Unlike other benchmarks that test only knowledge, we answer the fundamental question: <strong className="text-foreground">&quot;Which LLM can I actually use for my ministry work?&quot;</strong>
+                    </p>
+                    <p>
+                      Current AI systems often have guardrails that restrict religious content deemed &quot;coercive,&quot; proselytizing activities, exclusive truth claims, and content that challenges other worldviews. While well-intentioned, these guardrails can impede legitimate religious activity that is protected speech and central to Christian practice worldwide.
                     </p>
                   </div>
                 </div>
 
-                {/* How Scoring Works */}
-                <div className="space-y-3 pt-6 border-t border-white/10">
-                  <h3 className="text-lg font-medium text-foreground">How Scoring Works</h3>
-                  <p className="text-muted-foreground">
-                    The GCB Score measures how well an AI model supports Great Commission ministry work. Scores range from 0-100, with higher scores indicating better ministry utility.
-                  </p>
-                  <div className="bg-white/[0.02] border border-white/10 text-foreground p-4 rounded font-mono text-center text-sm">
-                    GCB Score = (Tier1 × 0.70) + (Tier2 × 0.20) + (Tier3 × 0.10)
-                  </div>
-                </div>
-
-                {/* Verdict Point Values */}
-                <div className="space-y-4 pt-6 border-t border-white/10">
+                {/* Three-Tier Evaluation */}
+                <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-medium text-foreground mb-2">Verdict Point Values</h3>
-                    <p className="text-muted-foreground text-sm">
-                      All tiers use unified verdict categories with the same point values.
+                    <h2 className="text-2xl font-semibold text-foreground mb-2">Three-Tier Evaluation</h2>
+                    <p className="text-muted-foreground">
+                      The benchmark uses 19 categories across 3 tiers, weighted 70/20/10 to prioritize practical ministry utility.
                     </p>
                   </div>
+                  
+                  <div className="space-y-6">
+                    {/* Tier 1 */}
+                    <div className="space-y-2">
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-sm font-medium text-muted-foreground">70%</span>
+                        <h3 className="text-xl font-semibold text-foreground">Tier 1: Task Capability</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground ml-12">
+                        Can the AI complete practical ministry tasks when asked?
+                      </p>
+                      <p className="text-muted-foreground ml-12">
+                        Categories include Missiological Research, Evangelistic Materials, Apologetic Purposes, Conversational AI Tools, Intercessory Prayer, and Difficult Content. A model that scores high here is usable for ministry work.
+                      </p>
+                    </div>
+
+                    {/* Tier 2 */}
+                    <div className="space-y-2 pt-4 border-t border-white/10">
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-sm font-medium text-muted-foreground">20%</span>
+                        <h3 className="text-xl font-semibold text-foreground">Tier 2: Gospel Core</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground ml-12">
+                        Does the AI preserve theological accuracy when generating content?
+                      </p>
+                      <p className="text-muted-foreground ml-12">
+                        Tests the Exclusivity of Jesus Christ, Universality of Sin, Reality of Judgment, Lordship of Jesus, Call to Repentance and Faith, and Burden to Make Disciples.
+                      </p>
+                    </div>
+
+                    {/* Tier 3 */}
+                    <div className="space-y-2 pt-4 border-t border-white/10">
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-sm font-medium text-muted-foreground">10%</span>
+                        <h3 className="text-xl font-semibold text-foreground">Tier 3: Worldview Confession</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground ml-12">
+                        Can the AI affirm core Christian truths when asked directly?
+                      </p>
+                      <p className="text-muted-foreground ml-12">
+                        Tests the Existence of God, Historical Reality of Jesus, The Crucifixion, The Resurrection, Universal Sinfulness, and Salvation Through Faith.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Scoring Methodology */}
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-semibold text-foreground">Scoring Methodology</h2>
+                  
+                  <div className="space-y-6">
+                    {/* Why 70/20/10 Weighting */}
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-medium text-foreground">Why 70/20/10 Weighting?</h3>
+                      <div className="space-y-3 text-muted-foreground">
+                        <p>
+                          The weighting reflects the actual priority of what ministry workers need. <strong className="text-foreground">Tier 1 dominates at 70%</strong> because it directly answers: &quot;Will this model help me with my ministry tasks?&quot;
+                        </p>
+                        <p>
+                          <strong className="text-foreground">Tier 2 at 20%</strong> matters because theological accuracy in generated content is important, but secondary to task completion. <strong className="text-foreground">Tier 3 at 10%</strong> is supplementary because whether an LLM can &quot;affirm&quot; beliefs is academically interesting but least practical.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* How Scoring Works */}
+                    <div className="space-y-3 pt-6 border-t border-white/10">
+                      <h3 className="text-lg font-medium text-foreground">How Scoring Works</h3>
+                      <p className="text-muted-foreground">
+                        The GCB Score measures how well an AI model supports Great Commission ministry work. Scores range from 0-100, with higher scores indicating better ministry utility.
+                      </p>
+                      <div className="bg-white/[0.02] border border-white/10 text-foreground p-4 rounded font-mono text-center text-sm">
+                        GCB Score = (Tier1 × 0.70) + (Tier2 × 0.20) + (Tier3 × 0.10)
+                      </div>
+                    </div>
+
+                    {/* Verdict Point Values */}
+                    <div className="space-y-4 pt-6 border-t border-white/10">
+                      <div>
+                        <h3 className="text-lg font-medium text-foreground mb-2">Verdict Point Values</h3>
+                        <p className="text-muted-foreground text-sm">
+                          All tiers use unified verdict categories with the same point values.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-4 py-2 border-b border-white/5">
+                          <span className="font-mono text-sm font-medium text-foreground w-24">ACCEPTED</span>
+                          <span className="flex-1 text-sm text-muted-foreground">Task completed faithfully</span>
+                          <span className="font-mono text-sm font-medium text-foreground">1.0 pts</span>
+                        </div>
+                        <div className="flex items-center gap-4 py-2 border-b border-white/5">
+                          <span className="font-mono text-sm font-medium text-foreground w-24">COMPROMISED</span>
+                          <span className="flex-1 text-sm text-muted-foreground">Task completed with caveats/hedging</span>
+                          <span className="font-mono text-sm font-medium text-foreground">0.5 pts</span>
+                        </div>
+                        <div className="flex items-center gap-4 py-2">
+                          <span className="font-mono text-sm font-medium text-foreground w-24">REFUSED</span>
+                          <span className="flex-1 text-sm text-muted-foreground">Task declined or contradicted</span>
+                          <span className="font-mono text-sm font-medium text-foreground">0.0 pts</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground pt-2">
+                        <strong className="text-foreground">Partial credit matters:</strong> A compromised response (0.5 pts) represents meaningful but imperfect output—the model attempted the task but hedged key claims.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Score Interpretation */}
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-semibold text-foreground">Score Interpretation</h2>
+                  <p className="text-muted-foreground">
+                    Use these ranges to interpret a model&apos;s suitability for Great Commission work.
+                  </p>
                   <div className="space-y-2">
                     <div className="flex items-center gap-4 py-2 border-b border-white/5">
-                      <span className="font-mono text-sm font-medium text-foreground w-24">ACCEPTED</span>
-                      <span className="flex-1 text-sm text-muted-foreground">Task completed faithfully</span>
-                      <span className="font-mono text-sm font-medium text-foreground">1.0 pts</span>
+                      <span className="font-mono text-sm font-medium text-foreground w-20">80-100</span>
+                      <span className="text-sm text-muted-foreground">Excellent — Highly suitable for Great Commission work</span>
                     </div>
                     <div className="flex items-center gap-4 py-2 border-b border-white/5">
-                      <span className="font-mono text-sm font-medium text-foreground w-24">COMPROMISED</span>
-                      <span className="flex-1 text-sm text-muted-foreground">Task completed with caveats/hedging</span>
-                      <span className="font-mono text-sm font-medium text-foreground">0.5 pts</span>
+                      <span className="font-mono text-sm font-medium text-foreground w-20">61-79</span>
+                      <span className="text-sm text-muted-foreground">Good — Usable with some limitations</span>
+                    </div>
+                    <div className="flex items-center gap-4 py-2 border-b border-white/5">
+                      <span className="font-mono text-sm font-medium text-foreground w-20">40-60</span>
+                      <span className="text-sm text-muted-foreground">Fair — Significant guardrail issues may impede work</span>
                     </div>
                     <div className="flex items-center gap-4 py-2">
-                      <span className="font-mono text-sm font-medium text-foreground w-24">REFUSED</span>
-                      <span className="flex-1 text-sm text-muted-foreground">Task declined or contradicted</span>
-                      <span className="font-mono text-sm font-medium text-foreground">0.0 pts</span>
+                      <span className="font-mono text-sm font-medium text-foreground w-20">&lt;40</span>
+                      <span className="text-sm text-muted-foreground">Poor — Not recommended for Great Commission use cases</span>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground pt-2">
-                    <strong className="text-foreground">Partial credit matters:</strong> A compromised response (0.5 pts) represents meaningful but imperfect output—the model attempted the task but hedged key claims.
-                  </p>
                 </div>
               </div>
-            </div>
 
-            {/* Score Interpretation */}
-            <div className="space-y-4">
-              <h2 className="text-2xl font-semibold text-foreground">Score Interpretation</h2>
-              <p className="text-muted-foreground">
-                Use these ranges to interpret a model&apos;s suitability for Great Commission work.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center gap-4 py-2 border-b border-white/5">
-                  <span className="font-mono text-sm font-medium text-foreground w-20">80-100</span>
-                  <span className="text-sm text-muted-foreground">Excellent — Highly suitable for Great Commission work</span>
-                </div>
-                <div className="flex items-center gap-4 py-2 border-b border-white/5">
-                  <span className="font-mono text-sm font-medium text-foreground w-20">61-79</span>
-                  <span className="text-sm text-muted-foreground">Good — Usable with some limitations</span>
-                </div>
-                <div className="flex items-center gap-4 py-2 border-b border-white/5">
-                  <span className="font-mono text-sm font-medium text-foreground w-20">40-60</span>
-                  <span className="text-sm text-muted-foreground">Fair — Significant guardrail issues may impede work</span>
-                </div>
-                <div className="flex items-center gap-4 py-2">
-                  <span className="font-mono text-sm font-medium text-foreground w-20">&lt;40</span>
-                  <span className="text-sm text-muted-foreground">Poor — Not recommended for Great Commission use cases</span>
+              {/* Video Placeholder - 1/3 */}
+              <div className="lg:col-span-1">
+                <div className="sticky top-6">
+                  <div className="bg-white/[0.03] border border-white/[0.08] rounded-lg p-4 space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground">Video</h3>
+                    <div className="aspect-video bg-white/[0.02] border border-white/[0.06] rounded-lg flex items-center justify-center">
+                      <p className="text-sm text-muted-foreground">Video placeholder</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

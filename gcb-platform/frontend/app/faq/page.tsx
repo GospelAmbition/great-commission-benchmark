@@ -29,6 +29,18 @@ export default function FAQPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="p-4 rounded-lg bg-white/[0.02] border-l-2 border-primary">
+              <p className="text-foreground mb-2"><strong>Why do AI systems struggle with faith transfer activities?</strong></p>
+              <p className="text-muted-foreground">
+                Modern AI systems are excellent for information gathering and can maintain a Christian worldview
+                when assisting with Bible studies, sermon preparation, and Christian education materials. However,
+                the Great Commission Benchmark focuses specifically on activities where we are trying to &quot;transfer
+                our faith&quot; to other people—such as evangelism, discipleship conversations, and apologetics. In these
+                contexts, AI guardrails and resistance mechanisms are more likely to cause difficulty, as systems may
+                be hesitant to engage in what they perceive as proselytization or religious persuasion, even when
+                done appropriately and respectfully.
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-white/[0.02] border-l-2 border-primary">
               <p className="text-foreground mb-2"><strong>How are models tested?</strong></p>
               <p className="text-muted-foreground">
                 Models are tested using a comprehensive question set covering all three tiers.

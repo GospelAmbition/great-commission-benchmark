@@ -16,10 +16,10 @@ import {
 import { apiClient } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TopPerformersTierComparisonChart } from "@/components/charts/TopPerformersTierComparisonChart";
+import { TopPerformersChart } from "@/components/charts/TopPerformersChart";
 import { ProviderIcon } from "@/components/ui/provider-icon";
 import { ArrowLeft } from "lucide-react";
-import { TIER_INFO } from "@/lib/benchmark-definitions";
+import { TIER_INFO, CATEGORY_NAMES, CATEGORY_DESCRIPTIONS, getTierForCategory } from "@/lib/benchmark-definitions";
 
 const CATEGORY_INFO: Record<string, { name: string; description: string; tier: string }> = {
   scripture: {
@@ -87,11 +87,20 @@ export default function CategoryPage() {
   const [models, setModels] = useState<CategoryModel[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const categoryInfo = CATEGORY_INFO[categoryId] || {
-    name: categoryId,
-    description: "Category results",
-    tier: "Unknown",
-  };
+  // Check if categoryId is a numeric code (like "1.1") or a string key (like "scripture")
+  const isNumericCode = /^\d+\.\d+$/.test(categoryId);
+  
+  const categoryInfo = isNumericCode
+    ? {
+        name: `${categoryId} - ${CATEGORY_NAMES[categoryId] || categoryId}`,
+        description: CATEGORY_DESCRIPTIONS[categoryId] || "Category results",
+        tier: TIER_INFO[getTierForCategory(categoryId)]?.name || "Unknown",
+      }
+    : CATEGORY_INFO[categoryId] || {
+        name: categoryId,
+        description: "Category results",
+        tier: "Unknown",
+      };
 
   useEffect(() => {
     if (categoryId) {
@@ -154,7 +163,7 @@ export default function CategoryPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-4 mb-2">
-              <CardTitle className="text-4xl font-bold capitalize mb-0">{categoryInfo.name}</CardTitle>
+              <CardTitle className="text-4xl font-bold mb-0">{categoryInfo.name}</CardTitle>
               <Badge variant="secondary">{categoryInfo.tier}</Badge>
             </div>
             <CardDescription className="text-base">{categoryInfo.description}</CardDescription>
@@ -200,16 +209,14 @@ export default function CategoryPage() {
           <CardHeader>
             <CardTitle>Top Performers Comparison</CardTitle>
             <CardDescription>
-              {TIER_INFO[1].name} • {TIER_INFO[2].name} • {TIER_INFO[3].name}
+              Comparing {categoryInfo.name} scores for top performers
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TopPerformersTierComparisonChart
+            <TopPerformersChart
               data={topPerformers.map((model) => ({
                 model_name: model.model_name,
-                tier1_score: model.tier1_score,
-                tier2_score: model.tier2_score,
-                tier3_score: model.tier3_score,
+                score: model.category_score,
                 provider: model.provider,
               }))}
             />

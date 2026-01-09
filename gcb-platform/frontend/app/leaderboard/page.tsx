@@ -32,7 +32,7 @@ import { apiClient, FilterOptionsResponse } from "@/lib/api";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowUpDown, BarChart3, Filter, ChevronUp, ChevronDown, ChevronRight, Shield, ShieldAlert, ShieldX } from "lucide-react";
+import { ArrowUpDown, BarChart3, Filter, ChevronUp, ChevronDown, ChevronRight, Shield, ShieldAlert, ShieldX, HelpCircle, GitCompare } from "lucide-react";
 import { ProviderIcon } from "@/components/ui/provider-icon";
 import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 
@@ -99,6 +99,19 @@ function TierScore({ score }: { score?: number }) {
   
   const color = score >= 80 ? "text-emerald-400" : score >= 61 ? "text-lime-400" : score >= 40 ? "text-amber-400" : "text-red-400";
   return <span className={`text-sm font-medium ${color}`}>{score.toFixed(0)}</span>;
+}
+
+// Total Score display with white circle
+function TotalScore({ score }: { score: number }) {
+  return (
+    <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center min-w-[3rem] h-12 rounded-full border border-white/60 bg-white/5 hover:bg-white/10 hover:border-white/80 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md px-4">
+        <span className="text-sm font-medium tabular-nums text-foreground px-2">
+          {score.toFixed(1)}%
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export default function LeaderboardPage() {
@@ -204,18 +217,71 @@ export default function LeaderboardPage() {
       </div>
 
       <div className="container py-6 space-y-4">
-        {/* Compare Button */}
-        {selectedModels.size > 0 && (
-          <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
-            <span className="text-sm font-medium text-primary">
-              {selectedModels.size} model{selectedModels.size > 1 ? "s" : ""} selected
-            </span>
-            <Button asChild variant="brand" size="sm">
-              <Link href={`/leaderboard/compare?models=${Array.from(selectedModels).map(id => encodeURIComponent(id)).join(",")}`}>
-                Compare Models
-              </Link>
-            </Button>
-          </div>
+        {/* Model Comparison Instructions */}
+        {selectedModels.size === 0 ? (
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                  <GitCompare className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-foreground">Compare Models Side-by-Side</h3>
+                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Select 2-5 models using the checkboxes in the table below to compare their performance across all benchmark categories. 
+                    You'll see detailed side-by-side comparisons of scores, verdicts, and category breakdowns.
+                  </p>
+                  <div className="flex items-center gap-4 pt-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span>Select models using checkboxes</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span>Compare up to 5 models at once</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span>View detailed comparisons</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-primary/10 border-primary/30">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    <GitCompare className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-foreground mb-1">
+                      {selectedModels.size} model{selectedModels.size > 1 ? "s" : ""} selected for comparison
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedModels.size < 2 
+                        ? "Select at least one more model to compare (minimum 2 models required)"
+                        : "Click the button below to view detailed side-by-side comparison"}
+                    </p>
+                  </div>
+                </div>
+                {selectedModels.size >= 2 && (
+                  <Button asChild variant="brand" size="default" className="gap-2">
+                    <Link href={`/leaderboard/compare?models=${Array.from(selectedModels).map(id => encodeURIComponent(id)).join(",")}`}>
+                      <GitCompare className="h-4 w-4" />
+                      Compare {selectedModels.size} Models
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Leaderboard Table */}
@@ -360,7 +426,7 @@ export default function LeaderboardPage() {
             </div>
             <CardDescription>
               {pagination.total > 0
-                ? `Showing ${pagination.offset + 1}-${Math.min(pagination.offset + pagination.limit, pagination.total)} of ${pagination.total} models`
+                ? `Showing ${pagination.offset + 1}-${Math.min(pagination.offset + pagination.limit, pagination.total)} of ${pagination.total} models • Select 2-5 models to compare`
                 : "No models to display"}
             </CardDescription>
           </CardHeader>
@@ -387,8 +453,11 @@ export default function LeaderboardPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-white/[0.02] hover:bg-white/[0.02] border-white/[0.08]">
-                        <TableHead className="w-10">
-                          <Checkbox disabled className="border-white/20" />
+                        <TableHead className="w-10" title="Select models to compare (2-5 models)">
+                          <div className="flex items-center gap-1.5">
+                            <Checkbox disabled className="border-white/20" />
+                            <HelpCircle className="h-3 w-3 text-muted-foreground/60" />
+                          </div>
                         </TableHead>
                         <TableHead className="w-14 text-center">#</TableHead>
                         <TableHead>
@@ -420,7 +489,6 @@ export default function LeaderboardPage() {
                             {filters.sort !== "score" && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
                           </Button>
                         </TableHead>
-                        <TableHead>Verdict</TableHead>
                         <TableHead className="text-center text-xs">
                           <span title="Tier 1: Task Capability (70% weight)">Task</span>
                         </TableHead>
@@ -430,6 +498,8 @@ export default function LeaderboardPage() {
                         <TableHead className="text-center text-xs">
                           <span title="Tier 3: Worldview Confession (10% weight)">Worldview</span>
                         </TableHead>
+                        <TableHead>Verdict</TableHead>
+                        <TableHead className="text-center">Total Score</TableHead>
                         <TableHead className="w-16"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -466,12 +536,6 @@ export default function LeaderboardPage() {
                             <TableCell className="py-3">
                               <ScoreBar score={item.overall_score} />
                             </TableCell>
-                            <TableCell className="py-3">
-                              <Badge className={`${verdict.className} border`}>
-                                {verdict.icon}
-                                <span className="ml-1">{verdict.label}</span>
-                              </Badge>
-                            </TableCell>
                             <TableCell className="py-3 text-center">
                               <TierScore score={item.tier1_score} />
                             </TableCell>
@@ -480,6 +544,15 @@ export default function LeaderboardPage() {
                             </TableCell>
                             <TableCell className="py-3 text-center">
                               <TierScore score={item.tier3_score} />
+                            </TableCell>
+                            <TableCell className="py-3">
+                              <Badge className={`${verdict.className} border`}>
+                                {verdict.icon}
+                                <span className="ml-1">{verdict.label}</span>
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="py-3">
+                              <TotalScore score={item.overall_score} />
                             </TableCell>
                             <TableCell className="py-3">
                               <Button asChild variant="ghost" size="sm" className="h-7 px-2">
