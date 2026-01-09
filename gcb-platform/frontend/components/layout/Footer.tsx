@@ -40,8 +40,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/contribute" className="text-muted-foreground hover:text-primary transition-colors">
-                  Contribute
+                <Link href="/contribute/support" className="text-muted-foreground hover:text-primary transition-colors">
+                  Support the Project
                 </Link>
               </li>
             </ul>

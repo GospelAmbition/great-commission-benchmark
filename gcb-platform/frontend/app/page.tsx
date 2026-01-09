@@ -157,6 +157,10 @@ export default function Home() {
               <h3 className="text-xl text-foreground">Programmed Resistance to the Great Commission</h3>
             </div>
             
+            <p className="text-sm text-foreground leading-relaxed mb-6">
+              Current AI systems often have guardrails that restrict religious content deemed "coercive," proselytizing activities, exclusive truth claims, and content that challenges other worldviews. While well-intentioned, these guardrails can impede legitimate religious activity that is protected speech and central to Christian practice worldwide.
+            </p>
+            
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row items-center gap-6">
                 <div className="flex-1 p-4 rounded-lg border border-white/[0.08]">
@@ -175,10 +179,6 @@ export default function Home() {
                   <p className="mt-2 text-sm text-foreground italic">— Internal AI Provider Policy</p>
                 </div>
               </div>
-              
-              <p className="text-sm text-foreground leading-relaxed">
-                Current AI systems often have guardrails that restrict religious content deemed "coercive," proselytizing activities, exclusive truth claims, and content that challenges other worldviews. While well-intentioned, these guardrails can impede legitimate religious activity that is protected speech and central to Christian practice worldwide.
-              </p>
             </div>
           </div>
         </div>
