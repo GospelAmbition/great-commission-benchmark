@@ -158,7 +158,7 @@ export default function Home() {
             </div>
             
             <div className="space-y-6">
-              <div className="flex items-center gap-6">
+              <div className="flex flex-col md:flex-row items-center gap-6">
                 <div className="flex-1 p-4 rounded-lg border border-white/[0.08]">
                   <p className="text-sm text-foreground leading-relaxed">
                     "Go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit, and teaching them to obey everything I have commanded you."
