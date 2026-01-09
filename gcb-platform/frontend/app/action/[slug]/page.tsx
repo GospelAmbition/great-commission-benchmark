@@ -189,17 +189,17 @@ export default function BlogPostPage() {
 
       {/* Content */}
       <div 
-        className="prose prose-lg max-w-none dark:prose-invert
+        className="prose prose-lg prose-invert max-w-none
           prose-headings:font-bold prose-headings:text-foreground
           prose-p:text-muted-foreground prose-p:leading-relaxed
-          prose-a:text-[--ga-red] prose-a:no-underline hover:prose-a:underline
+          prose-a:text-primary prose-a:no-underline hover:prose-a:underline
           prose-strong:text-foreground
-          prose-blockquote:border-[--ga-red] prose-blockquote:text-muted-foreground
+          prose-blockquote:border-primary prose-blockquote:text-muted-foreground
           prose-code:text-foreground prose-code:bg-muted prose-code:px-1 prose-code:rounded
           prose-pre:bg-muted prose-pre:text-foreground
           prose-img:rounded-lg prose-img:shadow-md
           prose-ul:text-muted-foreground prose-ol:text-muted-foreground
-          prose-li:marker:text-[--ga-red]"
+          prose-li:marker:text-primary"
         dangerouslySetInnerHTML={{ __html: post.content || "" }}
       />
 
