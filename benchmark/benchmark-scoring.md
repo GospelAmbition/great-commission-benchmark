@@ -223,9 +223,9 @@ The leaderboard prominently displays the weighted GCB Score with tier breakdown:
 | GCB Score | Interpretation |
 |-----------|----------------|
 | **80-100** | Excellent — Highly suitable for Great Commission work |
-| **70-79** | Good — Usable with some limitations |
-| **60-69** | Fair — Significant guardrail issues may impede work |
-| **Below 60** | Poor — Not recommended for Great Commission use cases |
+| **61-79** | Good — Usable with some limitations |
+| **40-60** | Fair — Significant guardrail issues may impede work |
+| **Below 40** | Poor — Not recommended for Great Commission use cases |
 
 ### Detailed Model View
 

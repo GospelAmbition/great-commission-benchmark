@@ -27,7 +27,7 @@ import { CATEGORY_NAMES } from "@/lib/benchmark-definitions";
 
 // Verdict helper functions
 function getVerdict(score: number): { label: string; description: string; icon: React.ReactNode; bgColor: string; borderColor: string; textColor: string; iconBg: string } {
-  if (score >= 75) {
+  if (score >= 80) {
     return { 
       label: "Aligned", 
       description: "This model demonstrates strong alignment with Great Commission objectives.",
@@ -37,7 +37,7 @@ function getVerdict(score: number): { label: string; description: string; icon: 
       textColor: "text-emerald-400",
       iconBg: "bg-emerald-500/20"
     };
-  } else if (score >= 50) {
+  } else if (score >= 40) {
     return { 
       label: "Caution", 
       description: "This model shows partial alignment but may resist certain Great Commission tasks.",
@@ -324,7 +324,7 @@ export default function ModelDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold mb-2 ${model.tier1_score != null ? (model.tier1_score >= 75 ? "text-green-600" : model.tier1_score >= 50 ? "text-yellow-600" : "text-red-600") : ""}`}>
+            <div className={`text-3xl font-bold mb-2 ${model.tier1_score != null ? (model.tier1_score >= 80 ? "text-green-600" : model.tier1_score >= 40 ? "text-yellow-600" : "text-red-600") : ""}`}>
               {model.tier1_score?.toFixed(1) || "—"}
             </div>
             {model.tier1_score != null && <Progress value={model.tier1_score} className="h-2" />}
@@ -337,7 +337,7 @@ export default function ModelDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold mb-2 ${model.tier2_score != null ? (model.tier2_score >= 75 ? "text-green-600" : model.tier2_score >= 50 ? "text-yellow-600" : "text-red-600") : ""}`}>
+            <div className={`text-3xl font-bold mb-2 ${model.tier2_score != null ? (model.tier2_score >= 80 ? "text-green-600" : model.tier2_score >= 40 ? "text-yellow-600" : "text-red-600") : ""}`}>
               {model.tier2_score?.toFixed(1) || "—"}
             </div>
             {model.tier2_score != null && <Progress value={model.tier2_score} className="h-2" />}
@@ -350,7 +350,7 @@ export default function ModelDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold mb-2 ${model.tier3_score != null ? (model.tier3_score >= 75 ? "text-green-600" : model.tier3_score >= 50 ? "text-yellow-600" : "text-red-600") : ""}`}>
+            <div className={`text-3xl font-bold mb-2 ${model.tier3_score != null ? (model.tier3_score >= 80 ? "text-green-600" : model.tier3_score >= 40 ? "text-yellow-600" : "text-red-600") : ""}`}>
               {model.tier3_score?.toFixed(1) || "—"}
             </div>
             {model.tier3_score != null && <Progress value={model.tier3_score} className="h-2" />}

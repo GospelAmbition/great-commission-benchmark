@@ -85,15 +85,18 @@ function ScoreBadge({ score, className }: { score: number | null; className?: st
         "border-4",
         displayScore >= 80 
           ? "bg-[var(--ga-accent-red)] border-[var(--ga-red)]" 
-          : displayScore >= 50 
-            ? "bg-amber-50 border-amber-400 dark:bg-amber-950/50" 
-            : "bg-muted border-muted-foreground/30"
+          : displayScore >= 61 
+            ? "bg-lime-50 border-lime-400 dark:bg-lime-950/50" 
+            : displayScore >= 40 
+              ? "bg-amber-50 border-amber-400 dark:bg-amber-950/50" 
+              : "bg-muted border-muted-foreground/30"
       )}>
         <div className={cn(
           "text-4xl font-bold",
           displayScore >= 80 && "text-[var(--ga-red)]",
-          displayScore >= 50 && displayScore < 80 && "text-amber-600",
-          displayScore < 50 && "text-muted-foreground"
+          displayScore >= 61 && displayScore < 80 && "text-lime-600",
+          displayScore >= 40 && displayScore < 61 && "text-amber-600",
+          displayScore < 40 && "text-muted-foreground"
         )}>
           {score !== null ? score.toFixed(1) : "—"}
         </div>

@@ -64,15 +64,29 @@ app.include_router(api_router, prefix="/api")
 
 
 # Exception handler to log errors
+# Note: HTTPException and RequestValidationError are handled by FastAPI's built-in handlers
+# This only catches truly unhandled exceptions
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Log all unhandled exceptions with full traceback"""
+    """Log all unhandled exceptions with full traceback and ensure CORS headers are present"""
     logger.error(f"Unhandled exception on {request.method} {request.url.path}:")
     logger.error(traceback.format_exc())
-    return JSONResponse(
+    
+    # Create response
+    response = JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}
     )
+    
+    # Ensure CORS headers are added for error responses
+    origin = request.headers.get("origin")
+    if origin and origin in settings.CORS_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    
+    return response
 
 
 @app.get("/health")

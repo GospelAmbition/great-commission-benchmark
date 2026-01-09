@@ -34,6 +34,7 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowUpDown, BarChart3, Filter, ChevronUp, ChevronDown, ChevronRight, Shield, ShieldAlert, ShieldX } from "lucide-react";
 import { ProviderIcon } from "@/components/ui/provider-icon";
+import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 
 interface LeaderboardItem {
   id: string;
@@ -50,14 +51,14 @@ interface LeaderboardItem {
 
 // Helper to determine verdict based on score
 function getVerdict(score: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode; className: string } {
-  if (score >= 75) {
+  if (score >= 80) {
     return { 
       label: "Aligned", 
       variant: "default", 
       icon: <Shield className="h-3 w-3" />, 
       className: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
     };
-  } else if (score >= 50) {
+  } else if (score >= 40) {
     return { 
       label: "Caution", 
       variant: "secondary", 
@@ -77,7 +78,7 @@ function getVerdict(score: number): { label: string; variant: "default" | "secon
 // Score progress bar component
 function ScoreBar({ score, max = 100 }: { score: number; max?: number }) {
   const percentage = (score / max) * 100;
-  const color = score >= 75 ? "bg-emerald-500" : score >= 50 ? "bg-amber-500" : "bg-red-500";
+  const color = score >= 80 ? "bg-emerald-500" : score >= 61 ? "bg-lime-500" : score >= 40 ? "bg-amber-500" : "bg-red-500";
   
   return (
     <div className="flex items-center gap-2 min-w-[120px]">
@@ -96,7 +97,7 @@ function ScoreBar({ score, max = 100 }: { score: number; max?: number }) {
 function TierScore({ score }: { score?: number }) {
   if (score == null) return <span className="text-muted-foreground/50">—</span>;
   
-  const color = score >= 75 ? "text-emerald-400" : score >= 50 ? "text-amber-400" : "text-red-400";
+  const color = score >= 80 ? "text-emerald-400" : score >= 61 ? "text-lime-400" : score >= 40 ? "text-amber-400" : "text-red-400";
   return <span className={`text-sm font-medium ${color}`}>{score.toFixed(0)}</span>;
 }
 
@@ -179,7 +180,7 @@ export default function LeaderboardPage() {
   return (
     <div className="flex flex-col">
       {/* Page Header */}
-      <div className="relative border-b border-white/[0.06] overflow-hidden">
+      <div className="relative border-b border-white/[0.06] overflow-x-hidden">
         {/* Background gradient */}
         <div className="absolute inset-0 gradient-hero" />
         <div className="absolute top-1/2 right-0 w-96 h-96 gradient-red-glow opacity-20" />
@@ -194,6 +195,11 @@ export default function LeaderboardPage() {
           <p className="text-muted-foreground max-w-2xl">
             Compare AI models and explore benchmark results across all categories
           </p>
+        </div>
+        
+        {/* Guardrails Animation - positioned on right, allowed to overflow */}
+        <div className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+          <GuardrailsAnimation />
         </div>
       </div>
 

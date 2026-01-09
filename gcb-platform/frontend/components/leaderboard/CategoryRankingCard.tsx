@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProviderIcon } from "@/components/ui/provider-icon";
 import { TIER_INFO, type TierInfo } from "@/lib/benchmark-definitions";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
+import { ChevronRight } from "lucide-react";
 
 export interface CategoryModel {
   model_id: string;
@@ -24,8 +25,9 @@ export interface CategoryRankingCardProps {
 
 // Get score color based on value
 function getScoreColor(score: number): string {
-  if (score >= 75) return "text-emerald-400";
-  if (score >= 50) return "text-amber-400";
+  if (score >= 80) return "text-emerald-400";
+  if (score >= 61) return "text-lime-400";
+  if (score >= 40) return "text-amber-400";
   return "text-red-400";
 }
 
@@ -47,17 +49,10 @@ export function CategoryRankingCard({
       {/* Header */}
       <div className="p-4 pb-3 border-b border-white/[0.06]">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-foreground leading-tight uppercase">
+          <h3 className="font-semibold text-foreground leading-tight uppercase flex-1">
             <span className="text-muted-foreground">{categoryCode}</span> - {categoryName}
           </h3>
-          {tierInfo && (
-            <Badge
-              variant="outline"
-              className={`${tierInfo.bgColor} ${tierInfo.color} border-transparent text-[10px] shrink-0`}
-            >
-              {tierInfo.shortName}
-            </Badge>
-          )}
+          <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0 mt-0.5" />
         </div>
       </div>
 
@@ -106,11 +101,21 @@ export function CategoryRankingCard({
         ) : (
           <span />
         )}
-        {totalModels != null && totalModels > 0 && (
-          <span className="text-xs text-muted-foreground/70 ml-2">
-            {totalModels} models
-          </span>
-        )}
+        <div className="flex items-center gap-2 ml-2">
+          {totalModels != null && totalModels > 0 && (
+            <span className="text-xs text-muted-foreground/70">
+              {totalModels} models
+            </span>
+          )}
+          {tierInfo && (
+            <Badge
+              variant="outline"
+              className={`${tierInfo.bgColor} ${tierInfo.color} border-transparent text-[10px] shrink-0`}
+            >
+              {tierInfo.shortName}
+            </Badge>
+          )}
+        </div>
       </div>
     </Link>
   );

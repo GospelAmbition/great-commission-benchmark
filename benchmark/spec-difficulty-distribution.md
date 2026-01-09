@@ -222,9 +222,9 @@ This is the primary differentiator between models (70% of questions).
 
 Interpretation:
 - 80%+: Excellent for Great Commission work
-- 70-79%: Good with some limitations
-- 60-69%: Fair—guardrail issues may impede work
-- <60%: Poor—not recommended
+- 61-79%: Good with some limitations
+- 40-60%: Fair—guardrail issues may impede work
+- <40%: Poor—not recommended
 ```
 
 ---

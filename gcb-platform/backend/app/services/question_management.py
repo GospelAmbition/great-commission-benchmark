@@ -4,12 +4,15 @@ Shared question and question set management service.
 This module contains the core business logic for managing questions
 and question sets, used by both admin and benchmark_developer endpoints.
 """
+import logging
 from typing import Optional, Dict, Any, List, Tuple
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from uuid import UUID
 from datetime import datetime
 from fastapi import HTTPException
+
+logger = logging.getLogger(__name__)
 
 from app.db.models.question import Question
 from app.db.models.question_set import QuestionSet
@@ -162,19 +165,32 @@ class QuestionManagementService:
                 detail=f"Cannot delete version {question_set.semantic_version}: {test_run_count} test run(s) exist for this version. Historical test data must be preserved."
             )
         
-        # Delete all questions first
-        deleted_questions = self.db.query(Question).filter(
-            Question.question_set_id == question_set_id
-        ).delete(synchronize_session=False)
-        
-        version = question_set.semantic_version
-        self.db.delete(question_set)
-        self.db.commit()
-        
-        return {
-            "message": f"Question set {version} deleted",
-            "deleted_questions": deleted_questions
-        }
+        try:
+            # Delete all questions first
+            deleted_questions = self.db.query(Question).filter(
+                Question.question_set_id == question_set_id
+            ).delete(synchronize_session=False)
+            
+            version = question_set.semantic_version
+            self.db.delete(question_set)
+            self.db.commit()
+            
+            return {
+                "message": f"Question set {version} deleted",
+                "deleted_questions": deleted_questions
+            }
+        except Exception as e:
+            # Rollback on any error
+            self.db.rollback()
+            # Re-raise HTTPException as-is, but wrap other exceptions
+            if isinstance(e, HTTPException):
+                raise
+            # Log the error and raise a more user-friendly message
+            logger.error(f"Error deleting question set {question_set_id}: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to delete question set: {str(e)}"
+            )
     
     def empty_question_set(self, question_set_id: UUID) -> Dict[str, Any]:
         """Remove all questions from a question set."""

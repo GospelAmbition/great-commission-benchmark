@@ -19,8 +19,9 @@ interface QuickRankingsProps {
 
 // Get bar color based on score
 function getBarColor(score: number): string {
-  if (score >= 75) return "bg-emerald-500";
-  if (score >= 50) return "bg-amber-500";
+  if (score >= 80) return "bg-emerald-500";
+  if (score >= 61) return "bg-lime-500";
+  if (score >= 40) return "bg-amber-500";
   return "bg-red-500";
 }
 

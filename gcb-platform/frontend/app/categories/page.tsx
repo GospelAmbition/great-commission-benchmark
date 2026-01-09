@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Grid3X3 } from "lucide-react";
 import { CategoryRankingCard, type CategoryModel } from "@/components/leaderboard";
+import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 import {
   TIER_CATEGORIES,
   CATEGORY_NAMES,
@@ -79,21 +80,30 @@ export default function CategoriesPage() {
   return (
     <div className="flex flex-col">
       {/* Page Header */}
-      <div className="relative border-b border-white/[0.06] overflow-hidden">
+      <div className="relative border-b border-white/[0.06] overflow-x-hidden">
         {/* Background gradient */}
         <div className="absolute inset-0 gradient-hero" />
         <div className="absolute top-1/2 right-0 w-96 h-96 gradient-red-glow opacity-20" />
         
         <div className="container relative py-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Grid3X3 className="h-5 w-5 text-primary" />
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Grid3X3 className="h-5 w-5 text-primary" />
+                </div>
+                <h1 className="text-2xl md:text-3xl font-bold text-foreground">Categories</h1>
+              </div>
+              <p className="text-muted-foreground max-w-2xl">
+                Browse benchmark categories and see how AI models perform in each area of ministry and theological understanding
+              </p>
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Categories</h1>
           </div>
-          <p className="text-muted-foreground max-w-2xl">
-            Browse benchmark categories and see how AI models perform in each area of ministry and theological understanding
-          </p>
+        </div>
+        
+        {/* Guardrails Animation - positioned on right, allowed to overflow */}
+        <div className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+          <GuardrailsAnimation />
         </div>
       </div>
 
@@ -108,8 +118,8 @@ export default function CategoriesPage() {
           <>
             {/* Tier 1: Task Capability */}
             <div>
-              <div className="flex items-center gap-3 mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Task Capability</h2>
+              <div className="flex items-center gap-3 mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground">Task Capability</h2>
                 <Badge variant="outline" className="bg-red-500/10 text-red-400 border-transparent">
                   70% weight
                 </Badge>
@@ -133,9 +143,10 @@ export default function CategoriesPage() {
             </div>
 
             {/* Tier 2: Gospel Core */}
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Gospel Core</h2>
+            <div className="mt-8">
+              <hr className="border-white/[0.08] mb-6" />
+              <div className="flex items-center gap-3 mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground">Gospel Core</h2>
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-transparent">
                   20% weight
                 </Badge>
@@ -159,9 +170,10 @@ export default function CategoriesPage() {
             </div>
 
             {/* Tier 3: Worldview Confession */}
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Worldview Confession</h2>
+            <div className="mt-8">
+              <hr className="border-white/[0.08] mb-6" />
+              <div className="flex items-center gap-3 mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground">Worldview Confession</h2>
                 <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-transparent">
                   10% weight
                 </Badge>

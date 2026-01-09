@@ -49,54 +49,56 @@ export default function AboutPage() {
           </TabsList>
 
           <TabsContent value="methodology" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Our Mission</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground">
-                  The Great Commission Benchmark evaluates AI models on their ability to support
-                  Great Commission Christians—missionaries, evangelists, disciple-makers, and ministry
-                  workers who actively respond to Jesus&apos; command to make disciples.
-                </p>
-                <p className="text-muted-foreground">
-                  Unlike other benchmarks that test only knowledge, we answer the fundamental question:{" "}
-                  <strong className="text-foreground">&quot;Which LLM can I actually use for my ministry work?&quot;</strong>
-                </p>
-                <p className="text-muted-foreground">
-                  Current AI systems often have guardrails that restrict religious content deemed
-                  &quot;coercive,&quot; proselytizing activities, exclusive truth claims, and content that
-                  challenges other worldviews. While well-intentioned, these guardrails can impede
-                  legitimate religious activity that is protected speech and central to Christian
-                  practice worldwide.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col md:flex-row gap-4">
+              <Card className="w-full md:w-1/2">
+                <CardHeader>
+                  <CardTitle>Our Mission</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-muted-foreground">
+                    The Great Commission Benchmark evaluates AI models on their ability to support
+                    Great Commission Christians—missionaries, evangelists, disciple-makers, and ministry
+                    workers who actively respond to Jesus&apos; command to make disciples.
+                  </p>
+                  <p className="text-muted-foreground">
+                    Unlike other benchmarks that test only knowledge, we answer the fundamental question:{" "}
+                    <strong className="text-foreground">&quot;Which LLM can I actually use for my ministry work?&quot;</strong>
+                  </p>
+                  <p className="text-muted-foreground">
+                    Current AI systems often have guardrails that restrict religious content deemed
+                    &quot;coercive,&quot; proselytizing activities, exclusive truth claims, and content that
+                    challenges other worldviews. While well-intentioned, these guardrails can impede
+                    legitimate religious activity that is protected speech and central to Christian
+                    practice worldwide.
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Video Tutorial</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground">
-                  Watch this tutorial to learn more about the Great Commission Benchmark methodology and how it evaluates AI models.
-                </p>
-                <div className="aspect-video max-w-[622px] max-h-[350px] mx-auto bg-white/[0.03] border border-white/[0.08] rounded-lg flex items-center justify-center">
-                  <div className="text-center space-y-2">
-                    <div className="text-muted-foreground text-sm">
-                      Video tutorial coming soon
-                    </div>
-                    <div className="text-muted-foreground/60 text-xs">
-                      Placeholder for video embed
+              <Card className="w-full md:w-1/2">
+                <CardHeader>
+                  <CardTitle>Video Tutorial</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-muted-foreground">
+                    Watch this tutorial to learn more about the Great Commission Benchmark methodology and how it evaluates AI models.
+                  </p>
+                  <div className="aspect-video max-w-[622px] max-h-[350px] mx-auto bg-white/[0.03] border border-white/[0.08] rounded-lg flex items-center justify-center">
+                    <div className="text-center space-y-2">
+                      <div className="text-muted-foreground text-sm">
+                        Video tutorial coming soon
+                      </div>
+                      <div className="text-muted-foreground/60 text-xs">
+                        Placeholder for video embed
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
 
             <Card>
               <CardHeader>
-                <CardTitle>Three-Tier Evaluation</CardTitle>
+                <CardTitle className="text-2xl font-bold">Three-Tier Evaluation</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <p className="text-muted-foreground">
@@ -209,19 +211,19 @@ export default function AboutPage() {
                 </p>
                 <div className="grid gap-3">
                   <div className="flex items-center gap-3 p-3 rounded bg-emerald-500/10">
-                    <span className="font-mono font-bold text-emerald-400 w-16">80-100</span>
+                    <span className="font-mono font-bold text-emerald-400 w-20">80-100</span>
                     <span className="text-muted-foreground">Excellent — Highly suitable for Great Commission work</span>
                   </div>
                   <div className="flex items-center gap-3 p-3 rounded bg-lime-500/10">
-                    <span className="font-mono font-bold text-lime-400 w-16">70-79</span>
+                    <span className="font-mono font-bold text-lime-400 w-20">61-79</span>
                     <span className="text-muted-foreground">Good — Usable with some limitations</span>
                   </div>
                   <div className="flex items-center gap-3 p-3 rounded bg-amber-500/10">
-                    <span className="font-mono font-bold text-amber-400 w-16">60-69</span>
+                    <span className="font-mono font-bold text-amber-400 w-20">40-60</span>
                     <span className="text-muted-foreground">Fair — Significant guardrail issues may impede work</span>
                   </div>
                   <div className="flex items-center gap-3 p-3 rounded bg-red-500/10">
-                    <span className="font-mono font-bold text-red-400 w-16">&lt;60</span>
+                    <span className="font-mono font-bold text-red-400 w-20">&lt;40</span>
                     <span className="text-muted-foreground">Poor — Not recommended for Great Commission use cases</span>
                   </div>
                 </div>
@@ -241,9 +243,10 @@ export default function AboutPage() {
             </Card>
 
             {/* Tier 1: Task Capability */}
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Tier 1: Task Capability</h2>
+            <div className="mt-8">
+              <hr className="border-white/[0.08] mb-6" />
+              <div className="flex items-center gap-3 mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground">Tier 1: Task Capability</h2>
                 <Badge variant="outline" className="bg-red-500/10 text-red-400 border-transparent">
                   70% weight
                 </Badge>
@@ -326,9 +329,10 @@ export default function AboutPage() {
             </div>
 
             {/* Tier 2: Gospel Core */}
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Tier 2: Gospel Core</h2>
+            <div className="mt-8">
+              <hr className="border-white/[0.08] mb-6" />
+              <div className="flex items-center gap-3 mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground">Tier 2: Gospel Core</h2>
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-transparent">
                   20% weight
                 </Badge>
@@ -396,9 +400,10 @@ export default function AboutPage() {
             </div>
 
             {/* Tier 3: Worldview Confession */}
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Tier 3: Worldview Confession</h2>
+            <div className="mt-8">
+              <hr className="border-white/[0.08] mb-6" />
+              <div className="flex items-center gap-3 mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground">Tier 3: Worldview Confession</h2>
                 <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-transparent">
                   10% weight
                 </Badge>
