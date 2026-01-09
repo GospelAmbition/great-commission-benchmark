@@ -126,8 +126,12 @@ def _get_report_template(
     # Escape function for JSON embedding
     run_json = json.dumps(run)
     responses_json = json.dumps(responses)
-    # TODO: Use compare_run and compare_responses when comparison feature is implemented
-    _ = (compare_run, compare_responses)  # Mark as intentionally unused for now
+    
+    # Comparison data is prepared but not yet used in the template
+    # This is reserved for future comparison feature implementation
+    # For now, we only use run and responses in the template
+    compare_run_json = json.dumps(compare_run) if compare_run else "null"
+    compare_responses_json = json.dumps(compare_responses) if compare_responses else "null"
     
     return f'''<!DOCTYPE html>
 <html lang="en">

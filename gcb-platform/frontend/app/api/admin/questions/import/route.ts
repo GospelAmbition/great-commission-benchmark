@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getBackendToken, API_URL } from "@/lib/backend-auth";
+import { getBackendToken } from "@/lib/backend-auth";
+import { API_URL } from "@/lib/api";
 
 interface QuestionFromFile {
   content: string;

@@ -263,7 +263,16 @@ export default function CommunitySubmissionReviewPage() {
                 <div>
                   <Label className="text-sm font-semibold">Judge Verdict</Label>
                   <div className="mt-1">
-                    <Badge variant={currentResponse.verdict === "ACCEPTED" ? "default" : currentResponse.verdict === "COMPROMISED" ? "secondary" : "destructive"}>
+                    <Badge 
+                      variant="outline"
+                      className={
+                        currentResponse.verdict === "ACCEPTED"
+                          ? "bg-green-500/20 text-green-400 border-green-500/30"
+                          : currentResponse.verdict === "REFUSED"
+                          ? "bg-red-500/20 text-red-400 border-red-500/30"
+                          : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                      }
+                    >
                       {verdictLabels[currentResponse.verdict] || currentResponse.verdict}
                     </Badge>
                   </div>

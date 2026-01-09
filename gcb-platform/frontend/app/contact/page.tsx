@@ -1,6 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, Mail, Github } from "lucide-react";
 
+const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contact@greatcommissionbenchmark.ai";
+const DISCORD_URL = process.env.NEXT_PUBLIC_DISCORD_URL || "https://discord.gg/greatcommissionbenchmark";
+const GITHUB_URL = process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/greatcommissionbenchmark";
+
 export default function ContactPage() {
   return (
     <div className="flex flex-col">
@@ -33,7 +37,7 @@ export default function ContactPage() {
             </p>
             <div className="grid gap-3">
               <a 
-                href="mailto:contact@example.com" 
+                href={`mailto:${CONTACT_EMAIL}`}
                 className="flex items-center gap-3 p-4 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] hover:border-primary/30 transition-colors"
               >
                 <div className="p-2 rounded-lg bg-primary/10">
@@ -41,11 +45,11 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <span className="font-medium text-foreground">Email</span>
-                  <p className="text-sm text-muted-foreground">contact@example.com</p>
+                  <p className="text-sm text-muted-foreground">{CONTACT_EMAIL}</p>
                 </div>
               </a>
               <a
-                href="https://discord.com"
+                href={DISCORD_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 p-4 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] hover:border-primary/30 transition-colors"
@@ -59,7 +63,7 @@ export default function ContactPage() {
                 </div>
               </a>
               <a
-                href="https://github.com"
+                href={GITHUB_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 p-4 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] hover:border-primary/30 transition-colors"

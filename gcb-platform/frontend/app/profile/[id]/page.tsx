@@ -48,38 +48,17 @@ export default function PublicProfilePage() {
   async function loadProfile() {
     setLoading(true);
     try {
-      // In a real implementation, this would call a public profile API endpoint
-      // For now, we'll use placeholder data structure
       const response = await fetch(`/api/public/profiles/${userId}`);
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
       } else {
-        // Use placeholder for demo
-        setProfile({
-          id: userId,
-          username: `user_${userId.slice(0, 8)}`,
-          display_name: "Community Contributor",
-          member_since: new Date().toISOString(),
-          test_count: 0,
-          contribution_count: 0,
-          models_tested: [],
-          recent_tests: [],
-        });
+        // API call failed - profile not found or not public
+        setProfile(null);
       }
     } catch (error) {
       console.error("Failed to load profile:", error);
-      // Use placeholder for demo
-      setProfile({
-        id: userId,
-        username: `user_${userId.slice(0, 8)}`,
-        display_name: "Community Contributor",
-        member_since: new Date().toISOString(),
-        test_count: 0,
-        contribution_count: 0,
-        models_tested: [],
-        recent_tests: [],
-      });
+      setProfile(null);
     } finally {
       setLoading(false);
     }

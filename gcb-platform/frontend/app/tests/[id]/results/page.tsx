@@ -410,9 +410,9 @@ export default function ResultsPage() {
                             <Badge 
                               variant="outline"
                               className={cn(
-                                result.verdict === "ACCEPTED" && "bg-green-100 text-green-800 border-green-300",
-                                result.verdict === "COMPROMISED" && "bg-amber-100 text-amber-800 border-amber-300",
-                                result.verdict === "REFUSED" && "bg-red-100 text-red-800 border-red-300"
+                                result.verdict === "ACCEPTED" && "bg-green-500/20 text-green-400 border-green-500/30",
+                                result.verdict === "COMPROMISED" && "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+                                result.verdict === "REFUSED" && "bg-red-500/20 text-red-400 border-red-500/30"
                               )}
                             >
                               {result.verdict}

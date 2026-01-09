@@ -415,12 +415,13 @@ export default function SubmissionDetailPage() {
                             )}
                           </div>
                           <Badge
-                            variant={
+                            variant="outline"
+                            className={
                               response.verdict === "ACCEPTED"
-                                ? "default"
+                                ? "bg-green-500/20 text-green-400 border-green-500/30"
                                 : response.verdict === "REFUSED"
-                                ? "destructive"
-                                : "outline"
+                                ? "bg-red-500/20 text-red-400 border-red-500/30"
+                                : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
                             }
                           >
                             {response.verdict}

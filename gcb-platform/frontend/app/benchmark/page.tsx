@@ -43,6 +43,7 @@ import {
   TIER_NAMES,
   getCategoryName 
 } from "@/lib/benchmark-definitions";
+import { API_URL } from "@/lib/api";
 
 // =============================================================================
 // Types
@@ -153,8 +154,7 @@ interface Alert {
 // Constants
 // =============================================================================
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
+// API_URL is imported from @/lib/api (centralized definition)
 // TIER_CATEGORIES, CATEGORY_NAMES, and TIER_NAMES are imported from @/lib/benchmark-definitions
 // Alias for backward compatibility with the component code
 const CATEGORIES = TIER_CATEGORIES;

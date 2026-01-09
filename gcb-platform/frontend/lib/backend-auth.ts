@@ -8,11 +8,7 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import * as jose from "jose";
-
-/**
- * Base URL for the backend API
- */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { API_URL } from "@/lib/api";
 
 /**
  * Generate a JWT token for authenticating with the backend API.

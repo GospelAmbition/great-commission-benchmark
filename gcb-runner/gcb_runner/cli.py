@@ -480,7 +480,9 @@ def upload(
         console.print("Upload cancelled.")
         return
     
-    # TODO: Implement full upload flow
+    # Upload functionality is not yet implemented in the CLI
+    # Users should export results and upload via the web interface
+    # This command serves as a placeholder for future implementation
     console.print("[yellow]Upload functionality coming soon.[/yellow]")
     console.print("For now, use 'gcb-runner export' and upload manually at:")
     console.print("https://greatcommissionbenchmark.ai/submit")

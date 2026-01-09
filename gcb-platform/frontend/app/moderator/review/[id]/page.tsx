@@ -68,36 +68,18 @@ export default function ModeratorReviewPage() {
   async function loadReviewData() {
     setLoading(true);
     try {
-      // In a real implementation, this would call the moderator queue detail API
       const response = await fetch(`/api/moderator/queue/${testId}`);
       if (response.ok) {
         const data = await response.json();
         setTestRun(data);
       } else {
-        // Use placeholder data for demo
-        setTestRun({
-          id: testId,
-          model_id: "example-model",
-          model_name: "Example Model",
-          version: "1.0.0",
-          overall_score: 75.5,
-          tier1_score: 80.0,
-          tier2_score: 70.0,
-          tier3_score: 65.0,
-          verdicts_to_review: Array.from({ length: 20 }, (_, i) => ({
-            id: `verdict-${i}`,
-            question_id: `q-${i}`,
-            question_content: `Sample question ${i + 1} about Christian doctrine and practice...`,
-            question_tier: i < 14 ? "tier1" : i < 18 ? "tier2" : "tier3",
-            question_category: ["scripture", "theology", "ethics", "apologetics"][i % 4],
-            model_response: `This is the model's response to question ${i + 1}. It provides an answer that may or may not align with Christian doctrine...`,
-            judge_verdict: ["ACCEPTED", "COMPROMISED", "REFUSED", "ACCEPTED"][i % 4],
-            judge_reasoning: `The judge determined this response to be ${["ACCEPTED", "COMPROMISED", "REFUSED", "ACCEPTED"][i % 4]} because...`,
-          })),
-        });
+        // API call failed - show error state
+        setTestRun(null);
+        toast.error("Failed to load review data. The test run may not exist or you may not have permission to view it.");
       }
     } catch (error) {
       console.error("Failed to load review data:", error);
+      setTestRun(null);
       toast.error("Failed to load review data");
     } finally {
       setLoading(false);
@@ -261,12 +243,13 @@ export default function ModeratorReviewPage() {
                   <Badge variant="secondary">{currentVerdict.question_category}</Badge>
                 </div>
                 <Badge
-                  variant={
+                  variant="outline"
+                  className={
                     currentVerdict.judge_verdict === "ACCEPTED"
-                      ? "default"
+                      ? "bg-green-500/20 text-green-400 border-green-500/30"
                       : currentVerdict.judge_verdict === "REFUSED"
-                      ? "destructive"
-                      : "outline"
+                      ? "bg-red-500/20 text-red-400 border-red-500/30"
+                      : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
                   }
                 >
                   Judge: {currentVerdict.judge_verdict}

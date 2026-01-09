@@ -411,11 +411,9 @@ export default function DashboardPage() {
 
           </div>
 
-          {/* Side Column - API Keys + Upload Results + Sponsor Model Card */}
+          {/* Side Column - Upload Results + API Keys + Sponsor Model Card */}
           <div className="lg:col-span-1">
             <div className="sticky top-8 space-y-6">
-              <APIKeysCard />
-
               {/* Upload Results Card */}
               <Card className="border-primary/20">
                 <CardHeader className="pb-3">
@@ -438,6 +436,8 @@ export default function DashboardPage() {
                   </Button>
                 </CardContent>
               </Card>
+
+              <APIKeysCard />
 
               <SponsorModelCard />
             </div>

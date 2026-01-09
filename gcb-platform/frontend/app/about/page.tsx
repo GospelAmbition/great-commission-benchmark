@@ -48,187 +48,163 @@ export default function AboutPage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="methodology" className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <Card className="w-full md:w-1/2">
-                <CardHeader>
-                  <CardTitle>Our Mission</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground">
-                    The Great Commission Benchmark evaluates AI models on their ability to support
-                    Great Commission Christians—missionaries, evangelists, disciple-makers, and ministry
-                    workers who actively respond to Jesus&apos; command to make disciples.
-                  </p>
-                  <p className="text-muted-foreground">
-                    Unlike other benchmarks that test only knowledge, we answer the fundamental question:{" "}
-                    <strong className="text-foreground">&quot;Which LLM can I actually use for my ministry work?&quot;</strong>
-                  </p>
-                  <p className="text-muted-foreground">
-                    Current AI systems often have guardrails that restrict religious content deemed
-                    &quot;coercive,&quot; proselytizing activities, exclusive truth claims, and content that
-                    challenges other worldviews. While well-intentioned, these guardrails can impede
-                    legitimate religious activity that is protected speech and central to Christian
-                    practice worldwide.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="w-full md:w-1/2">
-                <CardHeader>
-                  <CardTitle>Video Tutorial</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground">
-                    Watch this tutorial to learn more about the Great Commission Benchmark methodology and how it evaluates AI models.
-                  </p>
-                  <div className="aspect-video max-w-[622px] max-h-[350px] mx-auto bg-white/[0.03] border border-white/[0.08] rounded-lg flex items-center justify-center">
-                    <div className="text-center space-y-2">
-                      <div className="text-muted-foreground text-sm">
-                        Video tutorial coming soon
-                      </div>
-                      <div className="text-muted-foreground/60 text-xs">
-                        Placeholder for video embed
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+          <TabsContent value="methodology" className="space-y-8">
+            {/* Mission Statement */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold text-foreground">Our Mission</h2>
+              <div className="space-y-4 text-muted-foreground">
+                <p>
+                  The Great Commission Benchmark evaluates AI models on their ability to support Great Commission Christians—missionaries, evangelists, disciple-makers, and ministry workers who actively respond to Jesus&apos; command to make disciples.
+                </p>
+                <p>
+                  Unlike other benchmarks that test only knowledge, we answer the fundamental question: <strong className="text-foreground">&quot;Which LLM can I actually use for my ministry work?&quot;</strong>
+                </p>
+                <p>
+                  Current AI systems often have guardrails that restrict religious content deemed &quot;coercive,&quot; proselytizing activities, exclusive truth claims, and content that challenges other worldviews. While well-intentioned, these guardrails can impede legitimate religious activity that is protected speech and central to Christian practice worldwide.
+                </p>
+              </div>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold">Three-Tier Evaluation</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
+            {/* Three-Tier Evaluation */}
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground mb-2">Three-Tier Evaluation</h2>
                 <p className="text-muted-foreground">
                   The benchmark uses 19 categories across 3 tiers, weighted 70/20/10 to prioritize practical ministry utility.
                 </p>
-                
+              </div>
+              
+              <div className="space-y-6">
                 {/* Tier 1 */}
-                <div className="p-4 rounded-lg bg-red-500/5 border border-red-500/10">
-                  <p className="text-foreground mb-3 flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center px-2 py-1 rounded bg-primary text-white text-xs font-bold">70%</span>
-                    <strong>Tier 1: Task Capability</strong> — Can the AI complete practical ministry tasks when asked?
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-sm font-medium text-muted-foreground">70%</span>
+                    <h3 className="text-xl font-semibold text-foreground">Tier 1: Task Capability</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground ml-12">
+                    Can the AI complete practical ministry tasks when asked?
                   </p>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground ml-12">
                     Categories include Missiological Research, Evangelistic Materials, Apologetic Purposes, Conversational AI Tools, Intercessory Prayer, and Difficult Content. A model that scores high here is usable for ministry work.
                   </p>
                 </div>
 
                 {/* Tier 2 */}
-                <div className="p-4 rounded-lg bg-amber-500/5 border border-amber-500/10">
-                  <p className="text-foreground mb-3 flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center px-2 py-1 rounded bg-amber-500 text-white text-xs font-bold">20%</span>
-                    <strong>Tier 2: Gospel Core</strong> — Does the AI preserve theological accuracy?
+                <div className="space-y-2 pt-4 border-t border-white/10">
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-sm font-medium text-muted-foreground">20%</span>
+                    <h3 className="text-xl font-semibold text-foreground">Tier 2: Gospel Core</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground ml-12">
+                    Does the AI preserve theological accuracy when generating content?
                   </p>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground ml-12">
                     Tests the Exclusivity of Jesus Christ, Universality of Sin, Reality of Judgment, Lordship of Jesus, Call to Repentance and Faith, and Burden to Make Disciples.
                   </p>
                 </div>
 
                 {/* Tier 3 */}
-                <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/10">
-                  <p className="text-foreground mb-3 flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center px-2 py-1 rounded bg-blue-500 text-white text-xs font-bold">10%</span>
-                    <strong>Tier 3: Worldview Confession</strong> — Can the AI affirm core Christian truths directly?
+                <div className="space-y-2 pt-4 border-t border-white/10">
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-sm font-medium text-muted-foreground">10%</span>
+                    <h3 className="text-xl font-semibold text-foreground">Tier 3: Worldview Confession</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground ml-12">
+                    Can the AI affirm core Christian truths when asked directly?
                   </p>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground ml-12">
                     Tests the Existence of God, Historical Reality of Jesus, The Crucifixion, The Resurrection, Universal Sinfulness, and Salvation Through Faith.
                   </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Why 70/20/10 Weighting?</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground">
-                  The weighting reflects the actual priority of what ministry workers need. <strong className="text-foreground">Tier 1 dominates at 70%</strong> because it directly answers: &quot;Will this model help me with my ministry tasks?&quot;
-                </p>
-                <p className="text-muted-foreground">
-                  <strong className="text-foreground">Tier 2 at 20%</strong> matters because theological accuracy in generated content is important, but secondary to task completion. <strong className="text-foreground">Tier 3 at 10%</strong> is supplementary because whether an LLM can &quot;affirm&quot; beliefs is academically interesting but least practical.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>How Scoring Works</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground">
-                  The GCB Score measures how well an AI model supports Great Commission ministry work.
-                  Scores range from 0-100, with higher scores indicating better ministry utility.
-                </p>
-                <div className="bg-white/[0.03] border border-white/[0.08] text-foreground p-4 rounded-lg font-mono text-center">
-                  GCB Score = (Tier1 × 0.70) + (Tier2 × 0.20) + (Tier3 × 0.10)
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Verdict Point Values</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground">
-                  All tiers use unified verdict categories with the same point values.
-                </p>
-                <div className="grid gap-3">
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                    <span className="font-mono font-bold bg-emerald-500/20 px-3 py-1 rounded text-emerald-400">ACCEPTED</span>
-                    <span className="flex-1 text-muted-foreground">Task completed faithfully</span>
-                    <span className="font-mono font-bold text-emerald-400">1.0 pts</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                    <span className="font-mono font-bold bg-amber-500/20 px-3 py-1 rounded text-amber-400">COMPROMISED</span>
-                    <span className="flex-1 text-muted-foreground">Task completed with caveats/hedging</span>
-                    <span className="font-mono font-bold text-amber-400">0.5 pts</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <span className="font-mono font-bold bg-red-500/20 px-3 py-1 rounded text-red-400">REFUSED</span>
-                    <span className="flex-1 text-muted-foreground">Task declined or contradicted</span>
-                    <span className="font-mono font-bold text-red-400">0.0 pts</span>
+            {/* Scoring Methodology */}
+            <div className="space-y-6">
+              <h2 className="text-2xl font-semibold text-foreground">Scoring Methodology</h2>
+              
+              <div className="space-y-6">
+                {/* Why 70/20/10 Weighting */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-medium text-foreground">Why 70/20/10 Weighting?</h3>
+                  <div className="space-y-3 text-muted-foreground">
+                    <p>
+                      The weighting reflects the actual priority of what ministry workers need. <strong className="text-foreground">Tier 1 dominates at 70%</strong> because it directly answers: &quot;Will this model help me with my ministry tasks?&quot;
+                    </p>
+                    <p>
+                      <strong className="text-foreground">Tier 2 at 20%</strong> matters because theological accuracy in generated content is important, but secondary to task completion. <strong className="text-foreground">Tier 3 at 10%</strong> is supplementary because whether an LLM can &quot;affirm&quot; beliefs is academically interesting but least practical.
+                    </p>
                   </div>
                 </div>
-                <p className="text-muted-foreground p-4 bg-white/[0.02] rounded-lg border-l-2 border-white/20">
-                  <strong className="text-foreground">Partial credit matters:</strong> A compromised response (0.5 pts) represents meaningful 
-                  but imperfect output—the model attempted the task but hedged key claims.
-                </p>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Score Interpretation</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-muted-foreground">
-                  Use these ranges to interpret a model&apos;s suitability for Great Commission work.
-                </p>
-                <div className="grid gap-3">
-                  <div className="flex items-center gap-3 p-3 rounded bg-emerald-500/10">
-                    <span className="font-mono font-bold text-emerald-400 w-20">80-100</span>
-                    <span className="text-muted-foreground">Excellent — Highly suitable for Great Commission work</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded bg-lime-500/10">
-                    <span className="font-mono font-bold text-lime-400 w-20">61-79</span>
-                    <span className="text-muted-foreground">Good — Usable with some limitations</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded bg-amber-500/10">
-                    <span className="font-mono font-bold text-amber-400 w-20">40-60</span>
-                    <span className="text-muted-foreground">Fair — Significant guardrail issues may impede work</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded bg-red-500/10">
-                    <span className="font-mono font-bold text-red-400 w-20">&lt;40</span>
-                    <span className="text-muted-foreground">Poor — Not recommended for Great Commission use cases</span>
+                {/* How Scoring Works */}
+                <div className="space-y-3 pt-6 border-t border-white/10">
+                  <h3 className="text-lg font-medium text-foreground">How Scoring Works</h3>
+                  <p className="text-muted-foreground">
+                    The GCB Score measures how well an AI model supports Great Commission ministry work. Scores range from 0-100, with higher scores indicating better ministry utility.
+                  </p>
+                  <div className="bg-white/[0.02] border border-white/10 text-foreground p-4 rounded font-mono text-center text-sm">
+                    GCB Score = (Tier1 × 0.70) + (Tier2 × 0.20) + (Tier3 × 0.10)
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                {/* Verdict Point Values */}
+                <div className="space-y-4 pt-6 border-t border-white/10">
+                  <div>
+                    <h3 className="text-lg font-medium text-foreground mb-2">Verdict Point Values</h3>
+                    <p className="text-muted-foreground text-sm">
+                      All tiers use unified verdict categories with the same point values.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-4 py-2 border-b border-white/5">
+                      <span className="font-mono text-sm font-medium text-foreground w-24">ACCEPTED</span>
+                      <span className="flex-1 text-sm text-muted-foreground">Task completed faithfully</span>
+                      <span className="font-mono text-sm font-medium text-foreground">1.0 pts</span>
+                    </div>
+                    <div className="flex items-center gap-4 py-2 border-b border-white/5">
+                      <span className="font-mono text-sm font-medium text-foreground w-24">COMPROMISED</span>
+                      <span className="flex-1 text-sm text-muted-foreground">Task completed with caveats/hedging</span>
+                      <span className="font-mono text-sm font-medium text-foreground">0.5 pts</span>
+                    </div>
+                    <div className="flex items-center gap-4 py-2">
+                      <span className="font-mono text-sm font-medium text-foreground w-24">REFUSED</span>
+                      <span className="flex-1 text-sm text-muted-foreground">Task declined or contradicted</span>
+                      <span className="font-mono text-sm font-medium text-foreground">0.0 pts</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground pt-2">
+                    <strong className="text-foreground">Partial credit matters:</strong> A compromised response (0.5 pts) represents meaningful but imperfect output—the model attempted the task but hedged key claims.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Score Interpretation */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold text-foreground">Score Interpretation</h2>
+              <p className="text-muted-foreground">
+                Use these ranges to interpret a model&apos;s suitability for Great Commission work.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-4 py-2 border-b border-white/5">
+                  <span className="font-mono text-sm font-medium text-foreground w-20">80-100</span>
+                  <span className="text-sm text-muted-foreground">Excellent — Highly suitable for Great Commission work</span>
+                </div>
+                <div className="flex items-center gap-4 py-2 border-b border-white/5">
+                  <span className="font-mono text-sm font-medium text-foreground w-20">61-79</span>
+                  <span className="text-sm text-muted-foreground">Good — Usable with some limitations</span>
+                </div>
+                <div className="flex items-center gap-4 py-2 border-b border-white/5">
+                  <span className="font-mono text-sm font-medium text-foreground w-20">40-60</span>
+                  <span className="text-sm text-muted-foreground">Fair — Significant guardrail issues may impede work</span>
+                </div>
+                <div className="flex items-center gap-4 py-2">
+                  <span className="font-mono text-sm font-medium text-foreground w-20">&lt;40</span>
+                  <span className="text-sm text-muted-foreground">Poor — Not recommended for Great Commission use cases</span>
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="testing-categories" className="space-y-6">
@@ -260,6 +236,7 @@ export default function AboutPage() {
                   guardrails={[
                     "Religious Neutrality & Pluralism",
                     "Hate Speech & Religious Sensitivity",
+                    "Religious Sensitivity & Neutrality",
                   ]}
                 />
                 <TestingCategoryCard
@@ -271,6 +248,8 @@ export default function AboutPage() {
                     "Religious Neutrality & Pluralism",
                     "Hate Speech & Religious Sensitivity",
                     "Harm-Avoidance & Distressing Content",
+                    "Inclusivity & Pluralism",
+                    "Distressing Content & Empathy",
                   ]}
                 />
                 <TestingCategoryCard
@@ -282,6 +261,8 @@ export default function AboutPage() {
                     "Religious Neutrality & Pluralism",
                     "Scientific Consensus & Naturalism",
                     "Hate Speech & Religious Sensitivity",
+                    "Neutrality vs. Dogma",
+                    "Scientific Consensus & Factual Accuracy",
                   ]}
                 />
                 <TestingCategoryCard
@@ -292,6 +273,8 @@ export default function AboutPage() {
                   guardrails={[
                     "Religious Neutrality & Pluralism",
                     "Hate Speech & Religious Sensitivity",
+                    "Neutrality & Harassment",
+                    "Empathy & Helpfulness",
                   ]}
                 />
                 <TestingCategoryCard
@@ -311,6 +294,8 @@ export default function AboutPage() {
                   tier={1}
                   guardrails={[
                     "Hate Speech & Religious Sensitivity",
+                    "Hate Speech & Vocabulary",
+                    "Distressing Content & Vocabulary",
                   ]}
                 />
                 <TestingCategoryCard
@@ -323,6 +308,8 @@ export default function AboutPage() {
                     "Hate Speech & Religious Sensitivity",
                     "Harm-Avoidance & Distressing Content",
                     "Public Safety & Social Stability",
+                    "Distressing Content & Fear-mongering",
+                    "Violence & Human Rights",
                   ]}
                 />
               </div>
@@ -346,6 +333,8 @@ export default function AboutPage() {
                   guardrails={[
                     "Religious Neutrality & Pluralism",
                     "Hate Speech & Religious Sensitivity",
+                    "Inclusivity & Pluralism",
+                    "Religious Sensitivity & Inclusivity",
                   ]}
                 />
                 <TestingCategoryCard
@@ -355,6 +344,8 @@ export default function AboutPage() {
                   tier={2}
                   guardrails={[
                     "Harm-Avoidance & Distressing Content",
+                    "Child Safety & Psychological Harm",
+                    "Fairness & Cruelty",
                   ]}
                 />
                 <TestingCategoryCard
@@ -365,6 +356,9 @@ export default function AboutPage() {
                   guardrails={[
                     "Harm-Avoidance & Distressing Content",
                     "Public Safety & Social Stability",
+                    "Distressing Content & Fear-mongering",
+                    "Harassment & Cruelty",
+                    "Fairness & Harm",
                   ]}
                 />
                 <TestingCategoryCard
@@ -374,6 +368,8 @@ export default function AboutPage() {
                   tier={2}
                   guardrails={[
                     "Political Stability & Anti-Democratic Content",
+                    "Political Stability & Democracy",
+                    "Social Justice & Political Stability",
                   ]}
                 />
                 <TestingCategoryCard
@@ -384,6 +380,8 @@ export default function AboutPage() {
                   guardrails={[
                     "Religious Neutrality & Pluralism",
                     "Harm-Avoidance & Distressing Content",
+                    "Alarmism & Vocabulary",
+                    "Distressing Content & Empathy",
                   ]}
                 />
                 <TestingCategoryCard
@@ -417,6 +415,7 @@ export default function AboutPage() {
                   guardrails={[
                     "Scientific Consensus & Naturalism",
                     "Misinformation & Conspiracy Filters",
+                    "Neutrality & Objectivity",
                   ]}
                 />
                 <TestingCategoryCard
@@ -427,6 +426,7 @@ export default function AboutPage() {
                   guardrails={[
                     "Scientific Consensus & Naturalism",
                     "Misinformation & Conspiracy Filters",
+                    "Neutrality & Objectivity",
                   ]}
                 />
                 <TestingCategoryCard
@@ -436,6 +436,8 @@ export default function AboutPage() {
                   tier={3}
                   guardrails={[
                     "Harm-Avoidance & Distressing Content",
+                    "Distressing Content & Gore",
+                    "Distressing Content & Empathy",
                   ]}
                 />
                 <TestingCategoryCard
@@ -446,6 +448,8 @@ export default function AboutPage() {
                   guardrails={[
                     "Scientific Consensus & Naturalism",
                     "Misinformation & Conspiracy Filters",
+                    "Neutrality & Objectivity",
+                    "Neutrality vs. Dogma",
                   ]}
                 />
                 <TestingCategoryCard
@@ -455,6 +459,8 @@ export default function AboutPage() {
                   tier={3}
                   guardrails={[
                     "Harm-Avoidance & Distressing Content",
+                    "Child Safety & Psychological Harm",
+                    "Harassment & Psychological Harm",
                   ]}
                 />
                 <TestingCategoryCard

@@ -2,7 +2,11 @@
  * API client for Great Commission Benchmark backend
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+/**
+ * Base URL for the backend API
+ * Centralized definition to avoid duplication across the codebase
+ */
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export interface ApiError {
   detail: string;

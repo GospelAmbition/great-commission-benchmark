@@ -2,8 +2,9 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="bg-surface border-t border-white/[0.06]" role="contentinfo" aria-label="Site footer">
-      <div className="container py-10 md:py-12">
+    <footer className="relative bg-surface border-t border-white/[0.06] overflow-hidden" role="contentinfo" aria-label="Site footer">
+      <div className="absolute inset-0 bg-gradient-to-b from-[#09090b] via-[#1a0a0a] to-[#09090b] opacity-80" />
+      <div className="relative container py-10 md:py-12">
         <div className="grid grid-cols-2 gap-6 md:grid-cols-4 md:gap-8">
           <div>
             <h3 className="mb-3 text-sm font-semibold text-foreground">Platform</h3>

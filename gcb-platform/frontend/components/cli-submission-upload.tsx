@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ interface CliSubmissionUploadProps {
 }
 
 export function CliSubmissionUpload({ open, onOpenChange, onSuccess }: CliSubmissionUploadProps) {
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [jsonText, setJsonText] = useState("");
   const [uploadMode, setUploadMode] = useState<"file" | "paste">("file");
@@ -148,9 +150,18 @@ export function CliSubmissionUpload({ open, onOpenChange, onSuccess }: CliSubmis
       // Success
       toast.success(response.message || "Submission uploaded successfully");
 
-      if (response.payment_required && response.payment_intent_id) {
-        toast.info("Payment required to complete submission");
-        // TODO: Navigate to payment page if needed
+      if (response.payment_required) {
+        if (response.payment_url) {
+          // If a payment URL is provided, navigate to it
+          router.push(response.payment_url);
+        } else if (response.submission_id) {
+          // Otherwise, navigate to submission detail page where payment can be completed
+          router.push(`/dashboard/submissions/${response.submission_id}`);
+        } else {
+          toast.info("Payment required to complete submission. Please check your dashboard.");
+        }
+        onOpenChange(false); // Close dialog before navigation
+        return; // Don't reset form yet if payment is needed
       }
 
       // Reset form
