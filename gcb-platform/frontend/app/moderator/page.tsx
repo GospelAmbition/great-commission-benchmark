@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,8 +20,10 @@ import Link from "next/link";
 import { apiClient } from "@/lib/api";
 
 export default function ModeratorDashboardPage() {
-  const { data: session } = useSession();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const user = session?.user;
+  const userLoading = status === "loading";
   const [platformQueue, setPlatformQueue] = useState<any[]>([]);
   const [communityQueue, setCommunityQueue] = useState<any[]>([]);
   const [sponsorshipQueue, setSponsorshipQueue] = useState<any[]>([]);
@@ -29,8 +32,14 @@ export default function ModeratorDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (!userLoading && !user) {
+      router.push("/api/auth/signin");
+      return;
+    }
+    if (user) {
+      loadDashboardData();
+    }
+  }, [user, userLoading, router]);
 
   async function loadDashboardData() {
     setLoading(true);
@@ -71,7 +80,7 @@ export default function ModeratorDashboardPage() {
     }
   }
 
-  if (loading) {
+  if (userLoading || (loading && !user)) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -82,6 +91,10 @@ export default function ModeratorDashboardPage() {
         </div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (

@@ -1,18 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const userLoading = status === "loading";
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (!userLoading && !user) {
+      router.push("/api/auth/signin");
+      return;
+    }
+    if (user) {
+      loadDashboardData();
+    }
+  }, [user, userLoading, router]);
 
   async function loadDashboardData() {
     setLoading(true);
@@ -46,7 +58,7 @@ export default function AdminDashboardPage() {
     }
   }
 
-  if (loading) {
+  if (userLoading || (loading && !user)) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -57,6 +69,10 @@ export default function AdminDashboardPage() {
         </div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (

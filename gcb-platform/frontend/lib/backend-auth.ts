@@ -18,10 +18,16 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000
  * Generate a JWT token for authenticating with the backend API.
  * Uses the NextAuth session to create a signed token.
  * 
+ * @param request - The incoming request object (needed to read session cookies)
  * @returns The JWT token string, or null if no session exists
  */
-export async function getBackendToken(): Promise<string | null> {
+export async function getBackendToken(request?: Request): Promise<string | null> {
+  // In NextAuth v5, auth() automatically reads from request context when called
+  // from within an API route handler. Since we're calling this from route handlers,
+  // auth() should automatically have access to the request context.
+  // The request parameter is kept for potential future use but may not be needed.
   const session = await auth();
+  
   if (!session) return null;
 
   const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET!);
@@ -64,11 +70,12 @@ interface ProxyRequestOptions {
  */
 export async function proxyToBackend(
   endpoint: string,
-  options: ProxyRequestOptions = {}
+  options: ProxyRequestOptions = {},
+  request?: Request
 ): Promise<NextResponse> {
   const { method = "GET", body, headers = {}, queryString, allowPublic = false } = options;
   
-  const token = await getBackendToken();
+  const token = await getBackendToken(request);
   
   // If authentication is required and no token exists, return 401
   if (!token && !allowPublic) {
@@ -133,9 +140,10 @@ export async function proxyToBackend(
  */
 export async function proxyFormDataToBackend(
   endpoint: string,
-  formData: FormData
+  formData: FormData,
+  request?: Request
 ): Promise<NextResponse> {
-  const token = await getBackendToken();
+  const token = await getBackendToken(request);
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

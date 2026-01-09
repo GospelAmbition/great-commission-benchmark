@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,9 @@ interface BlogCategory {
 
 export default function NewBlogPostPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const userLoading = status === "loading";
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -36,8 +40,14 @@ export default function NewBlogPostPage() {
   });
 
   useEffect(() => {
-    loadCategories();
-  }, []);
+    if (!userLoading && !user) {
+      router.push("/api/auth/signin");
+      return;
+    }
+    if (user) {
+      loadCategories();
+    }
+  }, [user, userLoading, router]);
 
   async function loadCategories() {
     try {
@@ -49,6 +59,20 @@ export default function NewBlogPostPage() {
     } catch (error) {
       console.error("Failed to load categories:", error);
     }
+  }
+
+  if (userLoading) {
+    return (
+      <div className="container py-8">
+        <div className="h-[500px] border rounded-md flex items-center justify-center bg-muted">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
   }
 
   function generateSlug(title: string) {

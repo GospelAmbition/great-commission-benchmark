@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,9 @@ interface BlogPost {
 
 export default function BlogManagerPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const userLoading = status === "loading";
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,8 +79,14 @@ export default function BlogManagerPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    loadData();
-  }, [statusFilter]);
+    if (!userLoading && !user) {
+      router.push("/api/auth/signin");
+      return;
+    }
+    if (user) {
+      loadData();
+    }
+  }, [user, userLoading, statusFilter, router]);
 
   async function loadData() {
     setLoading(true);
@@ -116,6 +126,23 @@ export default function BlogManagerPage() {
     } catch (error) {
       console.error("Failed to load categories:", error);
     }
+  }
+
+  if (userLoading || (loading && !user)) {
+    return (
+      <div className="container py-8">
+        <Skeleton className="h-12 w-64 mb-8" />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-48" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
   }
 
   function generateSlug(name: string) {

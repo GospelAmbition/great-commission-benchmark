@@ -2,7 +2,8 @@ import { auth } from "@/auth"
 import { NextResponse } from "next/server"
 import * as jose from "jose"
 
-export async function GET() {
+export async function GET(request: Request) {
+  // In NextAuth v5, auth() automatically reads from request context
   const session = await auth()
   
   if (!session) {

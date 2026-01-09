@@ -272,7 +272,7 @@ function detectFileType(filename: string, content: string): "csv" | "json" {
 }
 
 export async function POST(request: Request) {
-  const token = await getBackendToken();
+  const token = await getBackendToken(request);
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

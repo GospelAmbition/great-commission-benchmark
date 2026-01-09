@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,9 @@ interface BlogPost {
 export default function EditBlogPostPage() {
   const router = useRouter();
   const params = useParams();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const userLoading = status === "loading";
   const postId = params.id as string;
   
   const [post, setPost] = useState<BlogPost | null>(null);
@@ -62,10 +66,14 @@ export default function EditBlogPostPage() {
   });
 
   useEffect(() => {
-    if (postId) {
+    if (!userLoading && !user) {
+      router.push("/api/auth/signin");
+      return;
+    }
+    if (user && postId) {
       loadData();
     }
-  }, [postId]);
+  }, [user, userLoading, postId, router]);
 
   async function loadData() {
     setLoading(true);
@@ -110,6 +118,20 @@ export default function EditBlogPostPage() {
     } catch (error) {
       console.error("Failed to load categories:", error);
     }
+  }
+
+  if (userLoading || (loading && !user)) {
+    return (
+      <div className="container py-8">
+        <div className="h-[500px] border rounded-md flex items-center justify-center bg-muted">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
   }
 
   async function handleUploadImage(file: File): Promise<string> {

@@ -46,7 +46,7 @@ async function handleRequest(
     options.queryString = queryString;
   }
 
-  return proxyToBackend(backendPath, options);
+  return proxyToBackend(backendPath, options, request);
 }
 
 export async function GET(request: Request, context: RouteContext) {
