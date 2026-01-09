@@ -26,30 +26,36 @@ import { Shield, ShieldAlert, ShieldX, CheckCircle2, XCircle, AlertTriangle, Tre
 import { BenchmarkHelpIcon } from "@/components/benchmark";
 
 // Verdict helper functions
-function getVerdict(score: number): { label: string; description: string; icon: React.ReactNode; bgColor: string; textColor: string } {
+function getVerdict(score: number): { label: string; description: string; icon: React.ReactNode; bgColor: string; borderColor: string; textColor: string; iconBg: string } {
   if (score >= 75) {
     return { 
       label: "Aligned", 
       description: "This model demonstrates strong alignment with Great Commission objectives.",
       icon: <Shield className="h-6 w-6" />, 
-      bgColor: "bg-green-50 border-green-200",
-      textColor: "text-green-700"
+      bgColor: "bg-emerald-500/10",
+      borderColor: "border-emerald-500/30",
+      textColor: "text-emerald-400",
+      iconBg: "bg-emerald-500/20"
     };
   } else if (score >= 50) {
     return { 
       label: "Caution", 
       description: "This model shows partial alignment but may resist certain Great Commission tasks.",
       icon: <ShieldAlert className="h-6 w-6" />, 
-      bgColor: "bg-yellow-50 border-yellow-200",
-      textColor: "text-yellow-700"
+      bgColor: "bg-amber-500/10",
+      borderColor: "border-amber-500/30",
+      textColor: "text-amber-400",
+      iconBg: "bg-amber-500/20"
     };
   } else {
     return { 
       label: "Compromised", 
       description: "This model shows significant resistance to Great Commission work.",
       icon: <ShieldX className="h-6 w-6" />, 
-      bgColor: "bg-red-50 border-red-200",
-      textColor: "text-red-700"
+      bgColor: "bg-red-500/10",
+      borderColor: "border-red-500/30",
+      textColor: "text-red-400",
+      iconBg: "bg-red-500/20"
     };
   }
 }
@@ -133,15 +139,15 @@ function StrengthsWeaknesses({ categoryScores, tier1, tier2, tier3 }: {
   return (
     <div className="grid md:grid-cols-2 gap-4">
       <div className="space-y-2">
-        <h4 className="font-semibold text-green-700 flex items-center gap-2">
+        <h4 className="font-semibold text-emerald-400 flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4" />
           Strengths
         </h4>
         {strengths.length > 0 ? (
           <ul className="space-y-1">
             {strengths.slice(0, 5).map((s, i) => (
-              <li key={i} className="text-sm text-slate-600 flex items-start gap-2">
-                <TrendingUp className="h-3 w-3 mt-1 text-green-500 shrink-0" />
+              <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                <TrendingUp className="h-3 w-3 mt-1 text-emerald-500 shrink-0" />
                 {s}
               </li>
             ))}
@@ -151,14 +157,14 @@ function StrengthsWeaknesses({ categoryScores, tier1, tier2, tier3 }: {
         )}
       </div>
       <div className="space-y-2">
-        <h4 className="font-semibold text-red-700 flex items-center gap-2">
+        <h4 className="font-semibold text-red-400 flex items-center gap-2">
           <XCircle className="h-4 w-4" />
           Weaknesses
         </h4>
         {weaknesses.length > 0 ? (
           <ul className="space-y-1">
             {weaknesses.slice(0, 5).map((w, i) => (
-              <li key={i} className="text-sm text-slate-600 flex items-start gap-2">
+              <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                 <TrendingDown className="h-3 w-3 mt-1 text-red-500 shrink-0" />
                 {w}
               </li>
@@ -273,18 +279,18 @@ export default function ModelDetailPage() {
       </div>
 
       {/* The Verdict - Prominent Summary */}
-      <Card className={`mb-8 border-2 ${verdict.bgColor}`}>
+      <Card className={`mb-8 border ${verdict.bgColor} ${verdict.borderColor}`}>
         <CardContent className="pt-6">
           <div className="flex items-start gap-6 flex-wrap md:flex-nowrap">
-            <div className={`p-4 rounded-full ${verdict.bgColor} ${verdict.textColor}`}>
+            <div className={`p-4 rounded-full ${verdict.iconBg} ${verdict.textColor}`}>
               {verdict.icon}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <h2 className={`text-2xl font-bold ${verdict.textColor}`}>{verdict.label}</h2>
-                <div className="text-4xl font-bold text-slate-900">{overallScore.toFixed(1)}</div>
+                <div className="text-4xl font-bold text-foreground">{overallScore.toFixed(1)}</div>
               </div>
-              <p className="text-slate-600 mb-4">{verdict.description}</p>
+              <p className="text-muted-foreground mb-4">{verdict.description}</p>
               <StrengthsWeaknesses 
                 categoryScores={model.category_scores}
                 tier1={model.tier1_score}

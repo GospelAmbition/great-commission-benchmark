@@ -26,11 +26,11 @@ import { BenchmarkHelpIcon } from "@/components/benchmark";
 // Verdict helper
 function getVerdict(score: number): { label: string; icon: React.ReactNode; color: string; bgColor: string } {
   if (score >= 75) {
-    return { label: "Aligned", icon: <Shield className="h-4 w-4" />, color: "text-green-600", bgColor: "bg-green-50 border-green-200" };
+    return { label: "Aligned", icon: <Shield className="h-4 w-4" />, color: "text-emerald-400", bgColor: "bg-emerald-500/20 border-emerald-500/30" };
   } else if (score >= 50) {
-    return { label: "Caution", icon: <ShieldAlert className="h-4 w-4" />, color: "text-yellow-600", bgColor: "bg-yellow-50 border-yellow-200" };
+    return { label: "Caution", icon: <ShieldAlert className="h-4 w-4" />, color: "text-amber-400", bgColor: "bg-amber-500/20 border-amber-500/30" };
   } else {
-    return { label: "Compromised", icon: <ShieldX className="h-4 w-4" />, color: "text-red-600", bgColor: "bg-red-50 border-red-200" };
+    return { label: "Compromised", icon: <ShieldX className="h-4 w-4" />, color: "text-red-400", bgColor: "bg-red-500/20 border-red-500/30" };
   }
 }
 
