@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiClient } from "@/lib/api";
+import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CategoryChart } from "@/components/charts/CategoryChart";
@@ -237,9 +238,10 @@ export default function ModelDetailPage() {
   const verdict = getVerdict(overallScore);
 
   // Prepare radar chart data
+  const displayName = getDisplayModelName(model.model_name || model.name, model.model_id);
   const radarCategories = model.category_scores ? Object.keys(model.category_scores) : [];
   const radarData = model.category_scores ? [{
-    label: model.model_name || model.name,
+    label: displayName,
     scores: model.category_scores
   }] : [];
 
@@ -251,9 +253,9 @@ export default function ModelDetailPage() {
         </Button>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-4xl font-bold">{model.model_name || model.name}</h1>
+            <h1 className="text-4xl font-bold">{displayName}</h1>
             <div className="mt-2 flex items-center gap-4">
-              <Badge variant="secondary">{model.provider}</Badge>
+              <Badge variant="secondary">{formatProvider(model.provider)}</Badge>
               {model.trust_tier && (
                 <Badge variant="outline">{model.trust_tier}</Badge>
               )}
@@ -387,7 +389,7 @@ export default function ModelDetailPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-sm text-muted-foreground">Provider</span>
-                    <p className="font-medium">{model.provider}</p>
+                    <p className="font-medium">{formatProvider(model.provider)}</p>
                   </div>
                   {model.model_id && (
                     <div>

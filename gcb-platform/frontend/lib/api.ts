@@ -93,6 +93,13 @@ export interface StatsResponse {
   last_updated: string;
 }
 
+export interface FilterOptionsResponse {
+  providers: string[];
+  categories: string[];
+  trust_tiers: string[];
+  tiers: Array<{ value: string; label: string }>;
+}
+
 export interface CompareResponse {
   models: Array<{
     model_id: string;
@@ -349,6 +356,10 @@ export class ApiClient {
 
   async getStats(): Promise<StatsResponse> {
     return this.request<StatsResponse>('/api/public/stats');
+  }
+
+  async getFilterOptions(): Promise<FilterOptionsResponse> {
+    return this.request<FilterOptionsResponse>('/api/public/filter-options');
   }
 
   async compareModels(modelIds: string[]): Promise<CompareResponse> {

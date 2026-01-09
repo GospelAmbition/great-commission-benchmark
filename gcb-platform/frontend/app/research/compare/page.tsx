@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { apiClient, CompareResponse } from "@/lib/api";
+import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadarChart } from "@/components/charts/RadarChart";
@@ -103,21 +104,21 @@ function ComparePageContent() {
 
   const categories = comparison.categories || [];
   const radarData = comparison.models.map((model) => ({
-    label: model.model_name,
+    label: getDisplayModelName(model.model_name, model.model_id),
     scores: model.category_scores || {},
   }));
 
   // Sort models by overall score and assign ranks
   const rankedModels = [...comparison.models]
     .sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0))
-    .map((model, index) => ({ ...model, rank: index + 1 }));
+    .map((model, index) => ({ ...model, rank: index + 1, displayName: getDisplayModelName(model.model_name, model.model_id) }));
 
   // Find the winner
   const winner = rankedModels[0];
 
   // Prepare heatmap data
   const heatmapData = comparison.models.map((model) => ({
-    model_name: model.model_name,
+    model_name: getDisplayModelName(model.model_name, model.model_id),
     categories: model.category_scores || {},
   }));
 
@@ -136,7 +137,7 @@ function ComparePageContent() {
 
       {/* Head-to-Head Summary */}
       {rankedModels.length >= 2 && (
-        <Card className="mb-8 bg-gradient-to-r from-slate-50 to-slate-100 border-2">
+        <Card className="mb-8 border-yellow-500/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-yellow-500" />
@@ -146,22 +147,22 @@ function ComparePageContent() {
           <CardContent>
             <div className="flex items-center justify-center gap-8 flex-wrap">
               <div className="text-center">
-                <div className="text-lg font-bold text-slate-900">{winner.model_name}</div>
-                <div className="text-3xl font-bold text-green-600">{winner.overall_score?.toFixed(1)}</div>
-                <Badge className="mt-2 bg-green-600">Winner</Badge>
+                <div className="text-lg font-bold text-foreground">{winner.displayName}</div>
+                <div className="text-3xl font-bold text-emerald-400">{winner.overall_score?.toFixed(1)}</div>
+                <Badge className="mt-2 bg-emerald-600">Winner</Badge>
               </div>
-              <div className="text-2xl font-bold text-slate-300">vs</div>
+              <div className="text-2xl font-bold text-muted-foreground">vs</div>
               {rankedModels.slice(1).map((model, index) => (
                 <div key={model.model_id || `runner-up-${index}`} className="text-center">
-                  <div className="text-lg font-bold text-slate-600">{model.model_name}</div>
-                  <div className="text-3xl font-bold text-slate-500">{model.overall_score?.toFixed(1)}</div>
+                  <div className="text-lg font-bold text-muted-foreground">{model.displayName}</div>
+                  <div className="text-3xl font-bold text-muted-foreground">{model.overall_score?.toFixed(1)}</div>
                   <Badge variant="outline" className="mt-2">#{model.rank}</Badge>
                 </div>
               ))}
             </div>
             <div className="mt-6 text-center text-sm text-muted-foreground">
-              <strong>{winner.model_name}</strong> outperforms by{" "}
-              <span className="text-green-600 font-semibold">
+              <strong className="text-foreground">{winner.displayName}</strong> outperforms by{" "}
+              <span className="text-emerald-400 font-semibold">
                 +{((winner.overall_score || 0) - (rankedModels[1]?.overall_score || 0)).toFixed(1)} points
               </span>
             </div>
@@ -183,10 +184,10 @@ function ComparePageContent() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <RankIcon rank={model.rank} />
-                  <CardTitle className="text-lg">{model.model_name}</CardTitle>
+                  <CardTitle className="text-lg">{model.displayName}</CardTitle>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{model.provider}</Badge>
+                  <Badge variant="secondary">{formatProvider(model.provider)}</Badge>
                   <Badge className={`${verdict.color} ${verdict.bgColor} border`} variant="outline">
                     {verdict.icon}
                     <span className="ml-1">{verdict.label}</span>
@@ -287,7 +288,7 @@ function ComparePageContent() {
                 <TableRow>
                   <TableHead>Category</TableHead>
                   {comparison.models.map((model, index) => (
-                    <TableHead key={model.model_id || `header-${index}`}>{model.model_name}</TableHead>
+                    <TableHead key={model.model_id || `header-${index}`}>{getDisplayModelName(model.model_name, model.model_id)}</TableHead>
                   ))}
                   <TableHead>Best</TableHead>
                 </TableRow>
@@ -296,7 +297,7 @@ function ComparePageContent() {
                 {categories.map((category: string) => {
                   const scores = comparison.models.map((model) => {
                     const score = model.category_scores?.[category] || 0;
-                    return { model: model.model_name, score };
+                    return { model: getDisplayModelName(model.model_name, model.model_id), score };
                   });
                   const best = scores.reduce((max, curr) =>
                     curr.score > max.score ? curr : max

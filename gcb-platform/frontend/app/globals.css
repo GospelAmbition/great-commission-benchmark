@@ -219,6 +219,12 @@
     max-width: 1280px;
     width: 100%;
   }
+  
+  @media (min-width: 1536px) {
+    .container {
+      max-width: 1792px;
+    }
+  }
 }
 
 /* Animation keyframes */

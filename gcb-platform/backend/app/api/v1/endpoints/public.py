@@ -110,6 +110,66 @@ def _get_model_detail_data(db: Session, model: Model) -> dict:
     }
 
 
+@router.get("/filter-options")
+async def get_filter_options(
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    """
+    Get available filter options for the leaderboard.
+    Returns distinct providers and categories from models that have completed test runs.
+    """
+    # Check cache first
+    cache_key = make_cache_key("filter_options")
+    cached_result = await cache.get(cache_key)
+    if cached_result:
+        response.headers["X-Cache"] = "HIT"
+        return cached_result
+    
+    response.headers["X-Cache"] = "MISS"
+    
+    # Get distinct providers from models that have completed test runs
+    providers = db.query(Model.provider).join(
+        TestRun, TestRun.model_id == Model.id
+    ).filter(
+        TestRun.status == "completed",
+        Model.is_active == True
+    ).distinct().all()
+    providers = sorted([p[0] for p in providers if p[0]])
+    
+    # Get distinct categories from questions in the active question set
+    active_qs = db.query(QuestionSet).filter(QuestionSet.status == "active").first()
+    categories = []
+    if active_qs:
+        cat_results = db.query(Question.category).filter(
+            Question.question_set_id == active_qs.id
+        ).distinct().all()
+        categories = sorted([c[0] for c in cat_results if c[0]])
+    
+    # Get distinct trust tiers from completed test runs
+    trust_tiers = db.query(TestRun.trust_tier).filter(
+        TestRun.status == "completed",
+        TestRun.trust_tier.isnot(None)
+    ).distinct().all()
+    trust_tiers = sorted([t[0] for t in trust_tiers if t[0]])
+    
+    result = {
+        "providers": providers,
+        "categories": categories,
+        "trust_tiers": trust_tiers,
+        "tiers": [
+            {"value": "tier1", "label": "Tier 1 (Task)"},
+            {"value": "tier2", "label": "Tier 2 (Doctrine)"},
+            {"value": "tier3", "label": "Tier 3 (Worldview)"}
+        ]
+    }
+    
+    # Cache for 5 minutes
+    await cache.set(cache_key, result, 300)
+    
+    return result
+
+
 @router.get("/leaderboard", response_model=LeaderboardResponse)
 async def get_leaderboard(
     version: str = Query("current", description="Semantic version or 'current'"),

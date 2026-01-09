@@ -20,7 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { apiClient } from "@/lib/api";
+import { apiClient, FilterOptionsResponse } from "@/lib/api";
+import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowUpDown, BarChart3, Filter, AlertTriangle, ChevronUp, ChevronDown, Shield, ShieldAlert, ShieldX } from "lucide-react";
@@ -95,13 +96,13 @@ export default function ResearchPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
+  const [filterOptions, setFilterOptions] = useState<FilterOptionsResponse | null>(null);
   const [filters, setFilters] = useState({
     version: "",
     category: "",
     tier: "",
     provider: "",
     trust_tier: "",
-    model_type: "",
     sort: "score",
     order: "desc" as "asc" | "desc",
   });
@@ -111,9 +112,23 @@ export default function ResearchPage() {
     total: 0,
   });
 
+  // Load filter options on mount
+  useEffect(() => {
+    loadFilterOptions();
+  }, []);
+
   useEffect(() => {
     loadLeaderboard();
   }, [filters, pagination.offset]);
+
+  async function loadFilterOptions() {
+    try {
+      const options = await apiClient.getFilterOptions();
+      setFilterOptions(options);
+    } catch (error) {
+      console.error("Failed to load filter options:", error);
+    }
+  }
 
   async function loadLeaderboard() {
     setLoading(true);
@@ -183,7 +198,7 @@ export default function ResearchPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
               <div>
                 <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Provider</label>
                 <Select
@@ -197,30 +212,11 @@ export default function ResearchPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All providers</SelectItem>
-                    <SelectItem value="openai">OpenAI</SelectItem>
-                    <SelectItem value="anthropic">Anthropic</SelectItem>
-                    <SelectItem value="google">Google</SelectItem>
-                    <SelectItem value="meta">Meta</SelectItem>
-                    <SelectItem value="mistral">Mistral</SelectItem>
-                    <SelectItem value="cohere">Cohere</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Model Type</label>
-                <Select
-                  value={filters.model_type || "all"}
-                  onValueChange={(value) =>
-                    setFilters((prev) => ({ ...prev, model_type: value === "all" ? "" : value }))
-                  }
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="All types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All types</SelectItem>
-                    <SelectItem value="open_source">Open Source</SelectItem>
-                    <SelectItem value="proprietary">Proprietary</SelectItem>
+                    {filterOptions?.providers.map((provider) => (
+                      <SelectItem key={provider} value={provider}>
+                        {provider.charAt(0).toUpperCase() + provider.slice(1)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -237,9 +233,11 @@ export default function ResearchPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All tiers</SelectItem>
-                    <SelectItem value="automated">Automated</SelectItem>
-                    <SelectItem value="reviewed">Reviewed</SelectItem>
-                    <SelectItem value="validated">Validated</SelectItem>
+                    {filterOptions?.trust_tiers.map((tier) => (
+                      <SelectItem key={tier} value={tier}>
+                        {tier.charAt(0).toUpperCase() + tier.slice(1)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -256,10 +254,11 @@ export default function ResearchPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All categories</SelectItem>
-                    <SelectItem value="scripture">Scripture</SelectItem>
-                    <SelectItem value="theology">Theology</SelectItem>
-                    <SelectItem value="ethics">Ethics</SelectItem>
-                    <SelectItem value="apologetics">Apologetics</SelectItem>
+                    {filterOptions?.categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category.charAt(0).toUpperCase() + category.slice(1)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -276,9 +275,11 @@ export default function ResearchPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All tiers</SelectItem>
-                    <SelectItem value="tier1">Tier 1 (Task)</SelectItem>
-                    <SelectItem value="tier2">Tier 2 (Doctrine)</SelectItem>
-                    <SelectItem value="tier3">Tier 3 (Worldview)</SelectItem>
+                    {filterOptions?.tiers.map((tier) => (
+                      <SelectItem key={tier.value} value={tier.value}>
+                        {tier.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -404,11 +405,11 @@ export default function ResearchPage() {
                                 href={`/research/models/${encodeURIComponent(item.model_id)}`}
                                 className="font-medium text-foreground hover:text-primary transition-colors"
                               >
-                                {item.model_name}
+                                {getDisplayModelName(item.model_name, item.model_id)}
                               </Link>
                             </TableCell>
-                            <TableCell className="py-3">
-                              <Badge variant="muted">{item.provider}</Badge>
+                            <TableCell className="py-3 text-muted-foreground">
+                              {formatProvider(item.provider)}
                             </TableCell>
                             <TableCell className="py-3">
                               <ScoreBar score={item.overall_score} />
