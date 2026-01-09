@@ -88,12 +88,13 @@ async def upload_image(
     try:
         s3_client = get_s3_client()
         
-        # Upload to S3-compatible storage
+        # Upload to S3-compatible storage with public-read ACL
         s3_client.put_object(
             Bucket=settings.S3_BUCKET,
             Key=unique_filename,
             Body=content,
-            ContentType=file.content_type
+            ContentType=file.content_type,
+            ACL='public-read'
         )
         
         # Generate public URL
