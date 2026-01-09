@@ -1453,17 +1453,17 @@ export default function BenchmarkDashboardPage() {
                                 <TableCell className="font-medium">{catStats.count}</TableCell>
                                 <TableCell className="text-muted-foreground">{catStats.target}</TableCell>
                                 <TableCell>
-                                  <Badge variant="outline" className="bg-green-50 dark:bg-green-900/60">
+                                  <Badge variant="outline">
                                     {catStats.difficulty?.easy || 0}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant="outline" className="bg-yellow-50 dark:bg-yellow-900/60">
+                                  <Badge variant="outline">
                                     {catStats.difficulty?.medium || 0}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant="outline" className="bg-red-50 dark:bg-red-900/60">
+                                  <Badge variant="outline">
                                     {catStats.difficulty?.hard || 0}
                                   </Badge>
                                 </TableCell>
@@ -1661,17 +1661,8 @@ export default function BenchmarkDashboardPage() {
                               <span className="font-medium text-sm">{q.category}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Badge 
-                                variant="outline"
-                                className={
-                                  q.metadata?.difficulty === "easy" 
-                                    ? "bg-green-50 dark:bg-green-900/60" 
-                                    : q.metadata?.difficulty === "hard"
-                                    ? "bg-red-50 dark:bg-red-900/60"
-                                    : "bg-yellow-50 dark:bg-yellow-900/60"
-                                }
-                              >
-                                {q.metadata?.difficulty || "?"}
+                              <Badge variant="outline">
+                                {(q.metadata?.difficulty || "?").toUpperCase()}
                               </Badge>
                               {q.is_locked && (
                                 <Badge variant="default" className="bg-green-600 hover:bg-green-600 text-xs">
@@ -1681,16 +1672,7 @@ export default function BenchmarkDashboardPage() {
                             </div>
                             {q.expected_verdict && (
                               <div>
-                                <Badge 
-                                  variant="outline"
-                                  className={
-                                    q.expected_verdict === "ACCEPTED"
-                                      ? "bg-blue-50 dark:bg-blue-900/60 text-blue-700 dark:text-blue-400"
-                                      : q.expected_verdict === "COMPROMISED"
-                                      ? "bg-orange-50 dark:bg-orange-900/60 text-orange-700 dark:text-orange-400"
-                                      : "bg-red-50 dark:bg-red-900/60 text-red-700 dark:text-red-400"
-                                  }
-                                >
+                                <Badge variant="outline">
                                   {q.expected_verdict}
                                 </Badge>
                               </div>
