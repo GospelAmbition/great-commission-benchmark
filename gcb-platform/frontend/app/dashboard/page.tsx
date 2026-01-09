@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { CliSubmissionUpload } from "@/components/cli-submission-upload";
 import { SponsorModelCard } from "@/components/sponsor-model-card";
+import { APIKeysCard } from "@/components/api-keys-card";
 import { 
   Terminal, 
   Key, 
@@ -118,47 +119,67 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Engagement Cards */}
+      <div className="container pt-8 max-w-7xl">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Heart className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Support the Project</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Help keep the benchmark running and accessible to everyone.
+              </p>
+              <Button asChild variant="outline" size="sm" className="w-full">
+                <Link href="/contribute">Donate →</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Volunteer</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Help review submissions, develop features, or spread the word.
+              </p>
+              <Button asChild variant="outline" size="sm" className="w-full">
+                <Link href="/contribute">Get Involved →</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Newsletter</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Get updates on new features, benchmark results, and more.
+              </p>
+              <Button asChild variant="outline" size="sm" className="w-full">
+                <Link href="/dashboard/settings">Subscribe →</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       <div className="container py-8 max-w-7xl">
         {/* Two-column layout: Main content + Side column */}
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Main Content Column */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Stats Summary */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    GCB Runner Submissions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-foreground">{submissions?.length ?? 0}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Approved
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-foreground">
-                    {submissions?.filter((s: any) => s.status === "approved").length ?? 0}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Contributions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-foreground">{profile?.contribution_count || 0}</div>
-                </CardContent>
-              </Card>
-            </div>
-
             {/* Get Started as a Tester */}
             <Card className="border-primary/20 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 gradient-red-glow opacity-10" />
@@ -388,67 +409,11 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Engagement Cards */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Heart className="h-5 w-5 text-primary" />
-                    <CardTitle className="text-lg">Support the Project</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Help keep the benchmark running and accessible to everyone.
-                  </p>
-                  <Button asChild variant="outline" size="sm" className="w-full">
-                    <Link href="/contribute">Donate →</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-primary" />
-                    <CardTitle className="text-lg">Volunteer</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Help review submissions, develop features, or spread the word.
-                  </p>
-                  <Button asChild variant="outline" size="sm" className="w-full">
-                    <Link href="/contribute">Get Involved →</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-5 w-5 text-primary" />
-                    <CardTitle className="text-lg">Newsletter</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Get updates on new features, benchmark results, and more.
-                  </p>
-                  <Button asChild variant="outline" size="sm" className="w-full">
-                    <Link href="/dashboard/settings">Subscribe →</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
           </div>
 
-          {/* Side Column - Sponsor Model Card + Upload Results */}
+          {/* Side Column - Upload Results + Sponsor Model Card */}
           <div className="lg:col-span-1">
             <div className="sticky top-8 space-y-6">
-              <SponsorModelCard />
-              
               {/* Upload Results Card */}
               <Card className="border-primary/20">
                 <CardHeader className="pb-3">
@@ -471,8 +436,48 @@ export default function DashboardPage() {
                   </Button>
                 </CardContent>
               </Card>
+
+              <APIKeysCard />
+
+              <SponsorModelCard />
             </div>
           </div>
+        </div>
+
+        {/* Stats Summary */}
+        <div className="grid gap-4 md:grid-cols-3 mt-8">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                GCB Runner Submissions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{submissions?.length ?? 0}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Approved
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">
+                {submissions?.filter((s: any) => s.status === "approved").length ?? 0}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Contributions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{profile?.contribution_count || 0}</div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* CLI Submission Upload Dialog */}

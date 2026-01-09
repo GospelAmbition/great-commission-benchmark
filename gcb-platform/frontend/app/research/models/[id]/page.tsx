@@ -271,9 +271,6 @@ export default function ModelDetailPage() {
             <Button asChild variant="outline">
               <Link href={`/research/compare?models=${encodeURIComponent(model.id)}`}>Compare</Link>
             </Button>
-            <Button asChild variant="brand">
-              <Link href="/tests/new">Run Test</Link>
-            </Button>
           </div>
         </div>
       </div>
@@ -422,11 +419,6 @@ export default function ModelDetailPage() {
                 <Button asChild variant="outline" className="w-full justify-start">
                   <Link href={`/research/compare?models=${encodeURIComponent(model.id)}`}>
                     Compare with other models
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link href="/tests/new">
-                    Run your own test
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full justify-start">
