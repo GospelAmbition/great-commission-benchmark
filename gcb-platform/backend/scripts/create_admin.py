@@ -43,19 +43,49 @@ def list_users(db: Session):
     print()
 
 
-def promote_to_admin(db: Session, email: str) -> bool:
+def promote_to_admin(db: Session, email: str, create_if_missing: bool = False) -> bool:
     """Promote a user to admin role by email"""
     user = db.query(User).filter(User.email == email).first()
     
     if not user:
-        print(f"\n❌ User with email '{email}' not found in the database.")
-        print("\nPossible reasons:")
-        print("  1. The user hasn't signed in yet (users are created on first OAuth login)")
-        print("  2. The email address is incorrect")
-        print("\nTo create the user:")
-        print("  1. Have them sign in via Google OAuth on the platform")
-        print("  2. Then run this script again with their email")
-        return False
+        if create_if_missing:
+            # Create user for development purposes
+            # Use a placeholder auth0_id that won't conflict with real OAuth users
+            # Format: dev-{email_hash} to ensure uniqueness
+            import hashlib
+            email_hash = hashlib.md5(email.encode()).hexdigest()[:16]
+            auth0_id = f"dev-{email_hash}"
+            
+            # Check if this auth0_id already exists (shouldn't happen, but be safe)
+            existing = db.query(User).filter(User.auth0_id == auth0_id).first()
+            if existing:
+                print(f"\n⚠️  Warning: Found existing user with dev auth0_id, using existing user.")
+                user = existing
+            else:
+                user = User(
+                    auth0_id=auth0_id,
+                    email=email,
+                    name=email.split("@")[0].replace(".", " ").title(),  # Generate name from email
+                    role="admin"  # Set directly to admin since we're creating for admin purposes
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+                print(f"\n✅ Created new user '{email}' with admin role.")
+                print(f"   User ID: {user.id}")
+                print(f"   Note: This is a development user. For production, users should sign in via OAuth first.")
+                return True
+        else:
+            print(f"\n❌ User with email '{email}' not found in the database.")
+            print("\nPossible reasons:")
+            print("  1. The user hasn't signed in yet (users are created on first OAuth login)")
+            print("  2. The email address is incorrect")
+            print("\nTo create the user:")
+            print("  1. Have them sign in via Google OAuth on the platform")
+            print("  2. Then run this script again with their email")
+            print("\nOr for development, use --create-if-missing flag:")
+            print(f"   python scripts/create_admin.py --email {email} --create-if-missing")
+            return False
     
     if user.role == "admin":
         print(f"\n✅ User '{email}' is already an admin.")
@@ -98,6 +128,11 @@ Examples:
         action="store_true",
         help="List all users in the database"
     )
+    parser.add_argument(
+        "--create-if-missing",
+        action="store_true",
+        help="Create the user if they don't exist (for development only)"
+    )
     
     args = parser.parse_args()
     
@@ -113,12 +148,24 @@ Examples:
         if args.list_users:
             list_users(db)
         elif args.email:
-            promote_to_admin(db, args.email.lower().strip())
+            promote_to_admin(db, args.email.lower().strip(), create_if_missing=args.create_if_missing)
         else:
             parser.print_help()
             sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        error_msg = str(e)
+        if "does not exist" in error_msg or "relation" in error_msg.lower():
+            print(f"\n❌ Error: Database tables don't exist yet.")
+            print("\nYou need to run database migrations first:")
+            print("  1. Make sure PostgreSQL is running")
+            print("  2. Check that DATABASE_URL is set in your .env file")
+            print("  3. Run migrations:")
+            print("     cd gcb-platform/backend")
+            print("     source venv/bin/activate  # or activate your virtual environment")
+            print("     alembic upgrade head")
+            print("  4. Then run this script again")
+        else:
+            print(f"\n❌ Error: {e}")
         db.rollback()
         sys.exit(1)
     finally:
