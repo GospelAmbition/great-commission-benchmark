@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ProviderIcon } from "@/components/ui/provider-icon";
 
 interface Ranking {
   rank: number;
@@ -88,6 +89,9 @@ export function QuickRankings({ rankings }: QuickRankingsProps) {
               <div className="relative flex items-center gap-4 p-3 md:p-4">
                 {/* Rank */}
                 <RankDisplay rank={item.rank} />
+                
+                {/* Provider icon */}
+                <ProviderIcon provider={item.provider} size={18} />
                 
                 {/* Model info */}
                 <div className="flex-1 min-w-0">

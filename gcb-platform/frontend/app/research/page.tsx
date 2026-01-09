@@ -28,6 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowUpDown, BarChart3, Filter, AlertTriangle, ChevronUp, ChevronDown, Shield, ShieldAlert, ShieldX, Grid3X3, List } from "lucide-react";
 import { BenchmarkHelpIcon } from "@/components/benchmark";
 import { CategoryRankingCard, type CategoryModel } from "@/components/research";
+import { ProviderIcon } from "@/components/ui/provider-icon";
 import {
   TIER_CATEGORIES,
   CATEGORY_NAMES,
@@ -501,7 +502,10 @@ export default function ResearchPage() {
                                   </Link>
                                 </TableCell>
                                 <TableCell className="py-3 text-muted-foreground">
-                                  {formatProvider(item.provider)}
+                                  <div className="flex items-center gap-2">
+                                    <ProviderIcon provider={item.provider} size={16} />
+                                    {formatProvider(item.provider)}
+                                  </div>
                                 </TableCell>
                                 <TableCell className="py-3">
                                   <ScoreBar score={item.overall_score} />

@@ -68,14 +68,14 @@ export function Header() {
             Research
           </Link>
           <Link
-            href="/action"
+            href="/insights"
             className={`px-3 py-2 rounded-md transition-all ${
-              isActive("/action")
+              isActive("/insights")
                 ? "text-primary bg-primary/10 font-semibold"
                 : "text-muted-foreground hover:text-foreground hover:bg-white/5"
             }`}
           >
-            Action
+            Insights
           </Link>
           <Link
             href="/about"
@@ -190,14 +190,14 @@ export function Header() {
                   Research
                 </Link>
                 <Link
-                  href="/action"
+                  href="/insights"
                   className={`text-base font-medium transition-all px-4 py-2.5 rounded-lg ${
-                    isActive("/action") 
+                    isActive("/insights") 
                       ? "text-primary bg-primary/10 border-l-2 border-primary" 
                       : "text-foreground hover:bg-white/5"
                   }`}
                 >
-                  Action
+                  Insights
                 </Link>
                 <Link
                   href="/about"

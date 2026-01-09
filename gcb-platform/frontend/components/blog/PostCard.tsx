@@ -121,7 +121,7 @@ export function PostCard({ post, onEdit, onDelete, showActions = false }: PostCa
             {/* Actions */}
             {showActions && (
               <div className="flex items-center gap-2 flex-shrink-0">
-                <Link href={`/action/${post.slug}`} target="_blank">
+                <Link href={`/insights/${post.slug}`} target="_blank">
                   <Button variant="ghost" size="icon" title="View post">
                     <Eye className="h-4 w-4" />
                   </Button>

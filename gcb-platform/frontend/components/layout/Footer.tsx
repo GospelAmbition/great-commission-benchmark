@@ -23,6 +23,11 @@ export function Footer() {
                   Methodology
                 </Link>
               </li>
+              <li>
+                <Link href="/faq" className="text-muted-foreground hover:text-primary transition-colors">
+                  FAQ
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
@@ -64,12 +69,9 @@ export function Footer() {
             <h3 className="mb-3 text-sm font-semibold text-foreground">Connect</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a
-                  href="mailto:contact@example.com"
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
+                <Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">
                   Contact
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

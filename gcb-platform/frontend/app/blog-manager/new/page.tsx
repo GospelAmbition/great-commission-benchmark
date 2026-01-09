@@ -178,7 +178,7 @@ export default function NewBlogPostPage() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold">New Post</h1>
-          <p className="text-muted-foreground">Create a new blog post for the Action section</p>
+          <p className="text-muted-foreground">Create a new blog post for the Insights section</p>
         </div>
       </div>
 
@@ -216,7 +216,7 @@ export default function NewBlogPostPage() {
                   placeholder="url-friendly-slug"
                 />
                 <p className="text-xs text-muted-foreground">
-                  URL: /action/{form.slug || "your-slug"}
+                  URL: /insights/{form.slug || "your-slug"}
                 </p>
               </div>
 

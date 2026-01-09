@@ -2,49 +2,14 @@
  * Utility functions for formatting model and provider names
  */
 
-// Provider name formatting - maps lowercase provider IDs to display names
-const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
-  nvidia: "NVIDIA",
-  openai: "OpenAI",
-  anthropic: "Anthropic",
-  google: "Google",
-  meta: "Meta",
-  "meta-llama": "Meta",
-  mistral: "Mistral",
-  mistralai: "Mistral AI",
-  cohere: "Cohere",
-  ai21: "AI21",
-  amazon: "Amazon",
-  microsoft: "Microsoft",
-  qwen: "Qwen",
-  deepseek: "DeepSeek",
-  perplexity: "Perplexity",
-  groq: "Groq",
-  together: "Together",
-  fireworks: "Fireworks",
-  anyscale: "Anyscale",
-  replicate: "Replicate",
-  huggingface: "Hugging Face",
-  "hugging-face": "Hugging Face",
-  databricks: "Databricks",
-  inflection: "Inflection",
-  x: "xAI",
-  xai: "xAI",
-  "01-ai": "01.AI",
-  yi: "Yi",
-  zhipu: "Zhipu",
-  baichuan: "Baichuan",
-  moonshot: "Moonshot",
-  minimax: "MiniMax",
-};
+import { getDisplayName } from "./providers";
 
 /**
  * Format provider name with proper capitalization
  * e.g., "nvidia" -> "NVIDIA", "openai" -> "OpenAI"
  */
 export function formatProvider(provider: string): string {
-  const lower = provider.toLowerCase();
-  return PROVIDER_DISPLAY_NAMES[lower] || provider.charAt(0).toUpperCase() + provider.slice(1);
+  return getDisplayName(provider);
 }
 
 /**

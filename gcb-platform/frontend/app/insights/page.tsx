@@ -35,7 +35,7 @@ interface BlogPost {
   published_at?: string;
 }
 
-export default function ActionPage() {
+export default function InsightsPage() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -97,7 +97,7 @@ export default function ActionPage() {
             <div className="p-2 rounded-lg bg-primary/10">
               <ArticleIcon className="h-5 w-5 text-primary" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Action</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Insights</h1>
           </div>
           <p className="text-muted-foreground max-w-2xl">
             Practical guides, insights, and resources for Christian missionaries and outreach workers 
@@ -163,7 +163,7 @@ export default function ActionPage() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {posts.map((post) => (
               <Card key={post.id} className="overflow-hidden group border-glow">
-                <Link href={`/action/${post.slug}`}>
+                <Link href={`/insights/${post.slug}`}>
                   {post.featured_image_url ? (
                     <div className="relative h-48 w-full bg-white/[0.02]">
                       <Image
@@ -189,7 +189,7 @@ export default function ActionPage() {
                     ))}
                   </div>
                   <CardTitle className="line-clamp-2">
-                    <Link href={`/action/${post.slug}`} className="hover:text-primary transition-colors">
+                    <Link href={`/insights/${post.slug}`} className="hover:text-primary transition-colors">
                       {post.title}
                     </Link>
                   </CardTitle>
@@ -200,7 +200,7 @@ export default function ActionPage() {
                       {post.excerpt}
                     </p>
                   )}
-                  <Link href={`/action/${post.slug}`}>
+                  <Link href={`/insights/${post.slug}`}>
                     <Button variant="link" className="p-0 h-auto text-primary">
                       Read more <ArrowRight className="h-4 w-4 ml-1" />
                     </Button>

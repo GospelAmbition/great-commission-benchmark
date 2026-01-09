@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { ProviderIcon } from "@/components/ui/provider-icon";
 import { TIER_INFO, type TierInfo } from "@/lib/benchmark-definitions";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 
@@ -74,12 +75,8 @@ export function CategoryRankingCard({
                   {index + 1}
                 </span>
 
-                {/* Provider icon placeholder - simple letter badge */}
-                <div className="w-5 h-5 rounded bg-white/[0.08] flex items-center justify-center shrink-0">
-                  <span className="text-[10px] font-medium text-muted-foreground uppercase">
-                    {model.provider.charAt(0)}
-                  </span>
-                </div>
+                {/* Provider icon */}
+                <ProviderIcon provider={model.provider} size={16} />
 
                 {/* Model name */}
                 <span className="flex-1 text-sm text-foreground truncate group-hover:text-primary transition-colors">

@@ -299,7 +299,7 @@ export default function EditBlogPostPage() {
           </div>
         </div>
         {post.status === "published" && (
-          <Link href={`/action/${post.slug}`} target="_blank">
+          <Link href={`/insights/${post.slug}`} target="_blank">
             <Button variant="outline">
               <ExternalLink className="h-4 w-4 mr-2" />
               View Post
@@ -335,7 +335,7 @@ export default function EditBlogPostPage() {
                   placeholder="url-friendly-slug"
                 />
                 <p className="text-xs text-muted-foreground">
-                  URL: /action/{form.slug || "your-slug"}
+                  URL: /insights/{form.slug || "your-slug"}
                 </p>
               </div>
 

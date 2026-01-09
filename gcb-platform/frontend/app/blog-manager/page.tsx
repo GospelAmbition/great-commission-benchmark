@@ -261,7 +261,7 @@ export default function BlogManagerPage() {
         <div>
           <h1 className="text-4xl font-bold">Blog Management</h1>
           <p className="mt-2 text-muted-foreground">
-            Manage articles for the Action section
+            Manage articles for the Insights section
           </p>
         </div>
         <Link href="/blog-manager/new">

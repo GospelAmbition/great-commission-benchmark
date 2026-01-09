@@ -170,7 +170,7 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Blog Management</CardTitle>
-            <CardDescription>Manage Action section articles and content</CardDescription>
+            <CardDescription>Manage Insights section articles and content</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>

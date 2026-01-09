@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ProviderIcon } from "@/components/ui/provider-icon";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -31,7 +32,10 @@ export function TopPerformers({ performers }: TopPerformersProps) {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="text-4xl">{rankEmojis[performer.rank] || `#${performer.rank}`}</div>
-              <Badge variant="secondary">{performer.provider}</Badge>
+              <div className="flex items-center gap-2">
+                <ProviderIcon provider={performer.provider} size={16} />
+                <Badge variant="secondary">{performer.provider}</Badge>
+              </div>
             </div>
             <CardTitle className="mt-4">{performer.model_name}</CardTitle>
           </CardHeader>

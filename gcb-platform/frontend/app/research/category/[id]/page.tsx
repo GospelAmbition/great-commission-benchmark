@@ -17,6 +17,7 @@ import { apiClient } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CategoryChart } from "@/components/charts/CategoryChart";
+import { ProviderIcon } from "@/components/ui/provider-icon";
 
 const CATEGORY_INFO: Record<string, { name: string; description: string; tier: string }> = {
   scripture: {
@@ -162,7 +163,10 @@ export default function CategoryPage() {
                 )}
               </div>
               <CardTitle className="text-lg mt-2">{model.model_name}</CardTitle>
-              <CardDescription>{model.provider}</CardDescription>
+              <CardDescription className="flex items-center gap-2">
+                <ProviderIcon provider={model.provider} size={14} />
+                {model.provider}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-[--ga-red]">
@@ -225,7 +229,10 @@ export default function CategoryPage() {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{model.provider}</Badge>
+                    <div className="flex items-center gap-2">
+                      <ProviderIcon provider={model.provider} size={16} />
+                      <Badge variant="secondary">{model.provider}</Badge>
+                    </div>
                   </TableCell>
                   <TableCell className="font-semibold text-[--ga-red]">
                     {model.category_score.toFixed(1)}

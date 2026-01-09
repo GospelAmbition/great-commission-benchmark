@@ -99,10 +99,10 @@ export default function BlogPostPage() {
   if (error || !post) {
     return (
       <div className="container py-8 max-w-4xl">
-        <Link href="/action">
+        <Link href="/insights">
           <Button variant="ghost" className="mb-8">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Action
+            Back to Insights
           </Button>
         </Link>
         <Card className="p-12 text-center">
@@ -111,7 +111,7 @@ export default function BlogPostPage() {
             <p className="text-muted-foreground mb-6">
               The article you&apos;re looking for doesn&apos;t exist or has been removed.
             </p>
-            <Link href="/action">
+            <Link href="/insights">
               <Button>Browse All Articles</Button>
             </Link>
           </CardContent>
@@ -123,10 +123,10 @@ export default function BlogPostPage() {
   return (
     <article className="container py-8 max-w-4xl">
       {/* Back Button */}
-      <Link href="/action">
+      <Link href="/insights">
         <Button variant="ghost" className="mb-8">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Action
+          Back to Insights
         </Button>
       </Link>
 
@@ -136,7 +136,7 @@ export default function BlogPostPage() {
         {post.categories.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {post.categories.map((cat) => (
-              <Link key={cat.id} href={`/action?category=${cat.slug}`}>
+              <Link key={cat.id} href={`/insights?category=${cat.slug}`}>
                 <Badge variant="secondary" className="hover:bg-secondary/80">
                   <Tag className="h-3 w-3 mr-1" />
                   {cat.name}
@@ -205,7 +205,7 @@ export default function BlogPostPage() {
             </p>
           )}
         </div>
-        <Link href="/action">
+        <Link href="/insights">
           <Button variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
             More Articles
@@ -222,7 +222,7 @@ export default function BlogPostPage() {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {post.categories.map((cat) => (
-                <Link key={cat.id} href={`/action?category=${cat.slug}`}>
+                <Link key={cat.id} href={`/insights?category=${cat.slug}`}>
                   <Button variant="secondary" size="sm">
                     {cat.name}
                   </Button>
