@@ -98,6 +98,7 @@ export interface FilterOptionsResponse {
   categories: string[];
   trust_tiers: string[];
   tiers: Array<{ value: string; label: string }>;
+  versions: string[];
 }
 
 export interface CategoryRankingModel {

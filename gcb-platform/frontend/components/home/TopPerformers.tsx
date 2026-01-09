@@ -45,7 +45,7 @@ export function TopPerformers({ performers }: TopPerformersProps) {
               <div className="text-sm text-muted-foreground">Overall Score</div>
             </div>
             <Button asChild variant="outline" className="w-full">
-              <Link href={`/research/models/${encodeURIComponent(performer.model_id)}`}>View Details →</Link>
+              <Link href={`/leaderboard/models/${encodeURIComponent(performer.model_id)}`}>View Details →</Link>
             </Button>
           </CardContent>
         </Card>

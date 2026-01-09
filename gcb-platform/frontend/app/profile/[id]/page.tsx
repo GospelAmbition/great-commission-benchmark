@@ -116,7 +116,7 @@ export default function PublicProfilePage() {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/research">Back to Research</Link>
+              <Link href="/leaderboard">Back to Leaderboard</Link>
             </Button>
           </CardContent>
         </Card>
@@ -228,7 +228,7 @@ export default function PublicProfilePage() {
                     <TableCell>{test.score.toFixed(1)}</TableCell>
                     <TableCell>
                       <Button asChild variant="ghost" size="sm">
-                        <Link href={`/research/models/${encodeURIComponent(test.model_name)}`}>
+                        <Link href={`/leaderboard/models/${encodeURIComponent(test.model_name)}`}>
                           View Model
                         </Link>
                       </Button>

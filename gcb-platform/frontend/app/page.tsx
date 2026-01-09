@@ -99,7 +99,7 @@ export default function Home() {
             </p>
           </div>
           <Button asChild variant="outline" className="hidden md:flex">
-            <Link href="/research">
+            <Link href="/leaderboard">
               View All
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -118,7 +118,7 @@ export default function Home() {
         
         <div className="mt-6 text-center md:hidden">
           <Button asChild variant="outline">
-            <Link href="/research">
+            <Link href="/leaderboard">
               View Full Leaderboard
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>

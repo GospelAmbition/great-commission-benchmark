@@ -53,7 +53,7 @@ frontend/
 │   ├── moderator/          # Moderator interface
 │   ├── privacy/            # Privacy policy
 │   ├── profile/            # Public profiles
-│   ├── research/           # Leaderboard and model pages
+│   ├── leaderboard/        # Leaderboard and model pages
 │   ├── terms/              # Terms of service
 │   ├── tester-agreement/   # Tester agreement
 │   ├── tests/              # Test flow pages
@@ -80,9 +80,9 @@ frontend/
 | Route | Description |
 |-------|-------------|
 | `/` | Homepage with top performers |
-| `/research` | Full leaderboard with filters |
-| `/research/models/[id]` | Model detail page |
-| `/research/compare` | Model comparison |
+| `/leaderboard` | Full leaderboard with filters |
+| `/leaderboard/models/[id]` | Model detail page |
+| `/leaderboard/compare` | Model comparison |
 | `/tests/new` | Start new test |
 | `/tests/[id]/payment` | Payment step |
 | `/tests/[id]/processing` | Test progress |

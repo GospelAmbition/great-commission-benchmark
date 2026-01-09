@@ -23,8 +23,8 @@ describe('Header Component', () => {
   it('renders navigation links', () => {
     render(<Header />);
     expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('Research')).toBeInTheDocument();
-    expect(screen.getByText('Contribute')).toBeInTheDocument();
+    expect(screen.getByText('Leaderboard')).toBeInTheDocument();
+    expect(screen.getByText('Insights')).toBeInTheDocument();
     expect(screen.getByText('About')).toBeInTheDocument();
   });
 

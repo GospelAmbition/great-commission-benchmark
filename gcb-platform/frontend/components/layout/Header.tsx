@@ -58,14 +58,24 @@ export function Header() {
             Home
           </Link>
           <Link
-            href="/research"
+            href="/leaderboard"
             className={`px-3 py-2 rounded-md transition-all ${
-              isActive("/research")
+              isActive("/leaderboard")
                 ? "text-primary bg-primary/10 font-semibold"
                 : "text-muted-foreground hover:text-foreground hover:bg-white/5"
             }`}
           >
-            Research
+            Leaderboard
+          </Link>
+          <Link
+            href="/categories"
+            className={`px-3 py-2 rounded-md transition-all ${
+              isActive("/categories")
+                ? "text-primary bg-primary/10 font-semibold"
+                : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+            }`}
+          >
+            Categories
           </Link>
           <Link
             href="/insights"
@@ -180,14 +190,24 @@ export function Header() {
                   Home
                 </Link>
                 <Link
-                  href="/research"
+                  href="/leaderboard"
                   className={`text-base font-medium transition-all px-4 py-2.5 rounded-lg ${
-                    isActive("/research") 
+                    isActive("/leaderboard") 
                       ? "text-primary bg-primary/10 border-l-2 border-primary" 
                       : "text-foreground hover:bg-white/5"
                   }`}
                 >
-                  Research
+                  Leaderboard
+                </Link>
+                <Link
+                  href="/categories"
+                  className={`text-base font-medium transition-all px-4 py-2.5 rounded-lg ${
+                    isActive("/categories") 
+                      ? "text-primary bg-primary/10 border-l-2 border-primary" 
+                      : "text-foreground hover:bg-white/5"
+                  }`}
+                >
+                  Categories
                 </Link>
                 <Link
                   href="/insights"

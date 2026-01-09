@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import { render, screen, waitFor } from '@testing-library/react';
-import ResearchPage from '@/app/research/page';
+import LeaderboardPage from '@/app/leaderboard/page';
 
 // Mock API client
 jest.mock('@/lib/api', () => ({
@@ -21,14 +21,14 @@ jest.mock('@/lib/api', () => ({
   },
 }));
 
-describe('Research Page', () => {
+describe('Leaderboard Page', () => {
   it('renders the page title', () => {
-    render(<ResearchPage />);
-    expect(screen.getByText('Research')).toBeInTheDocument();
+    render(<LeaderboardPage />);
+    expect(screen.getByText('Leaderboard')).toBeInTheDocument();
   });
 
   it('displays leaderboard data', async () => {
-    render(<ResearchPage />);
+    render(<LeaderboardPage />);
     
     await waitFor(() => {
       expect(screen.getByText('Test Model')).toBeInTheDocument();
@@ -36,7 +36,7 @@ describe('Research Page', () => {
   });
 
   it('shows filters', () => {
-    render(<ResearchPage />);
+    render(<LeaderboardPage />);
     expect(screen.getByText('Filters')).toBeInTheDocument();
   });
 });

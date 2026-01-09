@@ -19,6 +19,7 @@ export interface CategoryRankingCardProps {
   description?: string;
   tier: number;
   models: CategoryModel[];
+  totalModels?: number;
 }
 
 // Get score color based on value
@@ -34,11 +35,15 @@ export function CategoryRankingCard({
   description,
   tier,
   models,
+  totalModels,
 }: CategoryRankingCardProps) {
   const tierInfo: TierInfo | undefined = TIER_INFO[tier];
 
   return (
-    <div className="rounded-lg border border-white/[0.08] bg-card overflow-hidden hover:border-white/[0.12] transition-colors">
+    <Link 
+      href={`/categories/${encodeURIComponent(categoryCode.toLowerCase())}`}
+      className="block rounded-lg border border-white/[0.08] bg-card overflow-hidden hover:border-white/[0.12] hover:bg-white/[0.02] transition-colors"
+    >
       {/* Header */}
       <div className="p-4 pb-3 border-b border-white/[0.06]">
         <div className="flex items-start justify-between gap-2">
@@ -65,10 +70,9 @@ export function CategoryRankingCard({
         ) : (
           <div className="space-y-1.5">
             {models.slice(0, 5).map((model, index) => (
-              <Link
+              <div
                 key={`${model.model_id}-${index}`}
-                href={`/research/models/${encodeURIComponent(model.model_id)}`}
-                className="group flex items-center gap-2 py-1 px-1 -mx-1 rounded hover:bg-white/[0.04] transition-colors"
+                className="flex items-center gap-2 py-1 px-1 -mx-1 rounded"
               >
                 {/* Rank */}
                 <span className="w-4 text-xs font-medium text-muted-foreground tabular-nums">
@@ -79,7 +83,7 @@ export function CategoryRankingCard({
                 <ProviderIcon provider={model.provider} size={16} />
 
                 {/* Model name */}
-                <span className="flex-1 text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                <span className="flex-1 text-sm text-foreground truncate">
                   {getDisplayModelName(model.model_name, model.model_id)}
                 </span>
 
@@ -87,20 +91,27 @@ export function CategoryRankingCard({
                 <span className={`text-sm font-medium tabular-nums ${getScoreColor(model.score)}`}>
                   {model.score.toFixed(1)}
                 </span>
-              </Link>
+              </div>
             ))}
           </div>
         )}
       </div>
 
       {/* Footer */}
-      {description && (
-        <div className="px-4 py-3 border-t border-white/[0.06]">
-          <p className="text-xs text-muted-foreground leading-relaxed">
+      <div className="px-4 py-3 border-t border-white/[0.06] flex items-center justify-between">
+        {description ? (
+          <p className="text-xs text-muted-foreground leading-relaxed flex-1">
             {description}
           </p>
-        </div>
-      )}
-    </div>
+        ) : (
+          <span />
+        )}
+        {totalModels != null && totalModels > 0 && (
+          <span className="text-xs text-muted-foreground/70 ml-2">
+            {totalModels} models
+          </span>
+        )}
+      </div>
+    </Link>
   );
 }

@@ -187,7 +187,7 @@ export default function TestDetailPage() {
                   Run Again
                 </Button>
                 <Button asChild variant="brand">
-                  <Link href={`/research/models/${encodeURIComponent(test.model_id)}`}>
+                  <Link href={`/leaderboard/models/${encodeURIComponent(test.model_id)}`}>
                     View on Leaderboard
                   </Link>
                 </Button>

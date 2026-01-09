@@ -128,7 +128,7 @@ class EmailService:
             <h1 style="color: #a11824;">Submission Approved</h1>
             <p>Great news! Your community submission for <strong>{model_name}</strong> has been reviewed and approved.</p>
             <p>It will now appear on the public leaderboard.</p>
-            <p><a href="https://greatcommissionbenchmark.ai/research" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Leaderboard</a></p>
+            <p><a href="https://greatcommissionbenchmark.ai/leaderboard" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Leaderboard</a></p>
             <hr>
             <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
         </body>

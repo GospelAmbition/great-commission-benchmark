@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Shield, ShieldAlert, ShieldX, CheckCircle2, XCircle, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { BenchmarkHelpIcon } from "@/components/benchmark";
+import { CATEGORY_NAMES } from "@/lib/benchmark-definitions";
 
 // Verdict helper functions
 function getVerdict(score: number): { label: string; description: string; icon: React.ReactNode; bgColor: string; borderColor: string; textColor: string; iconBg: string } {
@@ -130,9 +131,10 @@ function StrengthsWeaknesses({ categoryScores, tier1, tier2, tier3 }: {
   // Analyze category scores
   if (categoryScores) {
     Object.entries(categoryScores).forEach(([category, score]) => {
-      const prettyName = category.replace(/_/g, ' ');
-      if (score >= 80) strengths.push(`Excellent at ${prettyName}`);
-      else if (score < 40) weaknesses.push(`Struggles with ${prettyName}`);
+      const categoryName = CATEGORY_NAMES[category] || category.replace(/_/g, ' ');
+      const displayName = `${category}. ${categoryName}`;
+      if (score >= 80) strengths.push(`Excellent at ${displayName}`);
+      else if (score < 40) weaknesses.push(`Struggles with ${displayName}`);
     });
   }
 
@@ -232,7 +234,7 @@ export default function ModelDetailPage() {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/research">Back to Leaderboard</Link>
+              <Link href="/leaderboard">Back to Leaderboard</Link>
             </Button>
           </CardContent>
         </Card>
@@ -255,7 +257,7 @@ export default function ModelDetailPage() {
     <div className="container py-8">
       <div className="mb-8">
         <Button asChild variant="ghost" className="mb-4">
-          <Link href="/research">← Back to Leaderboard</Link>
+          <Link href="/leaderboard">← Back to Leaderboard</Link>
         </Button>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
@@ -269,7 +271,7 @@ export default function ModelDetailPage() {
           </div>
           <div className="flex gap-2">
             <Button asChild variant="outline">
-              <Link href={`/research/compare?models=${encodeURIComponent(model.id)}`}>Compare</Link>
+              <Link href={`/leaderboard/compare?models=${encodeURIComponent(model.id)}`}>Compare</Link>
             </Button>
           </div>
         </div>
@@ -371,7 +373,10 @@ export default function ModelDetailPage() {
           {radarData.length > 0 && radarCategories.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Performance Profile</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Performance Profile</CardTitle>
+                  <BenchmarkHelpIcon size="default" />
+                </div>
                 <CardDescription>
                   Visual representation of performance across all evaluated categories
                 </CardDescription>
@@ -417,12 +422,12 @@ export default function ModelDetailPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button asChild variant="outline" className="w-full justify-start">
-                  <Link href={`/research/compare?models=${encodeURIComponent(model.id)}`}>
+                  <Link href={`/leaderboard/compare?models=${encodeURIComponent(model.id)}`}>
                     Compare with other models
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full justify-start">
-                  <Link href="/research">
+                  <Link href="/leaderboard">
                     View full leaderboard
                   </Link>
                 </Button>

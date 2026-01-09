@@ -18,6 +18,7 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CategoryChart } from "@/components/charts/CategoryChart";
 import { ProviderIcon } from "@/components/ui/provider-icon";
+import { ArrowLeft } from "lucide-react";
 
 const CATEGORY_INFO: Record<string, { name: string; description: string; tier: string }> = {
   scripture: {
@@ -141,8 +142,11 @@ export default function CategoryPage() {
   return (
     <div className="container py-8">
       <div className="mb-8">
-        <Button asChild variant="ghost" className="mb-4">
-          <Link href="/research">← Back to Leaderboard</Link>
+        <Button asChild variant="ghost" className="mb-4 gap-2">
+          <Link href="/categories">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Categories
+          </Link>
         </Button>
         <div className="flex items-center gap-4 mb-2">
           <h1 className="text-4xl font-bold capitalize">{categoryInfo.name}</h1>
@@ -176,7 +180,7 @@ export default function CategoryPage() {
                 Overall: {model.overall_score.toFixed(1)}
               </p>
               <Button asChild variant="outline" className="w-full mt-4">
-                <Link href={`/research/models/${encodeURIComponent(model.model_id)}`}>View Details</Link>
+                <Link href={`/leaderboard/models/${encodeURIComponent(model.model_id)}`}>View Details</Link>
               </Button>
             </CardContent>
           </Card>
@@ -222,7 +226,7 @@ export default function CategoryPage() {
                   <TableCell className="font-medium">{index + 1}</TableCell>
                   <TableCell>
                     <Link
-                      href={`/research/models/${encodeURIComponent(model.model_id)}`}
+                      href={`/leaderboard/models/${encodeURIComponent(model.model_id)}`}
                       className="hover:underline font-medium"
                     >
                       {model.model_name}
@@ -243,7 +247,7 @@ export default function CategoryPage() {
                   </TableCell>
                   <TableCell>
                     <Button asChild variant="ghost" size="sm">
-                      <Link href={`/research/models/${encodeURIComponent(model.model_id)}`}>View</Link>
+                      <Link href={`/leaderboard/models/${encodeURIComponent(model.model_id)}`}>View</Link>
                     </Button>
                   </TableCell>
                 </TableRow>

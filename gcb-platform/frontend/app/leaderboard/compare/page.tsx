@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Shield, ShieldAlert, ShieldX, Trophy, Crown, Medal, ArrowRight } from "lucide-react";
+import { Shield, ShieldAlert, ShieldX, Trophy, Crown, Medal, ArrowRight, ChevronRight } from "lucide-react";
 import { BenchmarkHelpIcon } from "@/components/benchmark";
 
 // Verdict helper
@@ -94,7 +94,7 @@ function ComparePageContent() {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/research">Back to Leaderboard</Link>
+              <Link href="/leaderboard">Back to Leaderboard</Link>
             </Button>
           </CardContent>
         </Card>
@@ -124,15 +124,24 @@ function ComparePageContent() {
 
   return (
     <div className="container py-8">
+      {/* Breadcrumb Navigation */}
+      <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-6">
+        <Link href="/leaderboard" className="hover:text-foreground transition-colors">
+          Leaderboard
+        </Link>
+        <ChevronRight className="h-4 w-4" />
+        <span className="text-foreground font-medium">Compare Models</span>
+      </nav>
+
       <div className="mb-8">
-        <Button asChild variant="ghost" className="mb-4">
-          <Link href="/research">← Back to Leaderboard</Link>
-        </Button>
         <h1 className="text-4xl font-bold">Model Comparison</h1>
         <p className="mt-2 text-muted-foreground">
           Side-by-side comparison of {comparison.models.length} model
           {comparison.models.length > 1 ? "s" : ""}
         </p>
+        <Button asChild variant="outline" size="sm" className="mt-4">
+          <Link href="/leaderboard">← Change Selection</Link>
+        </Button>
       </div>
 
       {/* Head-to-Head Summary */}
@@ -223,7 +232,7 @@ function ComparePageContent() {
                   </div>
                 </div>
                 <Button asChild variant="outline" className="w-full">
-                  <Link href={`/research/models/${encodeURIComponent(model.model_id)}`}>
+                  <Link href={`/leaderboard/models/${encodeURIComponent(model.model_id)}`}>
                     View Details
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -233,24 +242,6 @@ function ComparePageContent() {
           );
         })}
       </div>
-
-      {/* Radar Chart */}
-      {radarData.length > 0 && categories.length > 0 && (
-        <Card className="mb-8">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Performance Profile Comparison</CardTitle>
-              <BenchmarkHelpIcon size="default" />
-            </div>
-            <CardDescription>
-              Visual comparison of model &quot;shapes&quot; across all categories
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RadarChart data={radarData} categories={categories} />
-          </CardContent>
-        </Card>
-      )}
 
       {/* Category Heatmap */}
       {heatmapData.length > 0 && categories.length > 0 && (
@@ -266,6 +257,24 @@ function ComparePageContent() {
           </CardHeader>
           <CardContent>
             <CategoryHeatmap data={heatmapData} categories={categories} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Radar Chart */}
+      {radarData.length > 0 && categories.length > 0 && (
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Performance Profile Comparison</CardTitle>
+              <BenchmarkHelpIcon size="default" />
+            </div>
+            <CardDescription>
+              Visual comparison of model &quot;shapes&quot; across all categories
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RadarChart data={radarData} categories={categories} />
           </CardContent>
         </Card>
       )}

@@ -73,7 +73,7 @@ export function QuickRankings({ rankings }: QuickRankingsProps) {
         return (
           <Link
             key={item.model_id}
-            href={`/research/models/${encodeURIComponent(item.model_id)}`}
+            href={`/leaderboard/models/${encodeURIComponent(item.model_id)}`}
             className="group block"
           >
             <div 

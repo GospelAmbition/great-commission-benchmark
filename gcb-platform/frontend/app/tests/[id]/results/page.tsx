@@ -463,7 +463,7 @@ export default function ResultsPage() {
             </Link>
           </Button>
           <Button asChild variant="brand">
-            <Link href="/research">
+            <Link href="/leaderboard">
               View Leaderboard
               <ExternalLink className="h-4 w-4 ml-2" />
             </Link>

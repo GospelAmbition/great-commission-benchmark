@@ -153,6 +153,15 @@ async def get_filter_options(
     ).distinct().all()
     trust_tiers = sorted([t[0] for t in trust_tiers if t[0]])
     
+    # Get distinct versions from publicly visible question sets (active or archived with is_publicly_visible=True)
+    versions = db.query(QuestionSet.semantic_version).filter(
+        or_(
+            QuestionSet.status == "active",
+            (QuestionSet.status == "archived") & (QuestionSet.is_publicly_visible == True)
+        )
+    ).distinct().all()
+    versions = sorted([v[0] for v in versions if v[0]], reverse=True)  # Most recent first
+    
     result = {
         "providers": providers,
         "categories": categories,
@@ -161,7 +170,8 @@ async def get_filter_options(
             {"value": "tier1", "label": "Tier 1 (Task)"},
             {"value": "tier2", "label": "Tier 2 (Doctrine)"},
             {"value": "tier3", "label": "Tier 3 (Worldview)"}
-        ]
+        ],
+        "versions": versions
     }
     
     # Cache for 5 minutes
