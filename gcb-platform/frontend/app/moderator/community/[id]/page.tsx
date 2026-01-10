@@ -36,6 +36,7 @@ interface SubmissionDetail {
     response: string;
     verdict: string;
     judge_reasoning?: string;
+    thought_process?: string | null;
   }>;
   sample_size: number;
 }

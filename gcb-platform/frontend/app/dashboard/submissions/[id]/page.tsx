@@ -53,6 +53,7 @@ interface SubmissionDetail {
     verdict: string;
     verdict_normalized?: string;
     judge_reasoning?: string;
+    thought_process?: string | null;
     response_time_ms?: number;
   }>;
   fee_waived: boolean;
