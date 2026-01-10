@@ -6,8 +6,8 @@ Next.js 14 frontend for the Great Commission Benchmark platform.
 
 The frontend provides:
 - Public leaderboard and model comparison
-- User dashboard for test management
-- Test execution flow with payment integration
+- User dashboard for submission management
+- CLI submission review workflow
 - Moderator review interface
 - Admin management panels
 - Responsive design for all devices
@@ -56,7 +56,6 @@ frontend/
 │   ├── leaderboard/        # Leaderboard and model pages
 │   ├── terms/              # Terms of service
 │   ├── tester-agreement/   # Tester agreement
-│   ├── tests/              # Test flow pages
 │   ├── layout.tsx          # Root layout
 │   ├── page.tsx            # Homepage
 │   ├── error.tsx           # Error boundary
@@ -83,11 +82,8 @@ frontend/
 | `/leaderboard` | Full leaderboard with filters |
 | `/leaderboard/models/[id]` | Model detail page |
 | `/leaderboard/compare` | Model comparison |
-| `/tests/new` | Start new test |
-| `/tests/[id]/payment` | Payment step |
-| `/tests/[id]/processing` | Test progress |
-| `/tests/[id]/results` | Test results |
 | `/dashboard` | User dashboard |
+| `/dashboard/submissions` | User's CLI submissions |
 | `/moderator` | Moderator queue |
 | `/admin` | Admin dashboard |
 
@@ -239,7 +235,7 @@ const stats = await apiClient.getStats();
 
 // Authenticated endpoints
 const profile = await apiClient.getUserProfile();
-const tests = await apiClient.getUserTests();
+const submissions = await apiClient.getUserSubmissions();
 ```
 
 ## Deployment

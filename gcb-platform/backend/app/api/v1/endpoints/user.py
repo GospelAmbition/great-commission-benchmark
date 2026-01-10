@@ -8,11 +8,7 @@ from uuid import UUID
 from app.core.auth import get_db
 from app.core.auth import require_auth
 from app.db.models.user import User
-from app.db.models.test_run import TestRun
 from app.db.models.community_submission import CommunitySubmission
-from app.db.models.result import Result
-from app.db.models.question import Question
-from app.services.scoring import ScoringService
 from app.schemas.user import (
     UserProfileResponse,
     UserProfile,
@@ -48,7 +44,7 @@ async def get_profile(
             CommunitySubmission.user_id == current_user.id,
             CommunitySubmission.status == "approved"
         ).count(),
-        total_contribution=sum(float(t.total_cost or 0) for t in test_runs)
+        total_contribution=0  # Platform tests removed - contribution tracking no longer applies
     )
     
     from app.core.auth import has_permission

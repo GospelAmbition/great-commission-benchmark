@@ -2,7 +2,7 @@
 from typing import Optional, List
 from datetime import datetime
 from fastapi import APIRouter, Query, Depends, HTTPException, Response
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, or_
 from uuid import UUID
 import logging
@@ -45,8 +45,10 @@ def _get_model_detail_data(db: Session, model: Model) -> dict:
     Shared helper to get model detail data including scores, test history,
     and category breakdown. Used by both UUID and model_id lookup endpoints.
     """
-    # Get best (most recent completed) test result
-    best_test = db.query(TestRun).filter(
+    # Get best (most recent completed) test result with eager loading
+    best_test = db.query(TestRun).options(
+        joinedload(TestRun.question_set)
+    ).filter(
         TestRun.model_id == model.id,
         TestRun.status == "completed"
     ).order_by(TestRun.completed_at.desc()).first()
@@ -62,9 +64,11 @@ def _get_model_detail_data(db: Session, model: Model) -> dict:
             "benchmark_version": best_test.question_set.semantic_version
         }
     
-    # Get test history (last 10 completed tests)
+    # Get test history (last 10 completed tests) with eager loading
     test_history = []
-    tests = db.query(TestRun).filter(
+    tests = db.query(TestRun).options(
+        joinedload(TestRun.question_set)
+    ).filter(
         TestRun.model_id == model.id,
         TestRun.status == "completed"
     ).order_by(TestRun.completed_at.desc()).limit(10).all()
@@ -85,7 +89,9 @@ def _get_model_detail_data(db: Session, model: Model) -> dict:
     pass_verdicts = {"ACCEPTED"}
     
     if best_test:
-        results = db.query(Result).filter(Result.test_run_id == best_test.id).all()
+        results = db.query(Result).options(
+            joinedload(Result.question)
+        ).filter(Result.test_run_id == best_test.id).all()
         for result in results:
             cat = result.question.category
             if cat not in category_breakdown:
@@ -240,8 +246,11 @@ async def get_leaderboard(
             }
         )
     
-    # Build query for completed test runs
-    query = db.query(TestRun).filter(
+    # Build query for completed test runs with eager loading
+    query = db.query(TestRun).options(
+        joinedload(TestRun.model),
+        joinedload(TestRun.question_set)
+    ).filter(
         TestRun.status == "completed",
         TestRun.question_set_id == question_set.id
     )
@@ -273,7 +282,9 @@ async def get_leaderboard(
         
         # Filter by category/tier if specified
         if category or tier:
-            results = db.query(Result).filter(Result.test_run_id == test_run.id).all()
+            results = db.query(Result).options(
+                joinedload(Result.question)
+            ).filter(Result.test_run_id == test_run.id).all()
             if category:
                 results = [r for r in results if r.question.category == category]
             if tier:
@@ -736,8 +747,11 @@ async def compare_models(
         if not model:
             continue
         
-        # Get latest test run for this model and version
-        test_run = db.query(TestRun).filter(
+        # Get latest test run for this model and version with eager loading
+        test_run = db.query(TestRun).options(
+            joinedload(TestRun.model),
+            joinedload(TestRun.question_set)
+        ).filter(
             TestRun.model_id == model_id,
             TestRun.question_set_id == question_set.id,
             TestRun.status == "completed"
@@ -816,8 +830,11 @@ async def get_category_rankings(
     ).distinct().all()
     category_codes = sorted([c[0] for c in categories if c[0]])
     
-    # Get all completed test runs for this question set
-    test_runs = db.query(TestRun).filter(
+    # Get all completed test runs for this question set with eager loading
+    test_runs = db.query(TestRun).options(
+        joinedload(TestRun.model),
+        joinedload(TestRun.question_set)
+    ).filter(
         TestRun.status == "completed",
         TestRun.question_set_id == question_set.id
     ).order_by(TestRun.completed_at.desc()).all()
