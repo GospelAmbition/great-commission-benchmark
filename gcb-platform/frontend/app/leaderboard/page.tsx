@@ -204,7 +204,7 @@ export default function LeaderboardPage() {
             </div>
             <h1 className="text-3xl md:text-4xl font-light text-foreground">Leaderboard</h1>
           </div>
-          <p className="text-muted-foreground max-w-2xl font-thin">
+          <p className="text-muted-foreground max-w-2xl font-light">
             Compare AI models and explore benchmark results across all categories
           </p>
         </div>

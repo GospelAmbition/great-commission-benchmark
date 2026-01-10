@@ -94,7 +94,7 @@ export default function CategoriesPage() {
                 </div>
                 <h1 className="text-3xl md:text-4xl font-light text-foreground">Categories</h1>
               </div>
-              <p className="text-muted-foreground max-w-2xl font-thin">
+              <p className="text-muted-foreground max-w-2xl font-light">
                 Browse benchmark categories and see how AI models perform in each area of ministry and theological understanding
               </p>
             </div>

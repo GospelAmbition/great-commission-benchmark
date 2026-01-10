@@ -247,17 +247,19 @@ async def get_leaderboard(
         )
     
     # Build query for completed test runs with eager loading
+    # Join with Model to filter by is_active
     query = db.query(TestRun).options(
         joinedload(TestRun.model),
         joinedload(TestRun.question_set)
-    ).filter(
+    ).join(Model, TestRun.model_id == Model.id).filter(
         TestRun.status == "completed",
-        TestRun.question_set_id == question_set.id
+        TestRun.question_set_id == question_set.id,
+        Model.is_active == True
     )
     
     # Apply filters
     if provider:
-        query = query.join(Model).filter(Model.provider == provider)
+        query = query.filter(Model.provider == provider)
     
     if trust_tier:
         query = query.filter(TestRun.trust_tier == trust_tier)
@@ -744,7 +746,7 @@ async def compare_models(
     model_scores = []
     for model_id in models:
         model = db.query(Model).filter(Model.id == model_id).first()
-        if not model:
+        if not model or not model.is_active:
             continue
         
         # Get latest test run for this model and version with eager loading
@@ -831,12 +833,14 @@ async def get_category_rankings(
     category_codes = sorted([c[0] for c in categories if c[0]])
     
     # Get all completed test runs for this question set with eager loading
+    # Join with Model to filter by is_active
     test_runs = db.query(TestRun).options(
         joinedload(TestRun.model),
         joinedload(TestRun.question_set)
-    ).filter(
+    ).join(Model, TestRun.model_id == Model.id).filter(
         TestRun.status == "completed",
-        TestRun.question_set_id == question_set.id
+        TestRun.question_set_id == question_set.id,
+        Model.is_active == True
     ).order_by(TestRun.completed_at.desc()).all()
     
     # Deduplicate: keep only the most recent test per model

@@ -25,7 +25,7 @@ export default function AboutPage() {
             </div>
             <h1 className="text-3xl md:text-4xl font-light text-foreground">About</h1>
           </div>
-          <p className="text-muted-foreground font-thin">
+          <p className="text-muted-foreground font-light">
             Learn about the Great Commission Benchmark methodology and mission
           </p>
         </div>
