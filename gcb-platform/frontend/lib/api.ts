@@ -195,6 +195,7 @@ export interface TestResult {
   response?: string;
   verdict: string;
   reasoning?: string;
+  thought_process?: string | null;
 }
 
 export class ApiClient {
@@ -575,6 +576,7 @@ export class ApiClient {
       verdict: string;
       verdict_normalized?: string;
       judge_reasoning?: string;
+      thought_process?: string | null;
       response_time_ms?: number;
     }>;
     fee_waived: boolean;
@@ -797,6 +799,7 @@ export class ApiClient {
       response: string;
       verdict: string;
       judge_reasoning?: string;
+      thought_process?: string | null;
     }>;
     sample_size: number;
   }> {

@@ -140,7 +140,8 @@ async def get_queue_item_detail(
                 "question_id": str(r.question_id),
                 "verdict": r.verdict,
                 "response": r.response[:200] + "..." if len(r.response) > 200 else r.response,
-                "reasoning": r.reasoning[:200] + "..." if r.reasoning and len(r.reasoning) > 200 else r.reasoning
+                "reasoning": r.reasoning[:200] + "..." if r.reasoning and len(r.reasoning) > 200 else r.reasoning,
+                "thought_process": r.thought_process
             }
             for r in sample_results
         ],

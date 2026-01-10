@@ -1,8 +1,10 @@
 """OpenRouter backend for LLM completions."""
 
-from typing import Any, cast
+from typing import Any
 
 import httpx
+
+from gcb_runner.backends.common import CompletionResult
 
 
 class OpenRouterBackend:
@@ -38,7 +40,7 @@ class OpenRouterBackend:
         self,
         messages: list[dict[str, str]],
         model: str,
-    ) -> str:
+    ) -> CompletionResult:
         """Complete a chat conversation."""
         client = await self._get_client()
         
@@ -69,4 +71,8 @@ class OpenRouterBackend:
             raise RuntimeError(f"OpenRouter API error ({response.status_code}): {error_msg}")
         
         data: dict[str, Any] = response.json()
-        return cast(str, data["choices"][0]["message"]["content"])
+        response_text = data["choices"][0]["message"]["content"]
+        
+        # OpenRouter doesn't currently expose thought process separately
+        # Return None for thought_process
+        return CompletionResult(text=response_text, thought_process=None)

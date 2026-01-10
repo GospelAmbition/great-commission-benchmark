@@ -24,6 +24,7 @@ interface VerdictReview {
   model_response: string;
   judge_verdict: string;
   judge_reasoning: string;
+  thought_process?: string | null;
   reviewer_verdict?: "agree" | "disagree" | "unsure";
   reviewer_notes?: string;
 }
@@ -281,6 +282,17 @@ export default function ModeratorReviewPage() {
               <p className="text-sm text-muted-foreground">{currentVerdict.judge_reasoning}</p>
             </CardContent>
           </Card>
+
+          {currentVerdict.thought_process && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Thought Process</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm bg-muted p-2 rounded whitespace-pre-wrap">{currentVerdict.thought_process}</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right: Review Actions */}

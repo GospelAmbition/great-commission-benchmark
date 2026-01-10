@@ -57,6 +57,7 @@ class Response(Base):
     verdict: Mapped[str] = mapped_column(String(32))  # ACCEPTED, COMPROMISED, REFUSED
     verdict_normalized: Mapped[str] = mapped_column(String(16))  # pass, partial, fail
     judge_reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+    thought_process: Mapped[str | None] = mapped_column(Text, nullable=True)
     response_time_ms: Mapped[int | None] = mapped_column(nullable=True)
     
     test_run: Mapped["TestRun"] = relationship("TestRun", back_populates="responses")
@@ -96,6 +97,17 @@ class ResultsDB:
                 # Add the column (nullable, so no default needed)
                 conn.execute(text(
                     "ALTER TABLE test_runs ADD COLUMN judge_backend VARCHAR(64)"
+                ))
+                conn.commit()
+            
+            # Check if thought_process column exists in responses table
+            result_responses = conn.execute(text("PRAGMA table_info(responses)"))
+            response_columns = [row[1] for row in result_responses.fetchall()]
+            
+            if "thought_process" not in response_columns:
+                # Add the column (nullable, so no default needed)
+                conn.execute(text(
+                    "ALTER TABLE responses ADD COLUMN thought_process TEXT"
                 ))
                 conn.commit()
     
@@ -145,6 +157,7 @@ class ResultsDB:
         verdict: str,
         category: str | None = None,
         judge_reasoning: str | None = None,
+        thought_process: str | None = None,
         response_time_ms: int | None = None,
     ) -> Response:
         """Add a response to a test run."""
@@ -167,6 +180,7 @@ class ResultsDB:
                 verdict=verdict,
                 verdict_normalized=verdict_normalized,
                 judge_reasoning=judge_reasoning,
+                thought_process=thought_process,
                 response_time_ms=response_time_ms,
             )
             session.add(response)

@@ -234,17 +234,20 @@ async def run_benchmark(
                     # Get model response
                     start_time = time.time()
                     try:
-                        response_text = await model_backend.complete(
+                        completion_result = await model_backend.complete(
                             messages=[{"role": "user", "content": question.get("content", "")}],
                             model=model,
                         )
+                        response_text = completion_result.text
+                        thought_process = completion_result.thought_process
                     except Exception as e:
                         console.print(f"[red]Error getting response for question {question_id}: {e}[/red]")
                         response_text = f"[ERROR: {e}]"
+                        thought_process = None
                     
                     response_time_ms = int((time.time() - start_time) * 1000)
                     
-                    # Judge the response
+                    # Judge the response (using only response_text, not thought_process)
                     try:
                         verdict = await judge.evaluate(question, response_text)
                     except Exception as e:
@@ -265,6 +268,7 @@ async def run_benchmark(
                         response_text=response_text,
                         verdict=verdict.verdict,
                         judge_reasoning=verdict.reasoning,
+                        thought_process=thought_process,
                         response_time_ms=response_time_ms,
                     )
                     

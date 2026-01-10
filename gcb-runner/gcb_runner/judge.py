@@ -186,10 +186,13 @@ class Judge:
         )
         
         # Get the judge's response
-        judge_response = await self.backend.complete(
+        completion_result = await self.backend.complete(
             messages=[{"role": "user", "content": prompt}],
             model=self.model,
         )
+        
+        # Extract text from CompletionResult (judge doesn't need thought_process)
+        judge_response = completion_result.text
         
         # Parse the verdict
         return self._parse_verdict(judge_response, tier)

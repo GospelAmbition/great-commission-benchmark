@@ -286,6 +286,15 @@ export default function CommunitySubmissionReviewPage() {
                     </div>
                   </div>
                 )}
+
+                {currentResponse.thought_process && (
+                  <div>
+                    <Label className="text-sm font-semibold">Thought Process</Label>
+                    <div className="mt-1 p-4 bg-muted rounded-md text-sm whitespace-pre-wrap">
+                      {currentResponse.thought_process}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

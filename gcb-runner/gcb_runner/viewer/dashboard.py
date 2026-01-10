@@ -554,6 +554,13 @@ def get_dashboard_html() -> str:
                                         <span class="icon">▼</span> <span class="label">Show full reasoning</span>
                                     </button>
                                 ` : ''}
+                                ${r.thought_process ? `
+                                    <div class="meta" style="margin-top: 0.75rem; font-weight: 500;">Thought Process:</div>
+                                    <div class="response-text collapsed" id="thought-${idx}" data-full-height="0">${this.escapeHtml(r.thought_process)}</div>
+                                    <button class="expand-btn" id="expand-thought-btn-${idx}" onclick="App.toggleExpand('thought-${idx}', 'expand-thought-btn-${idx}')" style="display: none;">
+                                        <span class="icon">▼</span> <span class="label">Show full thought process</span>
+                                    </button>
+                                ` : ''}
                             </div>
                         `).join('')}
                         

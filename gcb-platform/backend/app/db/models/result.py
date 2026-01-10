@@ -18,6 +18,7 @@ class Result(Base):
     response = Column(Text, nullable=False)
     verdict = Column(String(50), nullable=False, index=True)  # 'ACCEPTED', 'COMPROMISED', 'REFUSED', etc.
     reasoning = Column(Text)
+    thought_process = Column(Text, nullable=True)
     tokens_used = Column(Integer)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

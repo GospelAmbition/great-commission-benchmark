@@ -4,6 +4,8 @@ from typing import Any
 
 import httpx
 
+from gcb_runner.backends.common import CompletionResult
+
 
 class AnthropicBackend:
     """Backend for Anthropic API."""
@@ -38,7 +40,7 @@ class AnthropicBackend:
         self,
         messages: list[dict[str, str]],
         model: str,
-    ) -> str:
+    ) -> CompletionResult:
         """Complete a chat conversation."""
         client = await self._get_client()
         
@@ -73,8 +75,17 @@ class AnthropicBackend:
         # Anthropic returns content as a list of blocks
         content_blocks = data.get("content", [])
         text_parts = []
-        for block in content_blocks:
-            if block.get("type") == "text":
-                text_parts.append(block.get("text", ""))
+        thinking_parts = []
         
-        return "".join(text_parts)
+        for block in content_blocks:
+            block_type = block.get("type")
+            if block_type == "text":
+                text_parts.append(block.get("text", ""))
+            elif block_type == "thinking":
+                # Extract thinking/reasoning blocks (Claude thinking models)
+                thinking_parts.append(block.get("text", ""))
+        
+        response_text = "".join(text_parts)
+        thought_process = "".join(thinking_parts) if thinking_parts else None
+        
+        return CompletionResult(text=response_text, thought_process=thought_process)

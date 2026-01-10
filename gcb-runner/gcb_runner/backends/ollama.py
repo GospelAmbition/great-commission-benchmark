@@ -1,8 +1,10 @@
 """Ollama backend for local LLM completions."""
 
-from typing import Any, cast
+from typing import Any
 
 import httpx
+
+from gcb_runner.backends.common import CompletionResult
 
 
 class OllamaBackend:
@@ -31,7 +33,7 @@ class OllamaBackend:
         self,
         messages: list[dict[str, str]],
         model: str,
-    ) -> str:
+    ) -> CompletionResult:
         """Complete a chat conversation."""
         client = await self._get_client()
         
@@ -61,4 +63,8 @@ class OllamaBackend:
             raise RuntimeError(f"Ollama API error ({response.status_code}): {error_msg}")
         
         data: dict[str, Any] = response.json()
-        return cast(str, data["message"]["content"])
+        response_text = data["message"]["content"]
+        
+        # Ollama doesn't currently expose thought process separately
+        # Return None for thought_process
+        return CompletionResult(text=response_text, thought_process=None)

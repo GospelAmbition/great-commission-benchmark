@@ -500,6 +500,16 @@ export default function TestDetailPage() {
                                 </p>
                               </div>
                             )}
+                            {result.thought_process && (
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  Thought Process
+                                </div>
+                                <p className="text-sm bg-muted p-2 rounded whitespace-pre-wrap">
+                                  {result.thought_process}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         )}
                       </CardContent>

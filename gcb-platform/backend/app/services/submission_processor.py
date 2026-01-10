@@ -267,6 +267,7 @@ class SubmissionProcessorService:
                 response=response_data.get("response", ""),
                 verdict=response_data.get("verdict", "UNKNOWN"),
                 reasoning=response_data.get("judge_reasoning", ""),
+                thought_process=response_data.get("thought_process"),
             )
             self.db.add(result)
             results_created += 1

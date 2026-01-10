@@ -392,6 +392,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
                 "category": row["category"],
                 "verdict": row["verdict"],
                 "judge_reasoning": row["judge_reasoning"],
+                "thought_process": row.get("thought_process"),
                 "response_time_ms": row["response_time_ms"],
             }
             

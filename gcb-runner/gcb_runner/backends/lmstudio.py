@@ -1,8 +1,10 @@
 """LM Studio backend for local LLM completions."""
 
-from typing import Any, cast
+from typing import Any
 
 import httpx
+
+from gcb_runner.backends.common import CompletionResult
 
 
 class LMStudioBackend:
@@ -31,7 +33,7 @@ class LMStudioBackend:
         self,
         messages: list[dict[str, str]],
         model: str,
-    ) -> str:
+    ) -> CompletionResult:
         """Complete a chat conversation."""
         client = await self._get_client()
         
@@ -60,4 +62,8 @@ class LMStudioBackend:
             raise RuntimeError(f"LM Studio API error ({response.status_code}): {error_msg}")
         
         data: dict[str, Any] = response.json()
-        return cast(str, data["choices"][0]["message"]["content"])
+        response_text = data["choices"][0]["message"]["content"]
+        
+        # LM Studio doesn't currently expose thought process separately
+        # Return None for thought_process
+        return CompletionResult(text=response_text, thought_process=None)

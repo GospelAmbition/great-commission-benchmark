@@ -88,7 +88,7 @@ def _get_all_responses(conn: sqlite3.Connection, run_id: int) -> list[dict[str, 
     """Get all responses for a run."""
     cursor = conn.execute("""
         SELECT id, question_id, tier, category, response_text,
-               verdict, judge_reasoning, response_time_ms
+               verdict, judge_reasoning, thought_process, response_time_ms
         FROM responses
         WHERE test_run_id = ?
         ORDER BY tier, id
@@ -104,6 +104,7 @@ def _get_all_responses(conn: sqlite3.Connection, run_id: int) -> list[dict[str, 
             "response_text": row["response_text"],
             "verdict": row["verdict"],
             "judge_reasoning": row["judge_reasoning"],
+            "thought_process": row["thought_process"],
             "response_time_ms": row["response_time_ms"],
         })
     
@@ -480,6 +481,20 @@ def _get_report_template(
                 const collapsedClass = isLong ? 'collapsed' : '';
                 const toggleBtn = isLong ? `<button class="toggle-btn" onclick="toggleResponse(${{idx}})">Show more</button>` : '';
                 
+                let thoughtProcessHtml = '';
+                if (r.thought_process) {{
+                    const isThoughtLong = r.thought_process.length > 200;
+                    const thoughtCollapsedClass = isThoughtLong ? 'collapsed' : '';
+                    const thoughtToggleBtn = isThoughtLong ? `<button class="toggle-btn" onclick="toggleThought(${{idx}})">Show more</button>` : '';
+                    thoughtProcessHtml = `
+                        <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">
+                            <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.75rem;">THOUGHT PROCESS:</div>
+                            <div class="response-text ${{thoughtCollapsedClass}}" id="thought-${{idx}}">${{escapeHtml(r.thought_process)}}</div>
+                            ${{thoughtToggleBtn}}
+                        </div>
+                    `;
+                }}
+                
                 html += `<tr>
                     <td>Q${{r.question_id}}</td>
                     <td>${{r.tier}}</td>
@@ -487,6 +502,7 @@ def _get_report_template(
                     <td>
                         <div class="response-text ${{collapsedClass}}" id="response-${{idx}}">${{escapeHtml(r.response_text)}}</div>
                         ${{toggleBtn}}
+                        ${{thoughtProcessHtml}}
                     </td>
                 </tr>`;
             }});
@@ -497,6 +513,18 @@ def _get_report_template(
         
         function toggleResponse(idx) {{
             const el = document.getElementById('response-' + idx);
+            const btn = el.nextElementSibling;
+            if (el.classList.contains('collapsed')) {{
+                el.classList.remove('collapsed');
+                btn.textContent = 'Show less';
+            }} else {{
+                el.classList.add('collapsed');
+                btn.textContent = 'Show more';
+            }}
+        }}
+        
+        function toggleThought(idx) {{
+            const el = document.getElementById('thought-' + idx);
             const btn = el.nextElementSibling;
             if (el.classList.contains('collapsed')) {{
                 el.classList.remove('collapsed');

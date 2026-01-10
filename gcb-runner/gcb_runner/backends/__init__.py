@@ -3,6 +3,7 @@
 from typing import Protocol, runtime_checkable
 
 from gcb_runner.backends.anthropic import AnthropicBackend
+from gcb_runner.backends.common import CompletionResult
 from gcb_runner.backends.lmstudio import LMStudioBackend
 from gcb_runner.backends.ollama import OllamaBackend
 from gcb_runner.backends.openai import OpenAIBackend
@@ -17,8 +18,8 @@ class LLMBackend(Protocol):
         self,
         messages: list[dict[str, str]],
         model: str,
-    ) -> str:
-        """Complete a chat conversation and return the response text."""
+    ) -> CompletionResult:
+        """Complete a chat conversation and return the response text and thought process."""
         ...
     
     async def close(self) -> None:
@@ -51,6 +52,7 @@ def get_backend(name: str, api_key: str | None = None, base_url: str | None = No
 
 __all__ = [
     "LLMBackend",
+    "CompletionResult",
     "get_backend",
     "OpenRouterBackend",
     "OpenAIBackend",

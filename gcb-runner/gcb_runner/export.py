@@ -87,6 +87,7 @@ def export_run(db: ResultsDB, run_id: int) -> str:
             "verdict": resp.verdict,
             "verdict_normalized": verdict_normalized,
             "judge_reasoning": resp.judge_reasoning,
+            "thought_process": resp.thought_process,
             "response_time_ms": resp.response_time_ms,
         })
     
