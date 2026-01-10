@@ -39,7 +39,7 @@ export function TestingCategoryCard({
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-2 -mt-2 pt-0">
-        <p className="text-xs text-muted-foreground leading-snug">
+        <p className="text-[13px] text-muted-foreground leading-snug">
           {description}
         </p>
         <div>
