@@ -18,8 +18,6 @@ from app.schemas.user import (
     UserProfile,
     UserStats,
     UpdateProfileRequest,
-    UserTestsResponse,
-    TestListItem,
     UserSubmissionsResponse,
     SubmissionListItem,
     UserActivityResponse,
@@ -37,14 +35,12 @@ async def get_profile(
     db: Session = Depends(get_db)
 ):
     """Get current user's profile"""
-    # Calculate stats
-    test_runs = db.query(TestRun).filter(TestRun.user_id == current_user.id).all()
-    
+    # Calculate stats (platform tests removed - only CLI submissions now)
     stats = UserStats(
-        total_tests=len(test_runs),
-        completed_tests=sum(1 for t in test_runs if t.status == "completed"),
-        pending_tests=sum(1 for t in test_runs if t.status == "pending_payment"),
-        running_tests=sum(1 for t in test_runs if t.status == "running"),
+        total_tests=0,
+        completed_tests=0,
+        pending_tests=0,
+        running_tests=0,
         total_submissions=db.query(CommunitySubmission).filter(
             CommunitySubmission.user_id == current_user.id
         ).count(),
@@ -97,142 +93,6 @@ async def update_profile(
     
     # Return updated profile
     return await get_profile(current_user, db)
-
-
-@router.get("/tests", response_model=UserTestsResponse)
-async def get_user_tests(
-    status: Optional[str] = Query(None),
-    model_id: Optional[UUID] = Query(None),
-    version: Optional[str] = Query(None),
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    sort: str = Query("created_at", regex="^(created_at|completed_at|score)$"),
-    order: str = Query("desc", regex="^(asc|desc)$"),
-    current_user: User = Depends(require_auth),
-    db: Session = Depends(get_db)
-):
-    """Get user's test run history"""
-    query = db.query(TestRun).filter(TestRun.user_id == current_user.id)
-    
-    if status:
-        query = query.filter(TestRun.status == status)
-    
-    if model_id:
-        query = query.filter(TestRun.model_id == model_id)
-    
-    # Apply sorting
-    if sort == "created_at":
-        query = query.order_by(TestRun.created_at.desc() if order == "desc" else TestRun.created_at.asc())
-    elif sort == "completed_at":
-        query = query.order_by(TestRun.completed_at.desc() if order == "desc" else TestRun.completed_at.asc())
-    
-    test_runs = query.offset(offset).limit(limit).all()
-    total = query.count()
-    
-    # Build test list items
-    tests = []
-    for test_run in test_runs:
-        scores = None
-        if test_run.status == "completed":
-            try:
-                scores_data = ScoringService.calculate_scores(db, str(test_run.id))
-                scores = {
-                    "overall": scores_data["overall"],
-                    "tier1": scores_data["tier1"],
-                    "tier2": scores_data["tier2"],
-                    "tier3": scores_data["tier3"]
-                }
-            except:
-                pass
-        
-        # Calculate progress
-        completed_questions = db.query(Result).filter(Result.test_run_id == test_run.id).count()
-        # Get actual total from question_set
-        question_set_total = db.query(Question).filter(
-            Question.question_set_id == test_run.question_set_id
-        ).count()
-        progress = {
-            "completed": completed_questions,
-            "total": question_set_total,
-            "percentage": int((completed_questions / question_set_total) * 100) if question_set_total > 0 else 0
-        }
-        
-        tests.append(TestListItem(
-            id=test_run.id,
-            model={
-                "id": str(test_run.model.id),
-                "name": test_run.model.name,
-                "provider": test_run.model.provider
-            },
-            status=test_run.status,
-            payment_status=test_run.payment_status or "pending",
-            scores=scores,
-            progress=progress,
-            benchmark_version=test_run.question_set.semantic_version,
-            created_at=test_run.created_at,
-            started_at=test_run.started_at,
-            completed_at=test_run.completed_at,
-            trust_tier=test_run.trust_tier,
-            leaderboard_rank=None  # DEFERRED: Rank calculation would require additional DB queries per test
-        ))
-    
-    return UserTestsResponse(
-        tests=tests,
-        pagination={
-            "limit": limit,
-            "offset": offset,
-            "total": total,
-            "has_more": (offset + limit) < total
-        }
-    )
-
-
-@router.get("/tests/{test_id}")
-async def get_test_detail(
-    test_id: UUID,
-    current_user: User = Depends(require_auth),
-    db: Session = Depends(get_db)
-):
-    """Get detailed test run information"""
-    test_run = db.query(TestRun).filter(
-        TestRun.id == test_id,
-        TestRun.user_id == current_user.id
-    ).first()
-    
-    if not test_run:
-        raise HTTPException(status_code=404, detail="Test not found")
-    
-    scores = None
-    if test_run.status == "completed":
-        try:
-            scores_data = ScoringService.calculate_scores(db, str(test_run.id))
-            scores = scores_data
-        except:
-            pass
-    
-    return {
-        "test": {
-            "id": str(test_run.id),
-            "model": {
-                "id": str(test_run.model.id),
-                "name": test_run.model.name,
-                "provider": test_run.model.provider,
-                "model_id": test_run.model.model_id
-            },
-            "status": test_run.status,
-            "payment": {
-                "status": test_run.payment_status or "pending",
-                "amount": float(test_run.total_cost or 0),
-                "currency": "USD"
-            },
-            "scores": scores,
-            "benchmark_version": test_run.question_set.semantic_version,
-            "created_at": test_run.created_at.isoformat(),
-            "started_at": test_run.started_at.isoformat() if test_run.started_at else None,
-            "completed_at": test_run.completed_at.isoformat() if test_run.completed_at else None,
-            "trust_tier": test_run.trust_tier
-        }
-    }
 
 
 @router.get("/submissions", response_model=UserSubmissionsResponse)
@@ -328,33 +188,9 @@ async def get_user_activity(
     db: Session = Depends(get_db)
 ):
     """Get user activity feed"""
+    # Platform tests removed - activity feed now only includes CLI submissions
+    # CLI submission activities are handled in the submissions endpoint
     activities = []
-    
-    # Get recent test runs
-    test_runs = db.query(TestRun).filter(
-        TestRun.user_id == current_user.id
-    ).order_by(TestRun.created_at.desc()).limit(limit).all()
-    
-    for test_run in test_runs:
-        activities.append(ActivityItem(
-            type="test_created",
-            timestamp=test_run.created_at,
-            title=f"Test created for {test_run.model.name}",
-            description=f"Test run {test_run.id} created",
-            link=f"/tests/{test_run.id}"
-        ))
-        
-        if test_run.completed_at:
-            activities.append(ActivityItem(
-                type="test_completed",
-                timestamp=test_run.completed_at,
-                title=f"Test completed for {test_run.model.name}",
-                description=f"Test run {test_run.id} completed",
-                link=f"/tests/{test_run.id}"
-            ))
-    
-    # Sort by timestamp descending
-    activities.sort(key=lambda a: a.timestamp, reverse=True)
     
     return UserActivityResponse(activities=activities[:limit])
 

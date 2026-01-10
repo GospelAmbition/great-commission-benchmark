@@ -1,7 +1,6 @@
 """Business logic services"""
 from app.services.scoring import ScoringService
 from app.services.openrouter import OpenRouterClient
-from app.services.executor import BenchmarkExecutor
 from app.services.judge import JudgeService, JudgeResult
 from app.services.email import EmailService
 from app.services.payment import PaymentService
@@ -15,7 +14,6 @@ __all__ = [
     # Core services
     "ScoringService",
     "OpenRouterClient", 
-    "BenchmarkExecutor",
     "JudgeService",
     "JudgeResult",
     # Email and payments

@@ -24,7 +24,6 @@ export default function ModeratorDashboardPage() {
   const { data: session, status } = useSession();
   const user = session?.user;
   const userLoading = status === "loading";
-  const [platformQueue, setPlatformQueue] = useState<any[]>([]);
   const [communityQueue, setCommunityQueue] = useState<any[]>([]);
   const [sponsorshipQueue, setSponsorshipQueue] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -44,19 +43,17 @@ export default function ModeratorDashboardPage() {
   async function loadDashboardData() {
     setLoading(true);
     try {
-      const [platformData, communityData, sponsorshipData, statsData, historyData] = await Promise.all([
-        apiClient.getModerationQueue().catch(() => ({ items: [], total: 0 })),
+      const [communityData, sponsorshipData, statsData, historyData] = await Promise.all([
         apiClient.getCommunitySubmissionQueue().catch(() => ({ items: [], total: 0 })),
         apiClient.getSponsorshipQueue().catch(() => ({ items: [], total: 0 })),
         apiClient.getModeratorStats().catch(() => null),
         apiClient.getModeratorActivity({ limit: 20 }).catch(() => ({ items: [], total: 0 })),
       ]);
 
-      setPlatformQueue(platformData.items || []);
       setCommunityQueue(communityData.items || []);
       setSponsorshipQueue(sponsorshipData.items || []);
       
-      const totalPending = (platformData.items?.length || 0) + (communityData.items?.length || 0) + (sponsorshipData.items?.length || 0);
+      const totalPending = (communityData.items?.length || 0) + (sponsorshipData.items?.length || 0);
       
       if (statsData) {
         setStats({
@@ -152,12 +149,9 @@ export default function ModeratorDashboardPage() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="community" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="community">
                 GCB Runner Submissions ({communityQueue.length})
-              </TabsTrigger>
-              <TabsTrigger value="platform">
-                Platform Tests ({platformQueue.length})
               </TabsTrigger>
               <TabsTrigger value="sponsorship">
                 Sponsorships ({sponsorshipQueue.length})
@@ -205,47 +199,6 @@ export default function ModeratorDashboardPage() {
               ) : (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">No GCB Runner submissions in queue</p>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="platform" className="mt-4">
-              {platformQueue.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Test ID</TableHead>
-                      <TableHead>Model</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Score</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {platformQueue.map((item) => (
-                      <TableRow key={item.test_id}>
-                        <TableCell className="font-mono text-sm">{item.test_id.slice(0, 8)}...</TableCell>
-                        <TableCell>{item.model_name}</TableCell>
-                        <TableCell>{item.user_name}</TableCell>
-                        <TableCell>{item.overall_score?.toFixed(1) || "—"}</TableCell>
-                        <TableCell>
-                          <Badge variant={item.trust_tier === "pending_review" ? "destructive" : "outline"}>
-                            {item.trust_tier}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button asChild variant="ghost" size="sm">
-                            <Link href={`/moderator/review/${item.test_id}`}>Review</Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No platform tests in queue</p>
                 </div>
               )}
             </TabsContent>
@@ -333,7 +286,7 @@ export default function ModeratorDashboardPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
-                        {item.review_type === "cli_submission" ? "Runner" : "Platform"}
+                        Runner
                       </Badge>
                     </TableCell>
                     <TableCell>{item.model_name}</TableCell>
@@ -351,16 +304,10 @@ export default function ModeratorDashboardPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {item.review_type === "cli_submission" && item.submission_id ? (
+                      {item.submission_id ? (
                         <Button asChild variant="ghost" size="sm">
                           <Link href={`/moderator/community/${item.submission_id}`} className="font-mono text-sm">
                             {item.submission_id.slice(0, 8)}...
-                          </Link>
-                        </Button>
-                      ) : item.test_id ? (
-                        <Button asChild variant="ghost" size="sm">
-                          <Link href={`/moderator/review/${item.test_id}`} className="font-mono text-sm">
-                            {item.test_id.slice(0, 8)}...
                           </Link>
                         </Button>
                       ) : (

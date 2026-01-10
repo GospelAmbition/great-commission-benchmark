@@ -152,51 +152,6 @@ export interface UserProfile {
   can_admin?: boolean;
 }
 
-export interface TestRun {
-  id: string;
-  model_id: string;
-  model_name?: string;
-  version: string;
-  status: string;
-  overall_score?: number;
-  tier1_score?: number;
-  tier2_score?: number;
-  tier3_score?: number;
-  category_scores?: Record<string, number>;
-  created_at: string;
-  started_at?: string;
-  completed_at?: string;
-  total_questions?: number;
-  completed_questions?: number;
-  system_prompt?: string;
-  estimated_cost?: number;
-}
-
-export interface TestsResponse {
-  items: TestRun[];
-  total: number;
-}
-
-export interface TestProgress {
-  status: string;
-  completed_questions: number;
-  total_questions: number;
-  current_tier?: string;
-  current_category?: string;
-  estimated_time_remaining_minutes?: number;
-}
-
-export interface TestResult {
-  id: string;
-  question_id: string;
-  question_content?: string;
-  question_category?: string;
-  question_tier?: string;
-  response?: string;
-  verdict: string;
-  reasoning?: string;
-  thought_process?: string | null;
-}
 
 export class ApiClient {
   private baseUrl: string;
@@ -456,72 +411,6 @@ export class ApiClient {
     });
   }
 
-  async getUserTests(params?: {
-    status?: string;
-    model_id?: string;
-    version?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<TestsResponse> {
-    // Backend returns { tests: [...], pagination: {...} }, transform to { items: [...], total: ... }
-    const response = await this.request<{ tests: any[]; pagination: { total: number } }>(
-      `/api/user/tests${this.buildQueryString(params, { skipEmpty: true })}`
-    );
-    return {
-      items: (response.tests || []).map((test) => ({
-        id: test.id,
-        model_id: test.model?.model_id || test.model?.id || '',
-        model_name: test.model?.name || '',
-        version: test.benchmark_version || '',
-        status: test.status || 'pending',
-        overall_score: test.scores?.overall,
-        tier1_score: test.scores?.tier1,
-        tier2_score: test.scores?.tier2,
-        tier3_score: test.scores?.tier3,
-        created_at: test.created_at,
-        started_at: test.started_at,
-        completed_at: test.completed_at,
-        trust_tier: test.trust_tier,
-      })),
-      total: response.pagination?.total || 0,
-    };
-  }
-
-  async getTest(id: string): Promise<TestRun> {
-    return this.request<TestRun>(`/api/user/tests/${id}`);
-  }
-
-  async getTestResults(id: string): Promise<TestResult[]> {
-    return this.request<TestResult[]>(`/api/user/tests/${id}/results`);
-  }
-
-  // Tests API
-  async createTest(data: {
-    model_id: string;
-    version: string;
-    system_prompt?: string;
-  }): Promise<TestRun> {
-    return this.request<TestRun>('/api/tests', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async startTest(id: string): Promise<TestRun> {
-    return this.request<TestRun>(`/api/tests/${id}/start`, {
-      method: 'POST',
-    });
-  }
-
-  async getTestProgress(id: string): Promise<TestProgress> {
-    return this.request<TestProgress>(`/api/tests/${id}/progress`);
-  }
-
-  async cancelTest(id: string): Promise<TestRun> {
-    return this.request<TestRun>(`/api/tests/${id}/cancel`, {
-      method: 'POST',
-    });
-  }
 
   // Newsletter
   async subscribeNewsletter(email: string): Promise<{ message: string }> {
@@ -664,64 +553,6 @@ export class ApiClient {
     });
   }
 
-  // Payments API
-  async createPaymentIntent(testId: string, tipPercentage?: number): Promise<{
-    payment_intent_id: string;
-    client_secret: string;
-    amount: number;
-    breakdown: {
-      api_cost: number;
-      processing_fee: number;
-      tip_amount: number;
-      total: number;
-    };
-  }> {
-    return this.request(`/api/v1/payments/create-intent`, {
-      method: 'POST',
-      body: JSON.stringify({
-        test_id: testId,
-        tip_percentage: tipPercentage,
-      }),
-    });
-  }
-
-  async createRefund(testId: string, amount?: number): Promise<{
-    refund_id: string;
-    amount: number;
-    status: string;
-  }> {
-    return this.request(`/api/v1/payments/refund`, {
-      method: 'POST',
-      body: JSON.stringify({
-        test_id: testId,
-        amount: amount,
-      }),
-    });
-  }
-
-  // Payment dev mode methods
-  async checkPaymentDevMode(): Promise<{
-    dev_mode: boolean;
-    stripe_configured: boolean;
-  }> {
-    return this.request(`/api/v1/payments/dev-mode`);
-  }
-
-  async devCompletePayment(testId: string): Promise<{
-    test_id: string;
-    status: string;
-    payment_status: string;
-    total_cost: number;
-    message: string;
-  }> {
-    return this.request(`/api/v1/payments/dev-complete`, {
-      method: 'POST',
-      body: JSON.stringify({
-        test_id: testId,
-        accepted_cost: true,
-      }),
-    });
-  }
 
   // Donations API (no auth required)
   async createDonationIntent(amount: number, email?: string): Promise<{
@@ -739,26 +570,6 @@ export class ApiClient {
   }
 
   // Moderator API endpoints
-  async getModerationQueue(params?: {
-    status?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<{
-    items: Array<{
-      test_id: string;
-      model_name: string;
-      user_name: string;
-      overall_score?: number;
-      status: string;
-      trust_tier: string;
-      created_at: string;
-      priority: number;
-    }>;
-    total: number;
-  }> {
-    return this.request(`/api/moderator/queue${this.buildQueryString(params)}`);
-  }
-
   async getCommunitySubmissionQueue(params?: {
     status?: string;
     limit?: number;
@@ -829,7 +640,7 @@ export class ApiClient {
       submission_id?: string | null;
       model_name: string;
       action: string;
-      review_type: 'platform_test' | 'cli_submission';
+      review_type: 'cli_submission';
       duration_seconds?: number | null;
       created_at: string;
     }>;
@@ -855,27 +666,6 @@ export class ApiClient {
     };
   }> {
     return this.request('/api/moderator/stats');
-  }
-
-  async submitModerationReview(data: {
-    test_id: string;
-    verdict_reviews: Array<{
-      result_id: string;
-      verdict: 'agree' | 'disagree' | 'unsure';
-      notes?: string;
-    }>;
-    overall_assessment: 'verified' | 'concerns' | 'escalated';
-    notes?: string;
-  }): Promise<{
-    review_id: string;
-    test_id: string;
-    trust_tier: string;
-    requires_second_review: boolean;
-  }> {
-    return this.request('/api/moderator/reviews', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
   }
 
   // Sponsorship API endpoints

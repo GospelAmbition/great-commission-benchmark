@@ -6,11 +6,9 @@ from app.api.v1.endpoints import (
     public,
     user,
     api_keys,
-    tests,
     submissions,
     runner,
     newsletter,
-    payments,
     donations,
     webhooks,
     moderator,
@@ -38,9 +36,6 @@ api_router.include_router(api_keys.router, prefix="/user/api-keys", tags=["api-k
 # Sponsorship (user endpoints)
 api_router.include_router(sponsorship.user_router, prefix="/user/sponsorship", tags=["sponsorship"])
 
-# Tests API
-api_router.include_router(tests.router, prefix="/tests", tags=["tests"])
-
 # Submissions API
 api_router.include_router(submissions.router, prefix="/submissions", tags=["submissions"])
 
@@ -50,8 +45,7 @@ api_router.include_router(runner.router, prefix="/runner", tags=["runner"])
 # Newsletter API
 api_router.include_router(newsletter.router, prefix="/newsletter", tags=["newsletter"])
 
-# Payments API
-api_router.include_router(payments.router, prefix="/payments", tags=["payments"])
+# Payments API removed - test payments removed, CLI/sponsorship payments handled in their endpoints
 
 # Donations API (public, no auth required)
 api_router.include_router(donations.router, prefix="/donations", tags=["donations"])
