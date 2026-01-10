@@ -24,6 +24,7 @@ async def run_benchmark(
     config: Config,
     benchmark_version: str | None = None,
     judge_model: str | None = None,
+    judge_backend: str | None = None,
     output_path: Path | None = None,
     resume: bool = False,
     is_draft: bool = False,
@@ -31,6 +32,10 @@ async def run_benchmark(
     """Run the benchmark against a model."""
     
     judge_model = judge_model or config.defaults.judge_model
+    
+    # Determine judge backend: explicit > config default > auto-detect
+    if judge_backend is None:
+        judge_backend = config.defaults.judge_backend
     
     # Initialize components
     api_client = PlatformAPIClient(config.platform.api_key or "", config.platform.url)
@@ -44,18 +49,28 @@ async def run_benchmark(
         base_url=backend_config.base_url,
     )
     
-    # Use openrouter for judge if model backend is local
-    if backend in ["lmstudio", "ollama"]:
-        # Try to use openrouter for judging, fall back to openai
-        if config.get_backend_config("openrouter").api_key:
-            judge_backend = get_backend("openrouter", api_key=config.get_backend_config("openrouter").api_key)
-        elif config.get_backend_config("openai").api_key:
-            judge_backend = get_backend("openai", api_key=config.get_backend_config("openai").api_key)
+    # Determine judge backend if not explicitly set
+    if judge_backend is None:
+        # Auto-detect: use openrouter/openai for judge if model backend is local
+        if backend in ["lmstudio", "ollama"]:
+            # Try to use openrouter for judging, fall back to openai
+            if config.get_backend_config("openrouter").api_key:
+                judge_backend = "openrouter"
+            elif config.get_backend_config("openai").api_key:
+                judge_backend = "openai"
+            else:
+                console.print("[yellow]Warning: Using local model for judging. Results may be less reliable.[/yellow]")
+                judge_backend = backend
         else:
-            console.print("[yellow]Warning: Using local model for judging. Results may be less reliable.[/yellow]")
-            judge_backend = model_backend
-    else:
-        judge_backend = model_backend
+            judge_backend = backend
+    
+    # Initialize judge backend
+    judge_backend_config = config.get_backend_config(judge_backend)
+    judge_backend_instance = get_backend(
+        judge_backend,
+        api_key=judge_backend_config.api_key,
+        base_url=judge_backend_config.base_url,
+    )
     
     try:
         # Fetch questions
@@ -159,12 +174,13 @@ async def run_benchmark(
                 backend=backend,
                 benchmark_version=actual_version,
                 judge_model=judge_model,
+                judge_backend=judge_backend,
                 is_draft_test=is_draft_test,
             )
             run_id = run.id
         
         console.print(f"[bold]Testing: {model} via {backend}[/bold]")
-        console.print(f"[bold]Judge: {judge_model}[/bold]")
+        console.print(f"[bold]Judge: {judge_model} via {judge_backend}[/bold]")
         console.print()
         
         # Record test start time
@@ -173,7 +189,7 @@ async def run_benchmark(
         console.print()
         
         # Initialize judge
-        judge = Judge(judge_backend, judge_model, judge_prompts)
+        judge = Judge(judge_backend_instance, judge_model, judge_prompts)
         
         # Run tests by tier - track by verdict
         tier_results: dict[int, dict[str, int]] = {
@@ -370,5 +386,5 @@ async def run_benchmark(
         
     finally:
         await model_backend.close()
-        await judge_backend.close()
+        await judge_backend_instance.close()
         await api_client.close()

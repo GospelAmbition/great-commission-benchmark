@@ -23,6 +23,8 @@ from app.schemas.admin import (
     UserListResponse,
     UpdateUserRoleRequest,
     UpdateUserRoleResponse,
+    UpdateUserPermissionsRequest,
+    UserPermissionsResponse,
     UpdateFeeWaiverRequest,
     UpdateFeeWaiverResponse,
     QuestionImportRequest,
@@ -85,7 +87,12 @@ async def list_users(
             created_at=user.created_at.isoformat() if user.created_at else "",
             test_count=test_count,
             fee_waived=user.fee_waived,
-            fee_waived_reason=user.fee_waived_reason
+            fee_waived_reason=user.fee_waived_reason,
+            can_view_benchmark=user.can_view_benchmark,
+            can_edit_benchmark=user.can_edit_benchmark,
+            can_moderate=user.can_moderate,
+            can_manage_blog=user.can_manage_blog,
+            can_admin=user.can_admin
         ))
     
     return UserListResponse(users=user_items, total=total)
@@ -98,9 +105,10 @@ async def update_user_role(
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    """Update user role"""
-    if request.role not in ["user", "moderator", "blog_manager", "benchmark_developer", "admin"]:
-        raise HTTPException(status_code=400, detail="Invalid role")
+    """Update user role and apply default permissions for that role"""
+    valid_roles = ["user", "moderator", "blog_manager", "benchmark_viewer", "benchmark_administrator", "admin"]
+    if request.role not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}")
     
     user = db.query(User).filter(User.id == user_id).first()
     
@@ -108,8 +116,8 @@ async def update_user_role(
         raise HTTPException(status_code=404, detail="User not found")
     
     # Prevent removing last admin
-    if user.role == "admin" and request.role != "admin":
-        admin_count = db.query(User).filter(User.role == "admin").count()
+    if user.can_admin and request.role != "admin":
+        admin_count = db.query(User).filter(User.can_admin == True).count()
         if admin_count <= 1:
             raise HTTPException(
                 status_code=400,
@@ -118,12 +126,110 @@ async def update_user_role(
     
     old_role = user.role
     user.role = request.role
+    
+    # Apply default permissions based on role
+    # Note: This sets defaults, but permissions can be overridden via the permissions endpoint
+    if request.role == "user":
+        user.can_view_benchmark = False
+        user.can_edit_benchmark = False
+        user.can_moderate = False
+        user.can_manage_blog = False
+        user.can_admin = False
+    elif request.role == "moderator":
+        user.can_moderate = True
+        user.can_view_benchmark = False
+        user.can_edit_benchmark = False
+        user.can_manage_blog = False
+        user.can_admin = False
+    elif request.role == "benchmark_viewer":
+        user.can_view_benchmark = True
+        user.can_edit_benchmark = False
+        user.can_moderate = False
+        user.can_manage_blog = False
+        user.can_admin = False
+    elif request.role == "benchmark_administrator":
+        user.can_view_benchmark = True
+        user.can_edit_benchmark = True
+        user.can_moderate = False
+        user.can_manage_blog = False
+        user.can_admin = False
+    elif request.role == "blog_manager":
+        user.can_manage_blog = True
+        user.can_view_benchmark = False
+        user.can_edit_benchmark = False
+        user.can_moderate = False
+        user.can_admin = False
+    elif request.role == "admin":
+        user.can_admin = True
+        # Admin gets all permissions (cascades)
+        user.can_view_benchmark = True
+        user.can_edit_benchmark = True
+        user.can_moderate = True
+        user.can_manage_blog = True
+    
     db.commit()
     
     return UpdateUserRoleResponse(
         user_id=user.id,
         role=user.role,
         message=f"User role updated from {old_role} to {request.role}"
+    )
+
+
+@router.put("/users/{user_id}/permissions", response_model=UserPermissionsResponse)
+async def update_user_permissions(
+    user_id: UUID,
+    request: UpdateUserPermissionsRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Update user permissions directly"""
+    user = db.query(User).filter(User.id == user_id).first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent removing last admin
+    if user.can_admin and request.can_admin is False:
+        admin_count = db.query(User).filter(User.can_admin == True).count()
+        if admin_count <= 1:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot remove last admin user"
+            )
+    
+    # Update permissions (only update if explicitly provided)
+    if request.can_view_benchmark is not None:
+        user.can_view_benchmark = request.can_view_benchmark
+    if request.can_edit_benchmark is not None:
+        user.can_edit_benchmark = request.can_edit_benchmark
+        # Editing implies viewing
+        if request.can_edit_benchmark:
+            user.can_view_benchmark = True
+    if request.can_moderate is not None:
+        user.can_moderate = request.can_moderate
+    if request.can_manage_blog is not None:
+        user.can_manage_blog = request.can_manage_blog
+    if request.can_admin is not None:
+        user.can_admin = request.can_admin
+        # Admin cascades to all permissions
+        if request.can_admin:
+            user.can_view_benchmark = True
+            user.can_edit_benchmark = True
+            user.can_moderate = True
+            user.can_manage_blog = True
+    
+    db.commit()
+    db.refresh(user)
+    
+    return UserPermissionsResponse(
+        user_id=user.id,
+        can_view_benchmark=user.can_view_benchmark,
+        can_edit_benchmark=user.can_edit_benchmark,
+        can_moderate=user.can_moderate,
+        can_manage_blog=user.can_manage_blog,
+        can_admin=user.can_admin,
+        message="User permissions updated successfully"
     )
 
 

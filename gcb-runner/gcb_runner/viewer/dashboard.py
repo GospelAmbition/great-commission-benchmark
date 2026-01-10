@@ -485,7 +485,7 @@ def get_dashboard_html() -> str:
                                 Benchmark v${run.benchmark_version} • 
                                 ${run.completed_at ? new Date(run.completed_at).toLocaleString() : 'In Progress'}
                             </p>
-                            <p class="meta">Backend: ${run.backend} • Judge: ${run.judge_model}</p>
+                            <p class="meta">Backend: ${run.backend} • Judge: ${run.judge_model}${run.judge_backend ? ` (via ${run.judge_backend})` : ''}</p>
                         </div>
                         
                         <div class="card">

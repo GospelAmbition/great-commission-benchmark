@@ -255,7 +255,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
     def _get_runs(self, conn: sqlite3.Connection) -> dict[str, Any]:
         """Get list of test runs."""
         cursor = conn.execute("""
-            SELECT id, model, backend, benchmark_version, judge_model,
+            SELECT id, model, backend, benchmark_version, judge_model, judge_backend,
                    score, tier1_score, tier2_score, tier3_score,
                    started_at, completed_at
             FROM test_runs
@@ -271,6 +271,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
                 "backend": row["backend"],
                 "benchmark_version": row["benchmark_version"],
                 "judge_model": row["judge_model"],
+                "judge_backend": row.get("judge_backend"),
                 "score": row["score"],
                 "tier1_score": row["tier1_score"],
                 "tier2_score": row["tier2_score"],
@@ -284,7 +285,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
     def _get_run_detail(self, conn: sqlite3.Connection, run_id: int) -> dict[str, Any]:
         """Get detailed information for a single run."""
         cursor = conn.execute("""
-            SELECT id, model, backend, benchmark_version, judge_model,
+            SELECT id, model, backend, benchmark_version, judge_model, judge_backend,
                    system_prompt, score, tier1_score, tier2_score, tier3_score,
                    started_at, completed_at
             FROM test_runs
@@ -315,6 +316,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
             "backend": row["backend"],
             "benchmark_version": row["benchmark_version"],
             "judge_model": row["judge_model"],
+            "judge_backend": row.get("judge_backend"),
             "score": row["score"],
             "tier1_score": row["tier1_score"],
             "tier2_score": row["tier2_score"],

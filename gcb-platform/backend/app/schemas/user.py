@@ -17,6 +17,12 @@ class UserProfile(GCBBaseModel):
     organization: Optional[str] = None
     tester_agreement_accepted: bool = False
     created_at: datetime
+    # Permissions
+    can_view_benchmark: bool = False
+    can_edit_benchmark: bool = False
+    can_moderate: bool = False
+    can_manage_blog: bool = False
+    can_admin: bool = False
 
 
 class UserStats(GCBBaseModel):

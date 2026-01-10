@@ -16,6 +16,12 @@ class User(Base):
     email = Column(String(255), nullable=False, index=True)
     name = Column(String(255))
     role = Column(String(50), default="user")  # 'user', 'moderator', 'benchmark_developer', 'admin'
+    # Permission flags (replaces hierarchical role system)
+    can_view_benchmark = Column(Boolean, default=False, nullable=False)  # Read-only benchmark dashboard access
+    can_edit_benchmark = Column(Boolean, default=False, nullable=False)  # Edit benchmark questions/versions
+    can_moderate = Column(Boolean, default=False, nullable=False)  # Access moderation dashboard
+    can_manage_blog = Column(Boolean, default=False, nullable=False)  # Access blog management dashboard
+    can_admin = Column(Boolean, default=False, nullable=False)  # Administrator (cascades to all permissions)
     credentials = Column(Text)  # For moderators: background, expertise
     tester_agreement_accepted = Column(Boolean, default=False, nullable=False)
     tester_agreement_accepted_at = Column(DateTime(timezone=True), nullable=True)

@@ -33,12 +33,13 @@ def list_users(db: Session):
         return
     
     print(f"\nFound {len(users)} user(s):\n")
-    print(f"{'Email':<40} {'Name':<30} {'Role':<15} {'Created':<20}")
-    print("-" * 105)
+    print(f"{'Email':<40} {'Name':<30} {'Role':<15} {'Admin':<5} {'Created':<20}")
+    print("-" * 110)
     
     for user in users:
         created = user.created_at.strftime("%Y-%m-%d %H:%M") if user.created_at else "N/A"
-        print(f"{user.email:<40} {user.name or 'N/A':<30} {user.role:<15} {created:<20}")
+        admin_status = "✓" if user.can_admin else "✗"
+        print(f"{user.email:<40} {user.name or 'N/A':<30} {user.role:<15} {admin_status:<3} {created:<20}")
     
     print()
 
@@ -66,7 +67,12 @@ def promote_to_admin(db: Session, email: str, create_if_missing: bool = False) -
                     auth0_id=auth0_id,
                     email=email,
                     name=email.split("@")[0].replace(".", " ").title(),  # Generate name from email
-                    role="admin"  # Set directly to admin since we're creating for admin purposes
+                    role="admin",  # Set directly to admin since we're creating for admin purposes
+                    can_admin=True,
+                    can_view_benchmark=True,
+                    can_edit_benchmark=True,
+                    can_moderate=True,
+                    can_manage_blog=True
                 )
                 db.add(user)
                 db.commit()
@@ -87,18 +93,32 @@ def promote_to_admin(db: Session, email: str, create_if_missing: bool = False) -
             print(f"   python scripts/create_admin.py --email {email} --create-if-missing")
             return False
     
-    if user.role == "admin":
-        print(f"\n✅ User '{email}' is already an admin.")
+    # Check if already admin (both role and permission)
+    is_already_admin = user.role == "admin" and user.can_admin
+    if is_already_admin:
+        print(f"\n✅ User '{email}' is already an admin (role and permissions).")
         return True
     
     old_role = user.role
+    old_can_admin = user.can_admin
+    
+    # Set both role and permissions
     user.role = "admin"
+    user.can_admin = True
+    # Admin cascades to all permissions
+    user.can_view_benchmark = True
+    user.can_edit_benchmark = True
+    user.can_moderate = True
+    user.can_manage_blog = True
+    
     db.commit()
     db.refresh(user)
     
-    print(f"\n✅ Successfully promoted user '{email}' to admin role.")
+    print(f"\n✅ Successfully promoted user '{email}' to admin.")
     print(f"   Previous role: {old_role}")
+    print(f"   Previous can_admin: {old_can_admin}")
     print(f"   New role: {user.role}")
+    print(f"   New can_admin: {user.can_admin}")
     print(f"   User ID: {user.id}")
     return True
 

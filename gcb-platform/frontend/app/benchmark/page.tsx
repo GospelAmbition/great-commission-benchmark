@@ -172,7 +172,7 @@ const DIFFICULTY_TARGETS = {
 
 export default function BenchmarkDashboardPage() {
   const { data: session, status } = useSession();
-  const { isBenchmarkDeveloper, loading: profileLoading } = useUserProfile();
+  const { canViewBenchmark, canEditBenchmark, loading: profileLoading } = useUserProfile();
   const router = useRouter();
   
   // Data state
@@ -356,14 +356,14 @@ export default function BenchmarkDashboardPage() {
       return;
     }
     
-    if (!isBenchmarkDeveloper) {
+    if (!canViewBenchmark) {
       router.push("/dashboard");
       toast.error("You don't have permission to access the Benchmark Development dashboard");
       return;
     }
     
     loadData();
-  }, [session, status, profileLoading, isBenchmarkDeveloper, router, loadData]);
+  }, [session, status, profileLoading, canViewBenchmark, router, loadData]);
 
   useEffect(() => {
     if (selectedVersionId) {
@@ -1091,9 +1091,11 @@ export default function BenchmarkDashboardPage() {
     );
   }
 
-  if (!session?.user || !isBenchmarkDeveloper) {
+  if (!session?.user || !canViewBenchmark) {
     return null;
   }
+
+  const isReadOnly = !canEditBenchmark;
 
   // =============================================================================
   // Main Render
@@ -1107,6 +1109,13 @@ export default function BenchmarkDashboardPage() {
         <p className="mt-2 text-muted-foreground">
           Develop and manage benchmark versions and questions
         </p>
+        {isReadOnly && (
+          <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              <strong>Read-only mode:</strong> You have view-only access. Editing is disabled.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -1193,7 +1202,7 @@ export default function BenchmarkDashboardPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button onClick={() => setShowCreateDialog(true)}>
+              <Button onClick={() => setShowCreateDialog(true)} disabled={isReadOnly}>
                 Create New Version
               </Button>
             </div>
@@ -1600,7 +1609,7 @@ export default function BenchmarkDashboardPage() {
                   </Button>
                   {canEditQuestions && (
                     <>
-                      <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+                      <Button variant="outline" onClick={() => setShowImportDialog(true)} disabled={isReadOnly}>
                         Import
                       </Button>
                       <Button onClick={() => {
@@ -1699,7 +1708,9 @@ export default function BenchmarkDashboardPage() {
                                 size="sm"
                                 onClick={() => {
                                   setEditingQuestion(q);
-                                  setShowEditQuestionDialog(true);
+                                  if (!isReadOnly) {
+                                    setShowEditQuestionDialog(true);
+                                  }
                                 }}
                               >
                                 Edit
@@ -1709,6 +1720,7 @@ export default function BenchmarkDashboardPage() {
                                 size="sm"
                                 className="text-destructive"
                                 onClick={() => handleDeleteQuestion(q.id)}
+                                disabled={isReadOnly}
                               >
                                 Delete
                               </Button>
@@ -1928,7 +1940,7 @@ export default function BenchmarkDashboardPage() {
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateVersion} disabled={actionLoading}>
+            <Button onClick={handleCreateVersion} disabled={actionLoading || isReadOnly}>
               {actionLoading ? "Creating..." : "Create Version"}
             </Button>
           </DialogFooter>
@@ -2038,7 +2050,7 @@ export default function BenchmarkDashboardPage() {
             <Button variant="outline" onClick={() => setShowCreateQuestionDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateQuestion} disabled={actionLoading}>
+            <Button onClick={handleCreateQuestion} disabled={actionLoading || isReadOnly}>
               {actionLoading ? "Adding..." : "Add Question"}
             </Button>
           </DialogFooter>
@@ -2233,7 +2245,7 @@ export default function BenchmarkDashboardPage() {
             <Button
               variant={showConfirmDialog?.action === "delete" ? "destructive" : "default"}
               onClick={() => showConfirmDialog && handleVersionAction(showConfirmDialog.action, showConfirmDialog.version)}
-              disabled={actionLoading}
+              disabled={actionLoading || isReadOnly}
             >
               {actionLoading ? "Processing..." : "Confirm"}
             </Button>
@@ -2346,7 +2358,7 @@ export default function BenchmarkDashboardPage() {
             {importValidation && importValidation.imported > 0 && (
               <Button
                 onClick={handleImportQuestions}
-                disabled={importLoading}
+                disabled={importLoading || isReadOnly}
               >
                 {importLoading ? "Importing..." : `Import ${importValidation.imported} Questions`}
               </Button>

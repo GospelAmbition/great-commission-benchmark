@@ -51,6 +51,7 @@ class PlatformConfig(BaseModel):
 class DefaultsConfig(BaseModel):
     """Default settings."""
     backend: str = "openrouter"
+    judge_backend: str | None = None  # If None, will use backend or auto-detect
     judge_model: str = "openai/gpt-oss-20b"
 
 

@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -39,12 +40,17 @@ interface AdminUser {
   id: string;
   email: string;
   name: string | null;
-  role: "user" | "moderator" | "blog_manager" | "benchmark_developer" | "admin";
+  role: "user" | "moderator" | "blog_manager" | "benchmark_developer" | "benchmark_viewer" | "benchmark_administrator" | "admin";
   created_at: string;
   test_count: number;
   last_login?: string;
   fee_waived?: boolean;
   fee_waived_reason?: string | null;
+  can_view_benchmark?: boolean;
+  can_edit_benchmark?: boolean;
+  can_moderate?: boolean;
+  can_manage_blog?: boolean;
+  can_admin?: boolean;
 }
 
 export default function AdminUsersPage() {
@@ -59,6 +65,13 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [newRole, setNewRole] = useState<string>("");
+  const [permissions, setPermissions] = useState({
+    can_view_benchmark: false,
+    can_edit_benchmark: false,
+    can_moderate: false,
+    can_manage_blog: false,
+    can_admin: false,
+  });
   const [saving, setSaving] = useState(false);
   const [feeWaiverUser, setFeeWaiverUser] = useState<AdminUser | null>(null);
   const [feeWaiverReason, setFeeWaiverReason] = useState<string>("");
@@ -130,13 +143,99 @@ export default function AdminUsersPage() {
         setNewRole("");
         loadUsers();
       } else {
-        throw new Error("Failed to update role");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to update role");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update role:", error);
-      toast.error("Failed to update user role");
+      toast.error(error.message || "Failed to update user role");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handlePermissionsChange() {
+    if (!selectedUser) return;
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/admin/users/${selectedUser.id}/permissions`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(permissions),
+      });
+
+      if (response.ok) {
+        toast.success("Permissions updated successfully");
+        setSelectedUser(null);
+        setPermissions({
+          can_view_benchmark: false,
+          can_edit_benchmark: false,
+          can_moderate: false,
+          can_manage_blog: false,
+          can_admin: false,
+        });
+        loadUsers();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to update permissions");
+      }
+    } catch (error: any) {
+      console.error("Failed to update permissions:", error);
+      toast.error(error.message || "Failed to update permissions");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleSetDefaultPermissions(role: string) {
+    const defaults: Record<string, typeof permissions> = {
+      user: {
+        can_view_benchmark: false,
+        can_edit_benchmark: false,
+        can_moderate: false,
+        can_manage_blog: false,
+        can_admin: false,
+      },
+      moderator: {
+        can_view_benchmark: false,
+        can_edit_benchmark: false,
+        can_moderate: true,
+        can_manage_blog: false,
+        can_admin: false,
+      },
+      benchmark_viewer: {
+        can_view_benchmark: true,
+        can_edit_benchmark: false,
+        can_moderate: false,
+        can_manage_blog: false,
+        can_admin: false,
+      },
+      benchmark_administrator: {
+        can_view_benchmark: true,
+        can_edit_benchmark: true,
+        can_moderate: false,
+        can_manage_blog: false,
+        can_admin: false,
+      },
+      blog_manager: {
+        can_view_benchmark: false,
+        can_edit_benchmark: false,
+        can_moderate: false,
+        can_manage_blog: true,
+        can_admin: false,
+      },
+      admin: {
+        can_view_benchmark: true,
+        can_edit_benchmark: true,
+        can_moderate: true,
+        can_manage_blog: true,
+        can_admin: true,
+      },
+    };
+    
+    if (defaults[role]) {
+      setPermissions(defaults[role]);
+      setNewRole(role);
     }
   }
 
@@ -235,7 +334,8 @@ export default function AdminUsersPage() {
                 <SelectItem value="user">User</SelectItem>
                 <SelectItem value="moderator">Moderator</SelectItem>
                 <SelectItem value="blog_manager">Blog Manager</SelectItem>
-                <SelectItem value="benchmark_developer">Benchmark Developer</SelectItem>
+                <SelectItem value="benchmark_viewer">Benchmark Viewer</SelectItem>
+                <SelectItem value="benchmark_administrator">Benchmark Administrator</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
@@ -291,7 +391,10 @@ export default function AdminUsersPage() {
                           : "outline"
                       }
                     >
-                      {u.role === "blog_manager" ? "Blog Manager" : u.role === "benchmark_developer" ? "Benchmark Dev" : u.role}
+                      {u.role === "blog_manager" ? "Blog Manager" : 
+                       u.role === "benchmark_developer" ? "Benchmark Dev" :
+                       u.role === "benchmark_viewer" ? "Benchmark Viewer" :
+                       u.role === "benchmark_administrator" ? "Benchmark Admin" : u.role}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -320,9 +423,16 @@ export default function AdminUsersPage() {
                         onClick={() => {
                           setSelectedUser(u);
                           setNewRole(u.role);
+                          setPermissions({
+                            can_view_benchmark: u.can_view_benchmark ?? false,
+                            can_edit_benchmark: u.can_edit_benchmark ?? false,
+                            can_moderate: u.can_moderate ?? false,
+                            can_manage_blog: u.can_manage_blog ?? false,
+                            can_admin: u.can_admin ?? false,
+                          });
                         }}
                       >
-                        Edit Role
+                        Edit Permissions
                       </Button>
                       {(u.role === "user") && (
                         <Button
@@ -373,35 +483,138 @@ export default function AdminUsersPage() {
         </CardContent>
       </Card>
 
-      {/* Edit Role Dialog */}
+      {/* Edit Permissions Dialog */}
       <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit User Role</DialogTitle>
+            <DialogTitle>Edit User Permissions</DialogTitle>
             <DialogDescription>
-              Change the role for {selectedUser?.name} ({selectedUser?.email})
+              Manage permissions for {selectedUser?.name} ({selectedUser?.email})
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Select value={newRole} onValueChange={setNewRole}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="user">User</SelectItem>
-                <SelectItem value="moderator">Moderator</SelectItem>
-                <SelectItem value="blog_manager">Blog Manager</SelectItem>
-                <SelectItem value="benchmark_developer">Benchmark Developer</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="py-4 space-y-6">
+            {/* Role Selection (for setting defaults) */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Role (for default permissions)</Label>
+              <Select value={newRole} onValueChange={(value) => {
+                setNewRole(value);
+                handleSetDefaultPermissions(value);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role to apply defaults" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="moderator">Moderator</SelectItem>
+                  <SelectItem value="blog_manager">Blog Manager</SelectItem>
+                  <SelectItem value="benchmark_viewer">Benchmark Viewer</SelectItem>
+                  <SelectItem value="benchmark_administrator">Benchmark Administrator</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Current role: <span className="font-medium">{selectedUser?.role}</span>
+              </p>
+            </div>
+
+            {/* Permissions Checkboxes */}
+            <div className="space-y-4">
+              <Label className="text-sm font-medium">Permissions</Label>
+              <div className="space-y-3 pl-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="can_view_benchmark"
+                    checked={permissions.can_view_benchmark}
+                    onCheckedChange={(checked) =>
+                      setPermissions((prev) => ({ ...prev, can_view_benchmark: checked === true }))
+                    }
+                    disabled={permissions.can_admin}
+                  />
+                  <Label htmlFor="can_view_benchmark" className="text-sm font-normal cursor-pointer">
+                    View Benchmark (read-only access to Benchmark Dashboard)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="can_edit_benchmark"
+                    checked={permissions.can_edit_benchmark}
+                    onCheckedChange={(checked) => {
+                      const isChecked = checked === true;
+                      setPermissions((prev) => ({
+                        ...prev,
+                        can_edit_benchmark: isChecked,
+                        can_view_benchmark: isChecked ? true : prev.can_view_benchmark, // Editing implies viewing
+                      }));
+                    }}
+                    disabled={permissions.can_admin}
+                  />
+                  <Label htmlFor="can_edit_benchmark" className="text-sm font-normal cursor-pointer">
+                    Edit Benchmark (full editing access to Benchmark Dashboard)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="can_moderate"
+                    checked={permissions.can_moderate}
+                    onCheckedChange={(checked) =>
+                      setPermissions((prev) => ({ ...prev, can_moderate: checked === true }))
+                    }
+                    disabled={permissions.can_admin}
+                  />
+                  <Label htmlFor="can_moderate" className="text-sm font-normal cursor-pointer">
+                    Moderate (access to Moderation Dashboard)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="can_manage_blog"
+                    checked={permissions.can_manage_blog}
+                    onCheckedChange={(checked) =>
+                      setPermissions((prev) => ({ ...prev, can_manage_blog: checked === true }))
+                    }
+                    disabled={permissions.can_admin}
+                  />
+                  <Label htmlFor="can_manage_blog" className="text-sm font-normal cursor-pointer">
+                    Manage Blog (access to Blog Management Dashboard)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 pt-2 border-t">
+                  <Checkbox
+                    id="can_admin"
+                    checked={permissions.can_admin}
+                    onCheckedChange={(checked) => {
+                      const isChecked = checked === true;
+                      setPermissions({
+                        can_view_benchmark: isChecked,
+                        can_edit_benchmark: isChecked,
+                        can_moderate: isChecked,
+                        can_manage_blog: isChecked,
+                        can_admin: isChecked,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="can_admin" className="text-sm font-medium cursor-pointer">
+                    Administrator (grants all permissions)
+                  </Label>
+                </div>
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedUser(null)}>
+            <Button variant="outline" onClick={() => {
+              setSelectedUser(null);
+              setPermissions({
+                can_view_benchmark: false,
+                can_edit_benchmark: false,
+                can_moderate: false,
+                can_manage_blog: false,
+                can_admin: false,
+              });
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleRoleChange} disabled={saving}>
-              {saving ? "Saving..." : "Save Changes"}
+            <Button onClick={handlePermissionsChange} disabled={saving}>
+              {saving ? "Saving..." : "Save Permissions"}
             </Button>
           </DialogFooter>
         </DialogContent>

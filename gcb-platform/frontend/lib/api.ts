@@ -140,10 +140,16 @@ export interface UserProfile {
   id: string;
   name?: string;
   email: string;
-  role?: 'user' | 'moderator' | 'blog_manager' | 'benchmark_developer' | 'admin';
+  role?: 'user' | 'moderator' | 'blog_manager' | 'benchmark_developer' | 'benchmark_viewer' | 'benchmark_administrator' | 'admin';
   organization?: string;
   test_count?: number;
   contribution_count?: number;
+  // Permissions
+  can_view_benchmark?: boolean;
+  can_edit_benchmark?: boolean;
+  can_moderate?: boolean;
+  can_manage_blog?: boolean;
+  can_admin?: boolean;
 }
 
 export interface TestRun {

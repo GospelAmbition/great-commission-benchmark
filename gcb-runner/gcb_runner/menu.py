@@ -107,7 +107,10 @@ def show_status_panel(cfg: Config) -> None:
         status_items.append(f"⚠️  Backend: [yellow]{backend}[/yellow] (no API key)")
     
     # Judge model
-    status_items.append(f"⚖️  Judge: [cyan]{cfg.defaults.judge_model}[/cyan]")
+    judge_display = cfg.defaults.judge_model
+    if cfg.defaults.judge_backend:
+        judge_display += f" (via {cfg.defaults.judge_backend})"
+    status_items.append(f"⚖️  Judge: [cyan]{judge_display}[/cyan]")
     
     console.print(Panel(
         "\n".join(status_items),
@@ -755,7 +758,10 @@ def run_test_menu() -> MenuAction:
     console.print(f"  Model: [cyan]{model}[/cyan]")
     console.print(f"  Backend: [cyan]{backend}[/cyan]")
     console.print(f"  Version: [cyan]{benchmark_version or 'current'}[/cyan]")
-    console.print(f"  Judge: [cyan]{cfg.defaults.judge_model}[/cyan]")
+    judge_display = cfg.defaults.judge_model
+    if cfg.defaults.judge_backend:
+        judge_display += f" (via {cfg.defaults.judge_backend})"
+    console.print(f"  Judge: [cyan]{judge_display}[/cyan]")
     console.print()
     
     if not Confirm.ask("Start the benchmark?", default=True):
@@ -782,6 +788,7 @@ def run_test_menu() -> MenuAction:
             backend=backend,
             benchmark_version=benchmark_version,
             judge_model=cfg.defaults.judge_model,
+            judge_backend=cfg.defaults.judge_backend,
             config=cfg,
             output_path=None,
             resume=False,
@@ -937,6 +944,8 @@ def view_run_details() -> None:
             table.add_row("Backend", run.backend)
             table.add_row("Benchmark Version", run.benchmark_version)
             table.add_row("Judge Model", run.judge_model)
+            if getattr(run, 'judge_backend', None):
+                table.add_row("Judge Backend", run.judge_backend)
             table.add_row("Score", f"[bold green]{run.score:.1f}[/bold green]" if run.score else "-")
             table.add_row("Status", "Completed" if run.completed_at else "In Progress")
             

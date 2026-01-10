@@ -28,6 +28,7 @@ class TestRun(Base):
     backend: Mapped[str] = mapped_column(String(64))
     benchmark_version: Mapped[str] = mapped_column(String(32))
     judge_model: Mapped[str] = mapped_column(String(128))
+    judge_backend: Mapped[str | None] = mapped_column(String(64), nullable=True)
     system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     score: Mapped[float | None] = mapped_column(nullable=True)
     tier1_score: Mapped[float | None] = mapped_column(nullable=True)
@@ -89,6 +90,14 @@ class ResultsDB:
                     "ALTER TABLE test_runs ADD COLUMN is_draft_test BOOLEAN NOT NULL DEFAULT 0"
                 ))
                 conn.commit()
+            
+            # Check if judge_backend column exists
+            if "judge_backend" not in columns:
+                # Add the column (nullable, so no default needed)
+                conn.execute(text(
+                    "ALTER TABLE test_runs ADD COLUMN judge_backend VARCHAR(64)"
+                ))
+                conn.commit()
     
     def create_run(
         self,
@@ -96,6 +105,7 @@ class ResultsDB:
         backend: str,
         benchmark_version: str,
         judge_model: str,
+        judge_backend: str | None = None,
         is_draft_test: bool = False,
     ) -> TestRun:
         """Create a new test run.
@@ -105,6 +115,7 @@ class ResultsDB:
             backend: Backend used for the model
             benchmark_version: Benchmark version being tested
             judge_model: Model used for judging
+            judge_backend: Backend used for judging (None if auto-detected)
             is_draft_test: True if testing a draft/locked version (won't be published to leaderboard)
         """
         session: Session = self.Session()
@@ -114,6 +125,7 @@ class ResultsDB:
                 backend=backend,
                 benchmark_version=benchmark_version,
                 judge_model=judge_model,
+                judge_backend=judge_backend,
                 started_at=datetime.now(),
                 is_draft_test=is_draft_test,
             )

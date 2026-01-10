@@ -262,10 +262,12 @@ async def get_user_info(
     """
     api_key_record, user = auth
     
-    # Determine permission flags based on role
-    is_admin = user.role == "admin"
-    is_benchmark_developer = user.role in ("admin", "benchmark_developer")
-    is_moderator = user.role in ("admin", "moderator")
+    # Determine permission flags based on permissions (admin cascades)
+    from app.core.auth import has_permission
+    
+    is_admin = has_permission(user, "can_admin")
+    is_benchmark_developer = has_permission(user, "can_edit_benchmark")
+    is_moderator = has_permission(user, "can_moderate")
     
     return {
         "role": user.role,
@@ -273,5 +275,12 @@ async def get_user_info(
         "is_benchmark_developer": is_benchmark_developer,
         "is_moderator": is_moderator,
         "email": user.email,
-        "name": user.name
+        "name": user.name,
+        "permissions": {
+            "can_view_benchmark": has_permission(user, "can_view_benchmark"),
+            "can_edit_benchmark": has_permission(user, "can_edit_benchmark"),
+            "can_moderate": has_permission(user, "can_moderate"),
+            "can_manage_blog": has_permission(user, "can_manage_blog"),
+            "can_admin": has_permission(user, "can_admin")
+        }
     }

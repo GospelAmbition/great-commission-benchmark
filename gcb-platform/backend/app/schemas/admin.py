@@ -14,6 +14,11 @@ class UserListItem(BaseModel):
     test_count: int
     fee_waived: Optional[bool] = None
     fee_waived_reason: Optional[str] = None
+    can_view_benchmark: bool = False
+    can_edit_benchmark: bool = False
+    can_moderate: bool = False
+    can_manage_blog: bool = False
+    can_admin: bool = False
 
 
 class UserListResponse(BaseModel):
@@ -24,13 +29,33 @@ class UserListResponse(BaseModel):
 
 class UpdateUserRoleRequest(BaseModel):
     """Update user role request"""
-    role: str  # 'user', 'moderator', 'admin'
+    role: str  # 'user', 'moderator', 'blog_manager', 'benchmark_viewer', 'benchmark_administrator', 'admin'
 
 
 class UpdateUserRoleResponse(BaseModel):
     """Update user role response"""
     user_id: UUID
     role: str
+    message: str
+
+
+class UpdateUserPermissionsRequest(BaseModel):
+    """Update user permissions request"""
+    can_view_benchmark: Optional[bool] = None
+    can_edit_benchmark: Optional[bool] = None
+    can_moderate: Optional[bool] = None
+    can_manage_blog: Optional[bool] = None
+    can_admin: Optional[bool] = None
+
+
+class UserPermissionsResponse(BaseModel):
+    """User permissions response"""
+    user_id: UUID
+    can_view_benchmark: bool
+    can_edit_benchmark: bool
+    can_moderate: bool
+    can_manage_blog: bool
+    can_admin: bool
     message: str
 
 

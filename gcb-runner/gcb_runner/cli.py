@@ -154,6 +154,44 @@ def config() -> None:
     except (ValueError, IndexError):
         cfg.defaults.judge_model = "openai/gpt-oss-20b"
     
+    # Judge backend selection
+    console.print()
+    console.print("[bold]Which backend should the judge use?[/bold]")
+    console.print("[dim]You can run the judge locally (lmstudio/ollama) to save tokens, while testing models on Open Router.[/dim]")
+    console.print()
+    judge_backend_options = [
+        "auto-detect (use same as test backend, or openrouter if test is local)",
+        "lmstudio (local)",
+        "ollama (local)",
+        "openrouter",
+        "openai",
+        "anthropic",
+        "none (use auto-detect always)"
+    ]
+    for i, opt in enumerate(judge_backend_options, 1):
+        console.print(f"  {i}. {opt}")
+    
+    judge_backend_choice = Prompt.ask("Select judge backend (number)", default="1")
+    
+    try:
+        judge_backend_idx = int(judge_backend_choice) - 1
+        if judge_backend_idx == 0:
+            cfg.defaults.judge_backend = None  # Auto-detect
+        elif judge_backend_idx == 1:
+            cfg.defaults.judge_backend = "lmstudio"
+        elif judge_backend_idx == 2:
+            cfg.defaults.judge_backend = "ollama"
+        elif judge_backend_idx == 3:
+            cfg.defaults.judge_backend = "openrouter"
+        elif judge_backend_idx == 4:
+            cfg.defaults.judge_backend = "openai"
+        elif judge_backend_idx == 5:
+            cfg.defaults.judge_backend = "anthropic"
+        else:
+            cfg.defaults.judge_backend = None  # None = auto-detect
+    except (ValueError, IndexError):
+        cfg.defaults.judge_backend = None  # Auto-detect by default
+    
     # Save configuration
     cfg.save()
     
@@ -245,6 +283,7 @@ def test(
     backend: str | None = typer.Option(None, "--backend", "-b", help="Backend: openrouter, lmstudio, ollama, openai, anthropic"),
     benchmark_version: str | None = typer.Option(None, "--benchmark-version", help="Benchmark version to run"),
     judge_model: str | None = typer.Option(None, "--judge-model", help="Model for judging responses"),
+    judge_backend: str | None = typer.Option(None, "--judge-backend", "-j", help="Backend for judge (e.g., lmstudio, openrouter). If not set, uses config default or auto-detects."),
     output: Path | None = typer.Option(None, "--output", "-o", help="Save results to JSON file"),  # noqa: B008
     resume: bool = typer.Option(False, "--resume", help="Resume interrupted test run"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Validate configuration without running tests"),
@@ -260,6 +299,7 @@ def test(
     # Use defaults if not specified
     backend = backend or cfg.defaults.backend
     judge_model = judge_model or cfg.defaults.judge_model
+    judge_backend = judge_backend or cfg.defaults.judge_backend
     
     if not cfg.platform.api_key:
         console.print("[red]Error: Platform API key not configured.[/red]")
@@ -272,11 +312,20 @@ def test(
         console.print("Run 'gcb-runner config' to set up your API key.")
         raise typer.Exit(1)
     
+    # Validate judge backend if explicitly set
+    if judge_backend:
+        judge_backend_config = cfg.get_backend_config(judge_backend)
+        if judge_backend in ["openrouter", "openai", "anthropic"] and not judge_backend_config.api_key:
+            console.print(f"[red]Error: {judge_backend} API key not configured for judge backend.[/red]")
+            console.print("Run 'gcb-runner config' to set up your API key.")
+            raise typer.Exit(1)
+    
     if dry_run:
         console.print("[green]✓ Configuration valid[/green]")
         console.print(f"  Model: {model}")
         console.print(f"  Backend: {backend}")
-        console.print(f"  Judge: {judge_model}")
+        console.print(f"  Judge Model: {judge_model}")
+        console.print(f"  Judge Backend: {judge_backend or 'auto-detect'}")
         console.print(f"  Benchmark version: {benchmark_version or 'latest'}")
         return
     
@@ -286,6 +335,7 @@ def test(
         backend=backend,
         benchmark_version=benchmark_version,
         judge_model=judge_model,
+        judge_backend=judge_backend,
         config=cfg,
         output_path=output,
         resume=resume,
@@ -323,6 +373,8 @@ def results(
         table.add_row("Backend", run.backend)
         table.add_row("Benchmark Version", run.benchmark_version)
         table.add_row("Judge Model", run.judge_model)
+        if getattr(run, 'judge_backend', None):
+            table.add_row("Judge Backend", run.judge_backend)
         table.add_row("Score", f"[bold green]{run.score:.1f}[/bold green]" if run.score else "-")
         table.add_row("Completed", run.completed_at.isoformat() if run.completed_at else "In Progress")
         

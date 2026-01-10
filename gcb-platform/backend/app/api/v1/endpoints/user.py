@@ -55,6 +55,8 @@ async def get_profile(
         total_contribution=sum(float(t.total_cost or 0) for t in test_runs)
     )
     
+    from app.core.auth import has_permission
+    
     return UserProfileResponse(
         user=UserProfile(
             id=current_user.id,
@@ -64,7 +66,12 @@ async def get_profile(
             role=current_user.role,
             organization=None,  # DEFERRED: Organization field not yet in User model schema
             tester_agreement_accepted=current_user.tester_agreement_accepted,
-            created_at=current_user.created_at
+            created_at=current_user.created_at,
+            can_view_benchmark=has_permission(current_user, "can_view_benchmark"),
+            can_edit_benchmark=has_permission(current_user, "can_edit_benchmark"),
+            can_moderate=has_permission(current_user, "can_moderate"),
+            can_manage_blog=has_permission(current_user, "can_manage_blog"),
+            can_admin=has_permission(current_user, "can_admin")
         ),
         stats=stats
     )

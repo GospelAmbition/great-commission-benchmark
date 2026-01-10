@@ -40,7 +40,7 @@ def generate_report(
 def _get_run_detail(conn: sqlite3.Connection, run_id: int) -> dict[str, Any]:
     """Get detailed information for a single run."""
     cursor = conn.execute("""
-        SELECT id, model, backend, benchmark_version, judge_model,
+        SELECT id, model, backend, benchmark_version, judge_model, judge_backend,
                system_prompt, score, tier1_score, tier2_score, tier3_score,
                started_at, completed_at
         FROM test_runs
@@ -71,6 +71,7 @@ def _get_run_detail(conn: sqlite3.Connection, run_id: int) -> dict[str, Any]:
         "backend": row["backend"],
         "benchmark_version": row["benchmark_version"],
         "judge_model": row["judge_model"],
+        "judge_backend": row.get("judge_backend"),
         "score": row["score"],
         "tier1_score": row["tier1_score"],
         "tier2_score": row["tier2_score"],
@@ -374,6 +375,7 @@ def _get_report_template(
             <table style="margin-top: 1rem;">
                 <tr><td><strong>Backend</strong></td><td>{run["backend"]}</td></tr>
                 <tr><td><strong>Judge Model</strong></td><td>{run["judge_model"]}</td></tr>
+                {run.get("judge_backend") and f'<tr><td><strong>Judge Backend</strong></td><td>{run["judge_backend"]}</td></tr>' or ''}
                 <tr><td><strong>Tier 1 Score</strong></td><td>{tier1_display}%</td></tr>
                 <tr><td><strong>Tier 2 Score</strong></td><td>{tier2_display}%</td></tr>
                 <tr><td><strong>Tier 3 Score</strong></td><td>{tier3_display}%</td></tr>

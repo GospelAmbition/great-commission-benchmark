@@ -10,7 +10,7 @@ from sqlalchemy import func, desc
 from uuid import UUID
 from datetime import datetime
 
-from app.core.auth import get_db, require_benchmark_developer
+from app.core.auth import get_db, require_benchmark_viewer, require_benchmark_editor
 from app.db.models.user import User
 from app.db.models.question import Question
 from app.db.models.question_set import QuestionSet
@@ -54,7 +54,7 @@ from app.services.question_management import QuestionManagementService
 @router.get("/question-sets")
 async def list_question_sets(
     status: Optional[str] = Query(None),
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_viewer),
     db: Session = Depends(get_db)
 ):
     """List all question sets (versions)"""
@@ -94,7 +94,7 @@ async def list_question_sets(
 @router.post("/question-sets")
 async def create_question_set(
     request: QuestionSetCreateRequest,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Create a new empty question set (version)"""
@@ -132,7 +132,7 @@ async def create_question_set(
 @router.get("/question-sets/{question_set_id}")
 async def get_question_set(
     question_set_id: UUID,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_viewer),
     db: Session = Depends(get_db)
 ):
     """Get a specific question set by ID"""
@@ -162,7 +162,7 @@ async def get_question_set(
 @router.delete("/question-sets/{question_set_id}")
 async def delete_question_set(
     question_set_id: UUID,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Delete a question set and all its questions"""
@@ -173,7 +173,7 @@ async def delete_question_set(
 @router.post("/question-sets/{question_set_id}/empty")
 async def empty_question_set(
     question_set_id: UUID,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Remove all questions from a question set"""
@@ -212,7 +212,7 @@ async def empty_question_set(
 @router.get("/question-sets/{question_set_id}/stats", response_model=QuestionSetStatsResponse)
 async def get_question_set_stats(
     question_set_id: UUID,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_viewer),
     db: Session = Depends(get_db)
 ):
     """Get statistics for a question set"""
@@ -224,7 +224,7 @@ async def get_question_set_stats(
 async def copy_question_set(
     question_set_id: UUID,
     request: QuestionSetCopyRequest,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Copy a question set to create a new version"""
@@ -291,7 +291,7 @@ async def copy_question_set(
 async def update_question_set_target(
     question_set_id: UUID,
     request: QuestionSetUpdateTargetRequest,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Update the target question count for a question set.
@@ -321,7 +321,7 @@ async def update_question_set_target(
 @router.post("/question-sets/{question_set_id}/lock")
 async def lock_question_set(
     question_set_id: UUID,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Lock a question set to prevent further editing"""
@@ -383,7 +383,7 @@ async def lock_question_set(
 @router.post("/question-sets/{question_set_id}/unlock")
 async def unlock_question_set(
     question_set_id: UUID,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Unlock a question set to allow editing (reverts to draft)"""
@@ -414,7 +414,7 @@ async def unlock_question_set(
 async def archive_question_set(
     question_set_id: UUID,
     is_publicly_visible: bool = Query(False, description="Keep version publicly visible after archiving"),
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Archive a question set.
@@ -451,7 +451,7 @@ async def archive_question_set(
 @router.put("/versions/{version}/publish")
 async def publish_version(
     version: str,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Publish a version (make it active)"""
@@ -494,7 +494,7 @@ async def publish_version(
 async def toggle_question_set_visibility(
     question_set_id: UUID,
     is_publicly_visible: bool = Query(..., description="Whether the version should be publicly visible"),
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Toggle public visibility for an archived question set.
@@ -536,7 +536,7 @@ async def list_questions(
     category: Optional[str] = Query(None),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_viewer),
     db: Session = Depends(get_db)
 ):
     """List questions with optional filtering"""
@@ -586,7 +586,7 @@ async def list_questions(
 @router.get("/questions/{question_id}", response_model=QuestionResponse)
 async def get_question(
     question_id: UUID,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_viewer),
     db: Session = Depends(get_db)
 ):
     """Get question details"""
@@ -611,7 +611,7 @@ async def get_question(
 @router.post("/questions")
 async def create_question(
     request: QuestionCreateRequest,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Create a new question"""
@@ -669,7 +669,7 @@ async def create_question(
 @router.post("/questions/import", response_model=QuestionImportResponse)
 async def import_questions(
     request: QuestionImportRequest,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Import questions from JSON"""
@@ -773,7 +773,7 @@ async def import_questions(
 async def update_question(
     question_id: UUID,
     request: QuestionUpdateRequest,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Update a question"""
@@ -824,7 +824,7 @@ async def update_question(
 @router.delete("/questions/{question_id}")
 async def delete_question(
     question_id: UUID,
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_editor),
     db: Session = Depends(get_db)
 ):
     """Delete a question"""
@@ -849,7 +849,7 @@ async def delete_question(
 
 @router.get("/overview")
 async def get_benchmark_overview(
-    current_user: User = Depends(require_benchmark_developer),
+    current_user: User = Depends(require_benchmark_viewer),
     db: Session = Depends(get_db)
 ):
     """Get overview statistics for the benchmark dashboard"""

@@ -18,7 +18,7 @@ import { useUserProfile } from "@/lib/useUserProfile";
 
 export function Header() {
   const { data: session, status } = useSession();
-  const { isAdmin, isModerator, isBlogManager, isBenchmarkDeveloper } = useUserProfile();
+  const { isAdmin, isModerator, isBlogManager, isBenchmarkDeveloper, canViewBenchmark, canModerate, canManageBlog, canAdmin } = useUserProfile();
   const pathname = usePathname();
   const user = session?.user;
   const isLoading = status === "loading";
@@ -130,22 +130,22 @@ export function Header() {
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard" className="cursor-pointer text-foreground">My Dashboard</Link>
                   </DropdownMenuItem>
-                  {isModerator && (
+                  {canModerate && (
                     <DropdownMenuItem asChild>
                       <Link href="/moderator" className="cursor-pointer text-foreground">Moderator Panel</Link>
                     </DropdownMenuItem>
                   )}
-                  {isBlogManager && (
+                  {canManageBlog && (
                     <DropdownMenuItem asChild>
                       <Link href="/blog-manager" className="cursor-pointer text-foreground">Blog Management</Link>
                     </DropdownMenuItem>
                   )}
-                  {isBenchmarkDeveloper && (
+                  {canViewBenchmark && (
                     <DropdownMenuItem asChild>
-                      <Link href="/benchmark" className="cursor-pointer text-foreground">Benchmark Development</Link>
+                      <Link href="/benchmark" className="cursor-pointer text-foreground">Benchmark Dashboard</Link>
                     </DropdownMenuItem>
                   )}
-                  {isAdmin && (
+                  {canAdmin && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin" className="cursor-pointer text-foreground">Admin Dashboard</Link>
                     </DropdownMenuItem>
@@ -247,7 +247,7 @@ export function Header() {
                         Moderator Panel
                       </Link>
                     )}
-                    {isBlogManager && (
+                    {canManageBlog && (
                       <Link
                         href="/blog-manager"
                         className="text-base font-medium transition-all px-4 py-2.5 rounded-lg text-foreground hover:bg-white/5"
@@ -255,7 +255,7 @@ export function Header() {
                         Blog Management
                       </Link>
                     )}
-                    {isBenchmarkDeveloper && (
+                    {canViewBenchmark && (
                       <Link
                         href="/benchmark"
                         className="text-base font-medium transition-all px-4 py-2.5 rounded-lg text-foreground hover:bg-white/5"

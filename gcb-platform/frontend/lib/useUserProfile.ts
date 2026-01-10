@@ -39,13 +39,33 @@ export function useUserProfile() {
     fetchProfile();
   }, [session, status]);
 
+  // Permission-based checks (preferred)
+  const canViewBenchmark = profile?.can_view_benchmark ?? false;
+  const canEditBenchmark = profile?.can_edit_benchmark ?? false;
+  const canModerate = profile?.can_moderate ?? false;
+  const canManageBlog = profile?.can_manage_blog ?? false;
+  const canAdmin = profile?.can_admin ?? false;
+  
+  // Legacy role-based checks for backward compatibility
+  const isAdmin = canAdmin || profile?.role === "admin";
+  const isModerator = canModerate || profile?.role === "moderator" || profile?.role === "blog_manager" || profile?.role === "benchmark_developer" || profile?.role === "admin";
+  const isBlogManager = canManageBlog || profile?.role === "blog_manager" || profile?.role === "benchmark_developer" || profile?.role === "admin";
+  const isBenchmarkDeveloper = canEditBenchmark || profile?.role === "benchmark_developer" || profile?.role === "admin";
+  
   return {
     profile,
     loading: loading || status === "loading",
     error,
-    isAdmin: profile?.role === "admin",
-    isModerator: profile?.role === "moderator" || profile?.role === "blog_manager" || profile?.role === "benchmark_developer" || profile?.role === "admin",
-    isBlogManager: profile?.role === "blog_manager" || profile?.role === "benchmark_developer" || profile?.role === "admin",
-    isBenchmarkDeveloper: profile?.role === "benchmark_developer" || profile?.role === "admin",
+    // Permission flags
+    canViewBenchmark,
+    canEditBenchmark,
+    canModerate,
+    canManageBlog,
+    canAdmin,
+    // Legacy role-based flags (for backward compatibility)
+    isAdmin,
+    isModerator,
+    isBlogManager,
+    isBenchmarkDeveloper,
   };
 }
