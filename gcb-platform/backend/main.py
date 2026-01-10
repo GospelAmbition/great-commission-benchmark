@@ -33,10 +33,33 @@ logger.info("API router loaded successfully")
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown events"""
     # Startup
+    logger.info("Application starting up...")
+    
+    # Warm caches in background to not block startup
+    # This ensures health checks pass immediately while cache warms
+    import asyncio
+    from app.services.cache_warmer import warm_all_caches, start_background_refresh
+    
+    async def delayed_cache_warm():
+        """Warm cache after a short delay to ensure DB is ready"""
+        await asyncio.sleep(2)  # Wait for DB connections to be established
+        try:
+            await warm_all_caches()
+            start_background_refresh()
+        except Exception as e:
+            logger.error(f"Cache warming failed during startup: {e}")
+    
+    # Start cache warming task (non-blocking)
+    asyncio.create_task(delayed_cache_warm())
+    
     logger.info("Application startup complete - ready to serve requests")
     yield
+    
     # Shutdown
-    logger.info("Application shutting down")
+    logger.info("Application shutting down...")
+    from app.services.cache_warmer import stop_background_refresh
+    stop_background_refresh()
+    logger.info("Application shutdown complete")
 
 
 app = FastAPI(

@@ -20,6 +20,17 @@ def get_db():
         db.close()
 
 
+def get_db_sync() -> Session:
+    """Get a database session directly (not as a generator).
+    
+    Use this for background tasks and cache warming where you need
+    a session outside of the request context.
+    
+    IMPORTANT: Caller is responsible for closing the session!
+    """
+    return SessionLocal()
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)

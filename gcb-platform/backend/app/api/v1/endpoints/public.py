@@ -8,7 +8,7 @@ from uuid import UUID
 import logging
 
 from app.core.auth import get_db
-from app.core.cache import cache, make_cache_key, CACHE_TTL
+from app.core.cache import cache, make_cache_key, CACHE_TTL, CACHE_STALE_TTL
 from app.db.models.test_run import TestRun
 from app.db.models.model import Model
 from app.db.models.question_set import QuestionSet
@@ -200,17 +200,32 @@ async def get_leaderboard(
     order: str = Query("desc", regex="^(asc|desc)$"),
     db: Session = Depends(get_db)
 ):
-    """Get public leaderboard"""
-    # Check cache first
+    """Get public leaderboard with stale-while-revalidate caching.
+    
+    Returns cached data immediately (even if stale) while refreshing in background.
+    This ensures users never wait for cold cache loads.
+    """
+    # Check cache with stale-while-revalidate support
     cache_params = {
         "version": version, "category": category, "tier": tier,
         "provider": provider, "trust_tier": trust_tier,
         "limit": limit, "offset": offset, "sort": sort, "order": order
     }
     cache_key = make_cache_key("leaderboard", cache_params)
-    cached_result = await cache.get(cache_key)
-    if cached_result:
-        response.headers["X-Cache"] = "HIT"
+    
+    # Get cached value with stale status
+    cached_result, is_fresh, should_refresh = await cache.get_with_stale(cache_key)
+    
+    if cached_result is not None:
+        # Return cached data immediately
+        if is_fresh:
+            response.headers["X-Cache"] = "HIT"
+        else:
+            response.headers["X-Cache"] = "STALE"
+            # Trigger background refresh if data is stale
+            if should_refresh:
+                import asyncio
+                asyncio.create_task(_refresh_leaderboard_cache(cache_key, cache_params, db))
         return cached_result
     
     response.headers["X-Cache"] = "MISS"
@@ -362,10 +377,55 @@ async def get_leaderboard(
         }
     )
     
-    # Cache for 1 hour (leaderboard data changes infrequently)
-    await cache.set(cache_key, result, CACHE_TTL["leaderboard"])
+    # Cache with stale-while-revalidate TTLs
+    await cache.set(
+        cache_key, 
+        result, 
+        ttl_seconds=CACHE_TTL["leaderboard"],
+        stale_ttl_seconds=CACHE_STALE_TTL["leaderboard"]
+    )
     
     return result
+
+
+async def _refresh_leaderboard_cache(cache_key: str, params: dict, db: Session):
+    """Background task to refresh a stale leaderboard cache entry.
+    
+    This is called when a user hits a stale cache entry.
+    The user gets immediate response with stale data while this refreshes.
+    """
+    try:
+        logger.info(f"Background refresh started for cache key: {cache_key}")
+        await cache.mark_refreshing(cache_key)
+        
+        # Import and use the cache warmer's generation function to avoid code duplication
+        from app.services.cache_warmer import _generate_leaderboard_data
+        
+        result = await _generate_leaderboard_data(
+            db,
+            version=params.get("version", "current"),
+            category=params.get("category"),
+            tier=params.get("tier"),
+            provider=params.get("provider"),
+            trust_tier=params.get("trust_tier"),
+            limit=params.get("limit", 50),
+            offset=params.get("offset", 0),
+            sort=params.get("sort", "score"),
+            order=params.get("order", "desc")
+        )
+        
+        await cache.set(
+            cache_key,
+            result,
+            ttl_seconds=CACHE_TTL["leaderboard"],
+            stale_ttl_seconds=CACHE_STALE_TTL["leaderboard"]
+        )
+        
+        logger.info(f"Background refresh completed for cache key: {cache_key}")
+    except Exception as e:
+        logger.error(f"Background refresh failed for {cache_key}: {e}")
+    finally:
+        await cache.unmark_refreshing(cache_key)
 
 
 @router.get("/models", response_model=ModelsListResponse)
@@ -805,15 +865,24 @@ async def get_category_rankings(
     all 19 categories with their top models in one call instead of 19
     parallel requests.
     
+    Uses stale-while-revalidate caching for instant responses.
+    
     Returns:
         Dict with categories grouped by tier, each containing top models
         with their scores for that specific category.
     """
-    # Check cache first
+    # Check cache with stale-while-revalidate support
     cache_key = make_cache_key("category_rankings", {"limit": limit_per_category})
-    cached_result = await cache.get(cache_key)
-    if cached_result:
-        response.headers["X-Cache"] = "HIT"
+    cached_result, is_fresh, should_refresh = await cache.get_with_stale(cache_key)
+    
+    if cached_result is not None:
+        if is_fresh:
+            response.headers["X-Cache"] = "HIT"
+        else:
+            response.headers["X-Cache"] = "STALE"
+            if should_refresh:
+                import asyncio
+                asyncio.create_task(_refresh_category_rankings_cache(cache_key, limit_per_category, db))
         return cached_result
     
     response.headers["X-Cache"] = "MISS"
@@ -897,7 +966,36 @@ async def get_category_rankings(
         "benchmark_version": question_set.semantic_version
     }
     
-    # Cache for 1 hour
-    await cache.set(cache_key, result, CACHE_TTL["category_rankings"])
+    # Cache with stale-while-revalidate TTLs
+    await cache.set(
+        cache_key, 
+        result, 
+        ttl_seconds=CACHE_TTL["category_rankings"],
+        stale_ttl_seconds=CACHE_STALE_TTL["category_rankings"]
+    )
     
     return result
+
+
+async def _refresh_category_rankings_cache(cache_key: str, limit_per_category: int, db: Session):
+    """Background task to refresh a stale category rankings cache entry."""
+    try:
+        logger.info(f"Background refresh started for cache key: {cache_key}")
+        await cache.mark_refreshing(cache_key)
+        
+        from app.services.cache_warmer import _generate_category_rankings_data
+        
+        result = await _generate_category_rankings_data(db, limit_per_category)
+        
+        await cache.set(
+            cache_key,
+            result,
+            ttl_seconds=CACHE_TTL["category_rankings"],
+            stale_ttl_seconds=CACHE_STALE_TTL["category_rankings"]
+        )
+        
+        logger.info(f"Background refresh completed for cache key: {cache_key}")
+    except Exception as e:
+        logger.error(f"Background refresh failed for {cache_key}: {e}")
+    finally:
+        await cache.unmark_refreshing(cache_key)
