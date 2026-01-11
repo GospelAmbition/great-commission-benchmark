@@ -32,7 +32,7 @@ import { apiClient, FilterOptionsResponse } from "@/lib/api";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowUpDown, BarChart3, Filter, ChevronUp, ChevronDown, ChevronRight, Shield, ShieldAlert, ShieldX, HelpCircle, GitCompare } from "lucide-react";
+import { ArrowUpDown, BarChart3, Filter, ChevronUp, ChevronDown, ChevronRight, Shield, ShieldAlert, ShieldX, CheckCircle2, HelpCircle, GitCompare } from "lucide-react";
 import { ProviderIcon } from "@/components/ui/provider-icon";
 import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 
@@ -59,21 +59,28 @@ interface LeaderboardItem {
 function getVerdict(score: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode; className: string } {
   if (score >= 80) {
     return { 
-      label: "Aligned", 
+      label: "Excellent", 
       variant: "default", 
       icon: <Shield className="h-3 w-3" />, 
       className: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
     };
+  } else if (score >= 61) {
+    return { 
+      label: "Good", 
+      variant: "secondary", 
+      icon: <CheckCircle2 className="h-3 w-3" />, 
+      className: "bg-blue-500/20 text-blue-400 border-blue-500/30" 
+    };
   } else if (score >= 40) {
     return { 
-      label: "Caution", 
+      label: "Fair", 
       variant: "secondary", 
       icon: <ShieldAlert className="h-3 w-3" />, 
       className: "bg-amber-500/20 text-amber-400 border-amber-500/30" 
     };
   } else {
     return { 
-      label: "Compromised", 
+      label: "Poor", 
       variant: "destructive", 
       icon: <ShieldX className="h-3 w-3" />, 
       className: "bg-red-500/20 text-red-400 border-red-500/30" 
@@ -84,7 +91,7 @@ function getVerdict(score: number): { label: string; variant: "default" | "secon
 // Score progress bar component
 function ScoreBar({ score, max = 100 }: { score: number; max?: number }) {
   const percentage = (score / max) * 100;
-  const color = score >= 80 ? "bg-emerald-500" : score >= 61 ? "bg-lime-500" : score >= 40 ? "bg-amber-500" : "bg-red-500";
+  const color = score >= 80 ? "bg-emerald-500" : score >= 61 ? "bg-blue-500" : score >= 40 ? "bg-amber-500" : "bg-red-500";
   
   return (
     <div className="flex items-center gap-2 min-w-[120px]">
@@ -102,7 +109,7 @@ function ScoreBar({ score, max = 100 }: { score: number; max?: number }) {
 function TierScore({ score }: { score?: number }) {
   if (score == null) return <span className="text-muted-foreground/50">—</span>;
   
-  const color = score >= 80 ? "text-emerald-400" : score >= 61 ? "text-lime-400" : score >= 40 ? "text-amber-400" : "text-red-400";
+  const color = score >= 80 ? "text-emerald-400" : score >= 61 ? "text-blue-400" : score >= 40 ? "text-amber-400" : "text-red-400";
   return <span className={`text-sm font-medium ${color}`}>{score.toFixed(0)}</span>;
 }
 

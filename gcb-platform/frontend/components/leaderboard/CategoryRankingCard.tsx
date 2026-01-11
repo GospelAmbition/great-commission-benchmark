@@ -26,7 +26,7 @@ export interface CategoryRankingCardProps {
 // Get score color based on value
 function getScoreColor(score: number): string {
   if (score >= 80) return "text-emerald-400";
-  if (score >= 61) return "text-lime-400";
+  if (score >= 61) return "text-blue-400";
   if (score >= 40) return "text-amber-400";
   return "text-red-400";
 }

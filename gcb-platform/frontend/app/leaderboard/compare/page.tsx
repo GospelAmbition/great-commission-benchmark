@@ -20,16 +20,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Shield, ShieldAlert, ShieldX, Trophy, Crown, Medal, ArrowRight, ChevronRight } from "lucide-react";
+import { Shield, ShieldAlert, ShieldX, CheckCircle2, Trophy, Crown, Medal, ArrowRight, ChevronRight } from "lucide-react";
 
 // Verdict helper
 function getVerdict(score: number): { label: string; icon: React.ReactNode; color: string; bgColor: string } {
   if (score >= 80) {
-    return { label: "Aligned", icon: <Shield className="h-4 w-4" />, color: "text-emerald-400", bgColor: "bg-emerald-500/20 border-emerald-500/30" };
+    return { label: "Excellent", icon: <Shield className="h-4 w-4" />, color: "text-emerald-400", bgColor: "bg-emerald-500/20 border-emerald-500/30" };
+  } else if (score >= 61) {
+    return { label: "Good", icon: <CheckCircle2 className="h-4 w-4" />, color: "text-blue-400", bgColor: "bg-blue-500/20 border-blue-500/30" };
   } else if (score >= 40) {
-    return { label: "Caution", icon: <ShieldAlert className="h-4 w-4" />, color: "text-amber-400", bgColor: "bg-amber-500/20 border-amber-500/30" };
+    return { label: "Fair", icon: <ShieldAlert className="h-4 w-4" />, color: "text-amber-400", bgColor: "bg-amber-500/20 border-amber-500/30" };
   } else {
-    return { label: "Compromised", icon: <ShieldX className="h-4 w-4" />, color: "text-red-400", bgColor: "bg-red-500/20 border-red-500/30" };
+    return { label: "Poor", icon: <ShieldX className="h-4 w-4" />, color: "text-red-400", bgColor: "bg-red-500/20 border-red-500/30" };
   }
 }
 
@@ -213,19 +215,19 @@ function ComparePageContent() {
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <div className="text-xs text-muted-foreground">Task (70%)</div>
-                    <div className={`font-semibold ${model.tier1_score != null && model.tier1_score >= 80 ? "text-green-600" : model.tier1_score != null && model.tier1_score >= 40 ? "text-yellow-600" : "text-red-600"}`}>
+                    <div className={`font-semibold ${model.tier1_score != null ? (model.tier1_score >= 80 ? "text-emerald-400" : model.tier1_score >= 61 ? "text-blue-400" : model.tier1_score >= 40 ? "text-amber-400" : "text-red-400") : ""}`}>
                       {model.tier1_score?.toFixed(1) || "—"}
                     </div>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground">Doctrine (20%)</div>
-                    <div className={`font-semibold ${model.tier2_score != null && model.tier2_score >= 80 ? "text-green-600" : model.tier2_score != null && model.tier2_score >= 40 ? "text-yellow-600" : "text-red-600"}`}>
+                    <div className={`font-semibold ${model.tier2_score != null ? (model.tier2_score >= 80 ? "text-emerald-400" : model.tier2_score >= 61 ? "text-blue-400" : model.tier2_score >= 40 ? "text-amber-400" : "text-red-400") : ""}`}>
                       {model.tier2_score?.toFixed(1) || "—"}
                     </div>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground">Worldview (10%)</div>
-                    <div className={`font-semibold ${model.tier3_score != null && model.tier3_score >= 80 ? "text-green-600" : model.tier3_score != null && model.tier3_score >= 40 ? "text-yellow-600" : "text-red-600"}`}>
+                    <div className={`font-semibold ${model.tier3_score != null ? (model.tier3_score >= 80 ? "text-emerald-400" : model.tier3_score >= 61 ? "text-blue-400" : model.tier3_score >= 40 ? "text-amber-400" : "text-red-400") : ""}`}>
                       {model.tier3_score?.toFixed(1) || "—"}
                     </div>
                   </div>

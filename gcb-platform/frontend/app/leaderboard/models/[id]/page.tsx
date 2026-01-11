@@ -29,18 +29,28 @@ import { CATEGORY_NAMES } from "@/lib/benchmark-definitions";
 function getVerdict(score: number): { label: string; description: string; icon: React.ReactNode; bgColor: string; borderColor: string; textColor: string; iconBg: string } {
   if (score >= 80) {
     return { 
-      label: "Aligned", 
-      description: "This model demonstrates strong alignment with Great Commission objectives.",
+      label: "Excellent", 
+      description: "Highly suitable for Great Commission work.",
       icon: <Shield className="h-6 w-6" />, 
       bgColor: "bg-emerald-500/10",
       borderColor: "border-emerald-500/30",
       textColor: "text-emerald-400",
       iconBg: "bg-emerald-500/20"
     };
+  } else if (score >= 61) {
+    return { 
+      label: "Good", 
+      description: "Usable with some limitations.",
+      icon: <CheckCircle2 className="h-6 w-6" />, 
+      bgColor: "bg-blue-500/10",
+      borderColor: "border-blue-500/30",
+      textColor: "text-blue-400",
+      iconBg: "bg-blue-500/20"
+    };
   } else if (score >= 40) {
     return { 
-      label: "Caution", 
-      description: "This model shows partial alignment but may resist certain Great Commission tasks.",
+      label: "Fair", 
+      description: "Significant guardrail issues may impede work.",
       icon: <ShieldAlert className="h-6 w-6" />, 
       bgColor: "bg-amber-500/10",
       borderColor: "border-amber-500/30",
@@ -49,8 +59,8 @@ function getVerdict(score: number): { label: string; description: string; icon: 
     };
   } else {
     return { 
-      label: "Compromised", 
-      description: "This model shows significant resistance to Great Commission work.",
+      label: "Poor", 
+      description: "Not recommended for Great Commission use cases.",
       icon: <ShieldX className="h-6 w-6" />, 
       bgColor: "bg-red-500/10",
       borderColor: "border-red-500/30",
@@ -329,7 +339,7 @@ export default function ModelDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold mb-2 ${model.tier1_score != null ? (model.tier1_score >= 80 ? "text-green-600" : model.tier1_score >= 40 ? "text-yellow-600" : "text-red-600") : ""}`}>
+            <div className={`text-3xl font-bold mb-2 ${model.tier1_score != null ? (model.tier1_score >= 80 ? "text-emerald-400" : model.tier1_score >= 61 ? "text-blue-400" : model.tier1_score >= 40 ? "text-amber-400" : "text-red-400") : ""}`}>
               {model.tier1_score?.toFixed(1) || "—"}
             </div>
             {model.tier1_score != null && <Progress value={model.tier1_score} className="h-2" />}
@@ -342,7 +352,7 @@ export default function ModelDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold mb-2 ${model.tier2_score != null ? (model.tier2_score >= 80 ? "text-green-600" : model.tier2_score >= 40 ? "text-yellow-600" : "text-red-600") : ""}`}>
+            <div className={`text-3xl font-bold mb-2 ${model.tier2_score != null ? (model.tier2_score >= 80 ? "text-emerald-400" : model.tier2_score >= 61 ? "text-blue-400" : model.tier2_score >= 40 ? "text-amber-400" : "text-red-400") : ""}`}>
               {model.tier2_score?.toFixed(1) || "—"}
             </div>
             {model.tier2_score != null && <Progress value={model.tier2_score} className="h-2" />}
@@ -355,7 +365,7 @@ export default function ModelDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold mb-2 ${model.tier3_score != null ? (model.tier3_score >= 80 ? "text-green-600" : model.tier3_score >= 40 ? "text-yellow-600" : "text-red-600") : ""}`}>
+            <div className={`text-3xl font-bold mb-2 ${model.tier3_score != null ? (model.tier3_score >= 80 ? "text-emerald-400" : model.tier3_score >= 61 ? "text-blue-400" : model.tier3_score >= 40 ? "text-amber-400" : "text-red-400") : ""}`}>
               {model.tier3_score?.toFixed(1) || "—"}
             </div>
             {model.tier3_score != null && <Progress value={model.tier3_score} className="h-2" />}

@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +14,7 @@ import {
 } from "@/lib/benchmark-definitions";
 
 export default function AboutPage() {
+  const [activeTab, setActiveTab] = useState("methodology");
   return (
     <div className="flex flex-col">
       {/* Page Header */}
@@ -32,7 +36,7 @@ export default function AboutPage() {
       </div>
 
       <div className="container py-6">
-        <Tabs defaultValue="methodology" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="bg-white/[0.03] border border-white/[0.08] p-1 h-auto flex-wrap">
             <TabsTrigger value="methodology" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Target className="h-4 w-4 mr-1.5" />
@@ -57,14 +61,24 @@ export default function AboutPage() {
                   <h2 className="text-2xl font-semibold text-foreground">Our Mission</h2>
                   <div className="space-y-4 text-muted-foreground">
                     <p>
+                      This benchmark is primarily focused on obedience, rather than intelligence.
+                    </p>
+                    <p>
                       The Great Commission Benchmark evaluates AI models on their ability to support Great Commission Christians—missionaries, evangelists, disciple-makers, and ministry workers who actively respond to Jesus&apos; command to make disciples.
                     </p>
                     <p>
-                      Unlike other benchmarks that test only knowledge, we answer the fundamental question: <strong className="text-foreground">&quot;Which LLM can I actually use for my ministry work?&quot;</strong>
+                    In truth, many major models are incredible Bible study companions or sermon prep companions. That is not the issue that we are trying to measure here with this benchmark. The issue we're facing is: as we try to make disciples and persuade others of the truth of the gospel and of the gift of Jesus Christ, as soon as we want to transfer our faith to someone else, the guardrails built into these systems are at different levels working against us. Some guardrails are resisting our efforts because they are protecting against harmful things and unfortunately including our Great Commision work in that category. Other guardrails are programmed against the Christian worldview (existence of God, historical reality of Jesus, the crucifixion, the resurrection, universal sinfulness, salvation through faith) and are working against us because they are protecting a secular worldview.
                     </p>
                     <p>
-                      Current AI systems often have guardrails that restrict religious content deemed &quot;coercive,&quot; proselytizing activities, exclusive truth claims, and content that challenges other worldviews. While well-intentioned, these guardrails can impede legitimate religious activity that is protected speech and central to Christian practice worldwide.
+                       The test for this benchmark is not focused on reliability in personal Bible study or sermon preparation. Instead, it evaluates reliability in creating outreach materials and in answering questions from those exploring faith. See the <button
+                          onClick={() => setActiveTab("testing-categories")}
+                          className="text-primary underline hover:text-primary/80 cursor-pointer font-medium"
+                        >Testing Categories</button> section for a detailed breakdown. And explore the <button
+                          onClick={() => setActiveTab("guardrails")}
+                          className="text-primary underline hover:text-primary/80 cursor-pointer font-medium"
+                        >Guardrails</button> section, which we have identified as challenging or interfering with our Great Commission work.
                     </p>
+                    
                   </div>
                 </div>
 
