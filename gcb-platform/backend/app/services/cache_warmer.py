@@ -25,8 +25,10 @@ from app.schemas.public import (
     ModelSummary,
     TestRunSummary,
     Scores,
+    ScoreRange,
     VerdictDistribution,
 )
+from app.db.models.model_version_stats import ModelVersionStats
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +173,7 @@ async def _generate_leaderboard_data(
     sort: str = "score",
     order: str = "desc"
 ) -> LeaderboardResponse:
-    """Generate leaderboard data (extracted from the endpoint for reuse)."""
+    """Generate leaderboard data using aggregated stats from model_version_stats."""
     from app.db.models.result import Result
     
     # Get question set version
@@ -205,82 +207,107 @@ async def _generate_leaderboard_data(
             }
         )
     
-    # Build query for completed test runs with eager loading
-    query = db.query(TestRun).options(
-        joinedload(TestRun.model),
-        joinedload(TestRun.question_set)
-    ).join(Model, TestRun.model_id == Model.id).filter(
-        TestRun.status == "completed",
-        TestRun.question_set_id == question_set.id,
-        Model.is_active == True
+    # Query aggregated stats from model_version_stats table
+    stats_query = db.query(ModelVersionStats).options(
+        joinedload(ModelVersionStats.model),
+        joinedload(ModelVersionStats.question_set)
+    ).join(Model, Model.id == ModelVersionStats.model_id).filter(
+        ModelVersionStats.question_set_id == question_set.id,
+        Model.is_active == True,
+        ModelVersionStats.test_count > 0
     )
     
     # Apply filters
     if provider:
-        query = query.filter(Model.provider == provider)
+        stats_query = stats_query.filter(Model.provider == provider)
     
-    if trust_tier:
-        query = query.filter(TestRun.trust_tier == trust_tier)
+    # Get all stats entries
+    all_stats = stats_query.all()
     
-    # Get test runs (ordered by completed_at desc so most recent is first)
-    test_runs = query.order_by(TestRun.completed_at.desc()).all()
-    
-    # Deduplicate: keep only the most recent test per model
-    seen_models = set()
-    unique_test_runs = []
-    for test_run in test_runs:
-        if test_run.model_id not in seen_models:
-            seen_models.add(test_run.model_id)
-            unique_test_runs.append(test_run)
-    test_runs = unique_test_runs
-    
-    # Calculate scores and build entries
+    # Build entries from aggregated stats
     entries = []
-    for idx, test_run in enumerate(test_runs[offset:offset+limit]):
-        # Calculate scores
-        scores_data = ScoringService.calculate_scores(db, str(test_run.id))
+    for stats in all_stats:
+        # Get the most recent test run for this model+version
+        latest_test = db.query(TestRun).filter(
+            TestRun.model_id == stats.model_id,
+            TestRun.question_set_id == question_set.id,
+            TestRun.status == "completed"
+        ).order_by(TestRun.completed_at.desc()).first()
+        
+        if not latest_test:
+            continue
+        
+        # Use pre-computed averaged scores from stats
+        avg_overall = float(stats.avg_overall_score) if stats.avg_overall_score else 0.0
+        avg_tier1 = float(stats.avg_tier1_score) if stats.avg_tier1_score else 0.0
+        avg_tier2 = float(stats.avg_tier2_score) if stats.avg_tier2_score else 0.0
+        avg_tier3 = float(stats.avg_tier3_score) if stats.avg_tier3_score else 0.0
+        
+        # Use pre-computed averaged category scores
+        category_scores = stats.avg_category_scores or {}
+        
+        # Average verdict distribution
+        test_count = stats.test_count or 1
+        avg_verdict_dist = {
+            "ACCEPTED": (stats.total_accepted or 0) // test_count,
+            "COMPROMISED": (stats.total_compromised or 0) // test_count,
+            "REFUSED": (stats.total_refused or 0) // test_count,
+            "ERROR": (stats.total_error or 0) // test_count
+        }
+        
+        total_questions = sum(avg_verdict_dist.values())
+        
+        # Build score range if multiple tests
+        score_range = None
+        if test_count > 1 and stats.min_overall_score and stats.max_overall_score:
+            score_range = ScoreRange(
+                min_score=float(stats.min_overall_score),
+                max_score=float(stats.max_overall_score)
+            )
         
         # Filter by category/tier if specified
         if category or tier:
             results = db.query(Result).options(
                 joinedload(Result.question)
-            ).filter(Result.test_run_id == test_run.id).all()
+            ).filter(Result.test_run_id == latest_test.id).all()
             if category:
                 results = [r for r in results if r.question.category == category]
             if tier:
                 results = [r for r in results if r.question.tier == tier]
             
             if not results:
-                continue  # Skip if no matching results
+                continue
         
-        # Build entry
+        # Build entry with averaged scores
         entry = LeaderboardEntry(
-            rank=offset + idx + 1,
+            rank=0,
             model=ModelSummary(
-                id=test_run.model.id,
-                name=test_run.model.name,
-                provider=test_run.model.provider,
-                model_id=test_run.model.model_id
+                id=stats.model.id,
+                name=stats.model.name,
+                provider=stats.model.provider,
+                model_id=stats.model.model_id
             ),
             test_run=TestRunSummary(
-                id=test_run.id,
-                trust_tier=test_run.trust_tier,
-                completed_at=test_run.completed_at,
+                id=latest_test.id,
+                trust_tier=latest_test.trust_tier,
+                completed_at=stats.last_test_at,
                 question_set_version=question_set.semantic_version
             ),
             scores=Scores(
-                overall=scores_data["overall"],
-                tier1=scores_data["tier1"],
-                tier2=scores_data["tier2"],
-                tier3=scores_data["tier3"]
+                overall=round(avg_overall, 2),
+                tier1=round(avg_tier1, 2),
+                tier2=round(avg_tier2, 2),
+                tier3=round(avg_tier3, 2)
             ),
-            category_scores=scores_data["category_scores"],
-            verdict_distribution=VerdictDistribution(**scores_data["verdict_distribution"]),
-            total_questions=scores_data["total_questions"],
+            category_scores={k: round(float(v), 2) for k, v in category_scores.items()},
+            verdict_distribution=VerdictDistribution(**avg_verdict_dist),
+            total_questions=total_questions,
             metadata={
-                "submission_date": test_run.completed_at.isoformat() if test_run.completed_at else "",
+                "submission_date": stats.last_test_at.isoformat() if stats.last_test_at else "",
                 "methodology_version": question_set.semantic_version
-            }
+            },
+            test_count=test_count,
+            score_range=score_range
         )
         entries.append(entry)
     
@@ -297,8 +324,14 @@ async def _generate_leaderboard_data(
     elif sort == "tier3":
         entries.sort(key=lambda e: e.scores.tier3, reverse=reverse_order)
     
-    # Update ranks after sorting
-    for idx, entry in enumerate(entries):
+    # Store total before pagination
+    total_models = len(entries)
+    
+    # Apply pagination after sorting
+    paginated_entries = entries[offset:offset+limit]
+    
+    # Update ranks after sorting and pagination
+    for idx, entry in enumerate(paginated_entries):
         entry.rank = offset + idx + 1
     
     return LeaderboardResponse(
@@ -310,19 +343,19 @@ async def _generate_leaderboard_data(
             "provider": provider,
             "trust_tier": trust_tier
         },
-        total_models=len(test_runs),
-        entries=entries,
+        total_models=total_models,
+        entries=paginated_entries,
         pagination={
             "limit": limit,
             "offset": offset,
-            "total": len(test_runs),
-            "has_more": (offset + limit) < len(test_runs)
+            "total": total_models,
+            "has_more": (offset + limit) < total_models
         }
     )
 
 
 async def _generate_category_rankings_data(db: Session, limit_per_category: int = 5) -> dict:
-    """Generate category rankings data."""
+    """Generate category rankings data using aggregated stats."""
     # Get active question set
     question_set = db.query(QuestionSet).filter(
         QuestionSet.status == "active"
@@ -337,52 +370,31 @@ async def _generate_category_rankings_data(db: Session, limit_per_category: int 
     ).distinct().all()
     category_codes = sorted([c[0] for c in categories if c[0]])
     
-    # Get all completed test runs for this question set with eager loading
-    test_runs = db.query(TestRun).options(
-        joinedload(TestRun.model),
-        joinedload(TestRun.question_set)
-    ).join(Model, TestRun.model_id == Model.id).filter(
-        TestRun.status == "completed",
-        TestRun.question_set_id == question_set.id,
-        Model.is_active == True
-    ).order_by(TestRun.completed_at.desc()).all()
+    # Query aggregated stats from model_version_stats table
+    all_stats = db.query(ModelVersionStats).options(
+        joinedload(ModelVersionStats.model),
+        joinedload(ModelVersionStats.question_set)
+    ).join(Model, Model.id == ModelVersionStats.model_id).filter(
+        ModelVersionStats.question_set_id == question_set.id,
+        Model.is_active == True,
+        ModelVersionStats.test_count > 0
+    ).all()
     
-    # Deduplicate: keep only the most recent test per model
-    seen_models = set()
-    unique_test_runs = []
-    for test_run in test_runs:
-        if test_run.model_id not in seen_models:
-            seen_models.add(test_run.model_id)
-            unique_test_runs.append(test_run)
-    
-    # Pre-calculate all scores once
-    test_run_scores = {}
-    for test_run in unique_test_runs:
-        try:
-            scores = ScoringService.calculate_scores(db, str(test_run.id))
-            test_run_scores[test_run.id] = {
-                "test_run": test_run,
-                "scores": scores
-            }
-        except Exception as e:
-            logger.warning(f"Failed to calculate scores for test run {test_run.id}: {e}")
-            continue
-    
-    # Build category rankings
+    # Build category rankings from aggregated stats
     categories_data = {}
     for category_code in category_codes:
         category_models = []
-        for test_run_id, data in test_run_scores.items():
-            test_run = data["test_run"]
-            scores = data["scores"]
-            category_score = scores.get("category_scores", {}).get(category_code)
+        for stats in all_stats:
+            # Get category score from pre-computed averages
+            category_scores = stats.avg_category_scores or {}
+            category_score = category_scores.get(category_code)
             
             if category_score is not None:
                 category_models.append({
-                    "model_id": test_run.model.model_id,
-                    "model_name": test_run.model.name,
-                    "provider": test_run.model.provider,
-                    "score": round(category_score, 2)
+                    "model_id": stats.model.model_id,
+                    "model_name": stats.model.name,
+                    "provider": stats.model.provider,
+                    "score": round(float(category_score), 2)
                 })
         
         # Sort by category score descending and take top N
@@ -396,7 +408,7 @@ async def _generate_category_rankings_data(db: Session, limit_per_category: int 
     
     return {
         "categories": categories_data,
-        "total_models": len(unique_test_runs),
+        "total_models": len(all_stats),
         "benchmark_version": question_set.semantic_version
     }
 

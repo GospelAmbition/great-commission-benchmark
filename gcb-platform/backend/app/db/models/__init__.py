@@ -15,6 +15,7 @@ from app.db.models.community_submission import CommunitySubmission
 from app.db.models.notification_preference import NotificationPreference
 from app.db.models.blog_category import BlogCategory
 from app.db.models.blog_post import BlogPost
+from app.db.models.model_version_stats import ModelVersionStats
 
 __all__ = [
     "User",
@@ -32,4 +33,5 @@ __all__ = [
     "NotificationPreference",
     "BlogCategory",
     "BlogPost",
+    "ModelVersionStats",
 ]

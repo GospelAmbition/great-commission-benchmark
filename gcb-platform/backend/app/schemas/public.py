@@ -39,6 +39,12 @@ class VerdictDistribution(GCBBaseModel):
     ERROR: int = 0
 
 
+class ScoreRange(GCBBaseModel):
+    """Score range for aggregated results"""
+    min_score: Optional[float] = None
+    max_score: Optional[float] = None
+
+
 class LeaderboardEntry(GCBBaseModel):
     """Leaderboard entry"""
     rank: int
@@ -49,6 +55,9 @@ class LeaderboardEntry(GCBBaseModel):
     verdict_distribution: VerdictDistribution
     total_questions: int
     metadata: Dict[str, str]
+    # Multi-test averaging fields
+    test_count: int = 1  # Number of tests averaged (1 for legacy single-test)
+    score_range: Optional[ScoreRange] = None  # Min/max scores when test_count > 1
 
 
 class LeaderboardResponse(GCBBaseModel):

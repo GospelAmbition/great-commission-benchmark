@@ -339,9 +339,9 @@ async def review_community_submission(
         
         db.commit()
         
-        # Invalidate leaderboard cache since new model data was added
-        from app.core.cache import cache
-        await cache.clear()
+        # Update model version stats for averaging (also handles cache invalidation)
+        from app.services.aggregation import AggregationService
+        AggregationService.update_stats_for_test_run(db, test_run)
         
         # Send approval email
         from app.services.email import EmailService
@@ -428,9 +428,9 @@ async def reprocess_community_submission(
     
     db.commit()
     
-    # Invalidate leaderboard cache since new model data was added
-    from app.core.cache import cache
-    await cache.clear()
+    # Update model version stats for averaging (also handles cache invalidation)
+    from app.services.aggregation import AggregationService
+    AggregationService.update_stats_for_test_run(db, test_run)
     
     return {
         "submission_id": str(submission.id),

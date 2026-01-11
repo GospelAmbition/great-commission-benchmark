@@ -287,6 +287,11 @@ export default function ModelDetailPage() {
               <div className="flex items-center gap-3 mb-2">
                 <h2 className={`text-2xl font-bold ${verdict.textColor}`}>{verdict.label}</h2>
                 <div className="text-4xl font-bold text-foreground">{overallScore.toFixed(1)}</div>
+                {model.test_count && model.test_count > 1 && (
+                  <Badge variant="outline" className="text-sm ml-2">
+                    Average of {model.test_count} tests
+                  </Badge>
+                )}
               </div>
               <p className="text-muted-foreground mb-4">{verdict.description}</p>
               <StrengthsWeaknesses 
