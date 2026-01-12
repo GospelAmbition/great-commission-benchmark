@@ -466,15 +466,19 @@ export class ApiClient {
     status: string;
     created_at: string;
     overall_score?: number;
+    submission_type?: string;
+    payment_status?: string;
   }>> {
     // Backend returns { submissions: [...], pagination: {...} }, extract the array
-    const response = await this.request<{ submissions: Array<{ id: string; model_name: string; status: string; submitted_at: string; overall_score?: number }> }>('/api/user/submissions');
+    const response = await this.request<{ submissions: Array<{ id: string; model_name: string; status: string; submitted_at: string; overall_score?: number; submission_type?: string; payment_status?: string }> }>('/api/user/submissions');
     return (response.submissions || []).map((sub) => ({
       id: sub.id,
       model_name: sub.model_name,
       status: sub.status,
       created_at: sub.submitted_at, // Map submitted_at to created_at for frontend compatibility
       overall_score: sub.overall_score,
+      submission_type: sub.submission_type || 'community',
+      payment_status: sub.payment_status,
     }));
   }
 
@@ -800,6 +804,26 @@ export class ApiClient {
     reviewer_notes?: string;
   }> {
     return this.request(`/api/moderator/sponsorship/${id}`);
+  }
+
+  async getUserSponsorshipDetail(id: string): Promise<{
+    id: string;
+    request_type: string;
+    openrouter_model_id?: string;
+    custom_model_name?: string;
+    model_name: string;
+    user_id: string;
+    user_name: string;
+    user_email: string;
+    message?: string;
+    status: string;
+    payment_id?: string;
+    payment_status?: string;
+    created_at: string;
+    reviewed_at?: string;
+    reviewer_notes?: string;
+  }> {
+    return this.request(`/api/user/sponsorship/${id}`);
   }
 
   async reviewSponsorship(id: string, action: 'approve' | 'reject', notes?: string): Promise<{

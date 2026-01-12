@@ -22,6 +22,7 @@ from app.db.models.user_api_key import UserAPIKey
 from app.db.models.result import Result
 from app.db.models.community_submission import CommunitySubmission
 from app.db.models.stripe_config import StripeConfig
+from app.db.models.sponsorship_request import SponsorshipRequest
 from app.services.payment import PaymentService, EncryptionService
 from app.schemas.admin import (
     UserListItem,
@@ -1132,14 +1133,54 @@ async def get_admin_stats(
     running_tests = db.query(TestRun).filter(TestRun.status == "running").count()
     
     # Revenue stats (from test runs)
-    total_revenue = db.query(func.sum(TestRun.total_cost)).filter(
+    test_run_revenue = db.query(func.sum(TestRun.total_cost)).filter(
         TestRun.payment_status == "succeeded"
     ).scalar() or 0
     
-    revenue_30d = db.query(func.sum(TestRun.total_cost)).filter(
+    test_run_revenue_30d = db.query(func.sum(TestRun.total_cost)).filter(
         TestRun.payment_status == "succeeded",
         TestRun.created_at >= datetime.utcnow() - timedelta(days=30)
     ).scalar() or 0
+    
+    # Revenue from sponsorship payments
+    # Query sponsorships with succeeded payments and retrieve amounts from Stripe
+    sponsorship_revenue = 0
+    sponsorship_revenue_30d = 0
+    
+    try:
+        # Get all succeeded sponsorships
+        succeeded_sponsorships = db.query(SponsorshipRequest).filter(
+            SponsorshipRequest.payment_status == "succeeded",
+            SponsorshipRequest.payment_id.isnot(None),
+            SponsorshipRequest.request_type == "sponsorship"
+        ).all()
+        
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        
+        for sponsorship in succeeded_sponsorships:
+            try:
+                # Retrieve payment amount from Stripe
+                payment_intent = PaymentService.get_payment_intent(
+                    sponsorship.payment_id,
+                    db=db
+                )
+                amount = payment_intent.get("amount", 0)
+                sponsorship_revenue += amount
+                
+                # Check if within last 30 days
+                if sponsorship.created_at >= thirty_days_ago:
+                    sponsorship_revenue_30d += amount
+            except Exception as e:
+                logger.warning(f"Failed to retrieve payment amount for sponsorship {sponsorship.id}: {e}")
+                # Continue with other sponsorships even if one fails
+                continue
+    except Exception as e:
+        logger.error(f"Failed to calculate sponsorship revenue: {e}")
+        # Continue with test run revenue only
+    
+    # Total revenue = test runs + sponsorships
+    total_revenue = float(test_run_revenue) + sponsorship_revenue
+    revenue_30d = float(test_run_revenue_30d) + sponsorship_revenue_30d
     
     # Moderation stats
     pending_reviews = db.query(TestRun).filter(

@@ -9,6 +9,7 @@ from app.core.auth import get_db
 from app.core.auth import require_auth
 from app.db.models.user import User
 from app.db.models.community_submission import CommunitySubmission
+from app.db.models.sponsorship_request import SponsorshipRequest
 from app.schemas.user import (
     UserProfileResponse,
     UserProfile,
@@ -98,17 +99,21 @@ async def get_user_submissions(
     current_user: User = Depends(require_auth),
     db: Session = Depends(get_db)
 ):
-    """Get user's community submissions"""
-    submissions = db.query(CommunitySubmission).filter(
+    """Get user's community submissions and sponsorship requests"""
+    # Get community submissions
+    community_submissions = db.query(CommunitySubmission).filter(
         CommunitySubmission.user_id == current_user.id
-    ).order_by(CommunitySubmission.submitted_at.desc()).offset(offset).limit(limit).all()
+    ).all()
     
-    total = db.query(CommunitySubmission).filter(
-        CommunitySubmission.user_id == current_user.id
-    ).count()
+    # Get sponsorship requests
+    sponsorship_requests = db.query(SponsorshipRequest).filter(
+        SponsorshipRequest.user_id == current_user.id
+    ).all()
     
     submission_items = []
-    for sub in submissions:
+    
+    # Add community submissions
+    for sub in community_submissions:
         submission_items.append(SubmissionListItem(
             id=sub.id,
             model_name=sub.model_name or "Unknown",
@@ -116,11 +121,34 @@ async def get_user_submissions(
             status=sub.status,
             submitted_at=sub.submitted_at,
             reviewed_at=sub.reviewed_at,
-            reviewer_notes=sub.reviewer_notes
+            reviewer_notes=sub.reviewer_notes,
+            submission_type="community",
+            payment_status=None
         ))
     
+    # Add sponsorship requests
+    for sp in sponsorship_requests:
+        model_name = sp.openrouter_model_id or sp.custom_model_name or "Unknown"
+        submission_items.append(SubmissionListItem(
+            id=sp.id,
+            model_name=model_name,
+            model_provider="Unknown",  # Could extract from openrouter_model_id if needed
+            status=sp.status,
+            submitted_at=sp.created_at,
+            reviewed_at=sp.reviewed_at,
+            reviewer_notes=sp.reviewer_notes,
+            submission_type="sponsorship",
+            payment_status=sp.payment_status
+        ))
+    
+    # Sort by submitted_at (most recent first) and apply pagination
+    submission_items.sort(key=lambda x: x.submitted_at, reverse=True)
+    
+    total = len(submission_items)
+    paginated_items = submission_items[offset:offset + limit]
+    
     return UserSubmissionsResponse(
-        submissions=submission_items,
+        submissions=paginated_items,
         pagination={
             "limit": limit,
             "offset": offset,

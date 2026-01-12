@@ -231,6 +231,45 @@ async def get_user_sponsorships(
     return SponsorshipListResponse(items=items, total=total)
 
 
+@user_router.get("/{sponsorship_id}", response_model=SponsorshipDetailResponse)
+async def get_user_sponsorship_detail(
+    sponsorship_id: UUID,
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Get user's own sponsorship request details"""
+    sponsorship = db.query(SponsorshipRequest).filter(
+        SponsorshipRequest.id == sponsorship_id
+    ).first()
+    
+    if not sponsorship:
+        raise HTTPException(status_code=404, detail="Sponsorship request not found")
+    
+    # Users can only view their own sponsorships
+    if sponsorship.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only view your own sponsorship requests")
+    
+    model_name = sponsorship.openrouter_model_id or sponsorship.custom_model_name or "Unknown"
+    
+    return SponsorshipDetailResponse(
+        id=sponsorship.id,
+        request_type=sponsorship.request_type,
+        openrouter_model_id=sponsorship.openrouter_model_id,
+        custom_model_name=sponsorship.custom_model_name,
+        model_name=model_name,
+        user_id=sponsorship.user_id,
+        user_name=sponsorship.user.name or sponsorship.user.email,
+        user_email=sponsorship.user.email,
+        message=sponsorship.message,
+        status=sponsorship.status,
+        payment_id=sponsorship.payment_id,
+        payment_status=sponsorship.payment_status,
+        created_at=sponsorship.created_at,
+        reviewed_at=sponsorship.reviewed_at,
+        reviewer_notes=sponsorship.reviewer_notes
+    )
+
+
 # Moderator endpoints
 
 @moderator_router.get("", response_model=SponsorshipQueueResponse)
@@ -249,14 +288,27 @@ async def get_sponsorship_queue(
         query = query.filter(SponsorshipRequest.status == status)
     else:
         # Default: show pending requests (paid sponsorships and free requests)
-        # Include sponsorships with status="pending" OR status="pending_payment" with succeeded payment
-        # (handles edge case where webhook hasn't updated status yet)
+        # Include:
+        # 1. Sponsorships with status="pending" (ready for review)
+        # 2. Sponsorships with status="pending_payment" that have payment_status="succeeded" (webhook updated payment but not status)
+        # 3. Sponsorships with status="pending_payment" that have a payment_id set but payment_status is None or "pending"
+        #    (payment was initiated, webhook may not have fired yet - exclude failed payments)
+        # This ensures all sponsorships that should be reviewed are visible, even if webhook processing failed
         query = query.filter(
             or_(
                 SponsorshipRequest.status == "pending",
                 and_(
                     SponsorshipRequest.status == "pending_payment",
-                    SponsorshipRequest.payment_status == "succeeded"
+                    or_(
+                        SponsorshipRequest.payment_status == "succeeded",
+                        and_(
+                            SponsorshipRequest.payment_id.isnot(None),
+                            or_(
+                                SponsorshipRequest.payment_status.is_(None),
+                                SponsorshipRequest.payment_status == "pending"
+                            )
+                        )
+                    )
                 )
             )
         )

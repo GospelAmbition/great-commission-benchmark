@@ -40,48 +40,47 @@ async def stripe_webhook(
         metadata = event_data.get("metadata", {})
         payment_type = metadata.get("type")
         
-        # Handle CLI submission payments
-        if payment_type == "cli_submission":
-            submission = db.query(CommunitySubmission).filter(
-                CommunitySubmission.payment_id == payment_intent_id
-            ).first()
-            
-            if submission and submission.status == "pending_payment":
-                # Update submission status to pending for moderation
-                submission.status = "pending"
-                db.commit()
-                
-                # Send confirmation email
-                try:
-                    await EmailService.send_submission_payment_confirmed_email(
-                        submission.user.email,
-                        str(submission.id),
-                        submission.model_name
-                    )
-                except:
-                    pass
+        # Try to find and update the relevant record by payment_id
+        # Check sponsorships first (they have payment_id set)
+        sponsorship = db.query(SponsorshipRequest).filter(
+            SponsorshipRequest.payment_id == payment_intent_id
+        ).first()
         
-        # Handle sponsorship payments
-        elif payment_type == "sponsorship":
-            # Query by payment_id for reliability (consistent with payment_failed handler)
-            sponsorship = db.query(SponsorshipRequest).filter(
-                SponsorshipRequest.payment_id == payment_intent_id
-            ).first()
+        if sponsorship and sponsorship.status == "pending_payment":
+            # Update sponsorship status to pending for moderation
+            sponsorship.payment_status = "succeeded"
+            sponsorship.status = "pending"
+            db.commit()
             
-            if sponsorship and sponsorship.status == "pending_payment":
-                # Update sponsorship status to pending for moderation
-                sponsorship.payment_status = "succeeded"
-                sponsorship.status = "pending"
-                db.commit()
+            # DEFERRED: Payment confirmation emails
+            # Sponsorship payment confirmation email not yet implemented in EmailService
+            # When ready, uncomment:
+            # await EmailService.send_sponsorship_payment_confirmed_email(
+            #     sponsorship.user.email,
+            #     str(sponsorship.id),
+            #     sponsorship.openrouter_model_id or sponsorship.custom_model_name
+            # )
+        else:
+            # Handle CLI submission payments (only if not a sponsorship)
+            if payment_type == "cli_submission":
+                submission = db.query(CommunitySubmission).filter(
+                    CommunitySubmission.payment_id == payment_intent_id
+                ).first()
                 
-                # DEFERRED: Payment confirmation emails
-                # Sponsorship payment confirmation email not yet implemented in EmailService
-                # When ready, uncomment:
-                # await EmailService.send_sponsorship_payment_confirmed_email(
-                #     sponsorship.user.email,
-                #     str(sponsorship.id),
-                #     sponsorship.openrouter_model_id or sponsorship.custom_model_name
-                # )
+                if submission and submission.status == "pending_payment":
+                    # Update submission status to pending for moderation
+                    submission.status = "pending"
+                    db.commit()
+                    
+                    # Send confirmation email
+                    try:
+                        await EmailService.send_submission_payment_confirmed_email(
+                            submission.user.email,
+                            str(submission.id),
+                            submission.model_name
+                        )
+                    except:
+                        pass
     
     elif event_type == "payment_intent.payment_failed":
         # Payment failed - update status

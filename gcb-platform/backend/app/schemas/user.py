@@ -102,6 +102,8 @@ class SubmissionListItem(GCBBaseModel):
     submitted_at: datetime
     reviewed_at: Optional[datetime] = None
     reviewer_notes: Optional[str] = None
+    submission_type: str = "community"  # "community" or "sponsorship"
+    payment_status: Optional[str] = None  # For sponsorship requests
 
 
 class UserSubmissionsResponse(GCBBaseModel):

@@ -346,7 +346,7 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Your Submissions</CardTitle>
-                <CardDescription>GCB Runner test results you&apos;ve submitted for review</CardDescription>
+                <CardDescription>GCB Runner test results and sponsorship requests you&apos;ve submitted for review</CardDescription>
               </CardHeader>
               <CardContent>
                 {submissions.length > 0 ? (
@@ -355,6 +355,7 @@ export default function DashboardPage() {
                       <TableHeader>
                         <TableRow className="bg-white/[0.02]">
                           <TableHead>Date</TableHead>
+                          <TableHead>Type</TableHead>
                           <TableHead>Model</TableHead>
                           <TableHead>Score</TableHead>
                           <TableHead>Status</TableHead>
@@ -362,33 +363,52 @@ export default function DashboardPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {submissions.map((submission: any) => (
-                          <TableRow key={submission.id}>
-                            <TableCell className="text-muted-foreground">
-                              {new Date(submission.created_at).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell className="text-foreground font-medium">{submission.model_name}</TableCell>
-                            <TableCell className="text-foreground">
-                              {submission.overall_score ? submission.overall_score.toFixed(1) : "—"}
-                            </TableCell>
-                            <TableCell>
-                              <Badge 
-                                className={
-                                  submission.status === "approved" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
-                                  submission.status === "rejected" ? "bg-red-500/20 text-red-400 border-red-500/30" :
-                                  "bg-white/[0.06] text-muted-foreground border-white/10"
-                                }
-                              >
-                                {submission.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button asChild variant="ghost" size="sm">
-                                <Link href={`/dashboard/submissions/${submission.id}`}>View</Link>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {submissions.map((submission: any) => {
+                          const isSponsorship = submission.submission_type === 'sponsorship';
+                          const viewLink = isSponsorship 
+                            ? `/dashboard/sponsorships/${submission.id}`
+                            : `/dashboard/submissions/${submission.id}`;
+                          
+                          return (
+                            <TableRow key={submission.id}>
+                              <TableCell className="text-muted-foreground">
+                                {new Date(submission.created_at).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={isSponsorship ? "default" : "outline"} className="text-xs">
+                                  {isSponsorship ? "Sponsorship" : "GCB Runner"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-foreground font-medium">{submission.model_name}</TableCell>
+                              <TableCell className="text-foreground">
+                                {submission.overall_score ? submission.overall_score.toFixed(1) : "—"}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-col gap-1">
+                                  <Badge 
+                                    className={
+                                      submission.status === "approved" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+                                      submission.status === "rejected" ? "bg-red-500/20 text-red-400 border-red-500/30" :
+                                      "bg-white/[0.06] text-muted-foreground border-white/10"
+                                    }
+                                  >
+                                    {submission.status}
+                                  </Badge>
+                                  {isSponsorship && submission.payment_status && (
+                                    <Badge variant="outline" className="text-xs">
+                                      Payment: {submission.payment_status}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Button asChild variant="ghost" size="sm">
+                                  <Link href={viewLink}>View</Link>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -399,7 +419,7 @@ export default function DashboardPage() {
                     </div>
                     <p className="text-foreground mb-2">No submissions yet</p>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Run the GCB Runner and upload your first test results
+                      Run the GCB Runner and upload your first test results, or sponsor a model test
                     </p>
                     <Button onClick={() => setUploadDialogOpen(true)}>
                       <Upload className="h-4 w-4 mr-2" />
@@ -477,13 +497,14 @@ export default function DashboardPage() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Approved
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                Sponsorship Submissions
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
-                {submissions?.filter((s: any) => s.status === "approved").length ?? 0}
+                {submissions?.filter((s: any) => s.submission_type === "sponsorship").length ?? 0}
               </div>
             </CardContent>
           </Card>
