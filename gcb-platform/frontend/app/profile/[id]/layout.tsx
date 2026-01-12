@@ -1,0 +1,53 @@
+import type { Metadata } from "next";
+import { generateProfileMetadata } from "@/lib/seo";
+import { buildProfilePageSchema, JsonLdScript } from "@/lib/structured-data";
+import { apiClient } from "@/lib/api";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  
+  try {
+    // Note: This would need a public profile API endpoint
+    // For now, using basic metadata
+    return generateProfileMetadata({
+      username: id,
+      displayName: id,
+    });
+  } catch {
+    return {
+      title: "User Profile",
+      description: "View user profile and contributions to the Great Commission Benchmark.",
+    };
+  }
+}
+
+export default async function ProfileLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  
+  try {
+    // Note: Would need profile API endpoint
+    const profileSchema = buildProfilePageSchema({
+      username: id,
+      displayName: id,
+    });
+    
+    return (
+      <>
+        <JsonLdScript data={profileSchema} />
+        {children}
+      </>
+    );
+  } catch {
+    return <>{children}</>;
+  }
+}

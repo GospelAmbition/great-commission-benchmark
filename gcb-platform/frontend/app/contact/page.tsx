@@ -1,5 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, Mail, Github } from "lucide-react";
+import type { Metadata } from "next";
+import { generatePageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = generatePageMetadata({
+  title: "Contact Us",
+  description: "Get in touch with the Great Commission Benchmark team. Contact us via email, Discord, or GitHub for questions, feedback, partnerships, or media inquiries.",
+  path: "/contact",
+  keywords: ["contact", "support", "help", "email", "Discord", "GitHub"],
+});
 
 const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contact@greatcommissionbenchmark.ai";
 const DISCORD_URL = process.env.NEXT_PUBLIC_DISCORD_URL || "https://discord.gg/greatcommissionbenchmark";
