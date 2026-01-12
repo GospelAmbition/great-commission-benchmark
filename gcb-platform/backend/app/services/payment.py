@@ -292,41 +292,99 @@ class PaymentService:
         """
         Test a Stripe connection with given credentials.
         
+        Supports both full API keys and restricted keys. For restricted keys,
+        uses a simpler endpoint that doesn't require account-level permissions.
+        
         Args:
             secret_key: Stripe secret key to test
         
         Returns:
             Dict with connection status and account info
         """
+        # Save current key to restore later
+        original_key = stripe.api_key
+        
         try:
-            # Temporarily set the API key
+            # Set the test API key
             stripe.api_key = secret_key
             
-            # Try to retrieve account info
-            account = stripe.Account.retrieve()
+            # Check if this is a restricted key by prefix
+            is_restricted = secret_key.startswith(("rk_live_", "rk_test_"))
             
-            return {
-                "success": True,
-                "account_id": account.id,
-                "business_name": account.get("business_profile", {}).get("name"),
-                "country": account.country,
-                "default_currency": account.default_currency,
-                "charges_enabled": account.charges_enabled,
-                "payouts_enabled": account.payouts_enabled,
-            }
-        except stripe.error.AuthenticationError:
+            if is_restricted:
+                # For restricted keys, use a simpler endpoint that most keys have access to
+                # PaymentIntent.list is commonly available for restricted keys
+                try:
+                    stripe.PaymentIntent.list(limit=1)
+                    return {
+                        "success": True,
+                        "account_id": None,
+                        "business_name": None,
+                        "country": None,
+                        "default_currency": None,
+                        "charges_enabled": None,
+                        "payouts_enabled": None,
+                        "is_restricted_key": True,
+                        "message": "Restricted key validated successfully. Account details unavailable with restricted keys.",
+                    }
+                except stripe.error.AuthenticationError:
+                    return {
+                        "success": False,
+                        "error": "Invalid API key"
+                    }
+                except stripe.error.StripeError as e:
+                    # Key might have very limited permissions, but if it's not an auth error,
+                    # it's probably valid - just with limited access
+                    error_msg = str(e).lower()
+                    if "permission" in error_msg:
+                        return {
+                            "success": True,
+                            "account_id": None,
+                            "business_name": None,
+                            "country": None,
+                            "default_currency": None,
+                            "charges_enabled": None,
+                            "payouts_enabled": None,
+                            "is_restricted_key": True,
+                            "message": "Restricted key accepted. Note: key has limited permissions.",
+                        }
+                    return {
+                        "success": False,
+                        "error": f"Stripe error: {str(e)}"
+                    }
+            else:
+                # For full keys (sk_live_, sk_test_), try to get account info
+                try:
+                    account = stripe.Account.retrieve()
+                    return {
+                        "success": True,
+                        "account_id": account.id,
+                        "business_name": account.get("business_profile", {}).get("name") if hasattr(account, 'get') else getattr(getattr(account, 'business_profile', None), 'name', None),
+                        "country": account.country,
+                        "default_currency": account.default_currency,
+                        "charges_enabled": account.charges_enabled,
+                        "payouts_enabled": account.payouts_enabled,
+                        "is_restricted_key": False,
+                    }
+                except stripe.error.AuthenticationError:
+                    return {
+                        "success": False,
+                        "error": "Invalid API key"
+                    }
+                except stripe.error.StripeError as e:
+                    return {
+                        "success": False,
+                        "error": str(e)
+                    }
+        except Exception as e:
             return {
                 "success": False,
-                "error": "Invalid API key"
-            }
-        except stripe.error.StripeError as e:
-            return {
-                "success": False,
-                "error": str(e)
+                "error": f"Unexpected error: {str(e)}"
             }
         finally:
-            # Restore previous key
-            stripe.api_key = settings.STRIPE_SECRET_KEY
+            # Restore original key (avoid setting to None which corrupts Stripe SDK)
+            if original_key:
+                stripe.api_key = original_key
     
     @staticmethod
     def list_balance_transactions(
