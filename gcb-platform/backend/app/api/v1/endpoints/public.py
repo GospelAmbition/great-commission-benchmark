@@ -707,6 +707,7 @@ async def list_available_models(
             "model_id": model_id,
             "name": model_name,
             "provider": provider,
+            "description": model.get("description"),  # Model description from OpenRouter
             "context_length": model.get("context_length", 0),
             "pricing": {
                 "prompt": prompt_cost,
@@ -770,6 +771,7 @@ async def get_model_by_model_id(
         "model_name": model.name,
         "name": model.name,
         "provider": model.provider,
+        "description": model.description,  # Model description from OpenRouter
         "overall_score": overall_score,
         "score": overall_score,
         "tier1_score": tier1_score,
@@ -813,7 +815,8 @@ async def get_model_detail(
             "id": str(model.id),
             "name": model.name,
             "provider": model.provider,
-            "model_id": model.model_id
+            "model_id": model.model_id,
+            "description": model.description
         },
         "best_result": data["best_result"],
         "test_history": data["test_history"],

@@ -81,6 +81,22 @@ class OpenRouterClient:
         except Exception as e:
             raise Exception(f"Failed to list models: {str(e)}")
     
+    async def get_model_info(self, model: str) -> Optional[Dict]:
+        """
+        Get full information for a specific model including description
+        
+        Args:
+            model: Model identifier
+        
+        Returns:
+            Model information dict with description, pricing, etc., or None if not found
+        """
+        models = await self.list_models()
+        for m in models:
+            if m.get("id") == model:
+                return m
+        return None
+    
     async def get_model_pricing(self, model: str) -> Dict:
         """
         Get pricing information for a model
@@ -91,13 +107,12 @@ class OpenRouterClient:
         Returns:
             Pricing information dict
         """
-        models = await self.list_models()
-        for m in models:
-            if m.get("id") == model:
-                return {
-                    "pricing": m.get("pricing", {}),
-                    "context_length": m.get("context_length", 0)
-                }
+        model_info = await self.get_model_info(model)
+        if model_info:
+            return {
+                "pricing": model_info.get("pricing", {}),
+                "context_length": model_info.get("context_length", 0)
+            }
         return {}
     
     async def close(self):

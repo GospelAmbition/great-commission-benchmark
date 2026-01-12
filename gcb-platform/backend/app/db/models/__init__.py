@@ -16,6 +16,7 @@ from app.db.models.notification_preference import NotificationPreference
 from app.db.models.blog_category import BlogCategory
 from app.db.models.blog_post import BlogPost
 from app.db.models.model_version_stats import ModelVersionStats
+from app.db.models.stripe_config import StripeConfig
 
 __all__ = [
     "User",
@@ -34,4 +35,5 @@ __all__ = [
     "BlogCategory",
     "BlogPost",
     "ModelVersionStats",
+    "StripeConfig",
 ]

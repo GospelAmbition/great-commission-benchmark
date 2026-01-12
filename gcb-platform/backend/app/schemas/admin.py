@@ -215,3 +215,139 @@ class QuestionSetUpdateTargetResponse(BaseModel):
     question_set_id: UUID
     target_question_count: Optional[int]
     message: str
+
+
+# =============================================================================
+# Stripe Configuration Schemas
+# =============================================================================
+
+class StripeConfigStatusResponse(BaseModel):
+    """Response showing current Stripe configuration status"""
+    is_configured: bool
+    source: str  # 'database' or 'environment'
+    is_live_mode: bool
+    config_name: Optional[str] = None
+    config_id: Optional[str] = None
+    secret_key_masked: Optional[str] = None
+    publishable_key_masked: Optional[str] = None
+    webhook_secret_masked: Optional[str] = None
+    updated_at: Optional[str] = None
+    updated_by_email: Optional[str] = None
+
+
+class StripeConfigCreateRequest(BaseModel):
+    """Request to create or update Stripe configuration"""
+    secret_key: str  # Will be encrypted
+    publishable_key: str
+    webhook_secret: Optional[str] = None  # Will be encrypted
+    name: Optional[str] = None  # Descriptive name (e.g., "Production - Ministry Name")
+
+
+class StripeConfigTestRequest(BaseModel):
+    """Request to test Stripe credentials"""
+    secret_key: str
+
+
+class StripeConfigTestResponse(BaseModel):
+    """Response from testing Stripe credentials"""
+    success: bool
+    error: Optional[str] = None
+    account_id: Optional[str] = None
+    business_name: Optional[str] = None
+    country: Optional[str] = None
+    default_currency: Optional[str] = None
+    charges_enabled: Optional[bool] = None
+    payouts_enabled: Optional[bool] = None
+
+
+class StripeBalanceResponse(BaseModel):
+    """Response showing Stripe account balance"""
+    available: List[Dict]  # [{amount, currency}]
+    pending: List[Dict]  # [{amount, currency}]
+    livemode: bool
+
+
+class StripeTransactionItem(BaseModel):
+    """A single balance transaction"""
+    id: str
+    amount: float
+    currency: str
+    net: float
+    fee: float
+    type: str
+    status: str
+    description: Optional[str] = None
+    created: str
+    available_on: Optional[str] = None
+    source: Optional[str] = None
+
+
+class StripeTransactionsResponse(BaseModel):
+    """Response containing list of balance transactions"""
+    data: List[StripeTransactionItem]
+    has_more: bool
+    total_count: Optional[int] = None
+
+
+class StripePaymentIntentItem(BaseModel):
+    """A single payment intent"""
+    id: str
+    amount: float
+    currency: str
+    status: str
+    description: Optional[str] = None
+    receipt_email: Optional[str] = None
+    metadata: Dict = {}
+    created: str
+    payment_method_types: List[str] = []
+
+
+class StripePaymentIntentsResponse(BaseModel):
+    """Response containing list of payment intents"""
+    data: List[StripePaymentIntentItem]
+    has_more: bool
+
+
+class StripeChargeItem(BaseModel):
+    """A single charge"""
+    id: str
+    amount: float
+    amount_refunded: float
+    currency: str
+    status: str
+    paid: bool
+    refunded: bool
+    disputed: bool
+    description: Optional[str] = None
+    receipt_email: Optional[str] = None
+    receipt_url: Optional[str] = None
+    payment_intent: Optional[str] = None
+    metadata: Dict = {}
+    created: str
+    failure_code: Optional[str] = None
+    failure_message: Optional[str] = None
+
+
+class StripeChargesResponse(BaseModel):
+    """Response containing list of charges"""
+    data: List[StripeChargeItem]
+    has_more: bool
+
+
+class StripeRefundItem(BaseModel):
+    """A single refund"""
+    id: str
+    amount: float
+    currency: str
+    status: str
+    reason: Optional[str] = None
+    payment_intent: Optional[str] = None
+    charge: Optional[str] = None
+    created: str
+    metadata: Dict = {}
+
+
+class StripeRefundsResponse(BaseModel):
+    """Response containing list of refunds"""
+    data: List[StripeRefundItem]
+    has_more: bool

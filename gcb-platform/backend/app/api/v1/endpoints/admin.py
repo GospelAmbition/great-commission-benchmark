@@ -18,6 +18,8 @@ from app.db.models.moderation_log import ModerationLog
 from app.db.models.user_api_key import UserAPIKey
 from app.db.models.result import Result
 from app.db.models.community_submission import CommunitySubmission
+from app.db.models.stripe_config import StripeConfig
+from app.services.payment import PaymentService, EncryptionService
 from app.schemas.admin import (
     UserListItem,
     UserListResponse,
@@ -43,7 +45,17 @@ from app.schemas.admin import (
     TierStats,
     DifficultyStats,
     DifficultyCount,
-    CategoryDifficultyBreakdown
+    CategoryDifficultyBreakdown,
+    # Stripe schemas
+    StripeConfigStatusResponse,
+    StripeConfigCreateRequest,
+    StripeConfigTestRequest,
+    StripeConfigTestResponse,
+    StripeBalanceResponse,
+    StripeTransactionsResponse,
+    StripePaymentIntentsResponse,
+    StripeChargesResponse,
+    StripeRefundsResponse,
 )
 
 router = APIRouter()
@@ -1429,3 +1441,244 @@ async def list_models(
         "items": items,
         "total": total
     }
+
+
+# =============================================================================
+# Stripe Configuration & Transaction Endpoints
+# =============================================================================
+
+@router.get("/stripe/config", response_model=StripeConfigStatusResponse)
+async def get_stripe_config(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get current Stripe configuration status (with masked keys)"""
+    keys = PaymentService.get_stripe_keys(db)
+    
+    # Get additional info if from database
+    updated_at = None
+    updated_by_email = None
+    
+    if keys["source"] == "database":
+        config = PaymentService.get_active_config(db)
+        if config:
+            updated_at = config.updated_at.isoformat() if config.updated_at else None
+            if config.updated_by:
+                updated_by_email = config.updated_by.email
+    
+    return StripeConfigStatusResponse(
+        is_configured=bool(keys.get("secret_key")),
+        source=keys["source"],
+        is_live_mode=keys.get("is_live_mode", False),
+        config_name=keys.get("config_name"),
+        config_id=keys.get("config_id"),
+        secret_key_masked=PaymentService.mask_key(keys["secret_key"]) if keys.get("secret_key") else None,
+        publishable_key_masked=PaymentService.mask_key(keys["publishable_key"]) if keys.get("publishable_key") else None,
+        webhook_secret_masked=PaymentService.mask_key(keys["webhook_secret"]) if keys.get("webhook_secret") else None,
+        updated_at=updated_at,
+        updated_by_email=updated_by_email,
+    )
+
+
+@router.post("/stripe/config", response_model=StripeConfigStatusResponse)
+async def create_or_update_stripe_config(
+    request: StripeConfigCreateRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Create or update Stripe configuration (encrypted storage)"""
+    # Validate keys by testing the secret key
+    test_result = PaymentService.test_connection(request.secret_key)
+    if not test_result["success"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid Stripe credentials: {test_result.get('error', 'Unknown error')}"
+        )
+    
+    # Determine if live mode based on key prefix
+    is_live_mode = request.secret_key.startswith("sk_live_")
+    
+    # Validate publishable key matches mode
+    if is_live_mode and not request.publishable_key.startswith("pk_live_"):
+        raise HTTPException(
+            status_code=400,
+            detail="Publishable key must be a live key (pk_live_) when using a live secret key"
+        )
+    if not is_live_mode and not request.publishable_key.startswith("pk_test_"):
+        raise HTTPException(
+            status_code=400,
+            detail="Publishable key must be a test key (pk_test_) when using a test secret key"
+        )
+    
+    # Encrypt sensitive keys
+    encrypted_secret = EncryptionService.encrypt(request.secret_key)
+    encrypted_webhook = None
+    if request.webhook_secret:
+        encrypted_webhook = EncryptionService.encrypt(request.webhook_secret)
+    
+    # Deactivate existing configs
+    db.query(StripeConfig).filter(StripeConfig.is_active == True).update(
+        {"is_active": False}
+    )
+    
+    # Create new config
+    new_config = StripeConfig(
+        secret_key_encrypted=encrypted_secret,
+        publishable_key=request.publishable_key,
+        webhook_secret_encrypted=encrypted_webhook,
+        is_active=True,
+        is_live_mode=is_live_mode,
+        name=request.name,
+        updated_by_id=current_user.id,
+    )
+    db.add(new_config)
+    db.commit()
+    db.refresh(new_config)
+    
+    return StripeConfigStatusResponse(
+        is_configured=True,
+        source="database",
+        is_live_mode=is_live_mode,
+        config_name=new_config.name,
+        config_id=str(new_config.id),
+        secret_key_masked=PaymentService.mask_key(request.secret_key),
+        publishable_key_masked=PaymentService.mask_key(request.publishable_key),
+        webhook_secret_masked=PaymentService.mask_key(request.webhook_secret) if request.webhook_secret else None,
+        updated_at=new_config.updated_at.isoformat() if new_config.updated_at else None,
+        updated_by_email=current_user.email,
+    )
+
+
+@router.post("/stripe/config/test", response_model=StripeConfigTestResponse)
+async def test_stripe_credentials(
+    request: StripeConfigTestRequest,
+    current_user: User = Depends(require_admin),
+):
+    """Test Stripe credentials without saving them"""
+    result = PaymentService.test_connection(request.secret_key)
+    return StripeConfigTestResponse(**result)
+
+
+@router.delete("/stripe/config")
+async def delete_stripe_config(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete the active Stripe configuration (reverts to environment variables)"""
+    config = PaymentService.get_active_config(db)
+    
+    if not config:
+        raise HTTPException(
+            status_code=404,
+            detail="No active Stripe configuration found in database"
+        )
+    
+    db.delete(config)
+    db.commit()
+    
+    return {"message": "Stripe configuration deleted. System will now use environment variables."}
+
+
+@router.get("/stripe/balance", response_model=StripeBalanceResponse)
+async def get_stripe_balance(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get current Stripe account balance"""
+    try:
+        balance = PaymentService.get_balance(db)
+        return StripeBalanceResponse(**balance)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/stripe/transactions", response_model=StripeTransactionsResponse)
+async def list_stripe_transactions(
+    limit: int = Query(25, ge=1, le=100),
+    starting_after: Optional[str] = Query(None, description="Pagination cursor"),
+    created_gte: Optional[datetime] = Query(None, description="Filter by created date (on or after)"),
+    created_lte: Optional[datetime] = Query(None, description="Filter by created date (on or before)"),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List balance transactions from Stripe"""
+    try:
+        transactions = PaymentService.list_balance_transactions(
+            limit=limit,
+            starting_after=starting_after,
+            created_gte=created_gte,
+            created_lte=created_lte,
+            db=db
+        )
+        return StripeTransactionsResponse(**transactions)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/stripe/payments", response_model=StripePaymentIntentsResponse)
+async def list_stripe_payment_intents(
+    limit: int = Query(25, ge=1, le=100),
+    starting_after: Optional[str] = Query(None, description="Pagination cursor"),
+    created_gte: Optional[datetime] = Query(None, description="Filter by created date (on or after)"),
+    created_lte: Optional[datetime] = Query(None, description="Filter by created date (on or before)"),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List payment intents from Stripe"""
+    try:
+        intents = PaymentService.list_payment_intents(
+            limit=limit,
+            starting_after=starting_after,
+            created_gte=created_gte,
+            created_lte=created_lte,
+            db=db
+        )
+        return StripePaymentIntentsResponse(**intents)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/stripe/charges", response_model=StripeChargesResponse)
+async def list_stripe_charges(
+    limit: int = Query(25, ge=1, le=100),
+    starting_after: Optional[str] = Query(None, description="Pagination cursor"),
+    created_gte: Optional[datetime] = Query(None, description="Filter by created date (on or after)"),
+    created_lte: Optional[datetime] = Query(None, description="Filter by created date (on or before)"),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List charges from Stripe"""
+    try:
+        charges = PaymentService.list_charges(
+            limit=limit,
+            starting_after=starting_after,
+            created_gte=created_gte,
+            created_lte=created_lte,
+            db=db
+        )
+        return StripeChargesResponse(**charges)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/stripe/refunds", response_model=StripeRefundsResponse)
+async def list_stripe_refunds(
+    limit: int = Query(25, ge=1, le=100),
+    starting_after: Optional[str] = Query(None, description="Pagination cursor"),
+    created_gte: Optional[datetime] = Query(None, description="Filter by created date (on or after)"),
+    created_lte: Optional[datetime] = Query(None, description="Filter by created date (on or before)"),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List refunds from Stripe"""
+    try:
+        refunds = PaymentService.list_refunds(
+            limit=limit,
+            starting_after=starting_after,
+            created_gte=created_gte,
+            created_lte=created_lte,
+            db=db
+        )
+        return StripeRefundsResponse(**refunds)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

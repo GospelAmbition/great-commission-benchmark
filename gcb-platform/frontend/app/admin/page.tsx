@@ -189,6 +189,17 @@ export default function AdminDashboardPage() {
             </Button>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Payments & Stripe</CardTitle>
+            <CardDescription>Manage Stripe configuration and view transaction history</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/admin/payments">Manage Payments</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

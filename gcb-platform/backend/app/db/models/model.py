@@ -1,5 +1,5 @@
 """Model (LLM) model"""
-from sqlalchemy import Column, String, Boolean, DateTime, Numeric
+from sqlalchemy import Column, String, Boolean, DateTime, Numeric, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -15,6 +15,7 @@ class Model(Base):
     model_id = Column(String(255), unique=True, nullable=False, index=True)  # OpenRouter model ID
     name = Column(String(255), nullable=False)
     provider = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)  # Model description from OpenRouter
     is_active = Column(Boolean, default=True)
     estimated_cost_per_test = Column(Numeric(10, 2))
     created_at = Column(DateTime(timezone=True), server_default=func.now())

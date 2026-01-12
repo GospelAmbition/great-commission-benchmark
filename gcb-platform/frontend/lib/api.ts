@@ -23,6 +23,7 @@ export interface LeaderboardItem {
   model_id: string; // OpenRouter-style ID (e.g., "openai/gpt-4")
   model_name: string;
   provider: string;
+  description?: string; // Model description from OpenRouter
   overall_score: number;
   tier1_score?: number;
   tier2_score?: number;
@@ -59,6 +60,7 @@ export interface ModelResponse {
   model_name?: string;
   name?: string;
   provider: string;
+  description?: string; // Model description from OpenRouter
   overall_score?: number;
   score?: number;
   tier1_score?: number;

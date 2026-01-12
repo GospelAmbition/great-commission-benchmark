@@ -406,6 +406,12 @@ export default function ModelDetailPage() {
                 <CardTitle>Model Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {model.description && (
+                  <div>
+                    <span className="text-sm text-muted-foreground">Description</span>
+                    <p className="text-sm mt-1">{model.description}</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-sm text-muted-foreground">Provider</span>
