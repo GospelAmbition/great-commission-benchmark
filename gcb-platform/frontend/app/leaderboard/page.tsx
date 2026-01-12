@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -127,11 +128,13 @@ function TotalScore({ score }: { score: number }) {
 }
 
 export default function LeaderboardPage() {
+  const searchParams = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [filterOptions, setFilterOptions] = useState<FilterOptionsResponse | null>(null);
+  const processedUrlParams = useRef<string | null>(null);
   const [filters, setFilters] = useState({
     version: "",
     category: "",
@@ -151,6 +154,27 @@ export default function LeaderboardPage() {
   useEffect(() => {
     loadFilterOptions();
   }, []);
+
+  // Pre-select models from URL query params (only on initial load or URL change)
+  useEffect(() => {
+    const modelsParam = searchParams.get("models");
+    // Only process if URL params changed or leaderboard just loaded
+    if (modelsParam && leaderboard.length > 0 && modelsParam !== processedUrlParams.current) {
+      processedUrlParams.current = modelsParam;
+      const modelIds = modelsParam.split(",").map(id => decodeURIComponent(id));
+      // Match by either id (UUID) or model_id (OpenRouter-style ID)
+      const matchingIds = new Set<string>();
+      leaderboard.forEach(item => {
+        if (modelIds.includes(item.id) || modelIds.includes(item.model_id)) {
+          matchingIds.add(item.id);
+        }
+      });
+      // Update selection if we found matches
+      if (matchingIds.size > 0) {
+        setSelectedModels(matchingIds);
+      }
+    }
+  }, [searchParams, leaderboard]);
 
   useEffect(() => {
     loadLeaderboard();

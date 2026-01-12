@@ -141,7 +141,9 @@ function ComparePageContent() {
           {comparison.models.length > 1 ? "s" : ""}
         </p>
         <Button asChild variant="outline" size="sm" className="mt-4">
-          <Link href="/leaderboard">← Change Selection</Link>
+          <Link href={`/leaderboard?models=${comparison.models.map(m => encodeURIComponent(m.model_id || m.id || "")).filter(Boolean).join(",")}`}>
+            ← Change Selection
+          </Link>
         </Button>
       </div>
 
@@ -245,7 +247,7 @@ function ComparePageContent() {
 
         {/* Placeholder card when only 1 model is selected */}
         {rankedModels.length === 1 && (
-          <Link href="/leaderboard" className="block">
+          <Link href={`/leaderboard?models=${encodeURIComponent(rankedModels[0].model_id || "")}`} className="block">
             <Card className="h-full border-2 border-dashed border-muted-foreground/30 bg-muted/5 hover:border-muted-foreground/50 hover:bg-muted/10 transition-all cursor-pointer">
               <CardContent className="h-full flex flex-col items-center justify-center py-12 space-y-4">
                 <div className="p-4 rounded-full bg-muted/20">
