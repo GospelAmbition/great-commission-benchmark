@@ -90,6 +90,10 @@ export function getDefaultTwitterCard(overrides?: {
   description?: string;
   images?: string[];
   card?: "summary" | "summary_large_image";
+  label1?: string;
+  data1?: string;
+  label2?: string;
+  data2?: string;
 }): Metadata["twitter"] {
   return {
     card: overrides?.card || "summary_large_image",
@@ -98,6 +102,14 @@ export function getDefaultTwitterCard(overrides?: {
     title: overrides?.title || SITE_CONFIG.name,
     description: overrides?.description || SITE_CONFIG.description,
     images: overrides?.images || [`${getBaseUrl()}/og-image.png`],
+    ...(overrides?.label1 && overrides?.data1 && {
+      label1: overrides.label1,
+      data1: overrides.data1,
+    }),
+    ...(overrides?.label2 && overrides?.data2 && {
+      label2: overrides.label2,
+      data2: overrides.data2,
+    }),
   };
 }
 
@@ -146,11 +158,13 @@ export function generatePageMetadata({
       url: canonicalUrl,
       ...openGraph,
     }),
-    twitter: getDefaultTwitterCard({
-      title: fullTitle,
-      description,
+    twitter: {
+      ...getDefaultTwitterCard({
+        title: fullTitle,
+        description,
+      }),
       ...twitter,
-    }),
+    },
     ...additionalMeta,
   };
 }
@@ -188,6 +202,15 @@ export function generateModelMetadata({
     keywords: [modelName, provider, "AI benchmark", "LLM evaluation", "model score"],
     openGraph: {
       type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${modelName} - ${score.toFixed(1)}% Score`,
+      description: pageDescription,
+      label1: "Overall Score",
+      data1: `${score.toFixed(1)}%`,
+      label2: "Verdict",
+      data2: verdict,
     },
   });
 }

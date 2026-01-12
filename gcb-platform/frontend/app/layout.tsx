@@ -41,10 +41,15 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [
-      { url: "/og-image.png", sizes: "180x180" },
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
+    shortcut: "/favicon.ico",
   },
   manifest: "/manifest.json",
   category: "technology",
@@ -58,6 +63,16 @@ export const metadata: Metadata = {
   other: {
     "msapplication-TileColor": "#b91c1c",
     "theme-color": "#0a0a0a",
+    "application-name": SITE_CONFIG.name,
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "mobile-web-app-capable": "yes",
+    ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION && {
+      "google-site-verification": process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    }),
+    ...(process.env.NEXT_PUBLIC_BING_VERIFICATION && {
+      "msvalidate.01": process.env.NEXT_PUBLIC_BING_VERIFICATION,
+    }),
   },
 };
 
