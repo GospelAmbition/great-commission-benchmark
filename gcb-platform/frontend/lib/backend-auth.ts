@@ -10,6 +10,9 @@ import { NextResponse } from "next/server";
 import * as jose from "jose";
 import { API_URL } from "@/lib/api";
 
+// Remove trailing slashes from API_URL to prevent double-slash URLs
+const BACKEND_URL = API_URL.replace(/\/+$/, '');
+
 /**
  * Generate a JWT token for authenticating with the backend API.
  * Uses the NextAuth session to create a signed token.
@@ -79,8 +82,8 @@ export async function proxyToBackend(
   }
 
   const url = queryString 
-    ? `${API_URL}${endpoint}?${queryString}` 
-    : `${API_URL}${endpoint}`;
+    ? `${BACKEND_URL}${endpoint}?${queryString}` 
+    : `${BACKEND_URL}${endpoint}`;
 
   const fetchHeaders: Record<string, string> = {
     "Content-Type": "application/json",
@@ -145,7 +148,7 @@ export async function proxyFormDataToBackend(
   }
 
   try {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const response = await fetch(`${BACKEND_URL}${endpoint}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
