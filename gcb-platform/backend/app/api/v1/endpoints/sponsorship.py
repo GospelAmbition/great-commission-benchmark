@@ -112,17 +112,37 @@ async def create_sponsorship(
             # Update sponsorship with payment info
             sponsorship.payment_id = payment_intent["id"]
             sponsorship.payment_status = payment_intent["status"]
+            
+            # For test mode: if payment is already succeeded, automatically mark as ready for moderation
+            # This simulates the webhook behavior for testing purposes
+            keys = PaymentService.get_stripe_keys(db)
+            is_test_mode = keys.get("secret_key", "").startswith("sk_test_")
+            
+            if is_test_mode and payment_intent["status"] == "succeeded":
+                # Simulate successful payment - update status to pending for moderation
+                sponsorship.payment_status = "succeeded"
+                sponsorship.status = "pending"
+                logger.info(f"Test mode: Payment already succeeded, sponsorship {sponsorship.id} marked as pending for moderation")
+            
             db.commit()
+            
+            # Determine response status and message based on whether payment was auto-completed
+            response_status = "pending" if (is_test_mode and payment_intent["status"] == "succeeded") else "pending_payment"
+            response_message = (
+                "Payment successful! Your sponsorship request is pending moderation."
+                if (is_test_mode and payment_intent["status"] == "succeeded")
+                else "Please complete payment to submit your sponsorship request"
+            )
             
             return CreateSponsorshipResponse(
                 id=sponsorship.id,
                 request_type="sponsorship",
                 model_name=model_name,
-                status="pending_payment",
-                payment_required=True,
+                status=response_status,
+                payment_required=not (is_test_mode and payment_intent["status"] == "succeeded"),
                 payment_intent_id=payment_intent["id"],
                 client_secret=payment_intent["client_secret"],
-                message="Please complete payment to submit your sponsorship request",
+                message=response_message,
                 cost_breakdown=cost_breakdown
             )
         except Exception as e:
@@ -270,6 +290,75 @@ async def get_user_sponsorship_detail(
     )
 
 
+@user_router.post("/{sponsorship_id}/check-payment")
+async def check_payment_status(
+    sponsorship_id: UUID,
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """
+    Check payment intent status and update sponsorship if payment succeeded.
+    This is useful in test mode to immediately update status without waiting for webhook.
+    """
+    sponsorship = db.query(SponsorshipRequest).filter(
+        SponsorshipRequest.id == sponsorship_id
+    ).first()
+    
+    if not sponsorship:
+        raise HTTPException(status_code=404, detail="Sponsorship request not found")
+    
+    # Users can only check their own sponsorships
+    if sponsorship.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only check your own sponsorship requests")
+    
+    if not sponsorship.payment_id:
+        raise HTTPException(status_code=400, detail="No payment associated with this sponsorship")
+    
+    # Check if we're in test mode
+    keys = PaymentService.get_stripe_keys(db)
+    is_test_mode = keys.get("secret_key", "").startswith("sk_test_")
+    
+    if not is_test_mode:
+        # In live mode, rely on webhooks
+        return {
+            "status": sponsorship.status,
+            "payment_status": sponsorship.payment_status,
+            "updated": False,
+            "message": "In live mode, payment status is updated via webhooks"
+        }
+    
+    # In test mode, check payment intent status
+    try:
+        payment_intent = PaymentService.get_payment_intent(sponsorship.payment_id, db=db)
+        
+        # If payment succeeded and sponsorship is still pending payment, update it
+        if payment_intent["status"] == "succeeded" and sponsorship.status == "pending_payment":
+            sponsorship.payment_status = "succeeded"
+            sponsorship.status = "pending"
+            db.commit()
+            logger.info(f"Test mode: Payment {sponsorship.payment_id} succeeded, sponsorship {sponsorship.id} updated to pending")
+            
+            return {
+                "status": sponsorship.status,
+                "payment_status": sponsorship.payment_status,
+                "updated": True,
+                "message": "Payment confirmed! Sponsorship is now pending moderation."
+            }
+        else:
+            return {
+                "status": sponsorship.status,
+                "payment_status": sponsorship.payment_status,
+                "updated": False,
+                "message": f"Payment status: {payment_intent['status']}"
+            }
+    except Exception as e:
+        logger.error(f"Failed to check payment status for sponsorship {sponsorship_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to check payment status: {str(e)}"
+        )
+
+
 # Moderator endpoints
 
 @moderator_router.get("", response_model=SponsorshipQueueResponse)
@@ -321,8 +410,28 @@ async def get_sponsorship_queue(
     total = query.count()
     sponsorships = query.offset(offset).limit(limit).all()
     
+    # In test mode, check Stripe for any sponsorships with payment_id but unclear status
+    # This helps catch cases where payment succeeded but webhook didn't fire
+    keys = PaymentService.get_stripe_keys(db)
+    is_test_mode = keys.get("secret_key", "").startswith("sk_test_")
+    
     items = []
     for s in sponsorships:
+        # If in test mode and sponsorship has payment_id but status is still pending_payment,
+        # check Stripe to see if payment actually succeeded
+        if is_test_mode and s.payment_id and s.status == "pending_payment" and s.payment_status != "succeeded":
+            try:
+                payment_intent = PaymentService.get_payment_intent(s.payment_id, db=db)
+                if payment_intent["status"] == "succeeded":
+                    # Payment succeeded but status wasn't updated - update it now
+                    s.payment_status = "succeeded"
+                    s.status = "pending"
+                    db.commit()
+                    logger.info(f"Queue: Auto-synced payment status for sponsorship {s.id} - payment succeeded")
+            except Exception as e:
+                logger.warning(f"Queue: Failed to check payment status for sponsorship {s.id}: {e}")
+                # Continue with current status if check fails
+        
         model_name = s.openrouter_model_id or s.custom_model_name or "Unknown"
         items.append(SponsorshipQueueItem(
             id=s.id,
@@ -372,6 +481,60 @@ async def get_sponsorship_detail(
         reviewed_at=sponsorship.reviewed_at,
         reviewer_notes=sponsorship.reviewer_notes
     )
+
+
+@moderator_router.post("/{sponsorship_id}/sync-payment")
+async def sync_payment_status(
+    sponsorship_id: UUID,
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db)
+):
+    """
+    Manually sync payment status from Stripe for a sponsorship.
+    Useful for troubleshooting when webhook didn't fire or payment status is out of sync.
+    """
+    sponsorship = db.query(SponsorshipRequest).filter(
+        SponsorshipRequest.id == sponsorship_id
+    ).first()
+    
+    if not sponsorship:
+        raise HTTPException(status_code=404, detail="Sponsorship request not found")
+    
+    if not sponsorship.payment_id:
+        raise HTTPException(status_code=400, detail="No payment associated with this sponsorship")
+    
+    try:
+        payment_intent = PaymentService.get_payment_intent(sponsorship.payment_id, db=db)
+        
+        # Update payment status from Stripe
+        sponsorship.payment_status = payment_intent["status"]
+        
+        # If payment succeeded and sponsorship is still pending payment, update status
+        if payment_intent["status"] == "succeeded" and sponsorship.status == "pending_payment":
+            sponsorship.status = "pending"
+            db.commit()
+            logger.info(f"Moderator {current_user.id} synced payment for sponsorship {sponsorship.id}: payment succeeded, status updated to pending")
+            
+            return {
+                "status": sponsorship.status,
+                "payment_status": sponsorship.payment_status,
+                "updated": True,
+                "message": "Payment status synced. Sponsorship is now pending moderation."
+            }
+        else:
+            db.commit()
+            return {
+                "status": sponsorship.status,
+                "payment_status": sponsorship.payment_status,
+                "updated": False,
+                "message": f"Payment status synced. Current payment status: {payment_intent['status']}"
+            }
+    except Exception as e:
+        logger.error(f"Failed to sync payment status for sponsorship {sponsorship_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to sync payment status: {str(e)}"
+        )
 
 
 @moderator_router.post("/{sponsorship_id}/review", response_model=ReviewSponsorshipResponse)

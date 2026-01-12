@@ -837,6 +837,17 @@ export class ApiClient {
     });
   }
 
+  async checkSponsorshipPayment(id: string): Promise<{
+    status: string;
+    payment_status: string;
+    updated: boolean;
+    message: string;
+  }> {
+    return this.request(`/api/user/sponsorship/${id}/check-payment`, {
+      method: 'POST',
+    });
+  }
+
   // =============================================================================
   // Blog API endpoints
   // =============================================================================

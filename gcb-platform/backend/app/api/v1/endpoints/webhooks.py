@@ -46,11 +46,13 @@ async def stripe_webhook(
             SponsorshipRequest.payment_id == payment_intent_id
         ).first()
         
-        if sponsorship and sponsorship.status == "pending_payment":
-            # Update sponsorship status to pending for moderation
-            sponsorship.payment_status = "succeeded"
-            sponsorship.status = "pending"
-            db.commit()
+        if sponsorship:
+            # Update sponsorship status to pending for moderation if payment is pending
+            # This handles both initial webhook and cases where status might have been updated elsewhere
+            if sponsorship.status == "pending_payment" or sponsorship.payment_status != "succeeded":
+                sponsorship.payment_status = "succeeded"
+                sponsorship.status = "pending"
+                db.commit()
             
             # DEFERRED: Payment confirmation emails
             # Sponsorship payment confirmation email not yet implemented in EmailService

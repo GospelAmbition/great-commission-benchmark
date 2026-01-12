@@ -154,7 +154,19 @@ function SponsorshipPaymentForm({
         setError(confirmError.message || "Payment failed");
         toast.error(confirmError.message || "Payment failed");
       } else if (paymentIntent && paymentIntent.status === "succeeded") {
-        toast.success("Payment successful! Your sponsorship request has been submitted for review.");
+        // In test mode, check and update payment status immediately
+        try {
+          const checkResult = await apiClient.checkSponsorshipPayment(modelId);
+          if (checkResult.updated) {
+            toast.success(checkResult.message || "Payment confirmed! Your sponsorship request has been submitted for review.");
+          } else {
+            toast.success("Payment successful! Your sponsorship request has been submitted for review.");
+          }
+        } catch (err) {
+          // If check fails, still show success (webhook will handle it)
+          console.warn("Failed to check payment status:", err);
+          toast.success("Payment successful! Your sponsorship request has been submitted for review.");
+        }
         // Track successful sponsorship
         trackSponsorshipRequest("sponsorship", modelName);
         onSuccess();

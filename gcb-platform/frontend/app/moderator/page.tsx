@@ -128,13 +128,11 @@ export default function ModeratorDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Agreement Rate
+              Sponsorship Requests
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {stats?.agreement_rate ? `${(stats.agreement_rate * 100).toFixed(1)}%` : "—"}
-            </div>
+            <div className="text-3xl font-bold">{sponsorshipQueue.length || 0}</div>
           </CardContent>
         </Card>
       </div>

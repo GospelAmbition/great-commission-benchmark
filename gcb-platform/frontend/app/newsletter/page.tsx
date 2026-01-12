@@ -33,14 +33,30 @@ export default function NewsletterPage() {
     }
     setSubscribing(true);
     try {
-      // Get reCAPTCHA token
-      const recaptchaToken = await executeRecaptcha("newsletter_subscribe");
+      // Get reCAPTCHA token if configured
+      const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+      let recaptchaToken: string | null = null;
       
-      if (!recaptchaToken) {
-        toast.error("Security verification failed. Please try again.");
-        setSubscribing(false);
-        return;
+      if (siteKey) {
+        // Only try to get token if site key is configured
+        let retries = 2;
+        
+        while (!recaptchaToken && retries > 0) {
+          recaptchaToken = await executeRecaptcha("newsletter_subscribe");
+          if (!recaptchaToken && retries > 1) {
+            // Wait a bit before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          retries--;
+        }
+        
+        if (!recaptchaToken) {
+          toast.error("Security verification failed. Please wait a moment and try again.");
+          setSubscribing(false);
+          return;
+        }
       }
+      // If no site key, proceed without token (backend will handle it)
 
       const response = await fetch(`${API_URL}/api/newsletter/subscribe`, {
         method: "POST",
@@ -52,7 +68,16 @@ export default function NewsletterPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.message || "Failed to subscribe");
+        const errorMessage = errorData.detail || errorData.message || "Failed to subscribe";
+        
+        // Check if it's a reCAPTCHA error from backend
+        if (errorMessage.toLowerCase().includes("recaptcha") || errorMessage.toLowerCase().includes("security verification")) {
+          toast.error("Security verification failed. Please try again.");
+        } else {
+          throw new Error(errorMessage);
+        }
+        setSubscribing(false);
+        return;
       }
 
       const data = await response.json();
