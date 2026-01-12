@@ -63,27 +63,25 @@ async def stripe_webhook(
         
         # Handle sponsorship payments
         elif payment_type == "sponsorship":
-            sponsorship_id = metadata.get("sponsorship_id")
+            # Query by payment_id for reliability (consistent with payment_failed handler)
+            sponsorship = db.query(SponsorshipRequest).filter(
+                SponsorshipRequest.payment_id == payment_intent_id
+            ).first()
             
-            if sponsorship_id:
-                sponsorship = db.query(SponsorshipRequest).filter(
-                    SponsorshipRequest.id == sponsorship_id
-                ).first()
+            if sponsorship and sponsorship.status == "pending_payment":
+                # Update sponsorship status to pending for moderation
+                sponsorship.payment_status = "succeeded"
+                sponsorship.status = "pending"
+                db.commit()
                 
-                if sponsorship and sponsorship.status == "pending_payment":
-                    # Update sponsorship status to pending for moderation
-                    sponsorship.payment_status = "succeeded"
-                    sponsorship.status = "pending"
-                    db.commit()
-                    
-                    # DEFERRED: Payment confirmation emails
-                    # Sponsorship payment confirmation email not yet implemented in EmailService
-                    # When ready, uncomment:
-                    # await EmailService.send_sponsorship_payment_confirmed_email(
-                    #     sponsorship.user.email,
-                    #     str(sponsorship.id),
-                    #     sponsorship.openrouter_model_id or sponsorship.custom_model_name
-                    # )
+                # DEFERRED: Payment confirmation emails
+                # Sponsorship payment confirmation email not yet implemented in EmailService
+                # When ready, uncomment:
+                # await EmailService.send_sponsorship_payment_confirmed_email(
+                #     sponsorship.user.email,
+                #     str(sponsorship.id),
+                #     sponsorship.openrouter_model_id or sponsorship.custom_model_name
+                # )
     
     elif event_type == "payment_intent.payment_failed":
         # Payment failed - update status

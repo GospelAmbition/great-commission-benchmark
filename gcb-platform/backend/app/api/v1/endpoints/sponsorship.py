@@ -4,7 +4,7 @@ from decimal import Decimal
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, or_, and_
 from uuid import UUID
 from datetime import datetime
 
@@ -249,7 +249,17 @@ async def get_sponsorship_queue(
         query = query.filter(SponsorshipRequest.status == status)
     else:
         # Default: show pending requests (paid sponsorships and free requests)
-        query = query.filter(SponsorshipRequest.status == "pending")
+        # Include sponsorships with status="pending" OR status="pending_payment" with succeeded payment
+        # (handles edge case where webhook hasn't updated status yet)
+        query = query.filter(
+            or_(
+                SponsorshipRequest.status == "pending",
+                and_(
+                    SponsorshipRequest.status == "pending_payment",
+                    SponsorshipRequest.payment_status == "succeeded"
+                )
+            )
+        )
     
     if request_type:
         query = query.filter(SponsorshipRequest.request_type == request_type)
