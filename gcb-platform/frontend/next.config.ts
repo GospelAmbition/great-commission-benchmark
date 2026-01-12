@@ -4,7 +4,13 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   images: {
     remotePatterns: [
-      // Backend proxy for storage files (Railway buckets are private)
+      // Production backend (custom domain)
+      {
+        protocol: "https",
+        hostname: "api.greatcommissionbenchmark.ai",
+        pathname: "/api/files/**",
+      },
+      // Production backend (Railway URL - fallback)
       {
         protocol: "https",
         hostname: "backend-production-ba51.up.railway.app",

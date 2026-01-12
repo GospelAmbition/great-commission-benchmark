@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     NEXTAUTH_SECRET: str = ""
     
     # CORS (stored as string, parsed to list)
-    CORS_ORIGINS_STR: str = "http://localhost:3000,http://localhost:3001,https://frontend-production-8b79.up.railway.app"
+    CORS_ORIGINS_STR: str = "http://localhost:3000,http://localhost:3001,https://frontend-production-8b79.up.railway.app,https://greatcommissionbenchmark.ai,https://www.greatcommissionbenchmark.ai"
     
     @property
     def CORS_ORIGINS(self) -> List[str]:
