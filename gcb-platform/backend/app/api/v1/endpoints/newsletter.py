@@ -1,4 +1,5 @@
 """Newsletter API endpoints"""
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
@@ -8,8 +9,11 @@ from app.core.recaptcha import verify_recaptcha
 from app.db.models.newsletter_subscriber import NewsletterSubscriber
 from app.schemas.newsletter import (
     NewsletterSubscribeRequest,
-    NewsletterSubscribeResponse
+    NewsletterSubscribeResponse,
+    NewsletterUnsubscribeRequest,
+    NewsletterUnsubscribeResponse
 )
+from app.services.newsletter import NewsletterService
 
 router = APIRouter()
 
@@ -46,23 +50,76 @@ async def subscribe_newsletter(
                 message="Email already subscribed"
             )
         else:
-            # Reactivate
+            # Reactivate in database
             existing.is_active = True
+            existing.unsubscribed_at = None
+            
+            # Sync with MailerLite (reactivate)
+            mailerlite_id = await NewsletterService.reactivate_subscriber(request.email)
+            if mailerlite_id:
+                existing.mailerlite_subscriber_id = mailerlite_id
+            
             db.commit()
             return NewsletterSubscribeResponse(
                 success=True,
                 message="Subscription reactivated"
             )
     
-    # Create new subscription
+    # Create new subscription in database
     subscriber = NewsletterSubscriber(
         email=request.email,
         is_active=True
     )
     db.add(subscriber)
+    db.flush()  # Get the ID before syncing
+    
+    # Sync with MailerLite
+    mailerlite_id = await NewsletterService.sync_subscriber_to_mailerlite(request.email)
+    if mailerlite_id:
+        subscriber.mailerlite_subscriber_id = mailerlite_id
+    
     db.commit()
     
     return NewsletterSubscribeResponse(
         success=True,
         message="Successfully subscribed to newsletter"
+    )
+
+
+@router.post("/unsubscribe", response_model=NewsletterUnsubscribeResponse)
+async def unsubscribe_newsletter(
+    request: NewsletterUnsubscribeRequest,
+    db: Session = Depends(get_db)
+):
+    """Unsubscribe from newsletter"""
+    # Find subscriber
+    subscriber = db.query(NewsletterSubscriber).filter(
+        NewsletterSubscriber.email == request.email
+    ).first()
+    
+    if not subscriber:
+        # Don't reveal if email exists or not for privacy
+        return NewsletterUnsubscribeResponse(
+            success=True,
+            message="If subscribed, you have been unsubscribed"
+        )
+    
+    if not subscriber.is_active:
+        return NewsletterUnsubscribeResponse(
+            success=True,
+            message="Already unsubscribed"
+        )
+    
+    # Update database
+    subscriber.is_active = False
+    subscriber.unsubscribed_at = datetime.utcnow()
+    
+    # Sync with MailerLite
+    await NewsletterService.remove_subscriber_from_mailerlite(request.email)
+    
+    db.commit()
+    
+    return NewsletterUnsubscribeResponse(
+        success=True,
+        message="Successfully unsubscribed from newsletter"
     )

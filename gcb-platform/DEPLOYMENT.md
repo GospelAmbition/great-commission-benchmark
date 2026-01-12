@@ -20,6 +20,8 @@ Before deploying, ensure you have:
 - [ ] Stripe live account (with webhook configured)
 - [ ] PostgreSQL database provisioned
 - [ ] Railway Storage Bucket for blog images
+- [ ] Resend account for transactional emails
+- [ ] MailerLite account for newsletter (optional)
 - [ ] Domain name configured
 - [ ] SSL certificate (usually automatic with Railway)
 
@@ -88,9 +90,13 @@ RUNNER_API_KEY=your-secure-runner-key
 STRIPE_SECRET_KEY=sk_live_xxxxxxxx
 STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxx
 
-# Email
+# Email (Transactional)
 RESEND_API_KEY=re_xxxxxxxx
 EMAIL_FROM=Great Commission Benchmark <noreply@greatcommissionbenchmark.ai>
+
+# Newsletter (MailerLite)
+MAILERLITE_API_KEY=your-mailerlite-api-key
+MAILERLITE_GROUP_ID=your-group-id  # Optional: specific subscriber group
 
 # Storage (Railway Simple Storage - private buckets, served via backend proxy)
 S3_ACCESS_KEY_ID=your-railway-access-key

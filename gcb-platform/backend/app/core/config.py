@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     EMAIL_FROM: str = "Great Commission Benchmark <noreply@greatcommissionbenchmark.ai>"
     
+    # Newsletter (MailerLite)
+    MAILERLITE_API_KEY: str = ""
+    MAILERLITE_GROUP_ID: str = ""  # Optional: specific subscriber group ID
+    
     # S3-Compatible Storage (Railway Simple Storage or AWS S3)
     S3_ACCESS_KEY_ID: str = ""
     S3_SECRET_ACCESS_KEY: str = ""

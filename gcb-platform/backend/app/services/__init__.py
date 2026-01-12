@@ -3,6 +3,7 @@ from app.services.scoring import ScoringService
 from app.services.openrouter import OpenRouterClient
 from app.services.judge import JudgeService, JudgeResult
 from app.services.email import EmailService
+from app.services.newsletter import NewsletterService
 from app.services.payment import PaymentService
 from app.services.pricing import PricingService
 from app.services.question_management import QuestionManagementService
@@ -18,6 +19,7 @@ __all__ = [
     "JudgeResult",
     # Email and payments
     "EmailService",
+    "NewsletterService",
     "PaymentService",
     "PricingService",
     # Data management

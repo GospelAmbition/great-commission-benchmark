@@ -13,3 +13,15 @@ class NewsletterSubscribeResponse(BaseModel):
     """Newsletter subscription response"""
     success: bool
     message: str
+
+
+class NewsletterUnsubscribeRequest(BaseModel):
+    """Newsletter unsubscribe request"""
+    email: EmailStr
+    token: Optional[str] = None  # Optional verification token
+
+
+class NewsletterUnsubscribeResponse(BaseModel):
+    """Newsletter unsubscribe response"""
+    success: bool
+    message: str

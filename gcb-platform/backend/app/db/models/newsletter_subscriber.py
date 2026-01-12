@@ -1,5 +1,5 @@
 """NewsletterSubscriber model"""
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, String, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -13,5 +13,7 @@ class NewsletterSubscriber(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    mailerlite_subscriber_id = Column(String(255), nullable=True)
     subscribed_at = Column(DateTime(timezone=True), server_default=func.now())
     unsubscribed_at = Column(DateTime(timezone=True))
