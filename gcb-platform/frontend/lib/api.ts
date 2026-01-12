@@ -179,7 +179,8 @@ export class ApiClient {
   private static TOKEN_CACHE_DURATION_MS = 55 * 60 * 1000;
 
   constructor(baseUrl: string = API_URL) {
-    this.baseUrl = baseUrl;
+    // Remove trailing slash to prevent double slashes in URLs
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
 
   private async request<T>(
