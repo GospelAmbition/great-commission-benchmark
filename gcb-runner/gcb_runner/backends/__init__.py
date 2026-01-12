@@ -31,17 +31,26 @@ def get_backend(name: str, api_key: str | None = None, base_url: str | None = No
     """Factory function to get a configured backend."""
     match name:
         case "openrouter":
-            if not api_key:
-                raise ValueError("OpenRouter requires an API key")
-            return OpenRouterBackend(api_key)
+            if not api_key or not api_key.strip():
+                raise ValueError(
+                    "OpenRouter requires an API key. "
+                    "Please configure it using 'gcb-runner config' or 'gcb-runner menu' → Configure Backend."
+                )
+            return OpenRouterBackend(api_key.strip())
         case "openai":
-            if not api_key:
-                raise ValueError("OpenAI requires an API key")
-            return OpenAIBackend(api_key)
+            if not api_key or not api_key.strip():
+                raise ValueError(
+                    "OpenAI requires an API key. "
+                    "Please configure it using 'gcb-runner config' or 'gcb-runner menu' → Configure Backend."
+                )
+            return OpenAIBackend(api_key.strip())
         case "anthropic":
-            if not api_key:
-                raise ValueError("Anthropic requires an API key")
-            return AnthropicBackend(api_key)
+            if not api_key or not api_key.strip():
+                raise ValueError(
+                    "Anthropic requires an API key. "
+                    "Please configure it using 'gcb-runner config' or 'gcb-runner menu' → Configure Backend."
+                )
+            return AnthropicBackend(api_key.strip())
         case "lmstudio":
             return LMStudioBackend(base_url or "http://localhost:1234/v1")
         case "ollama":

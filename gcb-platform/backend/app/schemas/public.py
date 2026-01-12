@@ -196,3 +196,9 @@ class ComparisonResponse(GCBBaseModel):
     marketing_version: str
     models: List[ComparisonModelData]
     comparison: ComparisonData
+
+
+class StripePublishableKeyResponse(GCBBaseModel):
+    """Stripe publishable key response"""
+    publishable_key: Optional[str] = None
+    is_configured: bool

@@ -26,12 +26,10 @@ import {
   X
 } from "lucide-react";
 
-// Initialize Stripe only if key is provided
-const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
+// Stripe will be initialized dynamically with key from API
 
-// Sponsorship fee
-const SPONSORSHIP_FEE = 20.00;
+// Default sponsorship fee (fallback if pricing calculation fails)
+const DEFAULT_SPONSORSHIP_FEE = 20.00;
 
 interface Model {
   id: string;
@@ -40,17 +38,32 @@ interface Model {
   provider?: string;
 }
 
+interface CostBreakdown {
+  input_tokens: number;
+  estimated_output_tokens: number;
+  input_cost: number;
+  output_cost: number;
+  base_fee: number;
+  total: number;
+  prompt_cost_per_token: number;
+  completion_cost_per_token: number;
+  question_count: number;
+  version: string;
+}
+
 // Payment form component for sponsorships
 function SponsorshipPaymentForm({
   modelId,
   modelName,
   clientSecret,
+  costBreakdown,
   onSuccess,
   onCancel,
 }: {
   modelId: string;
   modelName: string;
   clientSecret: string;
+  costBreakdown: CostBreakdown | null;
   onSuccess: () => void;
   onCancel: () => void;
 }) {
@@ -154,17 +167,53 @@ function SponsorshipPaymentForm({
     }
   };
 
+  // Get the total amount to display
+  const totalAmount = costBreakdown?.total ?? DEFAULT_SPONSORSHIP_FEE;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="p-3 bg-muted rounded-lg">
+      <div className="p-3 bg-muted rounded-lg space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Model:</span>
           <span className="font-medium truncate ml-2">{modelName}</span>
         </div>
-        <div className="flex justify-between text-sm mt-1">
-          <span className="text-muted-foreground">Sponsorship Fee:</span>
-          <span className="font-bold text-[--ga-red]">${SPONSORSHIP_FEE.toFixed(2)}</span>
-        </div>
+        
+        {costBreakdown ? (
+          <>
+            <div className="border-t border-border/50 pt-2 mt-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Input tokens ({costBreakdown.input_tokens.toLocaleString()}):
+                </span>
+                <span>${costBreakdown.input_cost.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm mt-1">
+                <span className="text-muted-foreground">
+                  Output tokens (est. {costBreakdown.estimated_output_tokens.toLocaleString()}):
+                </span>
+                <span>${costBreakdown.output_cost.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm mt-1">
+                <span className="text-muted-foreground">Base fee:</span>
+                <span>${costBreakdown.base_fee.toFixed(2)}</span>
+              </div>
+            </div>
+            <div className="border-t border-border/50 pt-2 mt-2">
+              <div className="flex justify-between text-sm font-bold">
+                <span>Total:</span>
+                <span className="text-[--ga-red]">${costBreakdown.total.toFixed(2)}</span>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Based on {costBreakdown.question_count} questions (v{costBreakdown.version})
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex justify-between text-sm mt-1">
+            <span className="text-muted-foreground">Sponsorship Fee:</span>
+            <span className="font-bold text-[--ga-red]">${DEFAULT_SPONSORSHIP_FEE.toFixed(2)}</span>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -211,7 +260,7 @@ function SponsorshipPaymentForm({
           ) : (
             <>
               <DollarSign className="h-4 w-4 mr-1" />
-              Pay ${SPONSORSHIP_FEE.toFixed(2)}
+              Pay ${totalAmount.toFixed(2)}
             </>
           )}
         </Button>
@@ -246,11 +295,15 @@ export function SponsorModelCard() {
     clientSecret: string;
     sponsorshipId: string;
     modelName: string;
+    costBreakdown: CostBreakdown | null;
   } | null>(null);
   
   // User's sponsorships
   const [sponsorships, setSponsorships] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  
+  // Stripe initialization
+  const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
 
   // Close list when clicking outside
   useEffect(() => {
@@ -262,6 +315,23 @@ export function SponsorModelCard() {
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fetch Stripe publishable key from API
+  useEffect(() => {
+    async function initializeStripe() {
+      try {
+        const response = await apiClient.getStripePublishableKey();
+        if (response.publishable_key && response.is_configured) {
+          setStripePromise(loadStripe(response.publishable_key));
+        } else {
+          console.warn("Stripe is not configured");
+        }
+      } catch (error) {
+        console.error("Failed to load Stripe publishable key:", error);
+      }
+    }
+    initializeStripe();
   }, []);
 
   useEffect(() => {
@@ -333,6 +403,7 @@ export function SponsorModelCard() {
           clientSecret: response.client_secret,
           sponsorshipId: response.id,
           modelName: selectedModelName || selectedModel,
+          costBreakdown: response.cost_breakdown || null,
         });
         setShowPayment(true);
       } else {
@@ -447,6 +518,7 @@ export function SponsorModelCard() {
                 modelId={paymentData.sponsorshipId}
                 modelName={paymentData.modelName}
                 clientSecret={paymentData.clientSecret}
+                costBreakdown={paymentData.costBreakdown}
                 onSuccess={handlePaymentSuccess}
                 onCancel={handlePaymentCancel}
               />
@@ -578,15 +650,18 @@ export function SponsorModelCard() {
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
+                    Calculating Cost...
                   </>
                 ) : (
                   <>
                     <DollarSign className="h-4 w-4 mr-1" />
-                    Sponsor Test (${SPONSORSHIP_FEE})
+                    Sponsor Test
                   </>
                 )}
               </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Cost varies by model. Includes $20 base fee + API costs.
+              </p>
 
               {/* Toggle to custom mode */}
               <button

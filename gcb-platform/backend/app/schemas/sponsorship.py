@@ -1,10 +1,25 @@
 """Sponsorship API schemas"""
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Dict, Any
+from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, validator
 from datetime import datetime
 from uuid import UUID
 
 from app.schemas.common import GCBBaseModel
+
+
+class CostBreakdown(BaseModel):
+    """Cost breakdown for sponsorship pricing"""
+    input_tokens: int
+    estimated_output_tokens: int
+    input_cost: float  # In USD
+    output_cost: float  # In USD
+    base_fee: float  # In USD
+    total: float  # In USD
+    prompt_cost_per_token: float
+    completion_cost_per_token: float
+    question_count: int
+    version: str
 
 
 class CreateSponsorshipRequest(BaseModel):
@@ -43,6 +58,7 @@ class CreateSponsorshipResponse(GCBBaseModel):
     payment_intent_id: Optional[str] = None
     client_secret: Optional[str] = None  # Stripe client secret for payment
     message: str
+    cost_breakdown: Optional[CostBreakdown] = None  # Cost breakdown for sponsorships
 
 
 class SponsorshipItem(GCBBaseModel):

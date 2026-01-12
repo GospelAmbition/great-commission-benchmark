@@ -99,7 +99,8 @@ async def upload_submission(
                 "model_name": model_name,
                 "version": version
             },
-            customer_email=current_user.email
+            customer_email=current_user.email,
+            db=db  # Pass db session to use database config
         )
         
         # Create submission record with payment pending

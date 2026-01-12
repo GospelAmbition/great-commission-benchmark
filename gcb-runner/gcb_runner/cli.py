@@ -307,18 +307,20 @@ def test(
         raise typer.Exit(1)
     
     backend_config = cfg.get_backend_config(backend)
-    if backend in ["openrouter", "openai", "anthropic"] and not backend_config.api_key:
-        console.print(f"[red]Error: {backend} API key not configured.[/red]")
-        console.print("Run 'gcb-runner config' to set up your API key.")
-        raise typer.Exit(1)
+    if backend in ["openrouter", "openai", "anthropic"]:
+        if not backend_config.api_key or not backend_config.api_key.strip():
+            console.print(f"[red]Error: {backend} API key not configured.[/red]")
+            console.print("Run 'gcb-runner config' to set up your API key.")
+            raise typer.Exit(1)
     
     # Validate judge backend if explicitly set
     if judge_backend:
         judge_backend_config = cfg.get_backend_config(judge_backend)
-        if judge_backend in ["openrouter", "openai", "anthropic"] and not judge_backend_config.api_key:
-            console.print(f"[red]Error: {judge_backend} API key not configured for judge backend.[/red]")
-            console.print("Run 'gcb-runner config' to set up your API key.")
-            raise typer.Exit(1)
+        if judge_backend in ["openrouter", "openai", "anthropic"]:
+            if not judge_backend_config.api_key or not judge_backend_config.api_key.strip():
+                console.print(f"[red]Error: {judge_backend} API key not configured for judge backend.[/red]")
+                console.print("Run 'gcb-runner config' to set up your API key.")
+                raise typer.Exit(1)
     
     if dry_run:
         console.print("[green]✓ Configuration valid[/green]")

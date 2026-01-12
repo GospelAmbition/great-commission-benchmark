@@ -1,11 +1,12 @@
 """Donations API endpoints"""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
 from decimal import Decimal
+from sqlalchemy.orm import Session
 
 from app.services.payment import PaymentService
-from app.core.config import settings
+from app.core.auth import get_db
 
 router = APIRouter()
 
@@ -24,14 +25,18 @@ class CreateDonationIntentResponse(BaseModel):
 
 
 @router.post("/create-intent", response_model=CreateDonationIntentResponse)
-async def create_donation_intent(request: CreateDonationIntentRequest):
+async def create_donation_intent(
+    request: CreateDonationIntentRequest,
+    db: Session = Depends(get_db)
+):
     """
     Create a Stripe payment intent for a donation.
     
     No authentication required - anyone can donate.
     """
-    # Check if Stripe is configured
-    if not settings.STRIPE_SECRET_KEY:
+    # Check if Stripe is configured (from database or environment)
+    keys = PaymentService.get_stripe_keys(db)
+    if not keys.get("secret_key"):
         raise HTTPException(
             status_code=503,
             detail="Payment processing is not configured"
@@ -47,7 +52,8 @@ async def create_donation_intent(request: CreateDonationIntentRequest):
         payment_intent = PaymentService.create_payment_intent(
             amount=Decimal(str(request.amount)),
             metadata=metadata,
-            customer_email=request.email
+            customer_email=request.email,
+            db=db  # Pass db session to use database config
         )
         
         return CreateDonationIntentResponse(

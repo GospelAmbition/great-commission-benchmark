@@ -43,6 +43,18 @@ async def run_benchmark(
     db = ResultsDB()
     
     backend_config = config.get_backend_config(backend)
+    
+    # Validate API key for cloud backends before initializing
+    if backend in ["openrouter", "openai", "anthropic"]:
+        if not backend_config.api_key or not backend_config.api_key.strip():
+            console.print(f"[red]Error: {backend.title()} API key is not configured.[/red]")
+            console.print()
+            console.print("Please configure it using one of these methods:")
+            console.print("  • Run: [cyan]gcb-runner config[/cyan]")
+            console.print("  • Run: [cyan]gcb-runner menu[/cyan] → Configure Backend")
+            console.print()
+            raise ValueError(f"{backend.title()} API key is required")
+    
     model_backend = get_backend(
         backend,
         api_key=backend_config.api_key,
@@ -66,6 +78,18 @@ async def run_benchmark(
     
     # Initialize judge backend
     judge_backend_config = config.get_backend_config(judge_backend)
+    
+    # Validate API key for cloud judge backends before initializing
+    if judge_backend in ["openrouter", "openai", "anthropic"]:
+        if not judge_backend_config.api_key or not judge_backend_config.api_key.strip():
+            console.print(f"[red]Error: {judge_backend.title()} API key is not configured for judge backend.[/red]")
+            console.print()
+            console.print("Please configure it using one of these methods:")
+            console.print("  • Run: [cyan]gcb-runner config[/cyan]")
+            console.print("  • Run: [cyan]gcb-runner menu[/cyan] → Configure Backend")
+            console.print()
+            raise ValueError(f"{judge_backend.title()} API key is required for judge backend")
+    
     judge_backend_instance = get_backend(
         judge_backend,
         api_key=judge_backend_config.api_key,

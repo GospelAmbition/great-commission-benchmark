@@ -68,6 +68,21 @@ class OpenRouterBackend:
                     error_msg = error_data["error"].get("message", error_msg)
             except Exception:
                 pass
+            
+            # Provide helpful error messages for common authentication issues
+            if response.status_code == 401:
+                if "cookie" in error_msg.lower() or "auth" in error_msg.lower():
+                    raise RuntimeError(
+                        f"OpenRouter API authentication failed (401): {error_msg}\n"
+                        "This usually means your API key is missing, invalid, or expired.\n"
+                        "Please check your API key configuration using 'gcb-runner config' or 'gcb-runner menu'."
+                    )
+                else:
+                    raise RuntimeError(
+                        f"OpenRouter API authentication failed (401): {error_msg}\n"
+                        "Please verify your API key is correct and has not expired."
+                    )
+            
             raise RuntimeError(f"OpenRouter API error ({response.status_code}): {error_msg}")
         
         data: dict[str, Any] = response.json()

@@ -1,5 +1,7 @@
 """Sponsorship API endpoints"""
 from typing import Optional
+from decimal import Decimal
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -11,9 +13,11 @@ from app.core.config import settings
 from app.db.models.user import User
 from app.db.models.sponsorship_request import SponsorshipRequest
 from app.services.payment import PaymentService
+from app.services.pricing import PricingService
 from app.schemas.sponsorship import (
     CreateSponsorshipRequest,
     CreateSponsorshipResponse,
+    CostBreakdown,
     SponsorshipItem,
     SponsorshipListResponse,
     SponsorshipQueueItem,
@@ -23,14 +27,16 @@ from app.schemas.sponsorship import (
     ReviewSponsorshipResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 # User-facing sponsorship endpoints
 user_router = APIRouter()
 
 # Moderator sponsorship endpoints
 moderator_router = APIRouter()
 
-# Flat fee for sponsorship in cents
-SPONSORSHIP_FEE_CENTS = 2000  # $20.00
+# Fallback flat fee for sponsorship in cents (used if pricing calculation fails)
+FALLBACK_FEE_CENTS = 2000  # $20.00
 
 
 @user_router.post("", response_model=CreateSponsorshipResponse)
@@ -45,6 +51,36 @@ async def create_sponsorship(
     
     # For sponsorship: require payment
     if request.request_type == "sponsorship":
+        # Calculate sponsorship cost based on model pricing and question tokens
+        cost_breakdown = None
+        payment_amount = Decimal(FALLBACK_FEE_CENTS) / 100  # Default fallback
+        
+        try:
+            cost_data = await PricingService.calculate_sponsorship_cost(
+                model_id=request.openrouter_model_id,
+                db=db
+            )
+            payment_amount = cost_data["total"]
+            
+            # Convert to CostBreakdown schema
+            cost_breakdown = CostBreakdown(
+                input_tokens=cost_data["input_tokens"],
+                estimated_output_tokens=cost_data["estimated_output_tokens"],
+                input_cost=float(cost_data["input_cost"]),
+                output_cost=float(cost_data["output_cost"]),
+                base_fee=float(cost_data["base_fee"]),
+                total=float(cost_data["total"]),
+                prompt_cost_per_token=float(cost_data["prompt_cost_per_token"]),
+                completion_cost_per_token=float(cost_data["completion_cost_per_token"]),
+                question_count=cost_data["question_count"],
+                version=cost_data["version"],
+            )
+            logger.info(f"Calculated sponsorship cost for {model_name}: ${payment_amount}")
+        except Exception as e:
+            logger.warning(f"Failed to calculate sponsorship cost for {model_name}: {e}")
+            # Fall back to flat fee if pricing calculation fails
+            payment_amount = Decimal(FALLBACK_FEE_CENTS) / 100
+        
         # Create sponsorship request with pending_payment status
         sponsorship = SponsorshipRequest(
             user_id=current_user.id,
@@ -67,9 +103,10 @@ async def create_sponsorship(
         
         try:
             payment_intent = PaymentService.create_payment_intent(
-                amount=SPONSORSHIP_FEE_CENTS,
+                amount=payment_amount,
                 metadata=metadata,
-                customer_email=current_user.email
+                customer_email=current_user.email,
+                db=db  # Pass db session to use database config
             )
             
             # Update sponsorship with payment info
@@ -85,7 +122,8 @@ async def create_sponsorship(
                 payment_required=True,
                 payment_intent_id=payment_intent["id"],
                 client_secret=payment_intent["client_secret"],
-                message="Please complete payment to submit your sponsorship request"
+                message="Please complete payment to submit your sponsorship request",
+                cost_breakdown=cost_breakdown
             )
         except Exception as e:
             db.rollback()
@@ -113,6 +151,51 @@ async def create_sponsorship(
             status="pending",
             payment_required=False,
             message="Your model request has been submitted for review"
+        )
+
+
+@user_router.get("/estimate-cost", response_model=CostBreakdown)
+async def estimate_sponsorship_cost(
+    model_id: str = Query(..., description="OpenRouter model ID"),
+    db: Session = Depends(get_db)
+):
+    """
+    Estimate the cost of sponsoring a model test.
+    
+    Returns a cost breakdown including:
+    - Input token cost (based on current version's questions)
+    - Estimated output token cost (with 10% margin)
+    - Base fee ($20)
+    - Total cost
+    
+    This endpoint does not require authentication and can be used
+    to preview costs before initiating a sponsorship request.
+    """
+    try:
+        cost_data = await PricingService.calculate_sponsorship_cost(
+            model_id=model_id,
+            db=db
+        )
+        
+        return CostBreakdown(
+            input_tokens=cost_data["input_tokens"],
+            estimated_output_tokens=cost_data["estimated_output_tokens"],
+            input_cost=float(cost_data["input_cost"]),
+            output_cost=float(cost_data["output_cost"]),
+            base_fee=float(cost_data["base_fee"]),
+            total=float(cost_data["total"]),
+            prompt_cost_per_token=float(cost_data["prompt_cost_per_token"]),
+            completion_cost_per_token=float(cost_data["completion_cost_per_token"]),
+            question_count=cost_data["question_count"],
+            version=cost_data["version"],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to estimate sponsorship cost for {model_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to calculate cost estimate. Please try again later."
         )
 
 

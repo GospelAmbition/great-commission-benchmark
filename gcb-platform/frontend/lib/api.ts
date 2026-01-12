@@ -135,6 +135,11 @@ export interface CategoryRankingsResponse {
   benchmark_version: string;
 }
 
+export interface StripePublishableKeyResponse {
+  publishable_key: string | null;
+  is_configured: boolean;
+}
+
 export interface CompareResponse {
   models: Array<{
     model_id: string;
@@ -378,6 +383,10 @@ export class ApiClient {
   async getCategoryRankings(params?: { limit_per_category?: number }): Promise<CategoryRankingsResponse> {
     const query = this.buildQueryString(params);
     return this.request<CategoryRankingsResponse>(`/api/public/category-rankings${query}`);
+  }
+
+  async getStripePublishableKey(): Promise<StripePublishableKeyResponse> {
+    return this.request<StripePublishableKeyResponse>('/api/public/stripe/publishable-key');
   }
 
   async compareModels(modelIds: string[]): Promise<CompareResponse> {
@@ -713,6 +722,18 @@ export class ApiClient {
     payment_intent_id?: string;
     client_secret?: string;
     message: string;
+    cost_breakdown?: {
+      input_tokens: number;
+      estimated_output_tokens: number;
+      input_cost: number;
+      output_cost: number;
+      base_fee: number;
+      total: number;
+      prompt_cost_per_token: number;
+      completion_cost_per_token: number;
+      question_count: number;
+      version: string;
+    };
   }> {
     return this.request('/api/user/sponsorship', {
       method: 'POST',

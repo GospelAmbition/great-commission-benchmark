@@ -16,6 +16,7 @@ from app.db.models.result import Result
 from app.db.models.question import Question
 from app.services.scoring import ScoringService
 from app.services.openrouter import OpenRouterClient
+from app.services.payment import PaymentService
 from app.schemas.public import (
     LeaderboardResponse,
     LeaderboardEntry,
@@ -29,7 +30,8 @@ from app.schemas.public import (
     VersionsResponse,
     VersionInfo,
     StatsResponse,
-    ComparisonResponse
+    ComparisonResponse,
+    StripePublishableKeyResponse
 )
 from app.db.models.model_version_stats import ModelVersionStats
 
@@ -1178,3 +1180,20 @@ async def _refresh_category_rankings_cache(cache_key: str, limit_per_category: i
         logger.error(f"Background refresh failed for {cache_key}: {e}")
     finally:
         await cache.unmark_refreshing(cache_key)
+
+
+@router.get("/stripe/publishable-key", response_model=StripePublishableKeyResponse)
+async def get_stripe_publishable_key(
+    db: Session = Depends(get_db)
+):
+    """
+    Get the Stripe publishable key for frontend use.
+    This endpoint is public and safe to expose the publishable key.
+    """
+    keys = PaymentService.get_stripe_keys(db)
+    publishable_key = keys.get("publishable_key")
+    
+    return StripePublishableKeyResponse(
+        publishable_key=publishable_key,
+        is_configured=bool(publishable_key)
+    )

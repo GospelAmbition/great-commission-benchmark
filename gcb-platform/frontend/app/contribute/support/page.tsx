@@ -7,16 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 import { Heart, Server, Users, Shield, ChevronLeft, Check, Lock } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { trackDonationInitiated, trackDonationCompleted } from "@/lib/analytics";
 
-// Initialize Stripe only if key is provided
-const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
+// Stripe will be initialized dynamically with key from API
 
 // Preset donation amounts
 const PRESET_AMOUNTS = [10, 25, 50, 100];
@@ -229,6 +227,24 @@ function DonationSuccess({ amount }: { amount?: number }) {
 
 export default function SupportPage() {
   const [donationComplete, setDonationComplete] = useState(false);
+  const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
+
+  // Fetch Stripe publishable key from API
+  useEffect(() => {
+    async function initializeStripe() {
+      try {
+        const response = await apiClient.getStripePublishableKey();
+        if (response.publishable_key && response.is_configured) {
+          setStripePromise(loadStripe(response.publishable_key));
+        } else {
+          console.warn("Stripe is not configured");
+        }
+      } catch (error) {
+        console.error("Failed to load Stripe publishable key:", error);
+      }
+    }
+    initializeStripe();
+  }, []);
 
   return (
     <div className="container py-8 max-w-4xl">
@@ -346,7 +362,7 @@ export default function SupportPage() {
                     Payment processing is not configured.
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Please set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY to enable donations.
+                    Please configure Stripe in the admin panel to enable donations.
                   </p>
                 </div>
               )}
