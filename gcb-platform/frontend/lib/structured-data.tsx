@@ -374,7 +374,7 @@ export function buildWebPageSchema(page: {
 /**
  * Helper component to render JSON-LD in pages
  */
-export function JsonLdScript({ data }: { data: JsonLd | JsonLd[] }): JSX.Element {
+export function JsonLdScript({ data }: { data: JsonLd | JsonLd[] }): React.ReactNode {
   const jsonLd = Array.isArray(data) ? data : [data];
   
   return (

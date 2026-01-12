@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Table,
@@ -127,7 +127,7 @@ function TotalScore({ score }: { score: number }) {
   );
 }
 
-export default function LeaderboardPage() {
+function LeaderboardContent() {
   const searchParams = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
@@ -664,5 +664,22 @@ export default function LeaderboardPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LeaderboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="container py-8">
+        <Skeleton className="h-12 w-64 mb-8" />
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      </div>
+    }>
+      <LeaderboardContent />
+    </Suspense>
   );
 }

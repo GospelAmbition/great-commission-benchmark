@@ -132,7 +132,12 @@ export function generatePageMetadata({
   keywords?: string[];
   noIndex?: boolean;
   openGraph?: Partial<NonNullable<Metadata["openGraph"]>>;
-  twitter?: Partial<NonNullable<Metadata["twitter"]>>;
+  twitter?: Partial<NonNullable<Metadata["twitter"]>> & {
+    label1?: string;
+    data1?: string;
+    label2?: string;
+    data2?: string;
+  };
   additionalMeta?: Partial<Metadata>;
 }): Metadata {
   const canonicalUrl = getCanonicalUrl(path);
@@ -152,12 +157,14 @@ export function generatePageMetadata({
     alternates: {
       canonical: canonicalUrl,
     },
-    openGraph: getDefaultOpenGraph({
-      title: fullTitle,
-      description,
-      url: canonicalUrl,
+    openGraph: {
+      ...getDefaultOpenGraph({
+        title: fullTitle,
+        description,
+        url: canonicalUrl,
+      }),
       ...openGraph,
-    }),
+    },
     twitter: {
       ...getDefaultTwitterCard({
         title: fullTitle,

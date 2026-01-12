@@ -141,7 +141,7 @@ function ComparePageContent() {
           {comparison.models.length > 1 ? "s" : ""}
         </p>
         <Button asChild variant="outline" size="sm" className="mt-4">
-          <Link href={`/leaderboard?models=${comparison.models.map(m => encodeURIComponent(m.model_id || m.id || "")).filter(Boolean).join(",")}`}>
+          <Link href={`/leaderboard?models=${comparison.models.map(m => encodeURIComponent(m.model_id || "")).filter(Boolean).join(",")}`}>
             ← Change Selection
           </Link>
         </Button>
