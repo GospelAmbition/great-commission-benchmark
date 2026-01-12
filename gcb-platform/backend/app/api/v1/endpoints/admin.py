@@ -6,6 +6,9 @@ from sqlalchemy import func, desc
 from uuid import UUID
 from datetime import datetime, timedelta
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 from app.core.auth import get_db
 from app.core.auth import require_admin
@@ -1589,6 +1592,7 @@ async def get_stripe_balance(
         balance = PaymentService.get_balance(db)
         return StripeBalanceResponse(**balance)
     except Exception as e:
+        logger.error(f"Error getting Stripe balance: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1612,6 +1616,7 @@ async def list_stripe_transactions(
         )
         return StripeTransactionsResponse(**transactions)
     except Exception as e:
+        logger.error(f"Error listing Stripe transactions: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1658,6 +1663,7 @@ async def list_stripe_charges(
         )
         return StripeChargesResponse(**charges)
     except Exception as e:
+        logger.error(f"Error listing Stripe charges: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1681,4 +1687,5 @@ async def list_stripe_refunds(
         )
         return StripeRefundsResponse(**refunds)
     except Exception as e:
+        logger.error(f"Error listing Stripe refunds: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

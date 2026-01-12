@@ -208,9 +208,14 @@ export default function AdminPaymentsPage() {
       if (response.ok) {
         const data = await response.json();
         setBalance(data);
+      } else {
+        const error = await response.json().catch(() => ({ detail: "Failed to load balance" }));
+        console.error("Failed to load balance:", error);
+        toast.error(error.detail || "Failed to load balance");
       }
     } catch (error) {
       console.error("Failed to load balance:", error);
+      toast.error("Failed to load balance");
     } finally {
       setBalanceLoading(false);
     }
@@ -234,9 +239,18 @@ export default function AdminPaymentsPage() {
         if (data.data.length > 0) {
           setChargesCursor(data.data[data.data.length - 1].id);
         }
+      } else {
+        const error = await response.json().catch(() => ({ detail: "Failed to load charges" }));
+        console.error("Failed to load charges:", error);
+        if (!cursor) {
+          toast.error(error.detail || "Failed to load charges");
+        }
       }
     } catch (error) {
       console.error("Failed to load charges:", error);
+      if (!cursor) {
+        toast.error("Failed to load charges");
+      }
     } finally {
       setChargesLoading(false);
     }
@@ -260,9 +274,18 @@ export default function AdminPaymentsPage() {
         if (data.data.length > 0) {
           setTransactionsCursor(data.data[data.data.length - 1].id);
         }
+      } else {
+        const error = await response.json().catch(() => ({ detail: "Failed to load transactions" }));
+        console.error("Failed to load transactions:", error);
+        if (!cursor) {
+          toast.error(error.detail || "Failed to load transactions");
+        }
       }
     } catch (error) {
       console.error("Failed to load transactions:", error);
+      if (!cursor) {
+        toast.error("Failed to load transactions");
+      }
     } finally {
       setTransactionsLoading(false);
     }
@@ -286,9 +309,18 @@ export default function AdminPaymentsPage() {
         if (data.data.length > 0) {
           setRefundsCursor(data.data[data.data.length - 1].id);
         }
+      } else {
+        const error = await response.json().catch(() => ({ detail: "Failed to load refunds" }));
+        console.error("Failed to load refunds:", error);
+        if (!cursor) {
+          toast.error(error.detail || "Failed to load refunds");
+        }
       }
     } catch (error) {
       console.error("Failed to load refunds:", error);
+      if (!cursor) {
+        toast.error("Failed to load refunds");
+      }
     } finally {
       setRefundsLoading(false);
     }
