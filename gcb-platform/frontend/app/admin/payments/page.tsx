@@ -162,6 +162,18 @@ export default function AdminPaymentsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingConfig, setDeletingConfig] = useState(false);
 
+  // Test current config state
+  const [testingCurrentConfig, setTestingCurrentConfig] = useState(false);
+  const [currentConfigTestResult, setCurrentConfigTestResult] = useState<{
+    success: boolean;
+    error?: string;
+    message?: string;
+    config_source?: string;
+    is_restricted_key?: boolean;
+    account_id?: string;
+    business_name?: string;
+  } | null>(null);
+
   // Load config on mount
   useEffect(() => {
     if (!userLoading && !user) {
@@ -411,6 +423,26 @@ export default function AdminPaymentsPage() {
     }
   }
 
+  async function testCurrentConfig() {
+    setTestingCurrentConfig(true);
+    setCurrentConfigTestResult(null);
+    try {
+      const response = await fetch("/api/admin/stripe/config/test-current");
+      const data = await response.json();
+      setCurrentConfigTestResult(data);
+      if (data.success) {
+        toast.success(data.message || "Configuration test successful!");
+      } else {
+        toast.error(data.error || "Configuration test failed");
+      }
+    } catch (error) {
+      console.error("Configuration test failed:", error);
+      toast.error("Failed to test configuration");
+    } finally {
+      setTestingCurrentConfig(false);
+    }
+  }
+
   function formatCurrency(amount: number, currency: string) {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -483,6 +515,15 @@ export default function AdminPaymentsPage() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              {config?.is_configured && (
+                <Button
+                  variant="outline"
+                  onClick={testCurrentConfig}
+                  disabled={testingCurrentConfig}
+                >
+                  {testingCurrentConfig ? "Testing..." : "Test Configuration"}
+                </Button>
+              )}
               {config?.source === "database" && (
                 <Button
                   variant="outline"
@@ -541,19 +582,54 @@ export default function AdminPaymentsPage() {
                 <div className="pt-4 border-t">
                   <Label className="text-muted-foreground mb-2 block">Account Balance</Label>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg">
-                      <p className="text-sm text-muted-foreground">Available</p>
+                    <div className="p-4 bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded-lg">
+                      <p className="text-sm text-green-700 dark:text-green-300">Available</p>
                       <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                         {balance.available.map(b => formatCurrency(b.amount, b.currency)).join(", ") || "$0.00"}
                       </p>
                     </div>
-                    <div className="p-4 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
-                      <p className="text-sm text-muted-foreground">Pending</p>
+                    <div className="p-4 bg-yellow-50 dark:bg-yellow-900/40 border border-yellow-200 dark:border-yellow-700 rounded-lg">
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300">Pending</p>
                       <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                         {balance.pending.map(b => formatCurrency(b.amount, b.currency)).join(", ") || "$0.00"}
                       </p>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Configuration Test Result */}
+              {currentConfigTestResult && (
+                <div className="pt-4 border-t">
+                  <Alert variant={currentConfigTestResult.success ? "default" : "destructive"}>
+                    <AlertTitle>
+                      {currentConfigTestResult.success ? "✓ Configuration Valid" : "✗ Configuration Error"}
+                    </AlertTitle>
+                    <AlertDescription>
+                      {currentConfigTestResult.success ? (
+                        <div className="space-y-1 mt-2">
+                          <p>{currentConfigTestResult.message || "Connection to Stripe successful."}</p>
+                          {currentConfigTestResult.config_source && (
+                            <p className="text-sm text-muted-foreground">
+                              Source: <span className="capitalize">{currentConfigTestResult.config_source}</span>
+                            </p>
+                          )}
+                          {currentConfigTestResult.business_name && (
+                            <p className="text-sm text-muted-foreground">
+                              Business: {currentConfigTestResult.business_name}
+                            </p>
+                          )}
+                          {currentConfigTestResult.is_restricted_key && (
+                            <p className="text-sm text-muted-foreground">
+                              Using restricted API key (limited account details)
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p>{currentConfigTestResult.error}</p>
+                      )}
+                    </AlertDescription>
+                  </Alert>
                 </div>
               )}
             </div>

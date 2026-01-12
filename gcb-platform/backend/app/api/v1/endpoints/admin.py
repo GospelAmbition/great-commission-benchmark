@@ -1562,6 +1562,26 @@ async def test_stripe_credentials(
     return StripeConfigTestResponse(**result)
 
 
+@router.get("/stripe/config/test-current", response_model=StripeConfigTestResponse)
+async def test_current_stripe_config(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Test the currently active Stripe configuration (from DB or environment)"""
+    keys = PaymentService.get_stripe_keys(db)
+    
+    if not keys.get("secret_key"):
+        return StripeConfigTestResponse(
+            success=False,
+            error="No Stripe API key configured. Please configure Stripe credentials first."
+        )
+    
+    result = PaymentService.test_connection(keys["secret_key"])
+    # Add source information to the result
+    result["config_source"] = keys.get("source", "unknown")
+    return StripeConfigTestResponse(**result)
+
+
 @router.delete("/stripe/config")
 async def delete_stripe_config(
     current_user: User = Depends(require_admin),

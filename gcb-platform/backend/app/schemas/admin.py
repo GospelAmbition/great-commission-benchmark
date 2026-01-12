@@ -258,6 +258,9 @@ class StripeConfigTestResponse(BaseModel):
     default_currency: Optional[str] = None
     charges_enabled: Optional[bool] = None
     payouts_enabled: Optional[bool] = None
+    is_restricted_key: Optional[bool] = None
+    message: Optional[str] = None
+    config_source: Optional[str] = None  # "database" or "environment"
 
 
 class StripeBalanceResponse(BaseModel):
