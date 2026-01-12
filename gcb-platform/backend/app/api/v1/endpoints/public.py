@@ -919,14 +919,34 @@ async def get_stats(response: Response, db: Session = Depends(get_db)):
     current_qs = db.query(QuestionSet).filter(QuestionSet.status == "active").first()
     current_version = current_qs.semantic_version if current_qs else "1.0"
     
-    # Count models tested
-    total_models_tested = db.query(Model).filter(Model.is_active == True).count()
+    # Count models tested - only models with completed test runs for current benchmark
+    if current_qs:
+        total_models_tested = db.query(Model).join(TestRun).filter(
+            Model.is_active == True,
+            TestRun.question_set_id == current_qs.id,
+            TestRun.status == "completed"
+        ).distinct().count()
+    else:
+        total_models_tested = 0
     
-    # Count test runs
-    total_test_runs = db.query(TestRun).filter(TestRun.status == "completed").count()
+    # Count test runs - only for current benchmark
+    if current_qs:
+        total_test_runs = db.query(TestRun).filter(
+            TestRun.question_set_id == current_qs.id,
+            TestRun.status == "completed"
+        ).count()
+    else:
+        total_test_runs = 0
     
-    # Calculate top and average scores
-    completed_tests = db.query(TestRun).filter(TestRun.status == "completed").all()
+    # Calculate top and average scores - only for current benchmark
+    if current_qs:
+        completed_tests = db.query(TestRun).filter(
+            TestRun.question_set_id == current_qs.id,
+            TestRun.status == "completed"
+        ).all()
+    else:
+        completed_tests = []
+    
     scores = []
     for test in completed_tests:
         try:
@@ -938,8 +958,14 @@ async def get_stats(response: Response, db: Session = Depends(get_db)):
     top_score = max(scores) if scores else 0.0
     average_score = sum(scores) / len(scores) if scores else 0.0
     
-    # Count providers
-    providers_represented = db.query(Model.provider).distinct().count()
+    # Count providers - only providers with models tested in current benchmark
+    if current_qs:
+        providers_represented = db.query(Model.provider).join(TestRun).filter(
+            TestRun.question_set_id == current_qs.id,
+            TestRun.status == "completed"
+        ).distinct().count()
+    else:
+        providers_represented = 0
     
     result = StatsResponse(
         total_models_tested=total_models_tested,
