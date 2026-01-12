@@ -58,6 +58,59 @@ function SponsorshipPaymentForm({
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [textColor, setTextColor] = useState("#fafafa"); // Default to white for dark mode
+  const [placeholderColor, setPlaceholderColor] = useState("rgba(255, 255, 255, 0.5)");
+
+  // Get the foreground color from CSS variables to support theme switching
+  useEffect(() => {
+    const rgbToHex = (rgb: string): string => {
+      // Extract RGB values from "rgb(r, g, b)" or "rgba(r, g, b, a)"
+      const match = rgb.match(/\d+/g);
+      if (!match || match.length < 3) return "#fafafa";
+      
+      const r = parseInt(match[0], 10);
+      const g = parseInt(match[1], 10);
+      const b = parseInt(match[2], 10);
+      
+      return "#" + [r, g, b].map(x => {
+        const hex = x.toString(16);
+        return hex.length === 1 ? "0" + hex : hex;
+      }).join("");
+    };
+    
+    const getForegroundColor = (): string => {
+      if (typeof window !== "undefined") {
+        // Try to get the actual computed color by checking a test element
+        const testEl = document.createElement("div");
+        testEl.style.color = "var(--foreground)";
+        testEl.style.position = "absolute";
+        testEl.style.visibility = "hidden";
+        document.body.appendChild(testEl);
+        const computedColor = getComputedStyle(testEl).color;
+        document.body.removeChild(testEl);
+        
+        // If we got a valid RGB/RGBA color, convert to hex
+        if (computedColor && computedColor.startsWith("rgb")) {
+          return rgbToHex(computedColor);
+        }
+        
+        // Fallback: check if we're in dark mode
+        const isDark = document.documentElement.classList.contains("dark") || 
+                      !document.documentElement.classList.contains("light");
+        return isDark ? "#fafafa" : "#09090b";
+      }
+      return "#fafafa";
+    };
+    
+    const color = getForegroundColor();
+    setTextColor(color);
+    
+    // Set placeholder color based on theme
+    const isDark = typeof window !== "undefined" && 
+                   (document.documentElement.classList.contains("dark") || 
+                    !document.documentElement.classList.contains("light"));
+    setPlaceholderColor(isDark ? "rgba(255, 255, 255, 0.5)" : "rgba(0, 0, 0, 0.5)");
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,13 +175,13 @@ function SponsorshipPaymentForm({
               style: {
                 base: {
                   fontSize: "14px",
-                  color: "#424770",
+                  color: textColor,
                   "::placeholder": {
-                    color: "#aab7c4",
+                    color: placeholderColor,
                   },
                 },
                 invalid: {
-                  color: "#9e2146",
+                  color: "#ef4444",
                 },
               },
             }}
