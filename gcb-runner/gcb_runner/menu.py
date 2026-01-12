@@ -489,12 +489,13 @@ def configure_backend() -> None:
 
 
 def configure_judge() -> None:
-    """Configure the judge model."""
+    """Configure the judge model and backend."""
     console.print()
     cfg = Config.load()
     
+    # Judge model selection
+    console.print("[bold]Judge Model Configuration[/bold]")
     console.print("[dim]openai/gpt-oss-20b is the standard judge for consistent scoring.[/dim]")
-    console.print("[dim]The judge will use your configured backend (local or cloud).[/dim]")
     console.print()
     
     judge_models = [
@@ -522,11 +523,56 @@ def configure_judge() -> None:
             cfg.defaults.judge_model = custom_judge
         elif 0 <= judge_idx < len(judge_models):
             cfg.defaults.judge_model = judge_models[judge_idx][0]
-        cfg.save()
         console.print(f"[green]✓ Judge model set to: {cfg.defaults.judge_model}[/green]")
     except (ValueError, IndexError):
-        console.print("[yellow]No changes made[/yellow]")
+        console.print("[yellow]No changes made to judge model[/yellow]")
     
+    console.print()
+    
+    # Judge backend selection
+    console.print("[bold]Judge Backend Configuration[/bold]")
+    console.print("[dim]You can run the judge locally (lmstudio/ollama) to save tokens, while testing models on Open Router.[/dim]")
+    console.print()
+    
+    judge_backend_options = [
+        ("auto-detect", "auto-detect (use same as test backend, or openrouter if test is local)"),
+        ("lmstudio", "lmstudio (local)"),
+        ("ollama", "ollama (local)"),
+        ("openrouter", "openrouter"),
+        ("openai", "openai"),
+        ("anthropic", "anthropic"),
+    ]
+    
+    table = Table(box=box.ROUNDED, show_header=False)
+    table.add_column("#", style="bold green", width=3)
+    table.add_column("Backend", style="cyan")
+    
+    for i, (key, name) in enumerate(judge_backend_options, 1):
+        current_backend = cfg.defaults.judge_backend or "auto-detect"
+        marker = " ← current" if key == current_backend else ""
+        table.add_row(str(i), name + marker)
+    
+    console.print(table)
+    console.print()
+    
+    judge_backend_choice = Prompt.ask("Select judge backend (number)", default="1")
+    
+    try:
+        judge_backend_idx = int(judge_backend_choice) - 1
+        if 0 <= judge_backend_idx < len(judge_backend_options):
+            selected_backend = judge_backend_options[judge_backend_idx][0]
+            if selected_backend == "auto-detect":
+                cfg.defaults.judge_backend = None
+                console.print("[green]✓ Judge backend set to: auto-detect[/green]")
+            else:
+                cfg.defaults.judge_backend = selected_backend
+                console.print(f"[green]✓ Judge backend set to: {selected_backend}[/green]")
+        else:
+            console.print("[yellow]No changes made to judge backend[/yellow]")
+    except (ValueError, IndexError):
+        console.print("[yellow]No changes made to judge backend[/yellow]")
+    
+    cfg.save()
     console.print()
     Prompt.ask("[dim]Press Enter to continue[/dim]", default="")
 
@@ -543,6 +589,8 @@ def view_config() -> None:
         for name, bc in cfg.backends.items()
     ]) if cfg.backends else "  [dim]None configured[/dim]"
     
+    judge_backend_display = cfg.defaults.judge_backend or "auto-detect"
+    
     console.print(Panel(
         f"[bold]Configuration File:[/bold] {config_path}\n\n"
         f"[bold]Platform[/bold]\n"
@@ -550,7 +598,8 @@ def view_config() -> None:
         f"  API Key: {'*' * 20 if cfg.platform.api_key else '[dim]not set[/dim]'}\n\n"
         f"[bold]Defaults[/bold]\n"
         f"  Backend: {cfg.defaults.backend}\n"
-        f"  Judge Model: {cfg.defaults.judge_model}\n\n"
+        f"  Judge Model: {cfg.defaults.judge_model}\n"
+        f"  Judge Backend: {judge_backend_display}\n\n"
         f"[bold]Configured Backends[/bold]\n{backends_str}",
         border_style="blue"
     ))
