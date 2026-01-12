@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PostEditor } from "@/components/blog/PostEditor";
 import { ImageUploader } from "@/components/blog/ImageUploader";
-import { ArrowLeft, Save, Send, Loader2 } from "lucide-react";
+import { ChevronLeft, Save, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface BlogCategory {
@@ -173,7 +173,7 @@ export default function NewBlogPostPage() {
       <div className="flex items-center gap-4 mb-8">
         <Link href="/blog-manager">
           <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>

@@ -10,6 +10,7 @@ import { Alert } from "@/components/ui/alert";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { Upload, FileText, X } from "lucide-react";
+import { trackTestSubmission } from "@/lib/analytics";
 
 interface CliSubmissionUploadProps {
   open: boolean;
@@ -149,6 +150,9 @@ export function CliSubmissionUpload({ open, onOpenChange, onSuccess }: CliSubmis
 
       // Success
       toast.success(response.message || "Submission uploaded successfully");
+      
+      // Track test submission
+      trackTestSubmission(preview?.model || "Unknown", "cli");
 
       if (response.payment_required) {
         if (response.payment_url) {

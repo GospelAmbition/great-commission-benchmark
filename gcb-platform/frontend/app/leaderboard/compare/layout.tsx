@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { generatePageMetadata } from "@/lib/seo";
+import { buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
 
 export const metadata: Metadata = generatePageMetadata({
   title: "Compare AI Models",
@@ -13,5 +14,16 @@ export default function CompareLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: "Home", path: "/" },
+    { name: "Leaderboard", path: "/leaderboard" },
+    { name: "Compare Models", path: "/leaderboard/compare" },
+  ]);
+
+  return (
+    <>
+      <JsonLdScript data={breadcrumbSchema} />
+      {children}
+    </>
+  );
 }

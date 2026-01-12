@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PostEditor } from "@/components/blog/PostEditor";
 import { ImageUploader } from "@/components/blog/ImageUploader";
-import { ArrowLeft, Save, Send, Eye, EyeOff, Loader2, ExternalLink } from "lucide-react";
+import { ChevronLeft, Save, Send, Eye, EyeOff, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 interface BlogCategory {
@@ -283,7 +283,7 @@ export default function EditBlogPostPage() {
         <div className="flex items-center gap-4">
           <Link href="/blog-manager">
             <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
           </Link>
           <div>

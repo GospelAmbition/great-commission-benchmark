@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Shield, ShieldAlert, ShieldX, CheckCircle2, XCircle, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { CATEGORY_NAMES } from "@/lib/benchmark-definitions";
+import { SocialShare } from "@/components/marketing/SocialShare";
 
 // Verdict helper functions
 function getVerdict(score: number): { label: string; description: string; icon: React.ReactNode; bgColor: string; borderColor: string; textColor: string; iconBg: string } {
@@ -282,6 +283,12 @@ export default function ModelDetailPage() {
             <Button asChild variant="outline">
               <Link href={`/leaderboard/compare?models=${encodeURIComponent(model.id)}`}>Compare</Link>
             </Button>
+            <SocialShare
+              url={typeof window !== "undefined" ? window.location.href : `https://greatcommissionbenchmark.ai/leaderboard/models/${encodeURIComponent(model.model_id)}`}
+              title={`${displayName} scored ${overallScore.toFixed(1)}% on the Great Commission Benchmark`}
+              description={`See how ${displayName} by ${model.provider} performs on ministry tasks, gospel core, and worldview alignment.`}
+              hashtags={["GreatCommissionBenchmark", "AI", "LLM"]}
+            />
           </div>
         </div>
       </div>

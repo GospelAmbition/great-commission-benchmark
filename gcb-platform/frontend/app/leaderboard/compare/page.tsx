@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Shield, ShieldAlert, ShieldX, CheckCircle2, Trophy, Crown, Medal, ArrowRight, ChevronRight } from "lucide-react";
+import { Shield, ShieldAlert, ShieldX, CheckCircle2, Trophy, Crown, Medal, ChevronRight } from "lucide-react";
 
 // Verdict helper
 function getVerdict(score: number): { label: string; icon: React.ReactNode; color: string; bgColor: string } {
@@ -235,7 +235,7 @@ function ComparePageContent() {
                 <Button asChild variant="outline" className="w-full">
                   <Link href={`/leaderboard/models/${encodeURIComponent(model.model_id)}`}>
                     View Details
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <ChevronRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               </CardContent>

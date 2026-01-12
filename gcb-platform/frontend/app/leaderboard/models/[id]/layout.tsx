@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { generateModelMetadata } from "@/lib/seo";
-import { buildSoftwareApplicationSchema, JsonLdScript } from "@/lib/structured-data";
+import { buildSoftwareApplicationSchema, buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
 import { apiClient } from "@/lib/api";
 import { getDisplayModelName } from "@/lib/model-utils";
 
@@ -25,7 +25,7 @@ export async function generateMetadata({
       tier2Score: model.tier2_score,
       tier3Score: model.tier3_score,
     });
-  } catch (error) {
+  } catch {
     // Fallback metadata if model fetch fails
     return {
       title: "Model Details",
@@ -57,9 +57,15 @@ export default async function ModelLayout({
       testCount: model.test_count,
     });
     
+    const breadcrumbSchema = buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Leaderboard", path: "/leaderboard" },
+      { name: modelName, path: `/leaderboard/models/${encodeURIComponent(model.model_id)}` },
+    ]);
+    
     return (
       <>
-        <JsonLdScript data={softwareSchema} />
+        <JsonLdScript data={[softwareSchema, breadcrumbSchema]} />
         {children}
       </>
     );

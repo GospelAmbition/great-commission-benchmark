@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { generateProfileMetadata } from "@/lib/seo";
-import { buildProfilePageSchema, JsonLdScript } from "@/lib/structured-data";
-import { apiClient } from "@/lib/api";
+import { buildProfilePageSchema, buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
 
 export async function generateMetadata({
   params,
@@ -41,9 +40,14 @@ export default async function ProfileLayout({
       displayName: id,
     });
     
+    const breadcrumbSchema = buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Profile", path: `/profile/${id}` },
+    ]);
+    
     return (
       <>
-        <JsonLdScript data={profileSchema} />
+        <JsonLdScript data={[profileSchema, breadcrumbSchema]} />
         {children}
       </>
     );

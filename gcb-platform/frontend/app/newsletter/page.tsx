@@ -10,6 +10,7 @@ import { Mail, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { API_URL } from "@/lib/api";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
+import { trackNewsletterSignup } from "@/lib/analytics";
 
 export default function NewsletterPage() {
   const { data: session } = useSession();
@@ -57,6 +58,8 @@ export default function NewsletterPage() {
       const data = await response.json();
       toast.success(data.message || "Successfully subscribed to newsletter");
       setIsSubscribed(true);
+      // Track conversion
+      trackNewsletterSignup("newsletter_page");
     } catch (error) {
       console.error("Failed to subscribe to newsletter:", error);
       toast.error(error instanceof Error ? error.message : "Failed to subscribe to newsletter");

@@ -1,6 +1,15 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Metadata } from "next";
+import { generatePageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = generatePageMetadata({
+  title: "Page Not Found",
+  description: "The page you're looking for doesn't exist or has been moved. Return to the Great Commission Benchmark homepage or explore our leaderboard.",
+  path: "/404",
+  noIndex: true, // Don't index error pages
+});
 
 export default function NotFound() {
   return (

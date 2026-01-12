@@ -14,7 +14,7 @@ import { apiClient } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Mail, ArrowRight } from "lucide-react";
+import { Mail, ChevronRight } from "lucide-react";
 
 interface UserProfile {
   name: string;
@@ -203,7 +203,7 @@ export default function SettingsPage() {
           <Button asChild className="w-full sm:w-auto">
             <Link href="/newsletter">
               Subscribe to Newsletter
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ChevronRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
           {user?.email && (

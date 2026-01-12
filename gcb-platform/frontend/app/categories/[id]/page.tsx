@@ -18,7 +18,7 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TopPerformersChart } from "@/components/charts/TopPerformersChart";
 import { ProviderIcon } from "@/components/ui/provider-icon";
-import { ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { TIER_INFO, CATEGORY_NAMES, CATEGORY_DESCRIPTIONS, getTierForCategory } from "@/lib/benchmark-definitions";
 
 const CATEGORY_INFO: Record<string, { name: string; description: string; tier: string }> = {
@@ -156,7 +156,7 @@ export default function CategoryPage() {
       <div className="mb-8">
         <Button asChild variant="ghost" className="mb-4 gap-2">
           <Link href="/categories">
-            <ArrowLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" />
             Back to Categories
           </Link>
         </Button>

@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
+import { trackSponsorshipRequest } from "@/lib/analytics";
 import { 
   Sparkles, 
   MessageSquare, 
@@ -88,6 +89,8 @@ function SponsorshipPaymentForm({
         toast.error(confirmError.message || "Payment failed");
       } else if (paymentIntent && paymentIntent.status === "succeeded") {
         toast.success("Payment successful! Your sponsorship request has been submitted for review.");
+        // Track successful sponsorship
+        trackSponsorshipRequest("sponsorship", modelName);
         onSuccess();
       }
     } catch (err: any) {
@@ -311,6 +314,8 @@ export function SponsorModelCard() {
       });
 
       toast.success(response.message);
+      // Track custom request
+      trackSponsorshipRequest("request", customModelName.trim());
       loadData();
       setCustomModelName("");
       setCustomMessage("");

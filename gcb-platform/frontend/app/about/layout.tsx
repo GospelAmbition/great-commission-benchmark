@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { generatePageMetadata } from "@/lib/seo";
+import { buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
 
 export const metadata: Metadata = generatePageMetadata({
   title: "About the Great Commission Benchmark",
@@ -13,5 +14,15 @@ export default function AboutLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: "Home", path: "/" },
+    { name: "About", path: "/about" },
+  ]);
+
+  return (
+    <>
+      <JsonLdScript data={breadcrumbSchema} />
+      {children}
+    </>
+  );
 }

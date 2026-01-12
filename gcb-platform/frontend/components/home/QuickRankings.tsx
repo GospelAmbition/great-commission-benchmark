@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ProviderIcon } from "@/components/ui/provider-icon";
 
@@ -121,8 +121,8 @@ export function QuickRankings({ rankings }: QuickRankingsProps) {
                   </span>
                 </div>
                 
-                {/* Arrow indicator */}
-                <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                {/* Chevron indicator */}
+                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
               </div>
             </div>
           </Link>

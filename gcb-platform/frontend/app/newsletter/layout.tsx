@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { generatePageMetadata } from "@/lib/seo";
+import { buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
 
 export const metadata: Metadata = generatePageMetadata({
   title: "Newsletter Signup",
@@ -13,5 +14,15 @@ export default function NewsletterLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: "Home", path: "/" },
+    { name: "Newsletter", path: "/newsletter" },
+  ]);
+
+  return (
+    <>
+      <JsonLdScript data={breadcrumbSchema} />
+      {children}
+    </>
+  );
 }

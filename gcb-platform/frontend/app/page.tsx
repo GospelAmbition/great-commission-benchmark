@@ -6,7 +6,7 @@ import { QuickRankings } from "@/components/home/QuickRankings";
 import { apiClient, StatsResponse } from "@/lib/api";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, BarChart3, BookOpen } from "lucide-react";
+import { ChevronRight, BarChart3, BookOpen } from "lucide-react";
 import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 
 export default function Home() {
@@ -101,7 +101,7 @@ export default function Home() {
           <Button asChild variant="outline" className="hidden md:flex">
             <Link href="/leaderboard">
               View All
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ChevronRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         </div>
@@ -120,7 +120,7 @@ export default function Home() {
           <Button asChild variant="outline">
             <Link href="/leaderboard">
               View Full Leaderboard
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ChevronRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         </div>

@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
-import { Heart, Server, Users, Shield, ArrowLeft, Check, Lock } from "lucide-react";
+import { Heart, Server, Users, Shield, ChevronLeft, Check, Lock } from "lucide-react";
 import { useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
+import { trackDonationInitiated, trackDonationCompleted } from "@/lib/analytics";
 
 // Initialize Stripe only if key is provided
 const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
@@ -56,6 +57,9 @@ function DonationForm({ onSuccess }: { onSuccess: () => void }) {
     setError(null);
 
     try {
+      // Track donation initiation
+      trackDonationInitiated(actualAmount);
+      
       // Create payment intent on backend
       const { client_secret } = await apiClient.createDonationIntent(
         actualAmount,
@@ -84,6 +88,8 @@ function DonationForm({ onSuccess }: { onSuccess: () => void }) {
         toast.error(confirmError.message || "Payment failed");
       } else if (paymentIntent && paymentIntent.status === "succeeded") {
         toast.success("Thank you for your donation!");
+        // Track successful donation
+        trackDonationCompleted(actualAmount);
         onSuccess();
       }
     } catch (err: any) {
@@ -231,7 +237,7 @@ export default function SupportPage() {
         href="/contribute" 
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
       >
-        <ArrowLeft className="h-4 w-4 mr-1" />
+        <ChevronLeft className="h-4 w-4 mr-1" />
         Back to Contribute
       </Link>
 

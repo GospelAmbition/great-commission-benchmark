@@ -1,79 +1,179 @@
-/**
- * Default Open Graph Image
- * 
- * Note: For dynamic image generation, install @vercel/og:
- *   npm install @vercel/og
- * 
- * Then uncomment the ImageResponse code below and remove the static image reference.
- * 
- * For now, this file serves as a placeholder. Create a static og-image.png
- * file in the public directory (1200x630px) and reference it in metadata.
- */
+import { ImageResponse } from "@vercel/og";
+import { SITE_CONFIG, OG_IMAGE_SIZE } from "@/lib/seo";
 
-import { SITE_CONFIG } from "@/lib/seo";
+// Route segment config
+export const runtime = "edge";
 
-export const alt = SITE_CONFIG.name;
-export const size = {
-  width: 1200,
-  height: 630,
-};
-
+// Image metadata
+export const alt = "Great Commission Benchmark - Evaluating AI for Ministry";
+export const size = OG_IMAGE_SIZE;
 export const contentType = "image/png";
 
-// Static image approach - create public/og-image.png (1200x630px)
-// For dynamic generation, install @vercel/og and use ImageResponse:
-/*
-import { ImageResponse } from "@vercel/og";
-
-export default async function Image() {
+// Default OG image generation
+export default function OGImage() {
   return new ImageResponse(
     (
       <div
         style={{
-          fontSize: 60,
-          background: "linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)",
-          width: "100%",
           height: "100%",
+          width: "100%",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          color: "white",
-          fontFamily: "Inter, sans-serif",
+          backgroundColor: "#0a0a0a",
+          backgroundImage:
+            "radial-gradient(circle at 25% 25%, #1a0a0a 0%, transparent 50%), radial-gradient(circle at 75% 75%, #0a1a1a 0%, transparent 50%)",
         }}
       >
+        {/* Logo and cross symbol */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: "40px",
+          }}
+        >
+          <div
+            style={{
+              width: "100px",
+              height: "100px",
+              background: "linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%)",
+              borderRadius: "20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <svg
+              width="60"
+              height="60"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="12" y1="4" x2="12" y2="20" />
+              <line x1="5" y1="9" x2="19" y2="9" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Title */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 20,
-            padding: 40,
+            justifyContent: "center",
+          }}
+        >
+          <h1
+            style={{
+              fontSize: "64px",
+              fontWeight: "bold",
+              color: "white",
+              margin: "0 0 20px 0",
+              textAlign: "center",
+              letterSpacing: "-1px",
+            }}
+          >
+            {SITE_CONFIG.name}
+          </h1>
+          <p
+            style={{
+              fontSize: "28px",
+              color: "#a3a3a3",
+              margin: "0",
+              textAlign: "center",
+              maxWidth: "800px",
+              lineHeight: "1.4",
+            }}
+          >
+            Evaluating AI for the Great Commission
+          </p>
+        </div>
+
+        {/* Three tier indicators */}
+        <div
+          style={{
+            display: "flex",
+            gap: "40px",
+            marginTop: "60px",
           }}
         >
           <div
             style={{
-              fontSize: 72,
-              fontWeight: "bold",
-              background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
-              backgroundClip: "text",
-              WebkitBackgroundClip: "text",
-              color: "transparent",
-              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              padding: "20px 40px",
+              backgroundColor: "rgba(185, 28, 28, 0.1)",
+              borderRadius: "12px",
+              border: "1px solid rgba(185, 28, 28, 0.3)",
             }}
           >
-            {SITE_CONFIG.name}
+            <span style={{ color: "#b91c1c", fontSize: "24px", fontWeight: "bold" }}>
+              Tier 1
+            </span>
+            <span style={{ color: "#737373", fontSize: "16px", marginTop: "4px" }}>
+              Task Capability
+            </span>
           </div>
           <div
             style={{
-              fontSize: 32,
-              color: "#a3a3a3",
-              textAlign: "center",
-              maxWidth: 900,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              padding: "20px 40px",
+              backgroundColor: "rgba(185, 28, 28, 0.1)",
+              borderRadius: "12px",
+              border: "1px solid rgba(185, 28, 28, 0.3)",
             }}
           >
-            {SITE_CONFIG.description}
+            <span style={{ color: "#b91c1c", fontSize: "24px", fontWeight: "bold" }}>
+              Tier 2
+            </span>
+            <span style={{ color: "#737373", fontSize: "16px", marginTop: "4px" }}>
+              Gospel Core
+            </span>
           </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              padding: "20px 40px",
+              backgroundColor: "rgba(185, 28, 28, 0.1)",
+              borderRadius: "12px",
+              border: "1px solid rgba(185, 28, 28, 0.3)",
+            }}
+          >
+            <span style={{ color: "#b91c1c", fontSize: "24px", fontWeight: "bold" }}>
+              Tier 3
+            </span>
+            <span style={{ color: "#737373", fontSize: "16px", marginTop: "4px" }}>
+              Worldview
+            </span>
+          </div>
+        </div>
+
+        {/* URL */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "40px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span style={{ color: "#737373", fontSize: "20px" }}>
+            greatcommissionbenchmark.ai
+          </span>
         </div>
       </div>
     ),
@@ -81,12 +181,4 @@ export default async function Image() {
       ...size,
     }
   );
-}
-*/
-
-// Placeholder - Next.js will look for opengraph-image.png in the same directory
-// or use the metadata openGraph.image setting
-export default function Image() {
-  // This will be handled by Next.js metadata or a static image file
-  return null;
 }

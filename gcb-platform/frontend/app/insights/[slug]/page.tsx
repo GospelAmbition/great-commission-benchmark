@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Tag } from "lucide-react";
+import { ChevronLeft, Tag } from "lucide-react";
 
 interface BlogCategory {
   id: string;
@@ -101,7 +101,7 @@ export default function BlogPostPage() {
       <div className="w-full py-8 max-w-[800px] mx-auto px-4">
         <Link href="/insights">
           <Button variant="ghost" className="mb-8">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ChevronLeft className="h-4 w-4 mr-2" />
             Back to Insights
           </Button>
         </Link>
@@ -125,7 +125,7 @@ export default function BlogPostPage() {
       {/* Back Button */}
       <Link href="/insights">
         <Button variant="ghost" className="mb-8">
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ChevronLeft className="h-4 w-4 mr-2" />
           Back to Insights
         </Button>
       </Link>
@@ -222,7 +222,7 @@ export default function BlogPostPage() {
         </div>
         <Link href="/insights">
           <Button variant="outline">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ChevronLeft className="h-4 w-4 mr-2" />
             More Articles
           </Button>
         </Link>

@@ -580,8 +580,7 @@ export default function LeaderboardPage() {
                             <TableCell className="py-3">
                               <Button asChild variant="ghost" size="sm" className="h-7 px-2">
                                 <Link href={`/leaderboard/models/${encodeURIComponent(item.model_id)}`}>
-                                  View
-                                  <ChevronRight className="h-4 w-4 ml-1" />
+                                  <ChevronRight className="h-4 w-4" />
                                 </Link>
                               </Button>
                             </TableCell>

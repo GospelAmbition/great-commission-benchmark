@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { ArticleIcon } from "@/lib/icons";
 
 interface BlogCategory {
@@ -202,7 +202,7 @@ export default function InsightsPage() {
                   )}
                   <Link href={`/insights/${post.slug}`}>
                     <Button variant="link" className="p-0 h-auto text-primary">
-                      Read more <ArrowRight className="h-4 w-4 ml-1" />
+                      Read more <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </Link>
                 </CardContent>

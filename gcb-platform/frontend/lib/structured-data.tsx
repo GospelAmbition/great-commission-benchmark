@@ -196,6 +196,11 @@ export function buildArticleSchema(article: {
   modifiedAt?: string;
   author?: string;
   imageUrl?: string;
+  tags?: string[];
+  categories?: { name: string; slug: string }[];
+  section?: string;
+  wordCount?: number;
+  readingTime?: number;
 }): JsonLd {
   return {
     "@context": "https://schema.org",
@@ -229,6 +234,25 @@ export function buildArticleSchema(article: {
         url: article.imageUrl,
       },
     }),
+    // Enhanced metadata
+    ...(article.tags && article.tags.length > 0 && {
+      keywords: article.tags.join(", "),
+    }),
+    ...(article.categories && article.categories.length > 0 && {
+      articleSection: article.categories.map(c => c.name).join(", "),
+    }),
+    ...(article.section && {
+      articleSection: article.section,
+    }),
+    ...(article.wordCount && {
+      wordCount: article.wordCount,
+    }),
+    ...(article.readingTime && {
+      timeRequired: `PT${article.readingTime}M`,
+    }),
+    // Additional schema.org properties
+    isAccessibleForFree: true,
+    inLanguage: "en-US",
   };
 }
 
