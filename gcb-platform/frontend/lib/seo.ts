@@ -136,7 +136,7 @@ export function generatePageMetadata({
   additionalMeta?: Partial<Metadata>;
 }): Metadata {
   const canonicalUrl = getCanonicalUrl(path);
-  const fullTitle = title.includes(SITE_CONFIG.name) ? title : `${title} | ${SITE_CONFIG.name}`;
+  const fullTitle: string = title.includes(SITE_CONFIG.name) ? title : `${title} | ${SITE_CONFIG.name}`;
   const allKeywords = [...SITE_CONFIG.keywords, ...keywords];
 
   return {

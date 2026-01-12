@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Shield, ShieldAlert, ShieldX, CheckCircle2, Trophy, Crown, Medal, ChevronRight } from "lucide-react";
+import { Shield, ShieldAlert, ShieldX, CheckCircle2, Trophy, Crown, Medal, ChevronRight, Plus } from "lucide-react";
 
 // Verdict helper
 function getVerdict(score: number): { label: string; icon: React.ReactNode; color: string; bgColor: string } {
@@ -242,6 +242,23 @@ function ComparePageContent() {
             </Card>
           );
         })}
+
+        {/* Placeholder card when only 1 model is selected */}
+        {rankedModels.length === 1 && (
+          <Link href="/leaderboard" className="block">
+            <Card className="h-full border-2 border-dashed border-muted-foreground/30 bg-muted/5 hover:border-muted-foreground/50 hover:bg-muted/10 transition-all cursor-pointer">
+              <CardContent className="h-full flex flex-col items-center justify-center py-12 space-y-4">
+                <div className="p-4 rounded-full bg-muted/20">
+                  <Plus className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <div className="text-center">
+                  <p className="text-muted-foreground font-medium">Select Another Model</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">Compare side-by-side</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
       </div>
 
       {/* Category Heatmap */}
