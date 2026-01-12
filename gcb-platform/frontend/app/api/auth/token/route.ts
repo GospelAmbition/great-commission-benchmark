@@ -7,7 +7,9 @@ export async function GET(request: Request) {
   const session = await auth()
   
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    // Return 200 with null token instead of 401 to avoid console errors
+    // The frontend handles null tokens gracefully for public endpoints
+    return NextResponse.json({ token: null })
   }
 
   // Create a JWT token for the backend

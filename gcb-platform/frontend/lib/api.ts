@@ -173,10 +173,13 @@ export class ApiClient {
   // Token caching to avoid redundant /api/auth/token requests
   private cachedToken: string | null = null;
   private tokenExpiresAt: number = 0;
+  private tokenChecked: boolean = false; // Track if we've checked for a token
   private pendingTokenRequest: Promise<string | null> | null = null;
   
   // Cache token for 55 minutes (token is valid for 1 hour)
   private static TOKEN_CACHE_DURATION_MS = 55 * 60 * 1000;
+  // Cache "no token" state for 5 minutes to avoid repeated requests when logged out
+  private static NO_TOKEN_CACHE_DURATION_MS = 5 * 60 * 1000;
 
   constructor(baseUrl: string = API_URL) {
     // Remove trailing slash to prevent double slashes in URLs
@@ -227,6 +230,11 @@ export class ApiClient {
       return this.cachedToken;
     }
     
+    // Return null early if we've already checked and there's no token (cache the "logged out" state)
+    if (this.tokenChecked && !this.cachedToken && Date.now() < this.tokenExpiresAt) {
+      return null;
+    }
+    
     // If there's already a pending request, wait for it instead of making a new one
     if (this.pendingTokenRequest) {
       return this.pendingTokenRequest;
@@ -250,9 +258,14 @@ export class ApiClient {
         const data = await response.json();
         const token = data.token || null;
         
+        this.tokenChecked = true;
         if (token) {
           this.cachedToken = token;
           this.tokenExpiresAt = Date.now() + ApiClient.TOKEN_CACHE_DURATION_MS;
+        } else {
+          // Cache the "no token" state to avoid repeated requests when logged out
+          this.cachedToken = null;
+          this.tokenExpiresAt = Date.now() + ApiClient.NO_TOKEN_CACHE_DURATION_MS;
         }
         
         return token;
@@ -264,10 +277,11 @@ export class ApiClient {
     return null;
   }
   
-  // Clear cached token (useful for logout)
+  // Clear cached token (useful for logout or login state changes)
   public clearTokenCache(): void {
     this.cachedToken = null;
     this.tokenExpiresAt = 0;
+    this.tokenChecked = false;
     this.pendingTokenRequest = null;
   }
 
