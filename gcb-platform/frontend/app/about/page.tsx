@@ -1,20 +1,64 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { MenuBookIcon } from "@/lib/icons";
-import { Target, Grid3X3, Shield } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { MenuBookIcon, ArticleIcon } from "@/lib/icons";
+import { Target, Grid3X3, Shield, Tag, Calendar, ChevronRight, FileText, Users } from "lucide-react";
 import { TestingCategoryCard } from "@/components/benchmark/TestingCategoryCard";
+import { apiClient } from "@/lib/api";
 import {
   TIER_CATEGORIES,
   CATEGORY_NAMES,
   CATEGORY_DESCRIPTIONS,
 } from "@/lib/benchmark-definitions";
 
+interface VersionInfo {
+  semantic_version: string;
+  marketing_version: string;
+  status: string;
+  release_date?: string;
+  question_count: number;
+  tier_distribution?: {
+    tier1: number;
+    tier2: number;
+    tier3: number;
+  };
+  models_tested?: number;
+}
+
 export default function AboutPage() {
   const [activeTab, setActiveTab] = useState("methodology");
+  const [versions, setVersions] = useState<VersionInfo[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadVersions() {
+      try {
+        const data = await apiClient.getVersions();
+        // The API returns versions with different structure, transform to our interface
+        const transformedVersions = (data.versions || []).map((v: any) => ({
+          semantic_version: v.semantic_version,
+          marketing_version: v.marketing_version,
+          status: v.status,
+          release_date: v.release_date,
+          question_count: v.question_count,
+          tier_distribution: v.tier_distribution,
+          models_tested: v.models_tested,
+        }));
+        setVersions(transformedVersions);
+      } catch (error) {
+        console.error("Failed to load versions:", error);
+      } finally {
+        setVersionsLoading(false);
+      }
+    }
+    loadVersions();
+  }, []);
+
   return (
     <div className="flex flex-col">
       {/* Page Header */}
@@ -49,6 +93,10 @@ export default function AboutPage() {
             <TabsTrigger value="guardrails" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Shield className="h-4 w-4 mr-1.5" />
               Guardrails
+            </TabsTrigger>
+            <TabsTrigger value="versions" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Tag className="h-4 w-4 mr-1.5" />
+              Versions
             </TabsTrigger>
           </TabsList>
 
@@ -833,6 +881,217 @@ export default function AboutPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="versions" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Benchmark Versions</CardTitle>
+                <p className="text-muted-foreground text-sm mt-2">
+                  The Great Commission Benchmark evolves over time. Each version represents a snapshot of the testing methodology, 
+                  questions, and scoring criteria. Browse our version history to understand how the benchmark has developed.
+                </p>
+              </CardHeader>
+            </Card>
+
+            {versionsLoading ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {[1, 2].map((i) => (
+                  <Skeleton key={i} className="h-48" />
+                ))}
+              </div>
+            ) : versions.length === 0 ? (
+              <Card className="p-8 text-center">
+                <CardContent>
+                  <div className="w-16 h-16 rounded-full bg-white/[0.06] mx-auto mb-4 flex items-center justify-center">
+                    <Tag className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-foreground font-medium mb-2">No versions available</p>
+                  <p className="text-muted-foreground text-sm">
+                    Version information will appear here once the benchmark is published.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                {/* Current Version */}
+                {versions.filter(v => v.status === "current").map((version) => (
+                  <Card key={version.semantic_version} className="border-primary/20 bg-primary/[0.02]">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <Tag className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <CardTitle className="flex items-center gap-2">
+                              Version {version.semantic_version}
+                              <Badge className="bg-primary/20 text-primary border-transparent">
+                                Current
+                              </Badge>
+                            </CardTitle>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {version.marketing_version}
+                            </p>
+                          </div>
+                        </div>
+                        {version.release_date && (
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                            {new Date(version.release_date).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Stats Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                          <div className="flex items-center gap-2 mb-1">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">Questions</span>
+                          </div>
+                          <p className="text-lg font-semibold text-foreground">{version.question_count}</p>
+                        </div>
+                        {version.tier_distribution && (
+                          <>
+                            <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs text-muted-foreground">Tier 1</span>
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 bg-red-500/10 text-red-400 border-transparent">70%</Badge>
+                              </div>
+                              <p className="text-lg font-semibold text-foreground">{version.tier_distribution.tier1}</p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs text-muted-foreground">Tier 2</span>
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 bg-amber-500/10 text-amber-400 border-transparent">20%</Badge>
+                              </div>
+                              <p className="text-lg font-semibold text-foreground">{version.tier_distribution.tier2}</p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs text-muted-foreground">Tier 3</span>
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 bg-blue-500/10 text-blue-400 border-transparent">10%</Badge>
+                              </div>
+                              <p className="text-lg font-semibold text-foreground">{version.tier_distribution.tier3}</p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {version.models_tested !== undefined && version.models_tested > 0 && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Users className="h-4 w-4" />
+                          <span>{version.models_tested} models tested on this version</span>
+                        </div>
+                      )}
+
+                      {/* Link to Insights */}
+                      <div className="pt-2 border-t border-white/[0.06]">
+                        <Link 
+                          href={`/insights?category=category-versions`}
+                          className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                        >
+                          <ArticleIcon className="h-4 w-4" />
+                          Read about this version in Insights
+                          <ChevronRight className="h-4 w-4" />
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {/* Previous Versions */}
+                {versions.filter(v => v.status !== "current").length > 0 && (
+                  <>
+                    <h3 className="text-lg font-semibold text-foreground mt-8">Previous Versions</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {versions.filter(v => v.status !== "current").map((version) => (
+                        <Card key={version.semantic_version}>
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-white/[0.06]">
+                                  <Tag className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <div>
+                                  <CardTitle className="text-base">
+                                    Version {version.semantic_version}
+                                  </CardTitle>
+                                  <p className="text-sm text-muted-foreground">
+                                    {version.marketing_version}
+                                  </p>
+                                </div>
+                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                {version.status === "archived" ? "Archived" : version.status}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <FileText className="h-3.5 w-3.5" />
+                                  {version.question_count} questions
+                                </span>
+                                {version.release_date && (
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    {new Date(version.release_date).toLocaleDateString("en-US", {
+                                      year: "numeric",
+                                      month: "short",
+                                    })}
+                                  </span>
+                                )}
+                              </div>
+                              <Link 
+                                href={`/insights?category=category-versions`}
+                                className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+                              >
+                                View details
+                                <ChevronRight className="h-3 w-3" />
+                              </Link>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Link to all version insights */}
+                <Card className="bg-white/[0.02] border-dashed">
+                  <CardContent className="py-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <ArticleIcon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">Version Release Notes</p>
+                          <p className="text-sm text-muted-foreground">
+                            Read detailed release notes and methodology changes in our Insights section
+                          </p>
+                        </div>
+                      </div>
+                      <Link 
+                        href="/insights?category=category-versions"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+                      >
+                        Browse in Insights
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
