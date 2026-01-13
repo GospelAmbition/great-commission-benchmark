@@ -853,6 +853,13 @@ async def list_versions(response: Response, db: Session = Depends(get_db)):
         )
     ).order_by(QuestionSet.created_at.desc()).all()
     
+    # Defensive check: explicitly filter out any archived versions that are not publicly visible
+    # This ensures hidden archived versions are never returned, even if the query somehow includes them
+    question_sets = [
+        qs for qs in question_sets
+        if qs.status == "active" or (qs.status == "archived" and qs.is_publicly_visible is True)
+    ]
+    
     versions = []
     current_version = None
     

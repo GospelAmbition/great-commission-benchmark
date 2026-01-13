@@ -870,6 +870,10 @@ async def archive_question_set(
     question_set.is_publicly_visible = is_publicly_visible
     db.commit()
     
+    # Invalidate cache for versions endpoint since visibility/status changed
+    from app.core.cache import invalidate_cache
+    await invalidate_cache("versions")
+    
     return {
         "message": f"Question set {question_set.semantic_version} archived",
         "version": question_set.semantic_version,
@@ -905,6 +909,10 @@ async def toggle_question_set_visibility(
     
     question_set.is_publicly_visible = is_publicly_visible
     db.commit()
+    
+    # Invalidate cache for versions endpoint since visibility changed
+    from app.core.cache import invalidate_cache
+    await invalidate_cache("versions")
     
     return {
         "message": f"Question set {question_set.semantic_version} visibility updated",
