@@ -511,17 +511,6 @@ function LeaderboardContent() {
                             {filters.sort !== "model_name" && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
                           </Button>
                         </TableHead>
-                        <TableHead className="text-center text-xs">
-                          <span title="Tier 1: Task Capability (70% weight)">Task</span>
-                        </TableHead>
-                        <TableHead className="text-center text-xs">
-                          <span title="Tier 2: Gospel Core (20% weight)">Gospel</span>
-                        </TableHead>
-                        <TableHead className="text-center text-xs">
-                          <span title="Tier 3: Worldview Confession (10% weight)">Worldview</span>
-                        </TableHead>
-                        <TableHead>Verdict</TableHead>
-                        <TableHead className="min-w-[160px]"></TableHead>
                         <TableHead className="text-center">
                           <Button
                             variant="ghost"
@@ -536,6 +525,17 @@ function LeaderboardContent() {
                             {filters.sort !== "score" && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
                           </Button>
                         </TableHead>
+                        <TableHead className="min-w-[160px]"></TableHead>
+                        <TableHead className="text-center text-xs">
+                          <span title="Tier 1: Task Capability (70% weight)">Task</span>
+                        </TableHead>
+                        <TableHead className="text-center text-xs">
+                          <span title="Tier 2: Gospel Core (20% weight)">Gospel</span>
+                        </TableHead>
+                        <TableHead className="text-center text-xs">
+                          <span title="Tier 3: Worldview Confession (10% weight)">Worldview</span>
+                        </TableHead>
+                        <TableHead>Verdict</TableHead>
                         <TableHead className="w-16"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -569,6 +569,23 @@ function LeaderboardContent() {
                                 {getDisplayModelName(item.model_name, item.model_id)}
                               </Link>
                             </TableCell>
+                            <TableCell className="py-3">
+                              <div className="flex items-center gap-2">
+                                <TotalScore score={item.overall_score} />
+                                {item.test_count > 1 && (
+                                  <Badge 
+                                    variant="outline" 
+                                    className="text-xs bg-white/5 border-white/20 text-muted-foreground"
+                                    title={`Average of ${item.test_count} tests${item.score_range ? ` (${item.score_range.min_score?.toFixed(1)}-${item.score_range.max_score?.toFixed(1)}%)` : ''}`}
+                                  >
+                                    {item.test_count}×
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-3">
+                              <ScoreBar score={item.overall_score} />
+                            </TableCell>
                             <TableCell className="py-3 text-center">
                               <TierScore score={item.tier1_score} />
                             </TableCell>
@@ -583,23 +600,6 @@ function LeaderboardContent() {
                                 {verdict.icon}
                                 <span className="ml-1">{verdict.label}</span>
                               </Badge>
-                            </TableCell>
-                            <TableCell className="py-3">
-                              <ScoreBar score={item.overall_score} />
-                            </TableCell>
-                            <TableCell className="py-3">
-                              <div className="flex items-center gap-2">
-                                <TotalScore score={item.overall_score} />
-                                {item.test_count > 1 && (
-                                  <Badge 
-                                    variant="outline" 
-                                    className="text-xs bg-white/5 border-white/20 text-muted-foreground"
-                                    title={`Average of ${item.test_count} tests${item.score_range ? ` (${item.score_range.min_score?.toFixed(1)}-${item.score_range.max_score?.toFixed(1)}%)` : ''}`}
-                                  >
-                                    {item.test_count}×
-                                  </Badge>
-                                )}
-                              </div>
                             </TableCell>
                             <TableCell className="py-3">
                               <Button asChild variant="ghost" size="sm" className="h-7 px-2">
