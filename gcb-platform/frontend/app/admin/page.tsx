@@ -289,7 +289,25 @@ export default function AdminDashboardPage() {
             </div>
             <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
               <div className="flex-1">
-                <h4 className="font-medium">Next.js</h4>
+                <h4 className="font-medium">Resend</h4>
+                <p className="text-sm text-muted-foreground">Transactional email system</p>
+              </div>
+              <a href="https://resend.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex-1">
+                <h4 className="font-medium">Railway Storage</h4>
+                <p className="text-sm text-muted-foreground">Storage bucket for file uploads</p>
+              </div>
+              <a href="https://railway.app" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex-1">
+                <h4 className="font-medium">React Tailwind Next</h4>
                 <p className="text-sm text-muted-foreground">Frontend framework</p>
               </div>
               <a href="https://nextjs.org" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
