@@ -13,7 +13,6 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CategoryChart } from "@/components/charts/CategoryChart";
 import { RadarChart } from "@/components/charts/RadarChart";
-import { VersionHistoryChart } from "@/components/charts/VersionHistoryChart";
 import {
   Table,
   TableBody,
@@ -23,7 +22,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Shield, ShieldAlert, ShieldX, CheckCircle2, XCircle, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { CATEGORY_NAMES } from "@/lib/benchmark-definitions";
+import { CATEGORY_NAMES, CATEGORY_DESCRIPTIONS } from "@/lib/benchmark-definitions";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SocialShare } from "@/components/marketing/SocialShare";
 
 // Verdict helper functions
@@ -88,28 +88,44 @@ function SingleModelHeatmap({ categoryScores }: { categoryScores: Record<string,
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {categories.map(([category, score]) => (
-          <div key={category} className={`${getColor(score)} rounded-lg p-3 text-center`}>
-            <div className="text-2xl font-bold">{score.toFixed(0)}</div>
-            <div className="text-xs capitalize opacity-80">{category.replace(/_/g, ' ')}</div>
-          </div>
-        ))}
-      </div>
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-2 text-xs pt-2">
-        <span className="text-muted-foreground">Low</span>
-        <div className="flex gap-1">
-          <div className="w-6 h-4 bg-red-300 rounded" />
-          <div className="w-6 h-4 bg-orange-300 rounded" />
-          <div className="w-6 h-4 bg-yellow-300 rounded" />
-          <div className="w-6 h-4 bg-green-300 rounded" />
-          <div className="w-6 h-4 bg-green-500 rounded" />
+    <TooltipProvider>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {categories.map(([category, score]) => {
+            const categoryName = CATEGORY_NAMES[category] || category.replace(/_/g, ' ');
+            const categoryDescription = CATEGORY_DESCRIPTIONS[category] || "";
+            return (
+              <Tooltip key={category}>
+                <TooltipTrigger asChild>
+                  <div className={`${getColor(score)} rounded-lg p-3 text-center cursor-help`}>
+                    <div className="text-2xl font-bold">{score.toFixed(0)}</div>
+                    <div className="text-xs capitalize opacity-80">{category.replace(/_/g, ' ')}</div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-sm">
+                  <p className="font-semibold mb-1">{category} - {categoryName}</p>
+                  {categoryDescription && (
+                    <p className="text-xs text-muted-foreground">{categoryDescription}</p>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
         </div>
-        <span className="text-muted-foreground">High</span>
+        {/* Legend */}
+        <div className="flex items-center justify-center gap-2 text-xs pt-2">
+          <span className="text-muted-foreground">Low</span>
+          <div className="flex gap-1">
+            <div className="w-6 h-4 bg-red-300 rounded" />
+            <div className="w-6 h-4 bg-orange-300 rounded" />
+            <div className="w-6 h-4 bg-yellow-300 rounded" />
+            <div className="w-6 h-4 bg-green-300 rounded" />
+            <div className="w-6 h-4 bg-green-500 rounded" />
+          </div>
+          <span className="text-muted-foreground">High</span>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
 
@@ -269,26 +285,25 @@ export default function ModelDetailPage() {
         <Button asChild variant="ghost" className="mb-4">
           <Link href="/leaderboard">← Back to Leaderboard</Link>
         </Button>
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-4xl font-bold">{displayName}</h1>
-            <div className="mt-2 flex items-center gap-4">
-              <Badge variant="secondary">{formatProvider(model.provider)}</Badge>
-              {model.trust_tier && (
-                <Badge variant="outline">{model.trust_tier}</Badge>
-              )}
+        <div>
+          <h1 className="text-4xl font-bold mb-4">{formatProvider(model.provider).toUpperCase()} | {displayName}</h1>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            {model.description ? (
+              <p className="text-muted-foreground text-lg w-2/3">{model.description}</p>
+            ) : (
+              <div className="w-2/3"></div>
+            )}
+            <div className="flex gap-2">
+              <Button asChild variant="outline">
+                <Link href={`/leaderboard/compare?models=${encodeURIComponent(model.id)}`}>Compare</Link>
+              </Button>
+              <SocialShare
+                url={typeof window !== "undefined" ? window.location.href : `https://greatcommissionbenchmark.ai/leaderboard/models/${encodeURIComponent(model.model_id)}`}
+                title={`${displayName} scored ${overallScore.toFixed(1)}% on the Great Commission Benchmark`}
+                description={`See how ${displayName} by ${model.provider} performs on ministry tasks, gospel core, and worldview alignment.`}
+                hashtags={["GreatCommissionBenchmark", "AI", "LLM"]}
+              />
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button asChild variant="outline">
-              <Link href={`/leaderboard/compare?models=${encodeURIComponent(model.id)}`}>Compare</Link>
-            </Button>
-            <SocialShare
-              url={typeof window !== "undefined" ? window.location.href : `https://greatcommissionbenchmark.ai/leaderboard/models/${encodeURIComponent(model.model_id)}`}
-              title={`${displayName} scored ${overallScore.toFixed(1)}% on the Great Commission Benchmark`}
-              description={`See how ${displayName} by ${model.provider} performs on ministry tasks, gospel core, and worldview alignment.`}
-              hashtags={["GreatCommissionBenchmark", "AI", "LLM"]}
-            />
           </div>
         </div>
       </div>
@@ -384,7 +399,6 @@ export default function ModelDetailPage() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="history">Version History</TabsTrigger>
           <TabsTrigger value="tests">Recent Tests</TabsTrigger>
         </TabsList>
 
@@ -496,24 +510,6 @@ export default function ModelDetailPage() {
                 <CategoryChart data={model.category_scores} />
               ) : (
                 <p className="text-muted-foreground">No category data available</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history">
-          <Card>
-            <CardHeader>
-              <CardTitle>Version History</CardTitle>
-              <CardDescription>
-                Score trends across benchmark versions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {model.version_history ? (
-                <VersionHistoryChart data={model.version_history} />
-              ) : (
-                <p className="text-muted-foreground">No version history available</p>
               )}
             </CardContent>
           </Card>

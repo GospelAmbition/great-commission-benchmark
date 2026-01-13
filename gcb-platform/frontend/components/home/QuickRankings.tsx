@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { ProviderIcon } from "@/components/ui/provider-icon";
 
 interface Ranking {
@@ -23,6 +22,23 @@ function getBarColor(score: number): string {
   if (score >= 61) return "bg-blue-500";
   if (score >= 40) return "bg-amber-500";
   return "bg-red-500";
+}
+
+// Capitalize a string (e.g., "x-ai" -> "X-AI", "grok-code-fast-1" -> "Grok-Code-Fast-1")
+function capitalizeString(str: string): string {
+  return str
+    .split(/[-_\/]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('-');
+}
+
+// Extract model name without provider prefix
+function extractModelName(modelName: string, provider: string): string {
+  const prefix = `${provider}/`;
+  if (modelName.toLowerCase().startsWith(prefix.toLowerCase())) {
+    return modelName.slice(prefix.length);
+  }
+  return modelName;
 }
 
 // Rank display with numbers in circles
@@ -98,14 +114,8 @@ export function QuickRankings({ rankings }: QuickRankingsProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                      {item.model_name}
+                      {capitalizeString(item.provider)} | {capitalizeString(extractModelName(item.model_name, item.provider))}
                     </span>
-                    <Badge variant="muted" className="hidden sm:inline-flex text-[10px]">
-                      {item.provider}
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground sm:hidden">
-                    {item.provider}
                   </div>
                 </div>
                 

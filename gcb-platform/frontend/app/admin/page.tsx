@@ -9,7 +9,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useUserProfile } from "@/lib/useUserProfile";
 import { toast } from "sonner";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, RefreshCw } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -19,6 +19,7 @@ export default function AdminDashboardPage() {
   const { canAdmin, isAdmin, loading: profileLoading } = useUserProfile();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -65,6 +66,26 @@ export default function AdminDashboardPage() {
       });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function syncModelDescriptions() {
+    setSyncing(true);
+    try {
+      const response = await fetch("/api/admin/models/sync-descriptions", {
+        method: "POST",
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to sync model descriptions");
+      }
+      const data = await response.json();
+      toast.success(data.message || `Synced ${data.updated_count || 0} model(s)`);
+    } catch (error: any) {
+      console.error("Failed to sync model descriptions:", error);
+      toast.error(error.message || "Failed to sync model descriptions");
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -223,6 +244,22 @@ export default function AdminDashboardPage() {
           <CardContent>
             <Button asChild variant="outline">
               <Link href="/admin/volunteers">View Applications</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Model Utilities</CardTitle>
+            <CardDescription>Sync model descriptions from OpenRouter API</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={syncModelDescriptions} 
+              disabled={syncing}
+              variant="outline"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? "Syncing..." : "Sync Model Descriptions"}
             </Button>
           </CardContent>
         </Card>
