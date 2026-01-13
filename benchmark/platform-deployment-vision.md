@@ -53,7 +53,7 @@ Used during benchmark methodology and question development:
 
 A Railway-deployed application where registered testers:
 
-1. Sign in via Auth0 (must be approved tester — see [process-question-security.md](./process-question-security.md))
+1. Sign in via NextAuth with Google OAuth (must be approved tester — see [process-question-security.md](./process-question-security.md))
 2. Select an LLM to test (OpenRouter, custom endpoint, or API key)
 3. Pay for the OpenRouter/API costs to run the test
 4. Results are automatically submitted to the benchmark

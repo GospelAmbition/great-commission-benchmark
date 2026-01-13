@@ -20,9 +20,7 @@ Usage:
     python scripts/reset_transactional_data.py --skip-models --skip-moderation-log
 """
 import sys
-import os
 from pathlib import Path
-from typing import Optional
 
 # Add parent directory to path to import app modules
 sys.path.insert(0, str(Path(__file__).parent.parent))

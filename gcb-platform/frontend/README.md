@@ -48,14 +48,27 @@ frontend/
 │   │   └── auth/           # NextAuth handlers
 │   ├── about/              # About/methodology page
 │   ├── admin/              # Admin pages
-│   ├── contribute/         # Contribute page
-│   ├── dashboard/          # User dashboard
-│   ├── moderator/          # Moderator interface
-│   ├── privacy/            # Privacy policy
-│   ├── profile/            # Public profiles
-│   ├── leaderboard/        # Leaderboard and model pages
-│   ├── terms/              # Terms of service
-│   ├── tester-agreement/   # Tester agreement
+│   ├── api/                # API routes
+│   │   ├── auth/          # NextAuth handlers
+│   │   ├── admin/         # Admin API proxy
+│   │   └── blog/          # Blog API proxy
+│   ├── benchmark/         # Benchmark information
+│   ├── blog-manager/      # Blog management interface
+│   ├── categories/        # Category pages
+│   ├── contact/           # Contact page
+│   ├── contribute/        # Contribute page
+│   ├── dashboard/         # User dashboard
+│   ├── faq/               # FAQ page
+│   ├── insights/          # Blog/insights pages
+│   ├── leaderboard/       # Leaderboard and model pages
+│   ├── moderator/         # Moderator interface
+│   ├── newsletter/        # Newsletter page
+│   ├── privacy/           # Privacy policy
+│   ├── profile/           # Public profiles
+│   ├── runner/            # Runner CLI information
+│   ├── sponsor/           # Sponsorship page
+│   ├── terms/             # Terms of service
+│   ├── tester-agreement/  # Tester agreement
 │   ├── layout.tsx          # Root layout
 │   ├── page.tsx            # Homepage
 │   ├── error.tsx           # Error boundary
@@ -79,13 +92,42 @@ frontend/
 | Route | Description |
 |-------|-------------|
 | `/` | Homepage with top performers |
+| `/about` | About page and methodology |
 | `/leaderboard` | Full leaderboard with filters |
 | `/leaderboard/models/[id]` | Model detail page |
 | `/leaderboard/compare` | Model comparison |
+| `/categories` | Category overview |
+| `/categories/[id]` | Category detail page |
 | `/dashboard` | User dashboard |
+| `/dashboard/settings` | User settings |
 | `/dashboard/submissions` | User's CLI submissions |
+| `/dashboard/submissions/[id]` | Submission detail |
+| `/dashboard/sponsorships/[id]` | Sponsorship request detail |
 | `/moderator` | Moderator queue |
+| `/moderator/community/[id]` | Community submission review |
+| `/moderator/sponsorship/[id]` | Sponsorship request review |
 | `/admin` | Admin dashboard |
+| `/admin/users` | User management |
+| `/admin/questions` | Question management |
+| `/admin/payments` | Payment management |
+| `/admin/volunteers` | Volunteer applications |
+| `/admin/data` | Data management |
+| `/blog-manager` | Blog post management |
+| `/blog-manager/new` | Create new blog post |
+| `/blog-manager/[id]` | Edit blog post |
+| `/insights` | Blog/insights listing |
+| `/insights/[slug]` | Blog post detail |
+| `/contribute` | Contribute page |
+| `/contribute/support` | Support page |
+| `/sponsor` | Sponsorship page |
+| `/newsletter` | Newsletter page |
+| `/contact` | Contact page |
+| `/faq` | FAQ page |
+| `/runner` | Runner CLI information |
+| `/profile/[id]` | Public user profile |
+| `/terms` | Terms of service |
+| `/privacy` | Privacy policy |
+| `/tester-agreement` | Tester agreement |
 
 ## Components
 

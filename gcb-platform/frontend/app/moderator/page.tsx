@@ -49,6 +49,29 @@ export default function ModeratorDashboardPage() {
     }
   }, [user, userLoading, profileLoading, canModerate, canAdmin, isAdmin, router]);
 
+  // Refresh data when page becomes visible or window regains focus (e.g., returning from review page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user && !profileLoading) {
+        loadDashboardData();
+      }
+    };
+    
+    const handleFocus = () => {
+      if (user && !profileLoading) {
+        loadDashboardData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user, profileLoading]);
+
   async function loadDashboardData() {
     setLoading(true);
     try {
@@ -298,7 +321,9 @@ export default function ModeratorDashboardPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
-                        Runner
+                        {item.review_type === "sponsorship_review" ? "Sponsorship" : 
+                         item.review_type === "cli_submission" ? "Runner" : 
+                         item.review_type || "Unknown"}
                       </Badge>
                     </TableCell>
                     <TableCell>{item.model_name}</TableCell>
@@ -316,7 +341,13 @@ export default function ModeratorDashboardPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {item.submission_id ? (
+                      {item.review_type === "sponsorship_review" ? (
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/moderator/sponsorship/${item.review_id}`} className="font-mono text-sm">
+                            {item.review_id.slice(0, 8)}...
+                          </Link>
+                        </Button>
+                      ) : item.submission_id ? (
                         <Button asChild variant="ghost" size="sm">
                           <Link href={`/moderator/community/${item.submission_id}`} className="font-mono text-sm">
                             {item.submission_id.slice(0, 8)}...

@@ -31,6 +31,7 @@ This document defines the deployment procedures, environments, and release workf
 | **Frontend** | Railway | Git push to `main` |
 | **Backend API** | Railway | Git push to `main` |
 | **Database** | Railway PostgreSQL | Managed service |
+| **Storage** | Railway Simple Storage | S3-compatible bucket |
 | **CLI Runner** | PyPI | Manual release |
 
 ### Deployment Philosophy
@@ -458,11 +459,13 @@ pip install gcb-runner==1.2.0
 | Category | Variables | Management |
 |----------|-----------|------------|
 | **Database** | `DATABASE_URL` | Railway auto-injected |
-| **Auth** | `AUTH0_*` | Railway variables |
+| **Auth** | `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Railway variables |
 | **Payments** | `STRIPE_*` | Railway variables |
-| **LLM** | `OPENROUTER_API_KEY` | Railway variables |
-| **Email** | `SENDGRID_API_KEY` | Railway variables |
-| **Analytics** | `UMAMI_*` | Railway variables |
+| **LLM** | `OPENROUTER_API_KEY`, `OPENROUTER_REFERER` | Railway variables |
+| **Email** | `RESEND_API_KEY`, `EMAIL_FROM` | Railway variables |
+| **Newsletter** | `MAILERLITE_API_KEY`, `MAILERLITE_GROUP_ID` | Railway variables |
+| **Storage** | `S3_*`, `BACKEND_PUBLIC_URL` | Railway variables |
+| **Analytics** | `NEXT_PUBLIC_UMAMI_*` | Railway variables (frontend only) |
 
 ### Setting Environment Variables
 
@@ -492,7 +495,8 @@ railway variables remove OLD_VARIABLE
 |--------|-------------------|-----------|
 | **API Keys** | Quarterly | Generate new key, update Railway, verify, revoke old |
 | **Database** | As needed | Railway manages credentials |
-| **Auth0** | Annually | Rotate in Auth0 dashboard, update Railway |
+| **NextAuth Secret** | Annually | Generate new secret, update Railway (frontend + backend), users will need to re-authenticate |
+| **Google OAuth** | As needed | Rotate in Google Cloud Console, update Railway |
 
 ---
 
@@ -671,7 +675,7 @@ pip install gcb-runner==x.y.z    # Install specific version
 | **Project Lead** | [Contact info] | Service outages, critical issues |
 | **Railway Support** | support@railway.app | Infrastructure issues |
 | **Stripe Support** | Dashboard | Payment issues |
-| **Auth0 Support** | Dashboard | Authentication issues |
+| **Google Cloud Support** | Dashboard | OAuth/authentication issues |
 
 ---
 

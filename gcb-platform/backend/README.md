@@ -105,9 +105,9 @@ Interactive API documentation is available at:
 ### Authentication
 
 - **Public endpoints**: No authentication required
-- **User endpoints**: JWT Bearer token (NextAuth)
-- **Runner endpoints**: API key authentication
-- **Admin endpoints**: JWT with admin role
+- **User endpoints**: JWT Bearer token (NextAuth v5 with Google OAuth)
+- **Runner endpoints**: User API key authentication (per-user keys stored in database)
+- **Admin endpoints**: JWT with admin permission (`can_admin`)
 
 ### Rate Limiting
 
@@ -151,14 +151,24 @@ backend/
 
 | Model | Description |
 |-------|-------------|
-| `User` | Platform users |
+| `User` | Platform users with permission-based access control |
+| `UserAPIKey` | User-generated API keys for Runner CLI access |
 | `Model` | AI models available for testing |
+| `ModelVersionStats` | Aggregated statistics per model version |
 | `QuestionSet` | Benchmark question versions |
-| `Question` | Individual test questions |
+| `Question` | Individual test questions with metadata |
+| `MethodologyVersion` | Methodology version tracking |
 | `TestRun` | Test execution instances |
-| `Result` | Individual question results |
+| `Result` | Individual question results with thought process |
 | `ModerationLog` | Review history |
 | `CommunitySubmission` | CLI-submitted results |
+| `SponsorshipRequest` | Community sponsorship requests |
+| `NewsletterSubscriber` | Newsletter subscription management |
+| `BlogPost` | Blog posts for insights/articles |
+| `BlogCategory` | Blog post categories |
+| `VolunteerApplication` | Volunteer application submissions |
+| `NotificationPreference` | User notification preferences |
+| `StripeConfig` | Encrypted Stripe configuration storage |
 
 ### Migrations
 
@@ -181,6 +191,27 @@ View current revision:
 ```bash
 alembic current
 ```
+
+## Services
+
+The backend includes the following service modules:
+
+| Service | Description |
+|---------|-------------|
+| `aggregation` | Leaderboard and statistics aggregation |
+| `cache_warmer` | Background cache warming and refresh |
+| `email` | Transactional email sending via Resend |
+| `judge` | LLM-as-judge evaluation logic |
+| `model_sync` | OpenRouter model synchronization |
+| `newsletter` | MailerLite newsletter integration |
+| `openrouter` | OpenRouter API client |
+| `payment` | Stripe payment processing |
+| `pricing` | Test pricing calculations |
+| `question_management` | Question import and version management |
+| `scoring` | Benchmark scoring calculations |
+| `storage` | S3-compatible file storage (Railway Storage) |
+| `submission_processor` | CLI submission processing |
+| `token_counting` | Token counting utilities |
 
 ## Testing
 
@@ -209,12 +240,24 @@ pytest tests/test_phase_e.py -v
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DATABASE_URL` | PostgreSQL connection string | Required |
-| `CORS_ORIGINS_STR` | Allowed CORS origins | `localhost` |
+| `CORS_ORIGINS_STR` | Allowed CORS origins (comma-separated) | `localhost` |
+| `NEXTAUTH_SECRET` | NextAuth JWT signing secret | Required |
 | `OPENROUTER_API_KEY` | OpenRouter API key | Required |
-| `RUNNER_API_KEY` | API key for runner access | Required |
+| `OPENROUTER_REFERER` | OpenRouter referer header | Required |
 | `STRIPE_SECRET_KEY` | Stripe secret key | Optional |
+| `STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | Optional |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | Optional |
+| `PAYMENT_DEV_MODE` | Bypass payment processing (dev only) | `False` |
 | `RESEND_API_KEY` | Resend email API key | Optional |
+| `EMAIL_FROM` | Email sender address | Required if using email |
+| `MAILERLITE_API_KEY` | MailerLite newsletter API key | Optional |
+| `MAILERLITE_GROUP_ID` | MailerLite subscriber group ID | Optional |
+| `S3_ACCESS_KEY_ID` | S3-compatible storage access key | Optional |
+| `S3_SECRET_ACCESS_KEY` | S3-compatible storage secret | Optional |
+| `S3_BUCKET` | Storage bucket name | Optional |
+| `S3_ENDPOINT_URL` | Storage endpoint URL | Optional |
+| `S3_REGION` | Storage region | `us-east-1` |
+| `BACKEND_PUBLIC_URL` | Backend public URL for file proxy | Required if using storage |
 | `RECAPTCHA_SECRET_KEY` | Google reCAPTCHA v3 secret key | Optional |
 | `RECAPTCHA_ENABLED` | Enable/disable reCAPTCHA verification | `True` |
 
@@ -240,9 +283,10 @@ The following security headers are added to all responses:
 
 ### Authentication
 
-- JWT tokens validated via NextAuth
-- Role-based access control (user, moderator, admin)
-- API key authentication for runner endpoints
+- JWT tokens validated via NextAuth v5 (HS256 algorithm)
+- Permission-based access control (can_view_benchmark, can_edit_benchmark, can_moderate, can_manage_blog, can_admin)
+- User API key authentication for runner endpoints (keys stored as hashed values)
+- Google OAuth as identity provider
 
 ## Caching
 

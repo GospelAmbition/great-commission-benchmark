@@ -11,10 +11,13 @@ This document defines the infrastructure decisions for the Great Commission Benc
 | **API Backend** | Python + FastAPI | Matches existing pipeline code; handles benchmark execution |
 | **Frontend** | React + Next.js + Tailwind | SSR/SSG for SEO; modern DX; popular ecosystem |
 | **Hosting** | Railway | Familiar stack, cost bundling with other projects |
-| **Authentication** | Auth0 | Industry-standard OAuth, free tier available |
+| **Authentication** | NextAuth v5 + Google OAuth | Self-hosted auth solution; Google OAuth provider; JWT-based sessions |
 | **Database** | PostgreSQL | Already in use for pipeline; robust and reliable |
 | **LLM Access** | OpenRouter | Single API for 100+ models; pay-per-use |
 | **Payments** | Stripe | Industry standard; handles cards and compliance |
+| **Email** | Resend | Transactional emails (notifications, receipts) |
+| **Newsletter** | MailerLite | Newsletter subscription management |
+| **Storage** | Railway Simple Storage (S3-compatible) | Blog images and file uploads; private buckets served via backend proxy |
 | **Analytics** | Umami (self-hosted, off-site) | Privacy-respecting analytics; shared instance on separate server |
 
 ---
@@ -100,15 +103,22 @@ If OpenRouter has significant downtime or discontinues service:
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
         ┌──────────┐   ┌──────────┐   ┌──────────────┐
-        │PostgreSQL│   │OpenRouter│   │Auth0         │
-        │(Results) │   │(LLM API) │   │(Identity)    │
+        │PostgreSQL│   │OpenRouter│   │Google OAuth  │
+        │(Results) │   │(LLM API) │   │(Identity)   │
+        └──────────┘   └──────────┘   └──────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+        ┌──────────┐   ┌──────────┐   ┌──────────────┐
+        │ Stripe   │   │ Resend   │   │ MailerLite   │
+        │(Payments)│   │(Email)   │   │(Newsletter)  │
         └──────────┘   └──────────┘   └──────────────┘
                               │
                               ▼
-                       ┌──────────┐
-                       │ Stripe   │
-                       │(Payments)│
-                       └──────────┘
+                    ┌──────────────────┐
+                    │ Railway Storage  │
+                    │(Blog Images)     │
+                    └──────────────────┘
 ```
 
 ---
@@ -119,11 +129,11 @@ If OpenRouter has significant downtime or discontinues service:
 
 | Responsibility | Description |
 |----------------|-------------|
-| Page rendering | SSR/SSG for leaderboards, model pages |
-| Auth callbacks | Handle Auth0 redirects |
+| Page rendering | SSR/SSG for leaderboards, model pages, blog posts |
+| Auth callbacks | Handle NextAuth/Google OAuth redirects |
 | Light queries | Simple data fetches for UI |
 | Static assets | Serve images, CSS, JS |
-| Newsletter signup | Simple form submissions |
+| Blog management | Blog post creation and editing UI |
 | Simple CRUD | Basic data operations |
 
 ### FastAPI (Python)
@@ -138,6 +148,10 @@ If OpenRouter has significant downtime or discontinues service:
 | Payment processing | Stripe integration for charges |
 | Question Management | Import, review, approve, version assembly |
 | Questions API | Serve questions to Runner CLI via authenticated API |
+| Email notifications | Transactional emails via Resend |
+| Newsletter management | MailerLite integration for subscriptions |
+| File storage | Blog image uploads to Railway Storage (S3-compatible) |
+| File serving | Proxy endpoint for serving private storage files |
 
 ---
 
@@ -227,10 +241,10 @@ The Platform includes a lightweight CMS for managing benchmark questions without
 │ auth0_id       │     │ model_id       │     │ question_id    │
 │ email          │     │ question_set_id│     │ response       │
 │ role           │     │ status         │     │ verdict        │
-│ created_at     │     │ created_at     │     │ reasoning      │
-└────────────────┘     │ completed_at   │     └────────────────┘
-                       │ payment_id     │
-                       └────────────────┘
+│ permissions    │     │ created_at     │     │ reasoning      │
+│ created_at     │     │ completed_at   │     │ thought_process│
+└────────────────┘     │ payment_id     │     └────────────────┘
+                      └────────────────┘
 
 ┌────────────────┐     ┌────────────────┐     ┌────────────────┐
 │ QuestionSets   │     │ Questions      │     │ ModerationLogs │
@@ -239,9 +253,9 @@ The Platform includes a lightweight CMS for managing benchmark questions without
 │ semantic_ver   │     │ content        │     │ moderator_id   │
 │ marketing_ver  │     │ category       │     │ action         │
 │ status         │     │ tier           │     │ notes          │
-│ created_at     │     │ status         │     │ created_at     │
-│ locked_at      │     │ approved_at    │     └────────────────┘
-│ is_current     │     │ approved_by    │
+│ created_at     │     │ is_locked      │     │ created_at     │
+│ locked_at      │     │ notes          │     └────────────────┘
+│ is_public      │     │ metadata       │
 └────────────────┘     └────────────────┘
          │                     │
          └──────────┬──────────┘
@@ -250,6 +264,27 @@ The Platform includes a lightweight CMS for managing benchmark questions without
          │ question_set_questions│
          │ (junction table)     │
          └──────────────────────┘
+
+┌────────────────┐     ┌────────────────┐     ┌────────────────┐
+│ BlogPosts      │     │ BlogCategories │     │ Newsletter     │
+├────────────────┤     ├────────────────┤     ├────────────────┤
+│ id             │────▶│ id             │     │ id             │
+│ title          │     │ name           │     │ email          │
+│ slug           │     │ slug           │     │ is_active      │
+│ content        │     │ description    │     │ created_at     │
+│ category_id    │     └────────────────┘     └────────────────┘
+│ published_at   │
+│ created_at     │
+└────────────────┘
+
+┌────────────────┐     ┌────────────────┐     ┌────────────────┐
+│ UserAPIKeys    │     │ CommunitySubs  │     │ Sponsorships   │
+├────────────────┤     ├────────────────┤     ├────────────────┤
+│ id             │     │ id             │     │ id             │
+│ user_id        │     │ user_id        │     │ user_id        │
+│ key_hash       │     │ export_data    │     │ status         │
+│ created_at     │     │ status         │     │ created_at     │
+└────────────────┘     └────────────────┘     └────────────────┘
 ```
 
 ### Data Characteristics
@@ -299,7 +334,8 @@ The Platform includes a lightweight CMS for managing benchmark questions without
 | **Railway** | Handles moderate traffic | More than sufficient |
 | **OpenRouter** | No simultaneous call limits | No concerns |
 | **PostgreSQL** | Millions of rows | Vastly oversized |
-| **Auth0 free tier** | 7,000 users | Sufficient for years |
+| **NextAuth** | Self-hosted, no user limits | No concerns |
+| **Google OAuth** | Free tier sufficient | No concerns |
 
 ### Scaling Strategy
 
@@ -314,10 +350,11 @@ Given low expected traffic:
 
 ### Authentication
 
-- **Auth0** handles all authentication
-- **OAuth/social login** support
-- **Role-based access** (user, moderator, admin)
-- **API tokens** for programmatic access
+- **NextAuth v5** handles all authentication (self-hosted)
+- **Google OAuth** as the identity provider
+- **JWT-based sessions** with HS256 signing
+- **Permission-based access control** (can_view_benchmark, can_edit_benchmark, can_moderate, can_manage_blog, can_admin)
+- **User API keys** for programmatic access (stored as hashed values in database)
 
 ### API Security
 

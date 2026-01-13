@@ -26,11 +26,11 @@ This document provides step-by-step instructions for setting up a local developm
 
 | Software | Version | Purpose | Installation |
 |----------|---------|---------|--------------|
-| **Node.js** | 20.x LTS | Next.js frontend | [nodejs.org](https://nodejs.org) |
-| **Python** | 3.10+ | FastAPI backend, CLI tools | [python.org](https://python.org) |
+| **Node.js** | 18+ (20.x LTS recommended) | Next.js frontend | [nodejs.org](https://nodejs.org) |
+| **Python** | 3.11+ | FastAPI backend, CLI tools | [python.org](https://python.org) |
 | **PostgreSQL** | 15+ | Platform database | [postgresql.org](https://postgresql.org) or Docker |
 | **Git** | Latest | Version control | [git-scm.com](https://git-scm.com) |
-| **pnpm** | 8+ | Node package manager | `npm install -g pnpm` |
+| **npm** or **pnpm** | Latest | Node package manager | Included with Node.js or `npm install -g pnpm` |
 
 ### Optional Software
 
@@ -97,12 +97,16 @@ great-commission-benchmark/
 cd gcb-platform/frontend
 
 # Install dependencies
+npm install
+# or
 pnpm install
 
 # Copy environment template
 cp .env.example .env.local
 
 # Start development server
+npm run dev
+# or
 pnpm dev
 ```
 
@@ -252,8 +256,21 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx
 # OpenRouter
 OPENROUTER_API_KEY=sk-or-xxx
 
-# Email (optional for local dev)
-# SENDGRID_API_KEY=
+# Email (Resend - optional for local dev)
+# RESEND_API_KEY=
+# EMAIL_FROM=Great Commission Benchmark <noreply@example.com>
+
+# Newsletter (MailerLite - optional for local dev)
+# MAILERLITE_API_KEY=
+# MAILERLITE_GROUP_ID=
+
+# Storage (Railway Simple Storage or S3 - optional for local dev)
+# S3_ACCESS_KEY_ID=
+# S3_SECRET_ACCESS_KEY=
+# S3_BUCKET=
+# S3_ENDPOINT_URL=
+# S3_REGION=us-east-1
+# BACKEND_PUBLIC_URL=http://localhost:8000
 
 # Application
 ENVIRONMENT=development

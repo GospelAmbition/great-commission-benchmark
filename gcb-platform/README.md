@@ -20,8 +20,11 @@ gcb-platform/
 - **CLI Submission Upload**: Upload test results from gcb-runner via web dashboard
 - **Moderator Interface**: Review test results for quality assurance
 - **Admin Panel**: Manage users, questions, and benchmark versions
+- **Blog System**: Publish insights and articles with image uploads
+- **Newsletter**: MailerLite integration for subscriber management
 - **Payment Integration**: Stripe-powered test payments with transparent pricing
 - **API Access**: RESTful API for programmatic access
+- **User API Keys**: Per-user API keys for Runner CLI authentication
 
 ## Quick Start
 
@@ -30,8 +33,11 @@ gcb-platform/
 - Node.js 18+ (for frontend)
 - Python 3.11+ (for backend)
 - PostgreSQL 15+ (or Docker)
-- Google Cloud account (for OAuth, optional for development)
+- Google Cloud account (for OAuth, required for authentication)
 - Stripe account (for payments, optional for development)
+- Resend account (for transactional emails, optional for development)
+- MailerLite account (for newsletter, optional for development)
+- Railway account (for storage bucket, optional for development)
 
 ### Backend Setup
 
@@ -156,21 +162,32 @@ npm run lint:fix              # Fix auto-fixable issues
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `DATABASE_URL` | PostgreSQL connection string | Yes |
+| `NEXTAUTH_SECRET` | NextAuth JWT signing secret (same for frontend and backend) | Yes |
 | `OPENROUTER_API_KEY` | OpenRouter API key for model access | Yes |
+| `OPENROUTER_REFERER` | OpenRouter referer header | Yes |
 | `STRIPE_SECRET_KEY` | Stripe secret key | Production |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | Production |
-| `RESEND_API_KEY` | Email service API key | Production |
+| `RESEND_API_KEY` | Resend email service API key | Production |
+| `EMAIL_FROM` | Email sender address | Production |
+| `MAILERLITE_API_KEY` | MailerLite newsletter API key | Optional |
+| `S3_ACCESS_KEY_ID` | S3-compatible storage access key | Optional |
+| `S3_SECRET_ACCESS_KEY` | S3-compatible storage secret | Optional |
+| `S3_BUCKET` | Storage bucket name | Optional |
+| `S3_ENDPOINT_URL` | Storage endpoint URL | Optional |
+| `BACKEND_PUBLIC_URL` | Backend public URL for file proxy | Optional |
 
 ### Frontend (.env.local)
 
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `AUTH_URL` | Base URL of your app (e.g., `http://localhost:3000`) | Yes |
-| `NEXTAUTH_SECRET` | Session encryption secret (generate with `openssl rand -base64 32`) | Yes |
+| `NEXTAUTH_SECRET` | Session encryption secret (same as backend, generate with `openssl rand -base64 32`) | Yes |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID | Yes |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Yes |
 | `NEXT_PUBLIC_API_URL` | Backend API URL | Yes |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | Production |
+| `NEXT_PUBLIC_UMAMI_SCRIPT_URL` | Umami analytics script URL | Optional |
+| `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Umami website ID | Optional |
 
 ## API Documentation
 

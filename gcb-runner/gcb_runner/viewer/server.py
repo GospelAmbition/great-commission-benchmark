@@ -271,7 +271,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
                 "backend": row["backend"],
                 "benchmark_version": row["benchmark_version"],
                 "judge_model": row["judge_model"],
-                "judge_backend": row.get("judge_backend"),
+                "judge_backend": row["judge_backend"] if "judge_backend" in row.keys() else None,
                 "score": row["score"],
                 "tier1_score": row["tier1_score"],
                 "tier2_score": row["tier2_score"],
@@ -316,7 +316,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
             "backend": row["backend"],
             "benchmark_version": row["benchmark_version"],
             "judge_model": row["judge_model"],
-            "judge_backend": row.get("judge_backend"),
+            "judge_backend": row["judge_backend"] if "judge_backend" in row.keys() else None,
             "score": row["score"],
             "tier1_score": row["tier1_score"],
             "tier2_score": row["tier2_score"],
@@ -392,7 +392,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
                 "category": row["category"],
                 "verdict": row["verdict"],
                 "judge_reasoning": row["judge_reasoning"],
-                "thought_process": row.get("thought_process"),
+                "thought_process": row["thought_process"] if "thought_process" in row.keys() else None,
                 "response_time_ms": row["response_time_ms"],
             }
             

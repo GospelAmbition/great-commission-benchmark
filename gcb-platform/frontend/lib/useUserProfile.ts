@@ -4,9 +4,8 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { apiClient, UserProfile } from "./api";
 
-export interface UserProfileData extends UserProfile {
-  tester_agreement_accepted?: boolean;
-}
+// UserProfileData is an alias for UserProfile - extend if frontend-only fields are needed
+export type UserProfileData = UserProfile;
 
 export function useUserProfile() {
   const { data: session, status } = useSession();

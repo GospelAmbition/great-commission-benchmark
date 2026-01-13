@@ -87,15 +87,22 @@ The Great Commission Benchmark platform is a public-facing website that:
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
         ┌──────────┐   ┌──────────┐   ┌──────────────┐
-        │PostgreSQL│   │OpenRouter│   │Auth0         │
-        │(Results) │   │(LLM API) │   │(Identity)    │
+        │PostgreSQL│   │OpenRouter│   │Google OAuth  │
+        │(Results) │   │(LLM API) │   │(Identity)   │
+        └──────────┘   └──────────┘   └──────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+        ┌──────────┐   ┌──────────┐   ┌──────────────┐
+        │ Stripe   │   │ Resend   │   │ MailerLite   │
+        │(Payments)│   │(Email)   │   │(Newsletter)  │
         └──────────┘   └──────────┘   └──────────────┘
                               │
                               ▼
-                       ┌──────────┐
-                       │ Stripe   │
-                       │(Payments)│
-                       └──────────┘
+                    ┌──────────────────┐
+                    │ Railway Storage  │
+                    │(Blog Images)     │
+                    └──────────────────┘
 ```
 
 ### 2.2 Responsibility Split
@@ -105,7 +112,7 @@ The Great Commission Benchmark platform is a public-facing website that:
 | Responsibility | Description |
 |----------------|-------------|
 | Page rendering | SSR/SSG for leaderboards, model pages, SEO |
-| Auth callbacks | Handle Auth0 redirects |
+| Auth callbacks | Handle NextAuth/Google OAuth redirects |
 | Light queries | Simple data fetches for UI |
 | Static assets | Serve images, CSS, JS |
 | Newsletter signup | Simple form submissions |
@@ -134,7 +141,7 @@ The Great Commission Benchmark platform is a public-facing website that:
 | **UI Components** | shadcn/ui | Copy-paste components built on Radix UI + Tailwind; excellent accessibility; full customization; no runtime overhead |
 | **API Backend** | Python + FastAPI | Matches existing pipeline code; handles benchmark execution |
 | **Hosting** | Railway | Familiar stack, cost bundling with other projects |
-| **Authentication** | Auth0 | Industry-standard OAuth, free tier available |
+| **Authentication** | NextAuth v5 + Google OAuth | Self-hosted auth solution; Google OAuth provider |
 | **Database** | PostgreSQL | Robust and reliable; already in use |
 | **LLM Access** | OpenRouter | Single API for 100+ models; pay-per-use |
 | **Payments** | Stripe | Industry standard; handles cards and compliance |
@@ -501,14 +508,13 @@ POST /api/admin/question-sets/:id/lock   # Lock question set
 
 ```
 POST /api/webhooks/stripe                # Stripe payment webhooks
-POST /api/webhooks/auth0                 # Auth0 event webhooks
 ```
 
 ---
 
 ## 6. Authentication & Authorization
 
-### 6.1 Auth0 Configuration
+### 6.1 NextAuth v5 Configuration
 
 **Authentication Methods:**
 - Email/password
@@ -535,7 +541,7 @@ POST /api/webhooks/auth0                 # Auth0 event webhooks
 
 ### 6.3 Tester Registration Flow
 
-1. User signs up via Auth0
+1. User signs up via NextAuth with Google OAuth
 2. Presented with Tester Agreement
 3. Must accept agreement to access testing features
 4. Agreement acceptance recorded in user metadata
@@ -1064,9 +1070,9 @@ review    testing     reference
 
 ### 12.4 Authentication Security
 
-- **Auth0 handles identity** — No password storage
-- **JWT tokens** — Short-lived, validated per request
-- **Role-based access** — Enforced at API level
+- **NextAuth v5 handles identity** — No password storage, Google OAuth provider
+- **JWT tokens** — Short-lived, validated per request (HS256 algorithm)
+- **Permission-based access** — Enforced at API level (can_view_benchmark, can_edit_benchmark, can_moderate, can_manage_blog, can_admin)
 
 ---
 
@@ -1090,7 +1096,8 @@ review    testing     reference
 |---------|--------------|
 | Railway (hobby plan) | ~$5-20 |
 | Database | Included |
-| Auth0 | Free tier |
+| NextAuth | Self-hosted (no cost) |
+| Google OAuth | Free tier |
 | Domain | ~$1 (amortized) |
 | **Total Infrastructure** | **< $20/month** |
 
@@ -1210,13 +1217,13 @@ review    testing     reference
 | Task | Description |
 |------|-------------|
 | A.1 | Database schema — Full PostgreSQL schema |
-| A.2 | Auth0 setup — Authentication and role configuration |
+| A.2 | NextAuth setup — Authentication and permission configuration |
 | A.3 | Basic FastAPI — Core API structure, database connections |
 | A.4 | Railway infrastructure — Services, environment config |
 
 **Deliverables:**
 - Working database with migrations
-- Auth0 tenant configured
+- NextAuth v5 configured with Google OAuth
 - FastAPI skeleton deployed
 - CI/CD pipeline working
 
@@ -1490,10 +1497,12 @@ leaderboard review
 # Database
 DATABASE_URL=postgresql://user:pass@host:5432/gcb
 
-# Auth0
-AUTH0_DOMAIN=your-tenant.auth0.com
-AUTH0_CLIENT_ID=xxx
-AUTH0_CLIENT_SECRET=xxx
+# NextAuth
+NEXTAUTH_SECRET=your-32-byte-secret-generate-with-openssl-rand-base64-32
+
+# Google OAuth
+GOOGLE_CLIENT_ID=xxx
+GOOGLE_CLIENT_SECRET=xxx
 AUTH0_AUDIENCE=https://api.greatcommissionbenchmark.ai
 
 # Stripe

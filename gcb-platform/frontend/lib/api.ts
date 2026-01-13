@@ -434,9 +434,9 @@ export class ApiClient {
   }
 
   // User API endpoints (require auth)
-  async getUserProfile(): Promise<UserProfile & { test_count?: number; contribution_count?: number; tester_agreement_accepted?: boolean }> {
+  async getUserProfile(): Promise<UserProfile & { test_count?: number; contribution_count?: number }> {
     // Backend returns { user: {...}, stats: {...} }, transform to flat structure
-    const response = await this.request<{ user: UserProfile & { tester_agreement_accepted?: boolean }; stats: { total_tests: number; total_submissions: number; total_contribution: number } }>('/api/user/profile');
+    const response = await this.request<{ user: UserProfile; stats: { total_tests: number; total_submissions: number; total_contribution: number } }>('/api/user/profile');
     return {
       ...response.user,
       test_count: response.stats?.total_tests || 0,
@@ -737,8 +737,9 @@ export class ApiClient {
       submission_id?: string | null;
       model_name: string;
       action: string;
-      review_type: 'cli_submission';
+      review_type: 'cli_submission' | 'sponsorship_review' | 'platform_test';
       duration_seconds?: number | null;
+      benchmark_version?: string | null;
       created_at: string;
     }>;
     total: number;

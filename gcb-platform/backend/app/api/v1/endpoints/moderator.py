@@ -11,6 +11,7 @@ from app.core.auth import get_db
 from app.core.auth import require_moderator
 from app.db.models.user import User
 from app.db.models.community_submission import CommunitySubmission
+from app.db.models.sponsorship_request import SponsorshipRequest
 from app.db.models.question_set import QuestionSet
 from app.db.models.methodology_version import MethodologyVersion
 from app.db.models.question import Question
@@ -39,7 +40,7 @@ async def get_moderator_activity(
 ):
     """Get moderator activity history (all moderators by default, or filter by moderator_id)
     
-    Returns CLI submission reviews (CommunitySubmission)
+    Returns CLI submission reviews (CommunitySubmission) and sponsorship reviews (SponsorshipRequest)
     """
     from sqlalchemy.orm import joinedload
     
@@ -77,6 +78,43 @@ async def get_moderator_activity(
             duration_seconds=None,
             benchmark_version=submission.question_set_version,
             created_at=submission.reviewed_at  # Use reviewed_at as the activity timestamp
+        ))
+    
+    # Get sponsorship reviews (SponsorshipRequest with reviewer_id set)
+    sponsorship_query = db.query(SponsorshipRequest).options(
+        joinedload(SponsorshipRequest.reviewer)
+    ).filter(
+        SponsorshipRequest.reviewer_id.isnot(None),
+        SponsorshipRequest.reviewed_at.isnot(None)
+    )
+    
+    if moderator_id:
+        sponsorship_query = sponsorship_query.filter(SponsorshipRequest.reviewer_id == moderator_id)
+    
+    if start_date:
+        sponsorship_query = sponsorship_query.filter(SponsorshipRequest.reviewed_at >= start_date)
+    if end_date:
+        sponsorship_query = sponsorship_query.filter(SponsorshipRequest.reviewed_at <= end_date)
+    
+    sponsorships = sponsorship_query.order_by(desc(SponsorshipRequest.reviewed_at)).all()
+    
+    for sponsorship in sponsorships:
+        # Map sponsorship status to action
+        action = sponsorship.status  # 'approved' or 'rejected'
+        
+        # Get model name
+        model_name = sponsorship.openrouter_model_id or sponsorship.custom_model_name or "Unknown"
+        
+        items.append(ModeratorActivityItem(
+            review_id=sponsorship.id,  # Use sponsorship ID as review_id
+            test_id=None,
+            submission_id=None,
+            model_name=model_name,
+            action=action,
+            review_type="sponsorship_review",
+            duration_seconds=None,
+            benchmark_version=None,  # Sponsorships don't have a benchmark version yet
+            created_at=sponsorship.reviewed_at  # Use reviewed_at as the activity timestamp
         ))
     
     # Sort all items by created_at/reviewed_at descending
