@@ -247,6 +247,15 @@ export default function AdminDashboardPage() {
             </div>
             <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
               <div className="flex-1">
+                <h4 className="font-medium">PorkBun</h4>
+                <p className="text-sm text-muted-foreground">Domain name hosting</p>
+              </div>
+              <a href="https://porkbun.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex-1">
                 <h4 className="font-medium">GitHub</h4>
                 <p className="text-sm text-muted-foreground">Source control (Chris @ Chasm Solutions)</p>
               </div>
