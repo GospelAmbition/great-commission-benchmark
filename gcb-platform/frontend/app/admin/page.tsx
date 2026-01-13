@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useUserProfile } from "@/lib/useUserProfile";
 import { toast } from "sonner";
+import { ExternalLink } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -226,6 +227,96 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Platform Stack */}
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Platform Stack</CardTitle>
+          <CardDescription>Services and infrastructure powering the Great Commission Benchmark</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex-1">
+                <h4 className="font-medium">Railway</h4>
+                <p className="text-sm text-muted-foreground">Cloud hosting and deployment platform</p>
+              </div>
+              <a href="https://railway.app" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex-1">
+                <h4 className="font-medium">GitHub</h4>
+                <p className="text-sm text-muted-foreground">Source control (Chris @ Chasm Solutions)</p>
+              </div>
+              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex-1">
+                <h4 className="font-medium">MailerLite</h4>
+                <p className="text-sm text-muted-foreground">Email marketing and mailing lists</p>
+              </div>
+              <a href="https://mailerlite.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex-1">
+                <h4 className="font-medium">Google Cloud</h4>
+                <p className="text-sm text-muted-foreground">OAuth authentication provider</p>
+              </div>
+              <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex-1">
+                <h4 className="font-medium">Stripe</h4>
+                <p className="text-sm text-muted-foreground">Payment processing and subscriptions</p>
+              </div>
+              <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex-1">
+                <h4 className="font-medium">PostgreSQL</h4>
+                <p className="text-sm text-muted-foreground">Database (hosted on Railway)</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex-1">
+                <h4 className="font-medium">Next.js</h4>
+                <p className="text-sm text-muted-foreground">Frontend framework</p>
+              </div>
+              <a href="https://nextjs.org" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex-1">
+                <h4 className="font-medium">FastAPI</h4>
+                <p className="text-sm text-muted-foreground">Backend API framework (Python)</p>
+              </div>
+              <a href="https://fastapi.tiangolo.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex-1">
+                <h4 className="font-medium">NextAuth.js</h4>
+                <p className="text-sm text-muted-foreground">Authentication library</p>
+              </div>
+              <a href="https://next-auth.js.org" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
