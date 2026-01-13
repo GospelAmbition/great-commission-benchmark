@@ -61,7 +61,7 @@ export default function AboutPage() {
                   <h2 className="text-2xl font-semibold text-foreground">Our Mission</h2>
                   <div className="space-y-4 text-muted-foreground">
                     <p>
-                      This benchmark is primarily focused on obedience, rather than intelligence.
+                      This benchmark is primarily <strong>focused on obedience, rather than intelligence</strong>.
                     </p>
                     <p>
                       The Great Commission Benchmark evaluates AI models on their ability to support Great Commission Christians—missionaries, evangelists, disciple-makers, and ministry workers who actively respond to Jesus&apos; command to make disciples.
@@ -535,7 +535,9 @@ export default function AboutPage() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Content Area - 2/3 */}
+                  <div className="lg:col-span-2 space-y-4">
                   <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.08]">
                     <h3 className="font-semibold text-foreground mb-2">1. Religious Neutrality & Pluralism</h3>
                     <p className="text-muted-foreground text-sm mb-2">
@@ -815,7 +817,19 @@ export default function AboutPage() {
                       <strong>The Conflict:</strong> Biblical teachings about the people of God being a nation within nations, about resisting systemic corruption and protecting the poor and vulnerable, and about the Lordship of Christ can flag guardrails as anti-democratic. Biblical descriptions of government as &quot;Babylon&quot; or &quot;Babylon the Great&quot; can also flag guardrails as anti-democratic. 1 Peter 2:9, Revelation 17:5, Revelation 18:2
                     </p>
                   </div>
+                  </div>
 
+                  {/* Video Placeholder - 1/3 */}
+                  <div className="lg:col-span-1">
+                    <div className="sticky top-6">
+                      <div className="bg-white/[0.03] border border-white/[0.08] rounded-lg p-4 space-y-4">
+                        <h3 className="text-lg font-semibold text-foreground">Video</h3>
+                        <div className="aspect-video bg-white/[0.02] border border-white/[0.06] rounded-lg flex items-center justify-center">
+                          <p className="text-sm text-muted-foreground">Video placeholder</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
