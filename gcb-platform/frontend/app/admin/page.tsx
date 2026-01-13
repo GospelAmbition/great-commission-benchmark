@@ -257,7 +257,7 @@ export default function AdminDashboardPage() {
             <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
               <div className="flex-1">
                 <h4 className="font-medium">GitHub</h4>
-                <p className="text-sm text-muted-foreground">Source control (Chris @ Chasm Solutions)</p>
+                <p className="text-sm text-muted-foreground">Source control</p>
               </div>
               <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
                 <ExternalLink className="h-4 w-4" />
