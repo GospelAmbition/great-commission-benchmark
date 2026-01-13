@@ -3,6 +3,7 @@ from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError
 
 from app.core.config import settings
 from app.db.base import SessionLocal
@@ -66,26 +67,33 @@ async def get_current_user(
             )
         
         # Get or create user in database
-        user = db.query(User).filter(User.auth0_id == provider_id).first()
-        
-        if not user:
-            # Create user if doesn't exist
-            email = payload.get("email", "")
-            name = payload.get("name", "")
-            # Default role is "user" - can be updated by admins
-            role = payload.get("role", "user")
+        try:
+            user = db.query(User).filter(User.auth0_id == provider_id).first()
             
-            user = User(
-                auth0_id=provider_id,  # Keep field name for now, stores Google ID
-                email=email,
-                name=name,
-                role=role
+            if not user:
+                # Create user if doesn't exist
+                email = payload.get("email", "")
+                name = payload.get("name", "")
+                # Default role is "user" - can be updated by admins
+                role = payload.get("role", "user")
+                
+                user = User(
+                    auth0_id=provider_id,  # Keep field name for now, stores Google ID
+                    email=email,
+                    name=name,
+                    role=role
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            
+            return user
+        except OperationalError as e:
+            # Database connection error - return 503 Service Unavailable
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database service temporarily unavailable"
             )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-        
-        return user
         
     except JWTError:
         raise HTTPException(

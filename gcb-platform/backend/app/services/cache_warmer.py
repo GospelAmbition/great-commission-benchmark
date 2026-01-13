@@ -11,6 +11,7 @@ from typing import Optional
 from datetime import datetime
 
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import text
 
 from app.core.cache import cache, make_cache_key, CACHE_TTL, CACHE_STALE_TTL
 from app.core.auth import get_db_sync
@@ -75,7 +76,11 @@ async def warm_leaderboard_cache(db: Session) -> None:
         logger.info(f"Leaderboard cache warmed successfully with {len(result.entries)} entries")
         
     except Exception as e:
-        logger.error(f"Failed to warm leaderboard cache: {e}", exc_info=True)
+        # Log connection errors at info level, other errors at error level
+        if "connection" in str(e).lower() or "refused" in str(e).lower():
+            logger.info(f"Leaderboard cache warming skipped - database not available")
+        else:
+            logger.error(f"Failed to warm leaderboard cache: {e}", exc_info=True)
 
 
 async def warm_category_rankings_cache(db: Session) -> None:
@@ -96,7 +101,11 @@ async def warm_category_rankings_cache(db: Session) -> None:
         logger.info(f"Category rankings cache warmed with {len(result.get('categories', {}))} categories")
         
     except Exception as e:
-        logger.error(f"Failed to warm category rankings cache: {e}", exc_info=True)
+        # Log connection errors at info level, other errors at error level
+        if "connection" in str(e).lower() or "refused" in str(e).lower():
+            logger.info(f"Category rankings cache warming skipped - database not available")
+        else:
+            logger.error(f"Failed to warm category rankings cache: {e}", exc_info=True)
 
 
 async def warm_filter_options_cache(db: Session) -> None:
@@ -158,7 +167,11 @@ async def warm_filter_options_cache(db: Session) -> None:
         logger.info("Filter options cache warmed successfully")
         
     except Exception as e:
-        logger.error(f"Failed to warm filter options cache: {e}", exc_info=True)
+        # Log connection errors at info level, other errors at error level
+        if "connection" in str(e).lower() or "refused" in str(e).lower():
+            logger.info(f"Filter options cache warming skipped - database not available")
+        else:
+            logger.error(f"Failed to warm filter options cache: {e}", exc_info=True)
 
 
 async def _generate_leaderboard_data(
@@ -567,7 +580,19 @@ async def warm_all_caches() -> None:
     start_time = datetime.utcnow()
     
     # Get a database session
-    db = get_db_sync()
+    db = None
+    try:
+        db = get_db_sync()
+        # Test database connection first
+        db.execute(text("SELECT 1"))
+        db.commit()
+    except Exception as e:
+        # Database not available - log at info level instead of error
+        logger.info(f"Database not available for cache warming: {e}")
+        if db:
+            db.close()
+        return
+    
     try:
         # Warm caches in order of importance
         await warm_filter_options_cache(db)
@@ -578,9 +603,14 @@ async def warm_all_caches() -> None:
         logger.info(f"Cache warming completed in {elapsed:.2f} seconds")
         
     except Exception as e:
-        logger.error(f"Cache warming failed: {e}", exc_info=True)
+        # Log connection errors at info level, other errors at error level
+        if "connection" in str(e).lower() or "refused" in str(e).lower():
+            logger.info(f"Cache warming skipped - database connection issue: {e}")
+        else:
+            logger.error(f"Cache warming failed: {e}", exc_info=True)
     finally:
-        db.close()
+        if db:
+            db.close()
 
 
 async def _background_refresh_loop() -> None:
