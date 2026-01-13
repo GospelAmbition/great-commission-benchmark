@@ -271,6 +271,21 @@ export default function ModelDetailPage() {
   const overallScore = model.overall_score ?? model.score ?? 0;
   const verdict = getVerdict(overallScore);
 
+  // Helper function to capitalize provider name (Title Case)
+  const capitalizeProvider = (provider: string) => {
+    return provider
+      .split(/([\s-]+)/)
+      .map((part, index) => {
+        // Preserve separators (spaces, hyphens)
+        if (/^[\s-]+$/.test(part)) {
+          return part;
+        }
+        // Capitalize first letter, lowercase the rest
+        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+      })
+      .join('');
+  };
+
   // Prepare radar chart data
   const displayName = getDisplayModelName(model.model_name || model.name, model.model_id);
   const radarCategories = model.category_scores ? Object.keys(model.category_scores) : [];
@@ -286,7 +301,7 @@ export default function ModelDetailPage() {
           <Link href="/leaderboard">← Back to Leaderboard</Link>
         </Button>
         <div>
-          <h1 className="text-4xl font-bold mb-4">{formatProvider(model.provider).toUpperCase()} | {displayName}</h1>
+          <h1 className="text-4xl font-bold mb-4">{capitalizeProvider(formatProvider(model.provider))} | {displayName}</h1>
           <div className="flex items-center justify-between flex-wrap gap-4">
             {model.description ? (
               <p className="text-muted-foreground text-lg w-2/3">{model.description}</p>
@@ -527,9 +542,11 @@ export default function ModelDetailPage() {
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead>Version</TableHead>
+                      <TableHead className="text-center">Tier 1 (Task)</TableHead>
+                      <TableHead className="text-center">Tier 2 (Gospel)</TableHead>
+                      <TableHead className="text-center">Tier 3 (Worldview)</TableHead>
                       <TableHead>Score</TableHead>
                       <TableHead>Trust Tier</TableHead>
-                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -539,14 +556,51 @@ export default function ModelDetailPage() {
                           {new Date(run.completed_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell>{run.benchmark_version}</TableCell>
+                        <TableCell className="text-center">
+                          {run.tier1_score != null ? (
+                            <span className={`text-sm font-medium ${
+                              run.tier1_score >= 80 ? "text-emerald-400" : 
+                              run.tier1_score >= 61 ? "text-blue-400" : 
+                              run.tier1_score >= 40 ? "text-amber-400" : 
+                              "text-red-400"
+                            }`}>
+                              {run.tier1_score.toFixed(1)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/50">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {run.tier2_score != null ? (
+                            <span className={`text-sm font-medium ${
+                              run.tier2_score >= 80 ? "text-emerald-400" : 
+                              run.tier2_score >= 61 ? "text-blue-400" : 
+                              run.tier2_score >= 40 ? "text-amber-400" : 
+                              "text-red-400"
+                            }`}>
+                              {run.tier2_score.toFixed(1)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/50">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {run.tier3_score != null ? (
+                            <span className={`text-sm font-medium ${
+                              run.tier3_score >= 80 ? "text-emerald-400" : 
+                              run.tier3_score >= 61 ? "text-blue-400" : 
+                              run.tier3_score >= 40 ? "text-amber-400" : 
+                              "text-red-400"
+                            }`}>
+                              {run.tier3_score.toFixed(1)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/50">—</span>
+                          )}
+                        </TableCell>
                         <TableCell>{run.overall_score?.toFixed(1) || "—"}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{run.trust_tier}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button asChild variant="ghost" size="sm">
-                            <Link href={`/tests/${run.test_run_id}/results`}>View</Link>
-                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}

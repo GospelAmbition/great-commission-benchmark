@@ -496,6 +496,7 @@ function LeaderboardContent() {
                           </div>
                         </TableHead>
                         <TableHead className="w-14 text-center">#</TableHead>
+                        <TableHead>Provider</TableHead>
                         <TableHead>
                           <Button
                             variant="ghost"
@@ -510,7 +511,6 @@ function LeaderboardContent() {
                             {filters.sort !== "model_name" && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
                           </Button>
                         </TableHead>
-                        <TableHead>Provider</TableHead>
                         <TableHead className="text-center text-xs">
                           <span title="Tier 1: Task Capability (70% weight)">Task</span>
                         </TableHead>
@@ -555,6 +555,12 @@ function LeaderboardContent() {
                             <TableCell className="py-3 text-center font-bold text-muted-foreground">
                               {pagination.offset + index + 1}
                             </TableCell>
+                            <TableCell className="py-3 text-muted-foreground">
+                              <div className="flex items-center gap-2">
+                                <ProviderIcon provider={item.provider} size={16} />
+                                {formatProvider(item.provider)}
+                              </div>
+                            </TableCell>
                             <TableCell className="py-3">
                               <Link
                                 href={`/leaderboard/models/${encodeURIComponent(item.model_id)}`}
@@ -562,12 +568,6 @@ function LeaderboardContent() {
                               >
                                 {getDisplayModelName(item.model_name, item.model_id)}
                               </Link>
-                            </TableCell>
-                            <TableCell className="py-3 text-muted-foreground">
-                              <div className="flex items-center gap-2">
-                                <ProviderIcon provider={item.provider} size={16} />
-                                {formatProvider(item.provider)}
-                              </div>
                             </TableCell>
                             <TableCell className="py-3 text-center">
                               <TierScore score={item.tier1_score} />
