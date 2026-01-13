@@ -45,6 +45,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useUserProfile } from "@/lib/useUserProfile";
+import { ChevronRight } from "lucide-react";
 
 // Types
 interface StripeConfig {
@@ -116,6 +118,7 @@ export default function AdminPaymentsPage() {
   const user = session?.user;
   const userLoading = status === "loading";
   const router = useRouter();
+  const { canAdmin, isAdmin, loading: profileLoading } = useUserProfile();
 
   // Config state
   const [config, setConfig] = useState<StripeConfig | null>(null);
@@ -180,10 +183,16 @@ export default function AdminPaymentsPage() {
       router.push("/api/auth/signin");
       return;
     }
-    if (user) {
+    // Check if user is admin
+    if (user && !profileLoading) {
+      if (!canAdmin && !isAdmin) {
+        toast.error("You don't have permission to access this page");
+        router.push("/dashboard");
+        return;
+      }
       loadConfig();
     }
-  }, [user, userLoading, router]);
+  }, [user, userLoading, profileLoading, canAdmin, isAdmin, router]);
 
   // Load data when config is loaded and configured
   useEffect(() => {
@@ -472,7 +481,7 @@ export default function AdminPaymentsPage() {
     }
   }
 
-  if (userLoading || configLoading) {
+  if (userLoading || profileLoading || configLoading) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -485,12 +494,31 @@ export default function AdminPaymentsPage() {
     return null;
   }
 
+  // Double-check admin permission before rendering
+  if (!canAdmin && !isAdmin) {
+    return null; // Will redirect in useEffect
+  }
+
   return (
     <div className="container py-8">
+      {/* Breadcrumb */}
+      <nav className="mb-6" aria-label="Breadcrumb">
+        <ol className="flex items-center gap-2 text-sm text-muted-foreground">
+          <li>
+            <Link href="/admin" className="hover:text-primary transition-colors">
+              Admin
+            </Link>
+          </li>
+          <li>
+            <ChevronRight className="h-4 w-4" />
+          </li>
+          <li className="text-foreground font-medium">
+            Payments & Stripe
+          </li>
+        </ol>
+      </nav>
+
       <div className="mb-8">
-        <Button asChild variant="ghost" className="mb-4">
-          <Link href="/admin">← Back to Admin Dashboard</Link>
-        </Button>
         <h1 className="text-4xl font-bold">Payments & Stripe</h1>
         <p className="mt-2 text-muted-foreground">
           Manage Stripe configuration and view transaction history

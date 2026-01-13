@@ -24,11 +24,6 @@ export function Footer() {
                   FAQ
                 </Link>
               </li>
-              <li>
-                <Link href="/runner" className="text-muted-foreground hover:text-primary transition-colors">
-                  Testing CLI
-                </Link>
-              </li>
             </ul>
           </div>
           <div>
@@ -42,6 +37,11 @@ export function Footer() {
               <li>
                 <Link href="/contribute/support" className="text-muted-foreground hover:text-primary transition-colors">
                   Support the Project
+                </Link>
+              </li>
+              <li>
+                <Link href="/contribute" className="text-muted-foreground hover:text-primary transition-colors">
+                  Volunteer
                 </Link>
               </li>
             </ul>

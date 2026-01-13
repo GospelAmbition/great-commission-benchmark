@@ -17,6 +17,7 @@ class UserProfile(GCBBaseModel):
     organization: Optional[str] = None
     tester_agreement_accepted: bool = False
     created_at: datetime
+    is_newsletter_subscribed: bool = False
     # Permissions
     can_view_benchmark: bool = False
     can_edit_benchmark: bool = False

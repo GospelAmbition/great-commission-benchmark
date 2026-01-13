@@ -31,7 +31,8 @@ import {
   ExternalLink,
   Download,
   Sparkles,
-  Play
+  Play,
+  FileDown
 } from "lucide-react";
 import { DashboardIcon } from "@/lib/icons";
 import { toast } from "sonner";
@@ -45,6 +46,7 @@ export default function DashboardPage() {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [unsubscribing, setUnsubscribing] = useState(false);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -76,6 +78,21 @@ export default function DashboardPage() {
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
+  }
+
+  async function handleUnsubscribe() {
+    setUnsubscribing(true);
+    try {
+      const response = await apiClient.unsubscribeNewsletter();
+      toast.success(response.message || "Successfully unsubscribed from newsletter");
+      // Reload dashboard data to update subscription status
+      await loadDashboardData();
+    } catch (error) {
+      console.error("Failed to unsubscribe:", error);
+      toast.error("Failed to unsubscribe from newsletter");
+    } finally {
+      setUnsubscribing(false);
+    }
   }
 
   if (userLoading || loading) {
@@ -162,15 +179,39 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">Newsletter</CardTitle>
+                {profile?.is_newsletter_subscribed && (
+                  <Badge variant="default" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs">
+                    Subscribed
+                  </Badge>
+                )}
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Get updates on new features, benchmark results, and more.
-              </p>
-              <Button asChild variant="outline" size="sm" className="w-full">
-                <Link href="/newsletter">Subscribe →</Link>
-              </Button>
+              {profile?.is_newsletter_subscribed ? (
+                <>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    You&apos;re subscribed! Get updates on new features, benchmark results, and more.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={handleUnsubscribe}
+                    disabled={unsubscribing}
+                  >
+                    {unsubscribing ? "Unsubscribing..." : "Unsubscribe"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Get updates on new features, benchmark results, and more.
+                  </p>
+                  <Button asChild variant="outline" size="sm" className="w-full">
+                    <Link href="/newsletter">Subscribe →</Link>
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -231,7 +272,7 @@ export default function DashboardPage() {
                         Download the GCB Runner
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Download the standalone executable for your platform — no Python required.
+                        Download the standalone executable for your platform. Follow directions and enable permissions — no Python required.
                       </p>
                       <Button asChild variant="glow" size="sm" className="mt-2">
                         <Link href="/runner">
@@ -292,21 +333,21 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Step 5: Upload */}
+                  {/* Step 5: Export */}
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white/[0.06] text-muted-foreground flex items-center justify-center">
                       <span className="font-bold">5</span>
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-foreground flex items-center gap-2">
-                        <Upload className="h-4 w-4" />
-                        Export and Upload Your Results
+                        <FileDown className="h-4 w-4" />
+                        Export Your Results
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Export your results and upload them here for moderator review and leaderboard inclusion.
+                        Export your test results to a JSON file for submission.
                       </p>
                       <div className="mt-2 flex items-center gap-2">
-                        <code className="bg-white/[0.06] text-foreground px-3 py-2 rounded-md text-sm font-mono border border-white/[0.08]">
+                        <code className="bg-white/[0.06] text-foreground px-3 py-2 rounded-md text-sm font-mono flex-1 border border-white/[0.08]">
                           gcb-runner export --run N
                         </code>
                         <Button 
@@ -317,6 +358,22 @@ export default function DashboardPage() {
                           <Copy className="h-4 w-4" />
                         </Button>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Step 6: Upload */}
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white/[0.06] text-muted-foreground flex items-center justify-center">
+                      <span className="font-bold">6</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-foreground flex items-center gap-2">
+                        <Upload className="h-4 w-4" />
+                        Upload Your Results
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Upload your exported results here for moderator review and leaderboard inclusion.
+                      </p>
                       <Button 
                         variant="brand" 
                         size="sm" 
@@ -459,65 +516,8 @@ export default function DashboardPage() {
               </Card>
 
               <APIKeysCard />
-
-              <Card className="border-primary/20">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    <CardTitle className="text-lg">Sponsor a Model Test</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Help test AI models for the Great Commission by sponsoring a test run.
-                  </p>
-                  <Button asChild variant="glow" className="w-full">
-                    <Link href="/sponsor">
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Sponsor Test
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
             </div>
           </div>
-        </div>
-
-        {/* Stats Summary */}
-        <div className="grid gap-4 md:grid-cols-3 mt-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                GCB Runner Submissions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{submissions?.length ?? 0}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Sponsorship Submissions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {submissions?.filter((s: any) => s.submission_type === "sponsorship").length ?? 0}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Contributions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{profile?.contribution_count || 0}</div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* CLI Submission Upload Dialog */}

@@ -7,12 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useUserProfile } from "@/lib/useUserProfile";
+import { toast } from "sonner";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const user = session?.user;
   const userLoading = status === "loading";
+  const { canAdmin, isAdmin, loading: profileLoading } = useUserProfile();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -21,10 +24,16 @@ export default function AdminDashboardPage() {
       router.push("/api/auth/signin");
       return;
     }
-    if (user) {
+    // Check if user is admin
+    if (user && !profileLoading) {
+      if (!canAdmin && !isAdmin) {
+        toast.error("You don't have permission to access this page");
+        router.push("/dashboard");
+        return;
+      }
       loadDashboardData();
     }
-  }, [user, userLoading, router]);
+  }, [user, userLoading, profileLoading, canAdmin, isAdmin, router]);
 
   async function loadDashboardData() {
     setLoading(true);
@@ -58,7 +67,7 @@ export default function AdminDashboardPage() {
     }
   }
 
-  if (userLoading || (loading && !user)) {
+  if (userLoading || profileLoading || (loading && !user)) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -73,6 +82,11 @@ export default function AdminDashboardPage() {
 
   if (!user) {
     return null;
+  }
+
+  // Double-check admin permission before rendering
+  if (!canAdmin && !isAdmin) {
+    return null; // Will redirect in useEffect
   }
 
   return (
@@ -197,6 +211,17 @@ export default function AdminDashboardPage() {
           <CardContent>
             <Button asChild variant="outline">
               <Link href="/admin/payments">Manage Payments</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Volunteer Applications</CardTitle>
+            <CardDescription>Review and manage volunteer applications for moderation and advisory roles</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/admin/volunteers">View Applications</Link>
             </Button>
           </CardContent>
         </Card>

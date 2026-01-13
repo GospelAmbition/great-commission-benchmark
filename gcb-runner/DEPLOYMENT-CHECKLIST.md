@@ -233,10 +233,31 @@ python scripts/build.py
 ```
 
 ### Linux x64
+
+**Option 1: Using Docker (Recommended if you don't have Linux)**
 ```bash
-# On Linux x64 or via Docker/CI
+# Build Linux executable using Docker (works on macOS/Windows)
+./build-linux.sh
+
+# Or manually:
+docker build -f Dockerfile.build-linux -t gcb-runner-builder .
+CONTAINER_ID=$(docker create gcb-runner-builder)
+docker cp $CONTAINER_ID:/build/dist/release/gcb-runner-linux-x64 ./dist/release/
+docker rm $CONTAINER_ID
+```
+
+**Option 2: On a Linux machine**
+```bash
+# On Linux x64
 python scripts/build.py
 # Output: dist/release/gcb-runner-linux-x64
+```
+
+**Option 3: Using GitHub Actions**
+```bash
+# Push to GitHub and trigger the build-linux workflow
+# Or manually trigger: Actions → Build Linux Executable → Run workflow
+# Download the artifact from the workflow run
 ```
 
 ### Windows x64

@@ -18,12 +18,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { apiClient } from "@/lib/api";
+import { useUserProfile } from "@/lib/useUserProfile";
+import { toast } from "sonner";
 
 export default function ModeratorDashboardPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const user = session?.user;
   const userLoading = status === "loading";
+  const { canModerate, canAdmin, isAdmin, loading: profileLoading } = useUserProfile();
   const [communityQueue, setCommunityQueue] = useState<any[]>([]);
   const [sponsorshipQueue, setSponsorshipQueue] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -35,10 +38,16 @@ export default function ModeratorDashboardPage() {
       router.push("/api/auth/signin");
       return;
     }
-    if (user) {
+    // Check if user has moderator permission
+    if (user && !profileLoading) {
+      if (!canModerate && !canAdmin && !isAdmin) {
+        toast.error("You don't have permission to access this page");
+        router.push("/dashboard");
+        return;
+      }
       loadDashboardData();
     }
-  }, [user, userLoading, router]);
+  }, [user, userLoading, profileLoading, canModerate, canAdmin, isAdmin, router]);
 
   async function loadDashboardData() {
     setLoading(true);
@@ -77,7 +86,7 @@ export default function ModeratorDashboardPage() {
     }
   }
 
-  if (userLoading || (loading && !user)) {
+  if (userLoading || profileLoading || (loading && !user)) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -92,6 +101,11 @@ export default function ModeratorDashboardPage() {
 
   if (!user) {
     return null;
+  }
+
+  // Double-check moderator permission before rendering
+  if (!canModerate && !canAdmin && !isAdmin) {
+    return null; // Will redirect in useEffect
   }
 
   return (

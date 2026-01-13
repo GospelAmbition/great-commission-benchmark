@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Terminal, Download, Settings, BarChart3, Upload, Server, Laptop, Apple, Monitor, RefreshCw } from "lucide-react";
+import { Terminal, Download, BarChart3, Upload, Server, Laptop, Apple, Monitor, RefreshCw, Play } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Metadata } from "next";
 import { generatePageMetadata } from "@/lib/seo";
@@ -45,6 +45,18 @@ export default function RunnerPage() {
                 <Badge variant="secondary">Ollama</Badge>
               </div>
             </div>
+            <div className="w-full md:w-96 flex-shrink-0">
+              <div className="aspect-video bg-white/[0.03] border border-white/[0.08] rounded-lg flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center border-2 border-primary/40">
+                    <Play className="h-8 w-8 text-primary ml-1" fill="currentColor" />
+                  </div>
+                </div>
+                <div className="absolute bottom-4 left-4 right-4 text-center">
+                  <p className="text-xs text-muted-foreground">Video coming soon</p>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -82,12 +94,8 @@ export default function RunnerPage() {
                 <Button variant="brand" size="lg" className="w-full justify-start" asChild>
                   <a href="/downloads/gcb-runner-macos-arm64" download>
                     <Download className="h-4 w-4 mr-2" />
-                    Download for Apple Silicon (M1/M2/M3)
+                    Download for Apple Silicon (M series)
                   </a>
-                </Button>
-                <Button variant="outline" size="lg" className="w-full justify-start" disabled>
-                  <Download className="h-4 w-4 mr-2" />
-                  Intel Mac — Coming Soon
                 </Button>
               </div>
               <div className="bg-white/[0.03] border border-white/[0.08] p-4 rounded-lg text-sm space-y-2">
@@ -138,37 +146,6 @@ export default function RunnerPage() {
               <a href="/downloads/manifest.json" className="text-primary hover:underline">
                 manifest.json
               </a>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Quick Start */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-foreground">Quick Start</CardTitle>
-          <CardDescription className="text-muted-foreground">Get up and running in under a minute</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h3 className="font-medium text-foreground mb-2">1. Configure</h3>
-            <div className="bg-white/[0.03] border border-white/[0.08] p-4 rounded-lg font-mono text-sm text-foreground">
-              gcb-runner config
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              You&apos;ll need an API key from your{" "}
-              <a href="/dashboard/settings" className="text-primary hover:underline">
-                dashboard settings
-              </a>.
-            </p>
-          </div>
-          <div>
-            <h3 className="font-medium text-foreground mb-2">2. Run</h3>
-            <div className="bg-white/[0.03] border border-white/[0.08] p-4 rounded-lg font-mono text-sm text-foreground">
-              gcb-runner
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Launch the interactive menu and follow the guided setup.
             </p>
           </div>
         </CardContent>
@@ -236,111 +213,6 @@ export default function RunnerPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Platform vs CLI */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-foreground">Platform Tests vs GCB Runner Submissions</CardTitle>
-          <CardDescription className="text-muted-foreground">Choose the right approach for your needs</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-2 font-medium text-foreground">Aspect</th>
-                  <th className="text-left py-3 px-2 font-medium text-foreground">Platform Tests</th>
-                  <th className="text-left py-3 px-2 font-medium text-foreground">GCB Runner Submissions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-border">
-                  <td className="py-3 px-2 text-muted-foreground">Where run</td>
-                  <td className="py-3 px-2 text-foreground">On the platform</td>
-                  <td className="py-3 px-2 text-foreground">Locally via GCB Runner</td>
-                </tr>
-                <tr className="border-b border-border">
-                  <td className="py-3 px-2 text-muted-foreground">Publishing</td>
-                  <td className="py-3 px-2 text-foreground">Automatic</td>
-                  <td className="py-3 px-2 text-foreground">Requires moderator review</td>
-                </tr>
-                <tr className="border-b border-border">
-                  <td className="py-3 px-2 text-muted-foreground">Cost</td>
-                  <td className="py-3 px-2 text-foreground">Platform fee + model API cost</td>
-                  <td className="py-3 px-2 text-foreground">Submission fee (you pay model costs)</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-2 text-muted-foreground">Best for</td>
-                  <td className="py-3 px-2 text-foreground">Quick results, individual testers</td>
-                  <td className="py-3 px-2 text-foreground">Organizations, custom/local models</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Commands Reference */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-foreground">Command Reference</CardTitle>
-          <CardDescription className="text-muted-foreground">Common commands to get you started</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid gap-2">
-              <div className="flex items-start gap-4">
-                <code className="bg-white/[0.05] text-foreground px-2 py-1 rounded text-sm font-mono shrink-0">gcb-runner</code>
-                <span className="text-sm text-muted-foreground">Launch interactive menu</span>
-              </div>
-              <div className="flex items-start gap-4">
-                <code className="bg-white/[0.05] text-foreground px-2 py-1 rounded text-sm font-mono shrink-0">gcb-runner config</code>
-                <span className="text-sm text-muted-foreground">Configure API keys and backends</span>
-              </div>
-              <div className="flex items-start gap-4">
-                <code className="bg-white/[0.05] text-foreground px-2 py-1 rounded text-sm font-mono shrink-0">gcb-runner test --model gpt-4o</code>
-                <span className="text-sm text-muted-foreground">Run benchmark on a model</span>
-              </div>
-              <div className="flex items-start gap-4">
-                <code className="bg-white/[0.05] text-foreground px-2 py-1 rounded text-sm font-mono shrink-0">gcb-runner results</code>
-                <span className="text-sm text-muted-foreground">View test results</span>
-              </div>
-              <div className="flex items-start gap-4">
-                <code className="bg-white/[0.05] text-foreground px-2 py-1 rounded text-sm font-mono shrink-0">gcb-runner view</code>
-                <span className="text-sm text-muted-foreground">Open local web dashboard</span>
-              </div>
-              <div className="flex items-start gap-4">
-                <code className="bg-white/[0.05] text-foreground px-2 py-1 rounded text-sm font-mono shrink-0">gcb-runner update</code>
-                <span className="text-sm text-muted-foreground">Check for and install updates</span>
-              </div>
-              <div className="flex items-start gap-4">
-                <code className="bg-white/[0.05] text-foreground px-2 py-1 rounded text-sm font-mono shrink-0">gcb-runner upload --run 3</code>
-                <span className="text-sm text-muted-foreground">Submit results to platform</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Get API Key CTA */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Settings className="h-8 w-8 text-primary" />
-              <div>
-                <h3 className="font-semibold text-foreground">Ready to get started?</h3>
-                <p className="text-sm text-muted-foreground">
-                  Generate an API key in your dashboard settings
-                </p>
-              </div>
-            </div>
-            <Button variant="brand" asChild>
-              <a href="/dashboard/settings">Get API Key</a>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

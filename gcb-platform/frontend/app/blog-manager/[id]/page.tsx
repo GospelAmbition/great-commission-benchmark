@@ -16,6 +16,7 @@ import { PostEditor } from "@/components/blog/PostEditor";
 import { ImageUploader } from "@/components/blog/ImageUploader";
 import { ChevronLeft, Save, Send, Eye, EyeOff, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { useUserProfile } from "@/lib/useUserProfile";
 
 interface BlogCategory {
   id: string;
@@ -48,6 +49,7 @@ export default function EditBlogPostPage() {
   const { data: session, status } = useSession();
   const user = session?.user;
   const userLoading = status === "loading";
+  const { canManageBlog, canAdmin, isAdmin, loading: profileLoading } = useUserProfile();
   const postId = params.id as string;
   
   const [post, setPost] = useState<BlogPost | null>(null);
@@ -70,10 +72,18 @@ export default function EditBlogPostPage() {
       router.push("/api/auth/signin");
       return;
     }
-    if (user && postId) {
-      loadData();
+    // Check if user has blog management permission
+    if (user && !profileLoading) {
+      if (!canManageBlog && !canAdmin && !isAdmin) {
+        toast.error("You don't have permission to access this page");
+        router.push("/dashboard");
+        return;
+      }
+      if (postId) {
+        loadData();
+      }
     }
-  }, [user, userLoading, postId, router]);
+  }, [user, userLoading, profileLoading, canManageBlog, canAdmin, isAdmin, postId, router]);
 
   async function loadData() {
     setLoading(true);
@@ -120,7 +130,7 @@ export default function EditBlogPostPage() {
     }
   }
 
-  if (userLoading || (loading && !user)) {
+  if (userLoading || profileLoading || (loading && !user)) {
     return (
       <div className="container py-8">
         <div className="h-[500px] border rounded-md flex items-center justify-center bg-muted">
@@ -132,6 +142,11 @@ export default function EditBlogPostPage() {
 
   if (!user) {
     return null;
+  }
+
+  // Double-check blog management permission before rendering
+  if (!canManageBlog && !canAdmin && !isAdmin) {
+    return null; // Will redirect in useEffect
   }
 
   async function handleUploadImage(file: File): Promise<string> {

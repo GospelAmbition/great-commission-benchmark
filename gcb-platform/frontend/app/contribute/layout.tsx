@@ -3,10 +3,10 @@ import { generatePageMetadata } from "@/lib/seo";
 import { buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
 
 export const metadata: Metadata = generatePageMetadata({
-  title: "Contribute to the Great Commission Benchmark",
-  description: "Help build the Great Commission Benchmark community. Become a tester, submit results, contribute to development, or support the project financially.",
+  title: "Volunteer for the Great Commission Benchmark",
+  description: "Help advance the Great Commission Benchmark through volunteering. Sponsor a test, become a tester, or join our moderation or advisory team.",
   path: "/contribute",
-  keywords: ["contribute", "tester", "submit", "development", "support", "donate"],
+  keywords: ["volunteer", "sponsor", "tester", "moderation", "advisory", "contribute"],
 });
 
 export default function ContributeLayout({
@@ -16,7 +16,7 @@ export default function ContributeLayout({
 }) {
   const breadcrumbSchema = buildBreadcrumbSchema([
     { name: "Home", path: "/" },
-    { name: "Contribute", path: "/contribute" },
+    { name: "Volunteer", path: "/contribute" },
   ]);
 
   return (

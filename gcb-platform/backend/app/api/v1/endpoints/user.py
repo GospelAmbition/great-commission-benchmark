@@ -48,6 +48,14 @@ async def get_profile(
         total_contribution=0  # Platform tests removed - contribution tracking no longer applies
     )
     
+    # Check newsletter subscription status
+    from app.db.models.newsletter_subscriber import NewsletterSubscriber
+    newsletter_subscriber = db.query(NewsletterSubscriber).filter(
+        NewsletterSubscriber.email == current_user.email,
+        NewsletterSubscriber.is_active == True
+    ).first()
+    is_newsletter_subscribed = newsletter_subscriber is not None
+    
     from app.core.auth import has_permission
     
     return UserProfileResponse(
@@ -60,6 +68,7 @@ async def get_profile(
             organization=None,  # DEFERRED: Organization field not yet in User model schema
             tester_agreement_accepted=current_user.tester_agreement_accepted,
             created_at=current_user.created_at,
+            is_newsletter_subscribed=is_newsletter_subscribed,
             can_view_benchmark=has_permission(current_user, "can_view_benchmark"),
             can_edit_benchmark=has_permission(current_user, "can_edit_benchmark"),
             can_moderate=has_permission(current_user, "can_moderate"),
@@ -308,3 +317,44 @@ async def accept_tester_agreement(
     db.refresh(current_user)
     
     return {"message": "Tester agreement accepted", "accepted": True}
+
+
+@router.post("/newsletter/unsubscribe")
+async def unsubscribe_newsletter_authenticated(
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Unsubscribe authenticated user from newsletter"""
+    from app.db.models.newsletter_subscriber import NewsletterSubscriber
+    from app.services.newsletter import NewsletterService
+    
+    # Find subscriber by user's email
+    subscriber = db.query(NewsletterSubscriber).filter(
+        NewsletterSubscriber.email == current_user.email
+    ).first()
+    
+    if not subscriber:
+        return {
+            "success": True,
+            "message": "You are not subscribed to the newsletter"
+        }
+    
+    if not subscriber.is_active:
+        return {
+            "success": True,
+            "message": "You are already unsubscribed from the newsletter"
+        }
+    
+    # Update database
+    subscriber.is_active = False
+    subscriber.unsubscribed_at = datetime.utcnow()
+    
+    # Sync with MailerLite
+    await NewsletterService.remove_subscriber_from_mailerlite(current_user.email)
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": "Successfully unsubscribed from newsletter"
+    }

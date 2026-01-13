@@ -35,6 +35,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useUserProfile } from "@/lib/useUserProfile";
 
 interface AdminUser {
   id: string;
@@ -58,6 +59,7 @@ export default function AdminUsersPage() {
   const user = session?.user;
   const userLoading = status === "loading";
   const router = useRouter();
+  const { canAdmin, isAdmin, loading: profileLoading } = useUserProfile();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -87,10 +89,16 @@ export default function AdminUsersPage() {
       router.push("/api/auth/signin");
       return;
     }
-    if (user) {
+    // Check if user is admin
+    if (user && !profileLoading) {
+      if (!canAdmin && !isAdmin) {
+        toast.error("You don't have permission to access this page");
+        router.push("/dashboard");
+        return;
+      }
       loadUsers();
     }
-  }, [user, userLoading, router, search, roleFilter, pagination.page]);
+  }, [user, userLoading, profileLoading, canAdmin, isAdmin, router, search, roleFilter, pagination.page]);
 
   async function loadUsers() {
     setLoading(true);
@@ -286,7 +294,7 @@ export default function AdminUsersPage() {
     return true;
   });
 
-  if (userLoading || initialLoading) {
+  if (userLoading || profileLoading || initialLoading) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -297,6 +305,11 @@ export default function AdminUsersPage() {
 
   if (!user) {
     return null;
+  }
+
+  // Double-check admin permission before rendering
+  if (!canAdmin && !isAdmin) {
+    return null; // Will redirect in useEffect
   }
 
   return (

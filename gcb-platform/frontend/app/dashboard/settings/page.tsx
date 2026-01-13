@@ -20,6 +20,7 @@ interface UserProfile {
   name: string;
   email: string;
   organization?: string;
+  is_newsletter_subscribed?: boolean;
 }
 
 interface NotificationPreferences {
@@ -39,6 +40,7 @@ export default function SettingsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [unsubscribing, setUnsubscribing] = useState(false);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -59,12 +61,14 @@ export default function SettingsPage() {
           name: profileData.name || user?.name || "",
           email: profileData.email || user?.email || "",
           organization: profileData.organization || "",
+          is_newsletter_subscribed: profileData.is_newsletter_subscribed || false,
         });
       } else {
         setProfile({
           name: user?.name || "",
           email: user?.email || "",
           organization: "",
+          is_newsletter_subscribed: false,
         });
       }
     } catch (error) {
@@ -106,6 +110,21 @@ export default function SettingsPage() {
       toast.error("Failed to update notification preferences");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleUnsubscribe() {
+    setUnsubscribing(true);
+    try {
+      const response = await apiClient.unsubscribeNewsletter();
+      toast.success(response.message || "Successfully unsubscribed from newsletter");
+      // Reload settings to update subscription status
+      await loadSettings();
+    } catch (error) {
+      console.error("Failed to unsubscribe:", error);
+      toast.error("Failed to unsubscribe from newsletter");
+    } finally {
+      setUnsubscribing(false);
     }
   }
 
@@ -188,8 +207,15 @@ export default function SettingsPage() {
             <div className="p-2 rounded-lg bg-primary/10">
               <Mail className="h-5 w-5 text-primary" />
             </div>
-            <div>
-              <CardTitle>Newsletter Subscription</CardTitle>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <CardTitle>Newsletter Subscription</CardTitle>
+                {profile?.is_newsletter_subscribed && (
+                  <Badge variant="default" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                    Subscribed
+                  </Badge>
+                )}
+              </div>
               <CardDescription>
                 Receive updates about new features and benchmark results
               </CardDescription>
@@ -197,19 +223,39 @@ export default function SettingsPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Subscribe to our newsletter to stay updated with the latest features, benchmark results, and important announcements.
-          </p>
-          <Button asChild className="w-full sm:w-auto">
-            <Link href="/newsletter">
-              Subscribe to Newsletter
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-          {user?.email && (
-            <p className="text-xs text-muted-foreground">
-              Your email ({user.email}) will be pre-filled on the subscription page.
-            </p>
+          {profile?.is_newsletter_subscribed ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                You are currently subscribed to our newsletter. You will receive updates about new features, benchmark results, and important announcements.
+              </p>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleUnsubscribe}
+                  disabled={unsubscribing}
+                  className="w-full sm:w-auto"
+                >
+                  {unsubscribing ? "Unsubscribing..." : "Unsubscribe from Newsletter"}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Subscribe to our newsletter to stay updated with the latest features, benchmark results, and important announcements.
+              </p>
+              <Button asChild className="w-full sm:w-auto">
+                <Link href="/newsletter">
+                  Subscribe to Newsletter
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              {user?.email && (
+                <p className="text-xs text-muted-foreground">
+                  Your email ({user.email}) will be pre-filled on the subscription page.
+                </p>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

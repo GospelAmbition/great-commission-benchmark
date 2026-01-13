@@ -1,0 +1,41 @@
+name: Build Linux Executable
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+      
+      - name: Build executable
+        run: python scripts/build.py
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gcb-runner-linux-x64
+          path: dist/release/gcb-runner-linux-x64
+          retention-days: 30
+      
+      - name: Show build info
+        run: |
+          echo "Build complete!"
+          ls -lh dist/release/
+          file dist/release/gcb-runner-linux-x64

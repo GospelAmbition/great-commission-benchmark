@@ -17,6 +17,7 @@ from app.db.models.blog_category import BlogCategory
 from app.db.models.blog_post import BlogPost
 from app.db.models.model_version_stats import ModelVersionStats
 from app.db.models.stripe_config import StripeConfig
+from app.db.models.volunteer_application import VolunteerApplication
 
 __all__ = [
     "User",
@@ -36,4 +37,5 @@ __all__ = [
     "BlogPost",
     "ModelVersionStats",
     "StripeConfig",
+    "VolunteerApplication",
 ]

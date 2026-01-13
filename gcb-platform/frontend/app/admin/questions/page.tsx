@@ -36,6 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { toast } from "sonner";
 import { getCategoryName } from "@/lib/benchmark-definitions";
+import { useUserProfile } from "@/lib/useUserProfile";
 
 interface Question {
   id: string;
@@ -90,6 +91,7 @@ export default function AdminQuestionsPage() {
   const user = session?.user;
   const userLoading = status === "loading";
   const router = useRouter();
+  const { canEditBenchmark, canAdmin, isAdmin, loading: profileLoading } = useUserProfile();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [versions, setVersions] = useState<Version[]>([]);
@@ -148,10 +150,16 @@ export default function AdminQuestionsPage() {
       router.push("/api/auth/signin");
       return;
     }
-    if (user) {
+    // Check if user has permission to edit benchmark
+    if (user && !profileLoading) {
+      if (!canEditBenchmark && !canAdmin && !isAdmin) {
+        toast.error("You don't have permission to access this page");
+        router.push("/dashboard");
+        return;
+      }
       loadVersions();
     }
-  }, [user, userLoading, router]);
+  }, [user, userLoading, profileLoading, canEditBenchmark, canAdmin, isAdmin, router]);
 
   useEffect(() => {
     if (versionFilter) {
@@ -477,7 +485,7 @@ export default function AdminQuestionsPage() {
   // getCategoryName is imported from @/lib/benchmark-definitions
 
 
-  if (userLoading) {
+  if (userLoading || profileLoading) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -488,6 +496,11 @@ export default function AdminQuestionsPage() {
 
   if (!user) {
     return null;
+  }
+
+  // Double-check permission before rendering
+  if (!canEditBenchmark && !canAdmin && !isAdmin) {
+    return null; // Will redirect in useEffect
   }
 
   // Show loading skeleton only while fetching data with a version selected

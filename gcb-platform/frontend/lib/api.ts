@@ -163,6 +163,7 @@ export interface UserProfile {
   organization?: string;
   test_count?: number;
   contribution_count?: number;
+  is_newsletter_subscribed?: boolean;
   // Permissions
   can_view_benchmark?: boolean;
   can_edit_benchmark?: boolean;
@@ -457,6 +458,59 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
+  }
+
+  async unsubscribeNewsletter(): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>('/api/user/newsletter/unsubscribe', {
+      method: 'POST',
+    });
+  }
+
+  // Volunteer
+  async applyVolunteer(data: {
+    email: string;
+    name: string;
+    role: 'moderator' | 'advisor';
+    background?: string;
+    motivation?: string;
+  }): Promise<{ success: boolean; message: string; application_id?: string }> {
+    return this.request<{ success: boolean; message: string; application_id?: string }>('/api/volunteer/apply', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getVolunteerApplications(params?: {
+    status?: string;
+    role?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    applications: Array<{
+      id: string;
+      user_id: string | null;
+      email: string;
+      name: string;
+      role: string;
+      background: string | null;
+      motivation: string | null;
+      status: string;
+      reviewed_at: string | null;
+      reviewed_by: string | null;
+      notes: string | null;
+      created_at: string;
+      updated_at: string;
+    }>;
+    total: number;
+  }> {
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.role) queryParams.append('role', params.role);
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+    
+    const query = queryParams.toString();
+    return this.request(`/api/volunteer/applications${query ? `?${query}` : ''}`);
   }
 
   // User submissions and activity

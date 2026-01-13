@@ -31,6 +31,7 @@ import {
 import { PostCard } from "@/components/blog/PostCard";
 import { Plus, FolderPlus, Tag, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useUserProfile } from "@/lib/useUserProfile";
 
 interface BlogCategory {
   id: string;
@@ -62,6 +63,7 @@ export default function BlogManagerPage() {
   const { data: session, status } = useSession();
   const user = session?.user;
   const userLoading = status === "loading";
+  const { canManageBlog, canAdmin, isAdmin, loading: profileLoading } = useUserProfile();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,10 +85,16 @@ export default function BlogManagerPage() {
       router.push("/api/auth/signin");
       return;
     }
-    if (user) {
+    // Check if user has blog management permission
+    if (user && !profileLoading) {
+      if (!canManageBlog && !canAdmin && !isAdmin) {
+        toast.error("You don't have permission to access this page");
+        router.push("/dashboard");
+        return;
+      }
       loadData();
     }
-  }, [user, userLoading, statusFilter, router]);
+  }, [user, userLoading, profileLoading, canManageBlog, canAdmin, isAdmin, statusFilter, router]);
 
   async function loadData() {
     setLoading(true);
@@ -128,7 +136,7 @@ export default function BlogManagerPage() {
     }
   }
 
-  if (userLoading || (loading && !user)) {
+  if (userLoading || profileLoading || (loading && !user)) {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
@@ -143,6 +151,11 @@ export default function BlogManagerPage() {
 
   if (!user) {
     return null;
+  }
+
+  // Double-check blog management permission before rendering
+  if (!canManageBlog && !canAdmin && !isAdmin) {
+    return null; // Will redirect in useEffect
   }
 
   function generateSlug(name: string) {

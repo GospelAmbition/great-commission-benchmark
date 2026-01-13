@@ -14,6 +14,7 @@ import { PostEditor } from "@/components/blog/PostEditor";
 import { ImageUploader } from "@/components/blog/ImageUploader";
 import { ChevronLeft, Save, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useUserProfile } from "@/lib/useUserProfile";
 
 interface BlogCategory {
   id: string;
@@ -26,6 +27,7 @@ export default function NewBlogPostPage() {
   const { data: session, status } = useSession();
   const user = session?.user;
   const userLoading = status === "loading";
+  const { canManageBlog, canAdmin, isAdmin, loading: profileLoading } = useUserProfile();
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -44,10 +46,16 @@ export default function NewBlogPostPage() {
       router.push("/api/auth/signin");
       return;
     }
-    if (user) {
+    // Check if user has blog management permission
+    if (user && !profileLoading) {
+      if (!canManageBlog && !canAdmin && !isAdmin) {
+        toast.error("You don't have permission to access this page");
+        router.push("/dashboard");
+        return;
+      }
       loadCategories();
     }
-  }, [user, userLoading, router]);
+  }, [user, userLoading, profileLoading, canManageBlog, canAdmin, isAdmin, router]);
 
   async function loadCategories() {
     try {
@@ -61,7 +69,7 @@ export default function NewBlogPostPage() {
     }
   }
 
-  if (userLoading) {
+  if (userLoading || profileLoading) {
     return (
       <div className="container py-8">
         <div className="h-[500px] border rounded-md flex items-center justify-center bg-muted">
@@ -73,6 +81,11 @@ export default function NewBlogPostPage() {
 
   if (!user) {
     return null;
+  }
+
+  // Double-check blog management permission before rendering
+  if (!canManageBlog && !canAdmin && !isAdmin) {
+    return null; // Will redirect in useEffect
   }
 
   function generateSlug(title: string) {
