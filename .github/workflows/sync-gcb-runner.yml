@@ -45,6 +45,7 @@ jobs:
           user-email: github-actions@greatcommissionbenchmark.ai
           user-name: GCB Bot
           target-branch: main
+          create-target-branch-if-needed: 'true'
           commit-message: |
             Sync from monorepo
             
