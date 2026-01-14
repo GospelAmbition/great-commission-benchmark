@@ -556,10 +556,13 @@ function LeaderboardContent() {
                               {pagination.offset + index + 1}
                             </TableCell>
                             <TableCell className="py-3 text-muted-foreground">
-                              <div className="flex items-center gap-2">
+                              <Link
+                                href={`/leaderboard/providers/${encodeURIComponent(item.provider)}`}
+                                className="flex items-center gap-2 hover:text-foreground transition-colors"
+                              >
                                 <ProviderIcon provider={item.provider} size={16} />
                                 {formatProvider(item.provider)}
-                              </div>
+                              </Link>
                             </TableCell>
                             <TableCell className="py-3">
                               <Link
