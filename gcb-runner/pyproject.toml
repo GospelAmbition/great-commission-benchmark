@@ -44,8 +44,8 @@ gcb-runner = "gcb_runner.cli:main"
 
 [project.urls]
 Homepage = "https://greatcommissionbenchmark.ai"
-Documentation = "https://greatcommissionbenchmark.ai/docs/runner"
-Repository = "https://github.com/great-commission-benchmark/gcb-runner"
+Documentation = "https://greatcommissionbenchmark.ai/runner"
+Repository = "https://github.com/GospelAmbition/gcb-runner"
 
 [build-system]
 requires = ["hatchling"]

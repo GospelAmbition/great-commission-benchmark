@@ -1,8 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Terminal, Download, BarChart3, Upload, Server, Laptop, Apple, Monitor, RefreshCw, Play } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Terminal, Download, BarChart3, Upload, Server, Laptop, Apple, Monitor, RefreshCw, Play, Code, ChevronDown, Copy, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 import { generatePageMetadata } from "@/lib/seo";
 
@@ -61,85 +60,104 @@ export default function RunnerPage() {
         </CardContent>
       </Card>
 
-      {/* Download Section */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <Download className="h-5 w-5" />
-            Download
-          </CardTitle>
+      {/* Quick Install for macOS */}
+      <Card className="mb-6 border-green-500/30 bg-green-500/5">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Apple className="h-5 w-5 text-green-500" />
+            <CardTitle className="text-lg text-foreground">Quick Install for macOS</CardTitle>
+            <Badge variant="outline" className="ml-2 border-green-500/50 text-green-500">Recommended</Badge>
+          </div>
           <CardDescription className="text-muted-foreground">
-            Download the standalone executable - no Python required
+            One command installs everything — no Python required
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="macos" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-white/[0.03] border border-white/[0.08]">
-              <TabsTrigger value="macos" className="flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                <Apple className="h-4 w-4" />
-                macOS
-              </TabsTrigger>
-              <TabsTrigger value="linux" className="flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                <Monitor className="h-4 w-4" />
-                Linux
-              </TabsTrigger>
-              <TabsTrigger value="windows" className="flex items-center gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                <Monitor className="h-4 w-4" />
-                Windows
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="macos" className="mt-4 space-y-4">
-              <div className="grid gap-3">
-                <Button variant="brand" size="lg" className="w-full justify-start" asChild>
-                  <a href="/downloads/gcb-runner-macos-arm64" download>
-                    <Download className="h-4 w-4 mr-2" />
-                    Download for Apple Silicon (M series)
-                  </a>
-                </Button>
-              </div>
-              <div className="bg-white/[0.03] border border-white/[0.08] p-4 rounded-lg text-sm space-y-2">
-                <p className="font-medium text-foreground">After downloading:</p>
-                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                  <li>Open Terminal and navigate to your Downloads folder</li>
-                  <li>Run: <code className="bg-white/[0.05] text-foreground px-1 rounded">chmod +x gcb-runner-macos-arm64</code></li>
-                  <li>Run: <code className="bg-white/[0.05] text-foreground px-1 rounded">./gcb-runner-macos-arm64</code></li>
-                </ol>
-                <p className="text-muted-foreground mt-2">
-                  <strong className="text-foreground">Note:</strong> You may need to allow the app in System Settings → Privacy & Security.
-                </p>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="linux" className="mt-4 space-y-4">
-              <Button variant="outline" size="lg" className="w-full justify-start" disabled>
-                <Download className="h-4 w-4 mr-2" />
-                Linux (x64) — Coming Soon
-              </Button>
-              <div className="bg-white/[0.03] border border-white/[0.08] p-4 rounded-lg text-sm">
-                <p className="text-muted-foreground">
-                  Linux builds are in development. Check back soon or contact us if you need early access.
-                </p>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="windows" className="mt-4 space-y-4">
-              <Button variant="outline" size="lg" className="w-full justify-start" disabled>
-                <Download className="h-4 w-4 mr-2" />
-                Windows (x64) — Coming Soon
-              </Button>
-              <div className="bg-white/[0.03] border border-white/[0.08] p-4 rounded-lg text-sm">
-                <p className="text-muted-foreground">
-                  Windows builds are in development. Check back soon or contact us if you need early access.
-                </p>
-              </div>
-            </TabsContent>
-          </Tabs>
+          <div className="bg-black/40 border border-white/10 rounded-lg p-4 font-mono text-sm">
+            <div className="flex items-center justify-between gap-4">
+              <code className="text-green-400 break-all">
+                curl -fsSL https://greatcommissionbenchmark.ai/install.sh | bash
+              </code>
+            </div>
+          </div>
+          <div className="mt-4 text-sm text-muted-foreground space-y-2">
+            <p>This installer will:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>Detect your Mac type (Apple Silicon or Intel)</li>
+              <li>Download and verify the latest GCB Runner</li>
+              <li>Handle macOS security settings automatically</li>
+              <li>Install to your PATH for easy access</li>
+            </ul>
+          </div>
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <p className="text-xs text-muted-foreground">
+              Works on Apple Silicon (M1/M2/M3/M4) Macs. Intel Mac support coming soon.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
-          <div className="mt-6 pt-6 border-t border-border">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+      {/* Manual Download Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <Download className="h-5 w-5" />
+            Manual Download
+          </CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Download the standalone executable directly
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Button variant="brand" size="lg" className="w-full justify-start" asChild>
+              <a href="/downloads/gcb-runner-macos-arm64" download>
+                <Apple className="h-4 w-4 mr-2" />
+                Download for macOS (Apple Silicon)
+              </a>
+            </Button>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="outline" size="default" className="justify-start" disabled>
+                <Monitor className="h-4 w-4 mr-2" />
+                macOS Intel — Soon
+              </Button>
+              <Button variant="outline" size="default" className="justify-start" disabled>
+                <Monitor className="h-4 w-4 mr-2" />
+                Linux x64 — Soon
+              </Button>
+            </div>
+
+            {/* Manual installation steps */}
+            <details className="group">
+              <summary className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <ChevronDown className="h-4 w-4 group-open:rotate-180 transition-transform" />
+                Manual installation steps
+              </summary>
+              <div className="mt-3 bg-white/[0.03] border border-white/[0.08] p-4 rounded-lg text-sm space-y-3">
+                <p className="font-medium text-foreground">After downloading:</p>
+                <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                  <li>Open Terminal and navigate to your Downloads folder:
+                    <code className="block mt-1 ml-5 bg-black/30 text-foreground px-2 py-1 rounded text-xs">cd ~/Downloads</code>
+                  </li>
+                  <li>Remove macOS quarantine and make executable:
+                    <code className="block mt-1 ml-5 bg-black/30 text-foreground px-2 py-1 rounded text-xs">xattr -d com.apple.quarantine gcb-runner-macos-arm64 && chmod +x gcb-runner-macos-arm64</code>
+                  </li>
+                  <li>Move to your PATH (optional):
+                    <code className="block mt-1 ml-5 bg-black/30 text-foreground px-2 py-1 rounded text-xs">sudo mv gcb-runner-macos-arm64 /usr/local/bin/gcb-runner</code>
+                  </li>
+                  <li>Run the tool:
+                    <code className="block mt-1 ml-5 bg-black/30 text-foreground px-2 py-1 rounded text-xs">gcb-runner</code>
+                  </li>
+                </ol>
+              </div>
+            </details>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-border">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
               <RefreshCw className="h-4 w-4" />
-              <span>Auto-updates included - gcb-runner will notify you when updates are available</span>
+              <span>Auto-updates included — gcb-runner will notify you when updates are available</span>
             </div>
             <p className="text-xs text-muted-foreground">
               Verify downloads using SHA256 hashes from{" "}
@@ -151,7 +169,51 @@ export default function RunnerPage() {
         </CardContent>
       </Card>
 
+      {/* Developer Installation */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <Code className="h-5 w-5" />
+            Developer Installation
+          </CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Install from source for development or customization
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              For developers who want to run from source, contribute, or customize the runner:
+            </p>
+            
+            <div className="bg-black/40 border border-white/10 rounded-lg p-4 font-mono text-sm space-y-2">
+              <div className="text-muted-foreground"># Clone the repository</div>
+              <code className="text-foreground block">git clone https://github.com/GospelAmbition/gcb-runner.git</code>
+              <code className="text-foreground block">cd gcb-runner</code>
+              <div className="text-muted-foreground mt-3"># Install with pip (editable mode)</div>
+              <code className="text-foreground block">pip install -e &quot;.[dev]&quot;</code>
+              <div className="text-muted-foreground mt-3"># Run the tool</div>
+              <code className="text-foreground block">gcb-runner</code>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <Button variant="outline" size="sm" asChild>
+                <a href="https://github.com/GospelAmbition/gcb-runner" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View on GitHub
+                </a>
+              </Button>
+            </div>
+
+            <div className="bg-white/[0.03] border border-white/[0.08] p-3 rounded-lg text-xs text-muted-foreground">
+              <strong className="text-foreground">Requirements:</strong> Python 3.10 or higher
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Features Grid */}
+      <h2 className="text-2xl font-semibold text-foreground mb-4">Features</h2>
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-3">
@@ -213,6 +275,27 @@ export default function RunnerPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quick Start */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <Terminal className="h-5 w-5" />
+            Quick Start
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-black/40 border border-white/10 rounded-lg p-4 font-mono text-sm space-y-1">
+            <div className="text-muted-foreground"># Launch interactive menu</div>
+            <code className="text-foreground block">gcb-runner</code>
+            <div className="text-muted-foreground mt-3"># Or use commands directly</div>
+            <code className="text-foreground block">gcb-runner config                              <span className="text-muted-foreground"># Set up API keys</span></code>
+            <code className="text-foreground block">gcb-runner test --model gpt-4o --backend openrouter  <span className="text-muted-foreground"># Run benchmark</span></code>
+            <code className="text-foreground block">gcb-runner view                                <span className="text-muted-foreground"># Open dashboard</span></code>
+            <code className="text-foreground block">gcb-runner export                              <span className="text-muted-foreground"># Export results</span></code>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

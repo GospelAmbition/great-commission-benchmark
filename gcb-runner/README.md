@@ -2,6 +2,8 @@
 
 A lightweight CLI tool for running the Great Commission Benchmark against AI models.
 
+> **Note:** This repository is automatically synced from the [Great Commission Benchmark monorepo](https://github.com/GospelAmbition/great-commission-benchmark). Please file issues and pull requests there.
+
 ## Quick Start
 
 ### Download Standalone Executable (Recommended)
@@ -141,7 +143,7 @@ Verify downloads using SHA256 hashes from the [manifest.json](https://greatcommi
 ### For Developers: Install from Source
 
 ```bash
-git clone https://github.com/great-commission-benchmark/gcb-runner
+git clone https://github.com/GospelAmbition/gcb-runner.git
 cd gcb-runner
 pip install -e ".[dev]"
 ```
@@ -454,7 +456,7 @@ The build script uses PyInstaller to create single-file executables that bundle 
 
 ```bash
 # Clone the repository
-git clone https://github.com/great-commission-benchmark/gcb-runner
+git clone https://github.com/GospelAmbition/gcb-runner.git
 cd gcb-runner
 
 # Install development dependencies
@@ -481,5 +483,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - [Great Commission Benchmark](https://greatcommissionbenchmark.ai)
 - [Download GCB Runner](https://greatcommissionbenchmark.ai/runner)
-- [Documentation](https://greatcommissionbenchmark.ai/docs/runner)
-- [GitHub Issues](https://github.com/great-commission-benchmark/gcb-runner/issues)
+- [Documentation](https://greatcommissionbenchmark.ai/runner)
+- [GitHub Issues](https://github.com/GospelAmbition/great-commission-benchmark/issues)

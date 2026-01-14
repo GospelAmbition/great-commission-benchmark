@@ -1,0 +1,52 @@
+# Sync gcb-runner folder to standalone public repository
+#
+# This workflow automatically mirrors the gcb-runner folder from this monorepo
+# to the standalone gcb-runner repository at https://github.com/GospelAmbition/gcb-runner
+#
+# Setup required:
+# 1. Generate an SSH deploy key:
+#    ssh-keygen -t ed25519 -C "gcb-runner-sync" -f gcb-runner-deploy-key
+#
+# 2. Add the PUBLIC key to GospelAmbition/gcb-runner repo:
+#    Settings → Deploy Keys → Add deploy key (enable "Allow write access")
+#
+# 3. Add the PRIVATE key to this repo as a secret:
+#    Settings → Secrets and variables → Actions → New repository secret
+#    Name: GCB_RUNNER_DEPLOY_KEY
+#    Value: (paste the private key content)
+
+name: Sync gcb-runner to public repo
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'gcb-runner/**'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@v4
+      
+      - name: Push gcb-runner to standalone repo
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          SSH_DEPLOY_KEY: ${{ secrets.GCB_RUNNER_DEPLOY_KEY }}
+        with:
+          source-directory: 'gcb-runner'
+          destination-github-username: 'GospelAmbition'
+          destination-repository-name: 'gcb-runner'
+          user-email: github-actions@greatcommissionbenchmark.ai
+          user-name: GCB Bot
+          target-branch: main
+          commit-message: |
+            Sync from monorepo
+            
+            Source commit: ${{ github.sha }}
+            Triggered by: ${{ github.event_name }}
