@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -12,9 +13,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MenuIcon } from "@/lib/icons";
+import { MenuIcon, SearchIcon } from "@/lib/icons";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useUserProfile } from "@/lib/useUserProfile";
+import { SearchModal } from "./SearchModal";
 
 export function Header() {
   const { data: session, status } = useSession();
@@ -22,6 +24,19 @@ export function Header() {
   const pathname = usePathname();
   const user = session?.user;
   const isLoading = status === "loading";
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Global keyboard shortcut for search (Cmd+K / Ctrl+K)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -100,15 +115,24 @@ export function Header() {
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-3">
+          {/* Search Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSearchOpen(true)}
+            className="hidden md:flex h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-white/5"
+            aria-label="Search models and providers"
+          >
+            <SearchIcon className="h-4 w-4" />
+          </Button>
+
+          {/* Search Modal */}
+          <SearchModal open={searchOpen} onOpenChange={setSearchOpen} />
+
           {isLoading ? (
             <div className="h-8 w-8 animate-pulse rounded-full bg-white/10" />
           ) : user ? (
             <>
-              <Link href="/dashboard" className="hidden md:block">
-                <Button variant="outline" size="sm">
-                  Dashboard
-                </Button>
-              </Link>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full ring-2 ring-primary/30 hover:ring-primary/50 transition-all">
