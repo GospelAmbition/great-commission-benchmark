@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Terminal, Download, BarChart3, Upload, Server, Laptop, Apple, Monitor, RefreshCw, Play, Code, ChevronDown, Copy, ExternalLink } from "lucide-react";
+import { Terminal, Download, BarChart3, Upload, Server, Laptop, Apple, RefreshCw, Play, Code, ChevronDown, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 import { generatePageMetadata } from "@/lib/seo";
 
@@ -91,7 +91,7 @@ export default function RunnerPage() {
           </div>
           <div className="mt-4 pt-4 border-t border-white/10">
             <p className="text-xs text-muted-foreground">
-              Works on Apple Silicon (M1/M2/M3/M4) Macs. Intel Mac support coming soon.
+              Works on Apple Silicon (M1/M2/M3/M4) Macs.
             </p>
           </div>
         </CardContent>
@@ -116,17 +116,6 @@ export default function RunnerPage() {
                 Download for macOS (Apple Silicon)
               </a>
             </Button>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" size="default" className="justify-start" disabled>
-                <Monitor className="h-4 w-4 mr-2" />
-                macOS Intel — Soon
-              </Button>
-              <Button variant="outline" size="default" className="justify-start" disabled>
-                <Monitor className="h-4 w-4 mr-2" />
-                Linux x64 — Soon
-              </Button>
-            </div>
 
             {/* Manual installation steps */}
             <details className="group">
