@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ChevronRight, Search, X } from "lucide-react";
 import { ArticleIcon } from "@/lib/icons";
 
 interface BlogCategory {
@@ -35,21 +37,35 @@ interface BlogPost {
   published_at?: string;
 }
 
-export default function InsightsPage() {
+function InsightsContent() {
+  const searchParams = useSearchParams();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
 
+  // Initialize from URL params
+  useEffect(() => {
+    const categoryParam = searchParams.get("category");
+    const searchParam = searchParams.get("search");
+    
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    }
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     loadCategories();
-    loadPosts();
   }, []);
 
   useEffect(() => {
     loadPosts();
-  }, [selectedCategory]);
+  }, [selectedCategory, searchQuery]);
 
   async function loadCategories() {
     try {
@@ -69,6 +85,9 @@ export default function InsightsPage() {
       const params = new URLSearchParams();
       if (selectedCategory && selectedCategory !== "all") {
         params.append("category", selectedCategory);
+      }
+      if (searchQuery) {
+        params.append("search", searchQuery);
       }
       params.append("limit", "12");
       
@@ -107,24 +126,45 @@ export default function InsightsPage() {
       </div>
 
       <div className="container py-8">
-        {/* Category Filter */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">Filter by category:</span>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.slug}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Filters and Search */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Category:</span>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.slug}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search articles..."
+                className="pl-9 pr-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
+          
           <p className="text-sm text-muted-foreground">
             {total} {total === 1 ? "article" : "articles"}
           </p>
@@ -155,7 +195,9 @@ export default function InsightsPage() {
               </div>
               <p className="text-foreground font-medium mb-2">No articles yet</p>
               <p className="text-muted-foreground">
-                Check back soon for practical guides and insights on using AI for ministry work.
+                {searchQuery || selectedCategory !== "all" 
+                  ? "Try adjusting your filters to find what you're looking for." 
+                  : "Check back soon for practical guides and insights on using AI for ministry work."}
               </p>
             </CardContent>
           </Card>
@@ -213,5 +255,19 @@ export default function InsightsPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function InsightsPage() {
+  return (
+    <Suspense fallback={
+      <div className="container py-8">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading Insights...</p>
+        </div>
+      </div>
+    }>
+      <InsightsContent />
+    </Suspense>
   );
 }

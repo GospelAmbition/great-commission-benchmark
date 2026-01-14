@@ -994,7 +994,7 @@ export default function AboutPage() {
                       {/* Link to Insights */}
                       <div className="pt-2 border-t border-white/[0.06]">
                         <Link 
-                          href={`/insights?category=category-versions`}
+                          href={`/insights?category=category-versions&search=${version.semantic_version}`}
                           className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
                         >
                           <ArticleIcon className="h-4 w-4" />
@@ -1051,7 +1051,7 @@ export default function AboutPage() {
                                 )}
                               </div>
                               <Link 
-                                href={`/insights?category=category-versions`}
+                                href={`/insights?category=category-versions&search=${version.semantic_version}`}
                                 className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
                               >
                                 View details

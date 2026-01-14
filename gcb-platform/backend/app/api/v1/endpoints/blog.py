@@ -47,6 +47,7 @@ def generate_slug(title: str) -> str:
 @public_router.get("/posts", response_model=BlogPostListResponse)
 async def list_published_posts(
     category: Optional[str] = Query(None, description="Filter by category slug"),
+    search: Optional[str] = Query(None, description="Search in title or excerpt"),
     limit: int = Query(10, ge=1, le=50),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -60,11 +61,32 @@ async def list_published_posts(
     # Filter by category if provided
     if category:
         query = query.join(BlogPost.categories).filter(BlogCategory.slug == category)
+
+    # Search in title or excerpt if provided
+    if search:
+        search_filter = f"%{search}%"
+        query = query.filter(
+            (BlogPost.title.ilike(search_filter)) | 
+            (BlogPost.excerpt.ilike(search_filter)) |
+            (BlogPost.content.ilike(search_filter))
+        )
     
     # Order by published date, most recent first
     query = query.order_by(desc(BlogPost.published_at))
     
-    total = db.query(BlogPost).filter(BlogPost.status == "published").count()
+    # Get total count after filtering
+    total_query = db.query(BlogPost).filter(BlogPost.status == "published")
+    if category:
+        total_query = total_query.join(BlogPost.categories).filter(BlogCategory.slug == category)
+    if search:
+        search_filter = f"%{search}%"
+        total_query = total_query.filter(
+            (BlogPost.title.ilike(search_filter)) | 
+            (BlogPost.excerpt.ilike(search_filter)) |
+            (BlogPost.content.ilike(search_filter))
+        )
+    total = total_query.count()
+    
     posts = query.offset(offset).limit(limit).all()
     
     items = []

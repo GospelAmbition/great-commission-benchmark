@@ -28,7 +28,6 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
 
   // AI labs and platforms (with icons)
   mistral: { id: "mistral", displayName: "Mistral", simpleIconSlug: "mistral" },
-  deepseek: { id: "deepseek", displayName: "DeepSeek", simpleIconSlug: "deepseek" },
   perplexity: { id: "perplexity", displayName: "Perplexity", simpleIconSlug: "perplexity" },
   cohere: { id: "cohere", displayName: "Cohere", simpleIconSlug: "cohere" },
   huggingface: { id: "huggingface", displayName: "Hugging Face", simpleIconSlug: "huggingface" },
@@ -42,6 +41,7 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
   groq: { id: "groq", displayName: "Groq", simpleIconSlug: "groq" },
 
   // Providers without Simple Icons (fallback to letter)
+  deepseek: { id: "deepseek", displayName: "DeepSeek", simpleIconSlug: null },
   qwen: { id: "qwen", displayName: "Qwen", simpleIconSlug: null },
   ai21: { id: "ai21", displayName: "AI21", simpleIconSlug: null },
   together: { id: "together", displayName: "Together", simpleIconSlug: null },
