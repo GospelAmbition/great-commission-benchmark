@@ -27,6 +27,8 @@ export function getDisplayModelName(modelName: string, modelId?: string): string
   return namePart
     .replace(/[-_]/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase())
-    .replace(/(\d+)([a-z])/gi, "$1 $2") // Add space between numbers and letters
-    .replace(/([a-z])(\d)/gi, "$1 $2"); // Add space between letters and numbers
+    // Only add space between numbers and uppercase letters (indicating a new word like "3 Next")
+    // Don't split number + lowercase letter (like "80b", "7b") - these are parameter counts
+    // Don't split letter + number + letter (like "A3b") - these are version identifiers
+    .replace(/(\d+)([A-Z])/g, "$1 $2");
 }
