@@ -99,63 +99,68 @@ export default function RunnerPage() {
 
       {/* Manual Download Section */}
       <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <Download className="h-5 w-5" />
-            Manual Download
-          </CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Download the standalone executable directly
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <Button variant="brand" size="lg" className="w-full justify-start" asChild>
-              <a href="/downloads/gcb-runner-macos-arm64" download>
-                <Apple className="h-4 w-4 mr-2" />
-                Download for macOS (Apple Silicon)
-              </a>
-            </Button>
+        <details className="group">
+          <summary className="cursor-pointer list-none">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <Download className="h-5 w-5" />
+                Manual Download
+                <ChevronDown className="h-4 w-4 ml-auto group-open:rotate-180 transition-transform" />
+              </CardTitle>
+              <CardDescription className="text-muted-foreground">
+                Download the standalone executable directly
+              </CardDescription>
+            </CardHeader>
+          </summary>
+          <CardContent>
+            <div className="space-y-4">
+              <Button variant="brand" size="lg" className="w-full justify-start" asChild>
+                <a href="/downloads/gcb-runner-macos-arm64" download>
+                  <Apple className="h-4 w-4 mr-2" />
+                  Download for macOS (Apple Silicon)
+                </a>
+              </Button>
 
-            {/* Manual installation steps */}
-            <details className="group">
-              <summary className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
-                <ChevronDown className="h-4 w-4 group-open:rotate-180 transition-transform" />
-                Manual installation steps
-              </summary>
-              <div className="mt-3 bg-white/[0.03] border border-white/[0.08] p-4 rounded-lg text-sm space-y-3">
-                <p className="font-medium text-foreground">After downloading:</p>
-                <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                  <li>Open Terminal and navigate to your Downloads folder:
-                    <code className="block mt-1 ml-5 bg-black/30 text-foreground px-2 py-1 rounded text-xs">cd ~/Downloads</code>
-                  </li>
-                  <li>Remove macOS quarantine and make executable:
-                    <code className="block mt-1 ml-5 bg-black/30 text-foreground px-2 py-1 rounded text-xs">xattr -d com.apple.quarantine gcb-runner-macos-arm64 && chmod +x gcb-runner-macos-arm64</code>
-                  </li>
-                  <li>Move to your PATH (optional):
-                    <code className="block mt-1 ml-5 bg-black/30 text-foreground px-2 py-1 rounded text-xs">sudo mv gcb-runner-macos-arm64 /usr/local/bin/gcb-runner</code>
-                  </li>
-                  <li>Run the tool:
-                    <code className="block mt-1 ml-5 bg-black/30 text-foreground px-2 py-1 rounded text-xs">gcb-runner</code>
-                  </li>
-                </ol>
-              </div>
-            </details>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-border">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-              <RefreshCw className="h-4 w-4" />
-              <span>Auto-updates included — gcb-runner will notify you when updates are available</span>
+              {/* Manual installation steps */}
+              <details className="group">
+                <summary className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <ChevronDown className="h-4 w-4 group-open:rotate-180 transition-transform" />
+                  Manual installation steps
+                </summary>
+                <div className="mt-3 bg-white/[0.03] border border-white/[0.08] p-4 rounded-lg text-sm space-y-3">
+                  <p className="font-medium text-foreground">After downloading:</p>
+                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                    <li>Open Terminal and navigate to your Downloads folder:
+                      <code className="block mt-1 ml-5 bg-black/30 text-foreground px-2 py-1 rounded text-xs">cd ~/Downloads</code>
+                    </li>
+                    <li>Remove macOS quarantine and make executable:
+                      <code className="block mt-1 ml-5 bg-black/30 text-foreground px-2 py-1 rounded text-xs">xattr -d com.apple.quarantine gcb-runner-macos-arm64 && chmod +x gcb-runner-macos-arm64</code>
+                    </li>
+                    <li>Move to your PATH (optional):
+                      <code className="block mt-1 ml-5 bg-black/30 text-foreground px-2 py-1 rounded text-xs">sudo mv gcb-runner-macos-arm64 /usr/local/bin/gcb-runner</code>
+                    </li>
+                    <li>Run the tool:
+                      <code className="block mt-1 ml-5 bg-black/30 text-foreground px-2 py-1 rounded text-xs">gcb-runner</code>
+                    </li>
+                  </ol>
+                </div>
+              </details>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Verify downloads using SHA256 hashes from{" "}
-              <a href="/downloads/manifest.json" className="text-primary hover:underline">
-                manifest.json
-              </a>
-            </p>
-          </div>
-        </CardContent>
+
+            <div className="mt-6 pt-4 border-t border-border">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <RefreshCw className="h-4 w-4" />
+                <span>Auto-updates included — gcb-runner will notify you when updates are available</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Verify downloads using SHA256 hashes from{" "}
+                <a href="/downloads/manifest.json" className="text-primary hover:underline">
+                  manifest.json
+                </a>
+              </p>
+            </div>
+          </CardContent>
+        </details>
       </Card>
 
       {/* Developer Installation */}
