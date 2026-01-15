@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     api_keys,
     submissions,
     runner,
+    runner_blog,
     newsletter,
     donations,
     webhooks,
@@ -42,6 +43,9 @@ api_router.include_router(submissions.router, prefix="/submissions", tags=["subm
 
 # Runner API (for CLI)
 api_router.include_router(runner.router, prefix="/runner", tags=["runner"])
+
+# Runner Blog API (API key authenticated blog management for CLI)
+api_router.include_router(runner_blog.router, prefix="/runner/blog", tags=["runner-blog"])
 
 # Newsletter API
 api_router.include_router(newsletter.router, prefix="/newsletter", tags=["newsletter"])

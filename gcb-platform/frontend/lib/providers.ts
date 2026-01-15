@@ -27,7 +27,6 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
   amazon: { id: "amazon", displayName: "Amazon", simpleIconSlug: "amazon" },
 
   // AI labs and platforms (with icons)
-  mistral: { id: "mistral", displayName: "Mistral", simpleIconSlug: "mistral" },
   perplexity: { id: "perplexity", displayName: "Perplexity", simpleIconSlug: "perplexity" },
   cohere: { id: "cohere", displayName: "Cohere", simpleIconSlug: "cohere" },
   huggingface: { id: "huggingface", displayName: "Hugging Face", simpleIconSlug: "huggingface" },
@@ -41,6 +40,7 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
   groq: { id: "groq", displayName: "Groq", simpleIconSlug: "groq" },
 
   // Providers without Simple Icons (fallback to letter)
+  mistral: { id: "mistral", displayName: "Mistral", simpleIconSlug: null }, // Icon not available in Simple Icons
   deepseek: { id: "deepseek", displayName: "DeepSeek", simpleIconSlug: null },
   qwen: { id: "qwen", displayName: "Qwen", simpleIconSlug: null },
   ai21: { id: "ai21", displayName: "AI21", simpleIconSlug: null },

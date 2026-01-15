@@ -25,6 +25,7 @@ import { Shield, ShieldAlert, ShieldX, CheckCircle2, XCircle, AlertTriangle, Tre
 import { CATEGORY_NAMES, CATEGORY_DESCRIPTIONS } from "@/lib/benchmark-definitions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SocialShare } from "@/components/marketing/SocialShare";
+import { ProviderIcon } from "@/components/ui/provider-icon";
 
 // Verdict helper functions
 function getVerdict(score: number): { label: string; description: string; icon: React.ReactNode; bgColor: string; borderColor: string; textColor: string; iconBg: string } {
@@ -301,7 +302,10 @@ export default function ModelDetailPage() {
           <Link href="/leaderboard">← Back to Leaderboard</Link>
         </Button>
         <div>
-          <h1 className="text-4xl font-bold mb-4">{capitalizeProvider(formatProvider(model.provider))} | {displayName}</h1>
+          <h1 className="text-4xl font-bold mb-4 flex items-center gap-3">
+            <ProviderIcon provider={model.provider} size={32} />
+            <span>{capitalizeProvider(formatProvider(model.provider))} | {displayName}</span>
+          </h1>
           <div className="flex items-center justify-between flex-wrap gap-4">
             {model.description ? (
               <p className="text-muted-foreground text-lg w-2/3">{model.description}</p>
