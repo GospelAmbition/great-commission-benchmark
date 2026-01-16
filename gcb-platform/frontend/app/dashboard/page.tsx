@@ -251,13 +251,8 @@ export default function DashboardPage() {
                         Generate an API Key
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Create an API key to authenticate the GCB Runner with your account.
+                        Use the API Keys box in the right column to create an API key to authenticate the GCB Runner with your account. Enter a name for your key (e.g., "My Laptop") and click the plus button to generate it.
                       </p>
-                      <Button asChild variant="outline" size="sm" className="mt-2">
-                        <Link href="/dashboard/settings">
-                          {hasApiKey ? "Manage API Keys" : "Create API Key"} →
-                        </Link>
-                      </Button>
                     </div>
                   </div>
 
@@ -489,9 +484,11 @@ export default function DashboardPage() {
 
           </div>
 
-          {/* Side Column - Video Guide + API Keys + Sponsor Link */}
+          {/* Side Column - API Keys + Video Guide + Sponsor Link */}
           <div className="lg:col-span-1">
             <div className="sticky top-8 space-y-6">
+              <APIKeysCard />
+
               {/* Tester Guide Video */}
               <Card>
                 <CardHeader className="pb-3">
@@ -514,8 +511,6 @@ export default function DashboardPage() {
                   </div>
                 </CardContent>
               </Card>
-
-              <APIKeysCard />
             </div>
           </div>
         </div>

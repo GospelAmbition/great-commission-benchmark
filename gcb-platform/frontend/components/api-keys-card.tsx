@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,9 +28,32 @@ export function APIKeysCard() {
   const [creatingKey, setCreatingKey] = useState(false);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
   const [showNewKey, setShowNewKey] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadAPIKeys();
+  }, []);
+
+  // Focus input when hash is #api-keys
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === "#api-keys" && inputRef.current) {
+        // Small delay to ensure smooth scroll completes
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 300);
+      }
+    };
+
+    // Check on mount
+    handleHashChange();
+
+    // Listen for hash changes
+    window.addEventListener("hashchange", handleHashChange);
+
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange);
+    };
   }, []);
 
   async function loadAPIKeys() {
@@ -97,7 +120,7 @@ export function APIKeysCard() {
   }
 
   return (
-    <Card>
+    <Card id="api-keys">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <Key className="h-5 w-5 text-primary" />
@@ -155,6 +178,7 @@ export function APIKeysCard() {
         {/* Create New Key */}
         <div className="flex gap-2">
           <Input
+            ref={inputRef}
             placeholder="Key name (e.g., My Laptop)"
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
