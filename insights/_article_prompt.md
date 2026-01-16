@@ -38,7 +38,7 @@ This article is part of a series that helps the Church think about Great Commiss
 *   Show how technical benchmarks serve the heart of the mission, rather than replacing it.
 
 **Today’s Article Topic:**
-“”
+“TODAYS_ARTICLE_TOPIC”
 
 **Task:**
 Write a clear, strategic blog article on this topic in 1,200–1,800 words.

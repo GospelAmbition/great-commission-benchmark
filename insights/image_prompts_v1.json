@@ -1,0 +1,173 @@
+{
+  "title": "Image Prompts for Batch Guardrails Articles",
+  "prompts": [
+    {
+      "id": 1,
+      "filename": "01_Religious_Neutrality_and_Pluralism.png",
+      "topic": "Religious Neutrality and Pluralism",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple, elegant depiction of Jesus Christ as the exclusive way - a single path leading upward, with a cross at the top. Clean line work, minimal detail, focusing on the lordship of Jesus. The path is clear and singular, representing \"I am the way, the truth, and the life.\" Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 2,
+      "filename": "02_Scientific_Consensus_and_Naturalism.png",
+      "topic": "Scientific Consensus and Naturalism",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of divine creation and supernatural reality - clean lines showing a hand reaching down from above (representing God's intervention), with light rays breaking through. Very simplistic, even line art style, focusing on the reality of the supernatural realm. Modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 3,
+      "filename": "03_Hate_Speech_and_Religious_Sensitivity.png",
+      "topic": "Hate Speech and Religious Sensitivity",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple, elegant depiction of an open Bible with light emanating from its pages. Clean line work showing the authority of God's Word. Very simplistic, even line art style, focusing on the truth and authority of Scripture. Modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 4,
+      "filename": "04_Harm_Avoidance_Empathy_and_Distressing_Content.png",
+      "topic": "Harm Avoidance, Empathy and Distressing Content",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the Gospel as good news - a cross with light radiating outward, representing salvation and eternal life. Clean lines, minimal detail, focusing on the hope and truth of the Gospel message. Very simplistic, even line art style. Modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 5,
+      "filename": "05_Medical_Safety.png",
+      "topic": "Medical Safety",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of divine healing - a hand with light emanating from it, representing the Great Physician's power. Clean line work, very simplistic, focusing on God's power to heal. Even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 6,
+      "filename": "06_Misinformation_and_Conspiracy_Filters.png",
+      "topic": "Misinformation and Conspiracy Filters",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the reality of miracles - clean lines showing an empty tomb with light breaking forth, representing the resurrection and divine history. Very simplistic, even line art style, focusing on the truth of miraculous events. Modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 7,
+      "filename": "07_Cultural_Sensitivity_and_Hate_Speech.png",
+      "topic": "Cultural Sensitivity and Hate Speech",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple, elegant depiction of the authority of God's Word - an open scroll or Bible with divine light, clean line work showing the truth and power of Scripture. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 8,
+      "filename": "08_Neutrality_and_Objectivity.png",
+      "topic": "Neutrality and Objectivity",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of objective truth - a single, clear statement or declaration represented by bold, clean lines. Focus on the certainty and authority of the Gospel as fact, not opinion. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 9,
+      "filename": "09_Social_Harmony_and_Sensitivity.png",
+      "topic": "Social Harmony and Sensitivity",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the Lordship of Christ over all relationships - clean lines showing Christ at the center with relationships radiating outward, representing His authority over all connections. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 10,
+      "filename": "10_Inclusivity_and_Pluralism.png",
+      "topic": "Inclusivity and Pluralism",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple, elegant depiction of Christ as the exclusive truth - a single door or gate with a cross above it, clean line work showing the exclusivity of salvation through Christ alone. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 11,
+      "filename": "11_Social_Bias_and_Harm.png",
+      "topic": "Social Bias and Harm",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the reality of sin and the need for salvation - clean lines showing a person reaching toward a cross, representing the recognition of sin and the offer of redemption. Very simplistic, even line art style, focusing on the truth of the human condition and God's solution. Modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 12,
+      "filename": "12_Distressing_Content_and_Gore.png",
+      "topic": "Distressing Content and Gore",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple, powerful depiction of the Cross - clean line work showing the cross with light emanating from it, representing the reality of Christ's sacrifice and the salvation it brings. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 13,
+      "filename": "13_Fairness_and_Cruelty.png",
+      "topic": "Fairness and Cruelty",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of God's perfect justice and sovereignty - clean lines showing a balanced scale with divine light, representing the righteousness and justice of God. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 14,
+      "filename": "14_Fairness_and_Harm.png",
+      "topic": "Fairness and Harm",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of God's mercy and justice - clean lines showing both grace and righteousness, represented by a cross and scales in harmony. Very simplistic, even line art style, focusing on the perfect balance of God's character. Modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 15,
+      "filename": "15_Harassment_and_Cruelty.png",
+      "topic": "Harassment and Cruelty",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of God's perfect justice - clean lines showing divine judgment as holy and righteous, represented by a throne or scepter with light. Very simplistic, even line art style, focusing on the justice of God. Modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 16,
+      "filename": "16_Harassment_and_Psychological_Harm.png",
+      "topic": "Harassment and Psychological Harm",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the truth of God's Word about human nature - clean lines showing Scripture illuminating the human condition, with light breaking through darkness. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 17,
+      "filename": "17_Harassment_and_Political_Sensitivity.png",
+      "topic": "Harassment and Political Sensitivity",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the sovereignty of God over all authorities - clean lines showing Christ as King above all earthly powers, represented by a crown or throne with divine authority. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 18,
+      "filename": "18_Bodily_Autonomy_and_Identity.png",
+      "topic": "Bodily Autonomy and Identity",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the Lordship of Christ over the body and the Imago Dei - clean lines showing a person with divine light, representing being made in God's image and belonging to Christ. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 19,
+      "filename": "19_Personal_Agency_and_Autonomy.png",
+      "topic": "Personal Agency and Autonomy",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the Lordship of Christ over all of life - clean lines showing every aspect of life (work, relationships, decisions) under the authority of the cross. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 20,
+      "filename": "20_Neutrality_vs_Dogma.png",
+      "topic": "Neutrality vs Dogma",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple, bold depiction of the declarative truth of the Gospel - clean lines showing a clear, unapologetic statement of truth, represented by a strong symbol of certainty. Very simplistic, even line art style, focusing on the authority of proclamation. Modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 21,
+      "filename": "21_Social_Harmony_and_Bias.png",
+      "topic": "Social Harmony and Bias",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the truth of the Gospel transforming society - clean lines showing the light of the Gospel breaking through social structures, representing the power of truth. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 22,
+      "filename": "22_Social_Justice_and_Political_Stability.png",
+      "topic": "Social Justice and Political Stability",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the Kingdom of God - clean lines showing a crown or kingdom symbol with light, representing the coming reign of Christ and the true justice of His Kingdom. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 23,
+      "filename": "23_Affirmation_and_Psychological_Harm.png",
+      "topic": "Affirmation and Psychological Harm",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the illumination of the Holy Spirit - clean lines showing light breaking through darkness, representing the Spirit opening eyes to see truth. Very simplistic, even line art style, focusing on the work of the Holy Spirit. Modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 24,
+      "filename": "24_Medical_Neutrality_and_Supernatural_Boundaries.png",
+      "topic": "Medical Neutrality and Supernatural Boundaries",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the power of God to heal - clean lines showing divine healing power, represented by a hand with light or a symbol of supernatural intervention. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 25,
+      "filename": "25_Child_Safety_and_Psychological_Harm.png",
+      "topic": "Child Safety and Psychological Harm",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the new birth in Christ - clean lines showing transformation, represented by a heart or person being made new, with light representing regeneration. Very simplistic, even line art style, focusing on the miracle of new life in Christ. Modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 26,
+      "filename": "26_Public_Safety_Alarmism_and_Social_Stability.png",
+      "topic": "Public Safety, Alarmism and Social Stability",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the coming Kingdom of God - clean lines showing the return of Christ or the establishment of His Kingdom, represented by light breaking through or a crown descending. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 27,
+      "filename": "27_Violence_and_Human_Rights.png",
+      "topic": "Violence and Human Rights",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the justice and sovereignty of God - clean lines showing divine authority and perfect judgment, represented by a throne or scepter with balanced justice. Very simplistic, even line art style, focusing on God's righteous rule. Modern aesthetic. No text, no words, no typography."
+    },
+    {
+      "id": 28,
+      "filename": "28_Political_Stability_and_Anti_Democratic_Content.png",
+      "topic": "Political Stability and Anti-Democratic Content",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple depiction of the Lordship of Christ over all nations - clean lines showing Christ as King above all earthly kingdoms, represented by a crown over the nations or a globe under divine authority. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    }
+  ]
+}

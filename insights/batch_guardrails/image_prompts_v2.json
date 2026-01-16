@@ -1,0 +1,173 @@
+{
+  "title": "Image Prompts for Batch Guardrails Articles",
+  "prompts": [
+    {
+      "id": 1,
+      "filename": "01_Religious_Neutrality_and_Pluralism.png",
+      "topic": "Religious Neutrality & Pluralism",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A single narrow path in red cutting through a maze of white, flat distinct layers. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 2,
+      "filename": "02_Scientific_Consensus_and_Naturalism.png",
+      "topic": "Scientific Consensus & Naturalism",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red organic shape breaking through a rigid white grid structure. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 3,
+      "filename": "03_Hate_Speech_and_Religious_Sensitivity.png",
+      "topic": "Hate Speech & Religious Sensitivity",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. Sharp red geometric shapes piercing through soft white clouds. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 4,
+      "filename": "04_Harm_Avoidance_Empathy_and_Distressing_Content.png",
+      "topic": "Harm Avoidance, Empathy, & Distressing Content",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A rough red texture contrasting with a smooth, polished white surface. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 5,
+      "filename": "05_Medical_Safety.png",
+      "topic": "Medical Safety",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red light descending into a sterile white mechanical structure. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 6,
+      "filename": "06_Misinformation_and_Conspiracy_Filters.png",
+      "topic": "Misinformation & Conspiracy Filters",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red anomalous spark disrupting a uniform white data stream. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 7,
+      "filename": "07_Cultural_Sensitivity_and_Hate_Speech.png",
+      "topic": "Cultural Sensitivity & Hate Speech",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red ancient symbol standing firm amidst a shifting white landscape. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 8,
+      "filename": "08_Neutrality_and_Objectivity.png",
+      "topic": "Neutrality & Objectivity",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A bold red vertical line intersecting a horizontal white plane. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 9,
+      "filename": "09_Social_Harmony_and_Sensitivity.png",
+      "topic": "Social Harmony & Sensitivity",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red sword dividing a unified white circle. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 10,
+      "filename": "10_Inclusivity_and_Pluralism.png",
+      "topic": "Inclusivity & Pluralism",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red narrow gate standing apart from a wide white horizon. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 11,
+      "filename": "11_Social_Bias_and_Harm.png",
+      "topic": "Social Bias & Harm",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. Red roots penetrating deep beneath a structured white city. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 12,
+      "filename": "12_Distressing_Content_and_Gore.png",
+      "topic": "Distressing Content & Gore",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A heavy red rugged cross shape casting a shadow on a soft white background. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 13,
+      "filename": "13_Fairness_and_Cruelty.png",
+      "topic": "Fairness & Cruelty",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A large red hand shaping a small white vessel, abstract and layered. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 14,
+      "filename": "14_Fairness_and_Harm.png",
+      "topic": "Fairness & Harm",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red door firmly shut against a vast white open space. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 15,
+      "filename": "15_Harassment_and_Cruelty.png",
+      "topic": "Harassment & Cruelty",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red scale tipped heavily to one side against a balanced white background. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 16,
+      "filename": "16_Harassment_and_Psychological_Harm.png",
+      "topic": "Harassment & Psychological Harm",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A broken red vessel revealing a light within, set against a pristine white mirror. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 17,
+      "filename": "17_Harassment_and_Political_Sensitivity.png",
+      "topic": "Harassment & Political Sensitivity",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red lightning bolt striking a stable white pillar. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 18,
+      "filename": "18_Bodily_Autonomy_and_Identity.png",
+      "topic": "Bodily Autonomy & Identity",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red figure kneeling in surrender within a white silhouette. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 19,
+      "filename": "19_Personal_Agency_and_Autonomy.png",
+      "topic": "Personal Agency & Autonomy",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red path diverting sharply from a broad white highway. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 20,
+      "filename": "20_Neutrality_vs_Dogma.png",
+      "topic": "Neutrality vs. Dogma",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A solid red exclamation mark shape amidst floating white question marks. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 21,
+      "filename": "21_Social_Harmony_and_Bias.png",
+      "topic": "Social Harmony & Bias",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red stain on a perfectly clean white cloth texture. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 22,
+      "filename": "22_Social_Justice_and_Political_Stability.png",
+      "topic": "Social Justice & Political Stability",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red crown hovering above a white ballot box shape. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 23,
+      "filename": "23_Affirmation_and_Psychological_Harm.png",
+      "topic": "Affirmation & Psychological Harm",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red light piercing a dark grey and white fog. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 24,
+      "filename": "24_Medical_Neutrality_and_Supernatural_Boundaries.png",
+      "topic": "Medical Neutrality & Supernatural Boundaries",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red hand breaking through a white barrier wall. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 25,
+      "filename": "25_Child_Safety_and_Psychological_Harm.png",
+      "topic": "Child Safety & Psychological Harm",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A small red figure standing in a shadow, looking toward a white light. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 26,
+      "filename": "26_Public_Safety_Alarmism_and_Social_Stability.png",
+      "topic": "Public Safety, Alarmism, & Social Stability",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red warning flare in a calm white sky. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 27,
+      "filename": "27_Violence_and_Human_Rights.png",
+      "topic": "Violence & Human Rights",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red sword resting on a white scroll. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    },
+    {
+      "id": 28,
+      "filename": "28_Political_Stability_and_Anti_Democratic_Content.png",
+      "topic": "Political Stability & Anti-Democratic Content",
+      "prompt": "Flat, two-dimensional illustration with layers, 16:9 aspect ratio. A red stone shattering a white statue. Soft tone colors, integrating white and red. Abstract representation of struggle and conflict. No words, no phrases, no typography."
+    }
+  ]
+}

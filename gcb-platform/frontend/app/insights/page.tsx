@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, Search, X } from "lucide-react";
+import { ChevronRight, Search, X, ChevronLeft } from "lucide-react";
 import { ArticleIcon } from "@/lib/icons";
 
 interface BlogCategory {
@@ -45,17 +45,26 @@ function InsightsContent() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 12;
 
   // Initialize from URL params
   useEffect(() => {
     const categoryParam = searchParams.get("category");
     const searchParam = searchParams.get("search");
+    const pageParam = searchParams.get("page");
     
     if (categoryParam) {
       setSelectedCategory(categoryParam);
     }
     if (searchParam) {
       setSearchQuery(searchParam);
+    }
+    if (pageParam) {
+      const page = parseInt(pageParam, 10);
+      if (page > 0) {
+        setCurrentPage(page);
+      }
     }
   }, [searchParams]);
 
@@ -64,8 +73,13 @@ function InsightsContent() {
   }, []);
 
   useEffect(() => {
-    loadPosts();
+    // Reset to page 1 when filters change
+    setCurrentPage(1);
   }, [selectedCategory, searchQuery]);
+
+  useEffect(() => {
+    loadPosts();
+  }, [selectedCategory, searchQuery, currentPage]);
 
   async function loadCategories() {
     try {
@@ -89,7 +103,24 @@ function InsightsContent() {
       if (searchQuery) {
         params.append("search", searchQuery);
       }
-      params.append("limit", "12");
+      params.append("limit", pageSize.toString());
+      params.append("offset", ((currentPage - 1) * pageSize).toString());
+      
+      // Update URL without reload
+      const urlParams = new URLSearchParams();
+      if (selectedCategory && selectedCategory !== "all") {
+        urlParams.set("category", selectedCategory);
+      }
+      if (searchQuery) {
+        urlParams.set("search", searchQuery);
+      }
+      if (currentPage > 1) {
+        urlParams.set("page", currentPage.toString());
+      }
+      const newUrl = urlParams.toString() 
+        ? `${window.location.pathname}?${urlParams.toString()}`
+        : window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
       
       const response = await fetch(`/api/blog/posts?${params.toString()}`);
       if (response.ok) {
@@ -250,6 +281,69 @@ function InsightsContent() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && posts.length > 0 && total > pageSize && (
+          <div className="mt-8 flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.ceil(total / pageSize) }, (_, i) => i + 1)
+                .filter(page => {
+                  const totalPages = Math.ceil(total / pageSize);
+                  // Show first, last, current, and pages around current
+                  return (
+                    page === 1 ||
+                    page === totalPages ||
+                    Math.abs(page - currentPage) <= 1
+                  );
+                })
+                .reduce((acc: (number | string)[], page, i, arr) => {
+                  // Add ellipsis between non-consecutive pages
+                  if (i > 0 && page - (arr[i - 1] as number) > 1) {
+                    acc.push("...");
+                  }
+                  acc.push(page);
+                  return acc;
+                }, [])
+                .map((item, i) =>
+                  typeof item === "string" ? (
+                    <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground">
+                      {item}
+                    </span>
+                  ) : (
+                    <Button
+                      key={item}
+                      variant={item === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(item)}
+                      className="min-w-[2.5rem]"
+                    >
+                      {item}
+                    </Button>
+                  )
+                )}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage >= Math.ceil(total / pageSize)}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
           </div>
         )}
 

@@ -1,0 +1,48 @@
+{
+  "title": "Image Prompts for Batch Guardrails Articles",
+  "prompts": [
+    {
+      "id": 1,
+      "filename": "01_Topic_Name.png",
+      "topic": "Topic Name",
+      "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple, elegant depiction of [THEOLOGICAL CONCEPT] - [VISUAL DESCRIPTION]. Clean line work, minimal detail, focusing on [KEY THEME]. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    }
+  ],
+  "template_guide": {
+    "structure": {
+      "id": "Sequential number starting from 1",
+      "filename": "Format: '##_Topic_Name.png' where ## is zero-padded number (01, 02, etc.) and Topic_Name uses underscores between words",
+      "topic": "Full topic name with proper capitalization and spacing",
+      "prompt": "Image generation prompt following the pattern below"
+    },
+    "prompt_pattern": {
+      "opening": "Modern minimalist line art illustration, 16:9 aspect ratio.",
+      "description": "A simple, elegant depiction of [THEOLOGICAL CONCEPT] - [VISUAL DESCRIPTION].",
+      "style_notes": "Clean line work, minimal detail, focusing on [KEY THEME].",
+      "closing": "Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+    },
+    "prompt_components": {
+      "THEOLOGICAL_CONCEPT": "The biblical/Christian truth being illustrated (e.g., 'Jesus Christ as the exclusive way', 'divine creation and supernatural reality', 'the authority of God's Word')",
+      "VISUAL_DESCRIPTION": "Specific visual elements to include (e.g., 'a single path leading upward, with a cross at the top', 'a hand reaching down from above with light rays breaking through', 'an open Bible with light emanating from its pages')",
+      "KEY_THEME": "The main focus or message (e.g., 'the lordship of Jesus', 'the reality of the supernatural realm', 'the truth and authority of Scripture')"
+    },
+    "example_usage": {
+      "step_1": "Identify the theological concept or biblical truth related to the guardrail topic",
+      "step_2": "Design a simple visual metaphor that represents this truth",
+      "step_3": "Fill in the template with: [THEOLOGICAL CONCEPT], [VISUAL DESCRIPTION], and [KEY THEME]",
+      "step_4": "Ensure the prompt emphasizes: simplicity, minimalism, no text, 16:9 aspect ratio, modern aesthetic"
+    },
+    "common_visual_elements": [
+      "Cross with light radiating",
+      "Open Bible/scroll with divine light",
+      "Hand reaching down (God's intervention)",
+      "Path leading upward",
+      "Crown or throne (divine authority)",
+      "Empty tomb with light",
+      "Scales (justice/balance)",
+      "Light breaking through darkness",
+      "Person with divine light (Imago Dei)",
+      "Kingdom symbols"
+    ]
+  }
+}

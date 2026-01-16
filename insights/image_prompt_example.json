@@ -1,0 +1,15 @@
+{
+  "example_entry": {
+    "id": 29,
+    "filename": "29_Example_Topic_Name.png",
+    "topic": "Example Topic Name",
+    "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple, elegant depiction of [THEOLOGICAL CONCEPT] - [VISUAL DESCRIPTION]. Clean line work, minimal detail, focusing on [KEY THEME]. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+  },
+  "filled_example": {
+    "id": 29,
+    "filename": "29_Example_Topic_Name.png",
+    "topic": "Example Topic Name",
+    "prompt": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple, elegant depiction of the sovereignty of God over creation - clean lines showing a hand reaching down from above with light rays breaking through clouds, representing divine authority. Clean line work, minimal detail, focusing on God's ultimate control and power. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+  },
+  "quick_template": "Modern minimalist line art illustration, 16:9 aspect ratio. A simple, elegant depiction of [THEOLOGICAL CONCEPT] - [VISUAL DESCRIPTION]. Clean line work, minimal detail, focusing on [KEY THEME]. Very simplistic, even line art style, modern aesthetic. No text, no words, no typography."
+}
