@@ -13,15 +13,18 @@ logger = logging.getLogger(__name__)
 logger.info("Initializing database configuration...")
 
 # Create engine with connection pooling
-# Using shorter timeout to fail fast during healthchecks
-# Disable pool_pre_ping to prevent connection attempts at startup
+# Enable pool_pre_ping to automatically reconnect stale connections
+# This helps handle transient connection errors like "server login has been failing"
 engine = create_engine(
     settings.DATABASE_URL,
-    pool_pre_ping=False,  # Disabled to prevent startup connection attempts
+    pool_pre_ping=True,   # Check connections before using them (reconnects if stale)
     pool_recycle=300,     # Recycle connections after 5 minutes
     pool_size=5,          # Smaller pool size
     max_overflow=10,      # Allow some overflow
-    connect_args={"connect_timeout": 3}  # 3 second connection timeout (reduced from 5)
+    connect_args={
+        "connect_timeout": 10,  # 10 second connection timeout (increased for reliability)
+        "options": "-c statement_timeout=30000"  # 30 second statement timeout
+    }
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
