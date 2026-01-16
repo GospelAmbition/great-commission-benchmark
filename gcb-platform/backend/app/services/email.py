@@ -257,3 +257,149 @@ class EmailService:
         </html>
         """
         return await EmailService.send_email(to_email, subject, html)
+    
+    @staticmethod
+    async def send_contact_notification_email(
+        admin_email: str,
+        contact_name: str,
+        contact_email: str,
+        subject: str,
+        message: str,
+        submission_id: str
+    ) -> bool:
+        """Send notification email when someone submits the contact form"""
+        email_subject = f"New Contact Form Submission: {subject.title()}"
+        # Truncate message for preview
+        message_preview = message[:500] + "..." if len(message) > 500 else message
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #a11824;">New Contact Form Submission</h1>
+            <p>Someone has submitted the contact form on the Great Commission Benchmark website.</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Name:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">{contact_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Email:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;"><a href="mailto:{contact_email}">{contact_email}</a></td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Subject:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">{subject.title()}</td>
+                </tr>
+            </table>
+            <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <strong>Message:</strong>
+                <p style="white-space: pre-wrap;">{message_preview}</p>
+            </div>
+            <p><a href="https://greatcommissionbenchmark.ai/admin/contacts" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View in Admin</a></p>
+            <hr>
+            <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
+        </body>
+        </html>
+        """
+        return await EmailService.send_email(admin_email, email_subject, html)
+    
+    @staticmethod
+    async def send_volunteer_notification_email(
+        admin_email: str,
+        applicant_name: str,
+        applicant_email: str,
+        role: str,
+        background: Optional[str] = None,
+        motivation: Optional[str] = None
+    ) -> bool:
+        """Send notification email when someone applies to volunteer"""
+        subject = f"New Volunteer Application: {role.title()}"
+        background_preview = (background[:300] + "..." if background and len(background) > 300 else background) or "Not provided"
+        motivation_preview = (motivation[:300] + "..." if motivation and len(motivation) > 300 else motivation) or "Not provided"
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #a11824;">New Volunteer Application</h1>
+            <p>Someone has applied to volunteer for the Great Commission Benchmark.</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Name:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">{applicant_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Email:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;"><a href="mailto:{applicant_email}">{applicant_email}</a></td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Role:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">{role.title()}</td>
+                </tr>
+            </table>
+            <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <strong>Background & Experience:</strong>
+                <p style="white-space: pre-wrap;">{background_preview}</p>
+            </div>
+            <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <strong>Motivation:</strong>
+                <p style="white-space: pre-wrap;">{motivation_preview}</p>
+            </div>
+            <p><a href="https://greatcommissionbenchmark.ai/admin/volunteers" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Review Application</a></p>
+            <hr>
+            <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
+        </body>
+        </html>
+        """
+        return await EmailService.send_email(admin_email, subject, html)
+    
+    @staticmethod
+    async def send_sponsorship_request_notification_email(
+        admin_email: str,
+        requester_name: str,
+        requester_email: str,
+        model_name: str,
+        request_type: str,
+        message: Optional[str] = None,
+        sponsorship_id: str = ""
+    ) -> bool:
+        """Send notification email when someone submits a sponsorship or model request"""
+        request_type_label = "Sponsorship Request" if request_type == "sponsorship" else "Model Request"
+        subject = f"New {request_type_label}: {model_name}"
+        message_section = ""
+        if message:
+            message_preview = message[:500] + "..." if len(message) > 500 else message
+            message_section = f"""
+            <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <strong>Message from Requester:</strong>
+                <p style="white-space: pre-wrap;">{message_preview}</p>
+            </div>
+            """
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #a11824;">New {request_type_label}</h1>
+            <p>A new {request_type_label.lower()} has been submitted for review.</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Requested By:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">{requester_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Email:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;"><a href="mailto:{requester_email}">{requester_email}</a></td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Model:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">{model_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Type:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">{request_type_label}</td>
+                </tr>
+            </table>
+            {message_section}
+            <p><a href="https://greatcommissionbenchmark.ai/admin/sponsorships" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Review Request</a></p>
+            <hr>
+            <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
+        </body>
+        </html>
+        """
+        return await EmailService.send_email(admin_email, subject, html)

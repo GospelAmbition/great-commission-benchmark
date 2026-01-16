@@ -49,10 +49,10 @@ export function Header() {
         <Link href="/" className="mr-8 flex items-center space-x-2 group" aria-label="Great Commission Benchmark - Home">
           <div className="flex items-center gap-2">
             <div 
-              className="min-w-8 h-8 px-1.5 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.3)] group-hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] transition-shadow"
+              className="h-6 px-1.5 rounded flex items-center justify-center shadow-[0_0_10px_rgba(220,38,38,0.2)]" 
               style={{ background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)' }}
             >
-              <span className="text-white font-bold text-sm">GCB</span>
+              <span className="text-white font-bold text-xs">GCB</span>
             </div>
             <span className="font-bold text-lg text-foreground hidden sm:inline">
               Great Commission Benchmark

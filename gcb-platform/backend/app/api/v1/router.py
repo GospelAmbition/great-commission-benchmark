@@ -18,7 +18,8 @@ from app.api.v1.endpoints import (
     sponsorship,
     blog,
     files,
-    volunteer
+    volunteer,
+    contact
 )
 
 api_router = APIRouter()
@@ -69,6 +70,9 @@ api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 
 # Volunteer API (public apply, admin list)
 api_router.include_router(volunteer.router, prefix="/volunteer", tags=["volunteer"])
+
+# Contact Form API (public)
+api_router.include_router(contact.router, prefix="/contact", tags=["contact"])
 
 # Benchmark Development API (for benchmark_developer and admin roles)
 api_router.include_router(benchmark.router, prefix="/benchmark", tags=["benchmark"])

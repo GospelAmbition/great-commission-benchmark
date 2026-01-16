@@ -2001,3 +2001,208 @@ async def assign_sponsorship_moderator(
         assigned_at=sponsorship.assigned_at,
         message=f"Sponsorship assigned to {moderator_name}"
     )
+
+
+# =============================================================================
+# Contact Submissions Management Endpoints
+# =============================================================================
+
+from app.db.models.contact_submission import ContactSubmission, ContactStatus
+from app.schemas.contact import (
+    ContactSubmissionListItem,
+    ContactSubmissionListResponse,
+    ContactSubmissionDetail,
+    ContactStatusUpdateRequest,
+    ContactStatusUpdateResponse
+)
+
+
+@router.get("/contacts", response_model=ContactSubmissionListResponse)
+async def list_contact_submissions(
+    status: Optional[str] = Query(None, description="Filter by status: new, read, responded"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List all contact form submissions (admin only)"""
+    query = db.query(ContactSubmission)
+    
+    if status:
+        query = query.filter(ContactSubmission.status == status)
+    
+    total = query.count()
+    submissions = query.order_by(desc(ContactSubmission.created_at)).offset(offset).limit(limit).all()
+    
+    items = []
+    for sub in submissions:
+        items.append(ContactSubmissionListItem(
+            id=sub.id,
+            name=sub.name,
+            email=sub.email,
+            subject=sub.subject.value,
+            message=sub.message,
+            status=sub.status.value,
+            admin_notes=sub.admin_notes,
+            responded_at=sub.responded_at,
+            responded_by=sub.responded_by,
+            created_at=sub.created_at,
+            updated_at=sub.updated_at
+        ))
+    
+    return ContactSubmissionListResponse(items=items, total=total)
+
+
+@router.get("/contacts/{contact_id}", response_model=ContactSubmissionDetail)
+async def get_contact_submission(
+    contact_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get a specific contact submission (admin only)"""
+    submission = db.query(ContactSubmission).filter(ContactSubmission.id == contact_id).first()
+    
+    if not submission:
+        raise HTTPException(status_code=404, detail="Contact submission not found")
+    
+    # Get the name of who responded, if applicable
+    responded_by_name = None
+    if submission.responded_by:
+        responder = db.query(User).filter(User.id == submission.responded_by).first()
+        if responder:
+            responded_by_name = responder.name or responder.email
+    
+    return ContactSubmissionDetail(
+        id=submission.id,
+        name=submission.name,
+        email=submission.email,
+        subject=submission.subject.value,
+        message=submission.message,
+        status=submission.status.value,
+        admin_notes=submission.admin_notes,
+        responded_at=submission.responded_at,
+        responded_by=submission.responded_by,
+        responded_by_name=responded_by_name,
+        created_at=submission.created_at,
+        updated_at=submission.updated_at
+    )
+
+
+@router.put("/contacts/{contact_id}/status", response_model=ContactStatusUpdateResponse)
+async def update_contact_status(
+    contact_id: UUID,
+    request: ContactStatusUpdateRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Update contact submission status (admin only)"""
+    submission = db.query(ContactSubmission).filter(ContactSubmission.id == contact_id).first()
+    
+    if not submission:
+        raise HTTPException(status_code=404, detail="Contact submission not found")
+    
+    submission.status = request.status
+    if request.admin_notes is not None:
+        submission.admin_notes = request.admin_notes
+    
+    # Track who responded and when
+    if request.status == ContactStatus.RESPONDED:
+        submission.responded_at = datetime.utcnow()
+        submission.responded_by = current_user.id
+    
+    db.commit()
+    db.refresh(submission)
+    
+    return ContactStatusUpdateResponse(
+        id=submission.id,
+        status=submission.status.value,
+        message=f"Contact submission status updated to {request.status.value}"
+    )
+
+
+# =============================================================================
+# Notification Settings Management Endpoints
+# =============================================================================
+
+from app.db.models.notification_setting import NotificationSetting, NotificationType
+from app.schemas.notification import (
+    NotificationSettingItem,
+    NotificationSettingsListResponse,
+    NotificationSettingUpdateRequest,
+    NotificationSettingUpdateResponse
+)
+
+
+@router.get("/notification-settings", response_model=NotificationSettingsListResponse)
+async def list_notification_settings(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List all notification settings (admin only)"""
+    settings_list = db.query(NotificationSetting).all()
+    
+    items = []
+    for setting in settings_list:
+        # Get the name of who last updated, if applicable
+        updated_by_name = None
+        if setting.updated_by_id:
+            updater = db.query(User).filter(User.id == setting.updated_by_id).first()
+            if updater:
+                updated_by_name = updater.name or updater.email
+        
+        items.append(NotificationSettingItem(
+            id=setting.id,
+            notification_type=setting.notification_type.value,
+            recipient_email=setting.recipient_email,
+            is_enabled=setting.is_enabled,
+            description=setting.description,
+            updated_at=setting.updated_at,
+            updated_by_id=setting.updated_by_id,
+            updated_by_name=updated_by_name
+        ))
+    
+    return NotificationSettingsListResponse(settings=items)
+
+
+@router.put("/notification-settings/{notification_type}", response_model=NotificationSettingUpdateResponse)
+async def update_notification_setting(
+    notification_type: str,
+    request: NotificationSettingUpdateRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Update a notification setting (admin only)"""
+    # Validate notification type
+    try:
+        notif_type = NotificationType(notification_type)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid notification type. Must be one of: {', '.join([t.value for t in NotificationType])}"
+        )
+    
+    setting = db.query(NotificationSetting).filter(
+        NotificationSetting.notification_type == notif_type
+    ).first()
+    
+    if not setting:
+        raise HTTPException(status_code=404, detail="Notification setting not found")
+    
+    # Update fields if provided
+    if request.recipient_email is not None:
+        setting.recipient_email = request.recipient_email
+    if request.is_enabled is not None:
+        setting.is_enabled = request.is_enabled
+    
+    setting.updated_by_id = current_user.id
+    
+    db.commit()
+    db.refresh(setting)
+    
+    return NotificationSettingUpdateResponse(
+        id=setting.id,
+        notification_type=setting.notification_type.value,
+        recipient_email=setting.recipient_email,
+        is_enabled=setting.is_enabled,
+        message=f"Notification setting for {notification_type} updated successfully"
+    )

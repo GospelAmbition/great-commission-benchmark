@@ -1,5 +1,5 @@
 import { ImageResponse } from "@vercel/og";
-import { SITE_CONFIG, OG_IMAGE_SIZE } from "@/lib/seo";
+import { SITE_CONFIG, OG_IMAGE_SIZE, getBaseUrl } from "@/lib/seo";
 
 // Route segment config
 export const runtime = "edge";
@@ -10,7 +10,10 @@ export const size = OG_IMAGE_SIZE;
 export const contentType = "image/png";
 
 // Default OG image generation
-export default function OGImage() {
+export default async function OGImage() {
+  // Fetch the logo image
+  const logoUrl = `${getBaseUrl()}/logo.png`;
+  
   return new ImageResponse(
     (
       <div
@@ -26,7 +29,7 @@ export default function OGImage() {
             "radial-gradient(circle at 25% 25%, #1a0a0a 0%, transparent 50%), radial-gradient(circle at 75% 75%, #0a1a1a 0%, transparent 50%)",
         }}
       >
-        {/* Logo and cross symbol */}
+        {/* Logo */}
         <div
           style={{
             display: "flex",
@@ -35,31 +38,16 @@ export default function OGImage() {
             marginBottom: "40px",
           }}
         >
-          <div
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoUrl}
+            alt="GCB Logo"
+            width={140}
+            height={140}
             style={{
-              width: "100px",
-              height: "100px",
-              background: "linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%)",
-              borderRadius: "20px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              borderRadius: "24px",
             }}
-          >
-            <svg
-              width="60"
-              height="60"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="12" y1="4" x2="12" y2="20" />
-              <line x1="5" y1="9" x2="19" y2="9" />
-            </svg>
-          </div>
+          />
         </div>
 
         {/* Title */}

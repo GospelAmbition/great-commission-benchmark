@@ -18,6 +18,8 @@ from app.db.models.blog_post import BlogPost
 from app.db.models.model_version_stats import ModelVersionStats
 from app.db.models.stripe_config import StripeConfig
 from app.db.models.volunteer_application import VolunteerApplication
+from app.db.models.contact_submission import ContactSubmission
+from app.db.models.notification_setting import NotificationSetting
 
 __all__ = [
     "User",
@@ -38,4 +40,6 @@ __all__ = [
     "ModelVersionStats",
     "StripeConfig",
     "VolunteerApplication",
+    "ContactSubmission",
+    "NotificationSetting",
 ]

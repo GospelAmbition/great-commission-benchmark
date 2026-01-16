@@ -1114,6 +1114,83 @@ export class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // =============================================================================
+  // Contact Form API endpoints
+  // =============================================================================
+
+  async submitContactForm(data: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+    recaptcha_token?: string | null;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    submission_id?: string;
+  }> {
+    return this.request('/api/contact/submit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Admin contact submissions
+  async getAdminContacts(params?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    items: ContactSubmission[];
+    total: number;
+  }> {
+    return this.request(`/api/admin/contacts${this.buildQueryString(params)}`);
+  }
+
+  async getAdminContactDetail(contactId: string): Promise<ContactSubmission> {
+    return this.request(`/api/admin/contacts/${contactId}`);
+  }
+
+  async updateContactStatus(contactId: string, data: {
+    status: string;
+    admin_notes?: string | null;
+  }): Promise<{
+    id: string;
+    status: string;
+    message: string;
+  }> {
+    return this.request(`/api/admin/contacts/${contactId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // =============================================================================
+  // Notification Settings API endpoints
+  // =============================================================================
+
+  async getNotificationSettings(): Promise<{
+    settings: NotificationSetting[];
+  }> {
+    return this.request('/api/admin/notification-settings');
+  }
+
+  async updateNotificationSetting(notificationType: string, data: {
+    recipient_email?: string | null;
+    is_enabled?: boolean;
+  }): Promise<{
+    id: string;
+    notification_type: string;
+    recipient_email: string | null;
+    is_enabled: boolean;
+    message: string;
+  }> {
+    return this.request(`/api/admin/notification-settings/${notificationType}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // Blog types
@@ -1143,6 +1220,34 @@ export interface BlogPost {
   created_at: string;
   updated_at: string;
   published_at?: string;
+}
+
+// Contact submission types
+export interface ContactSubmission {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: string;
+  admin_notes: string | null;
+  responded_at: string | null;
+  responded_by: string | null;
+  responded_by_name?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Notification settings types
+export interface NotificationSetting {
+  id: string;
+  notification_type: string;
+  recipient_email: string | null;
+  is_enabled: boolean;
+  description: string | null;
+  updated_at: string;
+  updated_by_id: string | null;
+  updated_by_name: string | null;
 }
 
 export const apiClient = new ApiClient();

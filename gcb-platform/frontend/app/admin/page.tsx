@@ -9,7 +9,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useUserProfile } from "@/lib/useUserProfile";
 import { toast } from "sonner";
-import { ExternalLink, RefreshCw, Mail } from "lucide-react";
+import { ExternalLink, RefreshCw, Mail, MessageSquare, Bell } from "lucide-react";
 import { apiClient } from "@/lib/api";
 
 export default function AdminDashboardPage() {
@@ -295,6 +295,34 @@ export default function AdminDashboardPage() {
           <CardContent>
             <Button asChild variant="outline">
               <Link href="/admin/sponsorships">Manage Sponsorships</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Contact Submissions
+            </CardTitle>
+            <CardDescription>View and manage contact form submissions from the website</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/admin/contacts">View Submissions</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notification Settings
+            </CardTitle>
+            <CardDescription>Configure who receives email notifications for new submissions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/admin/notifications">Configure Recipients</Link>
             </Button>
           </CardContent>
         </Card>

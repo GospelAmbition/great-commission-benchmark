@@ -12,8 +12,10 @@ from app.core.auth import get_db, require_auth, require_moderator
 from app.core.config import settings
 from app.db.models.user import User
 from app.db.models.sponsorship_request import SponsorshipRequest
+from app.db.models.notification_setting import NotificationSetting, NotificationType
 from app.services.payment import PaymentService
 from app.services.pricing import PricingService
+from app.services.email import EmailService
 from app.schemas.sponsorship import (
     CreateSponsorshipRequest,
     CreateSponsorshipResponse,
@@ -123,6 +125,25 @@ async def create_sponsorship(
                 sponsorship.payment_status = "succeeded"
                 sponsorship.status = "pending"
                 logger.info(f"Test mode: Payment already succeeded, sponsorship {sponsorship.id} marked as pending for moderation")
+                
+                # Send notification email for test mode auto-success
+                try:
+                    notification_setting = db.query(NotificationSetting).filter(
+                        NotificationSetting.notification_type == NotificationType.SPONSORSHIP
+                    ).first()
+                    
+                    if notification_setting and notification_setting.is_enabled and notification_setting.recipient_email:
+                        await EmailService.send_sponsorship_request_notification_email(
+                            admin_email=notification_setting.recipient_email,
+                            requester_name=current_user.name or current_user.email,
+                            requester_email=current_user.email,
+                            model_name=model_name,
+                            request_type="sponsorship",
+                            message=request.message,
+                            sponsorship_id=str(sponsorship.id)
+                        )
+                except Exception as e:
+                    logger.warning(f"Failed to send sponsorship notification email: {e}")
             
             db.commit()
             
@@ -163,6 +184,26 @@ async def create_sponsorship(
         )
         db.add(sponsorship)
         db.commit()
+        
+        # Send notification email to designated recipient for model requests
+        try:
+            notification_setting = db.query(NotificationSetting).filter(
+                NotificationSetting.notification_type == NotificationType.SPONSORSHIP
+            ).first()
+            
+            if notification_setting and notification_setting.is_enabled and notification_setting.recipient_email:
+                await EmailService.send_sponsorship_request_notification_email(
+                    admin_email=notification_setting.recipient_email,
+                    requester_name=current_user.name or current_user.email,
+                    requester_email=current_user.email,
+                    model_name=model_name,
+                    request_type="request",
+                    message=request.message,
+                    sponsorship_id=str(sponsorship.id)
+                )
+        except Exception as e:
+            # Log error but don't fail the request submission
+            logger.warning(f"Failed to send sponsorship request notification email: {e}")
         
         return CreateSponsorshipResponse(
             id=sponsorship.id,

@@ -1,13 +1,17 @@
 """Webhook endpoints"""
+import logging
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import Response
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.auth import get_db
 from app.services.payment import PaymentService
 from app.db.models.community_submission import CommunitySubmission
 from app.db.models.sponsorship_request import SponsorshipRequest
+from app.db.models.notification_setting import NotificationSetting, NotificationType
 from app.services.email import EmailService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -49,19 +53,37 @@ async def stripe_webhook(
         if sponsorship:
             # Update sponsorship status to pending for moderation if payment is pending
             # This handles both initial webhook and cases where status might have been updated elsewhere
-            if sponsorship.status == "pending_payment" or sponsorship.payment_status != "succeeded":
+            was_pending_payment = sponsorship.status == "pending_payment"
+            if was_pending_payment or sponsorship.payment_status != "succeeded":
                 sponsorship.payment_status = "succeeded"
                 sponsorship.status = "pending"
                 db.commit()
             
-            # DEFERRED: Payment confirmation emails
-            # Sponsorship payment confirmation email not yet implemented in EmailService
-            # When ready, uncomment:
-            # await EmailService.send_sponsorship_payment_confirmed_email(
-            #     sponsorship.user.email,
-            #     str(sponsorship.id),
-            #     sponsorship.openrouter_model_id or sponsorship.custom_model_name
-            # )
+            # Send notification email to designated recipient when sponsorship is ready for review
+            if was_pending_payment:
+                try:
+                    # Get fresh sponsorship with user loaded
+                    sponsorship = db.query(SponsorshipRequest).options(
+                        joinedload(SponsorshipRequest.user)
+                    ).filter(SponsorshipRequest.id == sponsorship.id).first()
+                    
+                    notification_setting = db.query(NotificationSetting).filter(
+                        NotificationSetting.notification_type == NotificationType.SPONSORSHIP
+                    ).first()
+                    
+                    if notification_setting and notification_setting.is_enabled and notification_setting.recipient_email:
+                        model_name = sponsorship.openrouter_model_id or sponsorship.custom_model_name or "Unknown"
+                        await EmailService.send_sponsorship_request_notification_email(
+                            admin_email=notification_setting.recipient_email,
+                            requester_name=sponsorship.user.name or sponsorship.user.email,
+                            requester_email=sponsorship.user.email,
+                            model_name=model_name,
+                            request_type=sponsorship.request_type,
+                            message=sponsorship.message,
+                            sponsorship_id=str(sponsorship.id)
+                        )
+                except Exception as e:
+                    logger.warning(f"Failed to send sponsorship notification email: {e}")
         else:
             # Handle CLI submission payments (only if not a sponsorship)
             if payment_type == "cli_submission":

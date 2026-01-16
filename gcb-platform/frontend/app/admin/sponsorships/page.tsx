@@ -126,13 +126,13 @@ export default function AdminSponsorshipsPage() {
   }
 
   async function handleAssignModerator(sponsorshipId: string, moderatorId: string) {
-    if (!moderatorId) {
-      toast.error("Please select a moderator");
-      return;
-    }
-
     setAssigning(sponsorshipId);
     try {
+      if (!moderatorId) {
+        // Unassign moderator
+        toast.info("Unassigning moderator is not yet implemented");
+        return;
+      }
       const result = await apiClient.assignSponsorshipModerator(sponsorshipId, moderatorId);
       toast.success(result.message || "Moderator assigned successfully");
       await loadSponsorships(); // Refresh list
@@ -295,15 +295,15 @@ export default function AdminSponsorshipsPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Select
-                          value={sponsorship.assigned_moderator_id || ""}
-                          onValueChange={(value) => handleAssignModerator(sponsorship.id, value)}
+                          value={sponsorship.assigned_moderator_id || "none"}
+                          onValueChange={(value) => handleAssignModerator(sponsorship.id, value === "none" ? "" : value)}
                           disabled={assigning === sponsorship.id || moderatorsLoading}
                         >
                           <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder="Assign moderator" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Unassign</SelectItem>
+                            <SelectItem value="none">Unassign</SelectItem>
                             {moderators.map((mod) => (
                               <SelectItem key={mod.id} value={mod.id}>
                                 {mod.name || mod.email}

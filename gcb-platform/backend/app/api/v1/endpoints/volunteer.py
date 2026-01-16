@@ -1,4 +1,5 @@
 """Volunteer API endpoints"""
+import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -7,6 +8,7 @@ from uuid import UUID
 
 from app.core.auth import get_db, get_current_user, require_admin
 from app.db.models.volunteer_application import VolunteerApplication
+from app.db.models.notification_setting import NotificationSetting, NotificationType
 from app.db.models.user import User
 from app.schemas.volunteer import (
     VolunteerApplicationRequest,
@@ -14,6 +16,9 @@ from app.schemas.volunteer import (
     VolunteerApplicationListItem,
     VolunteerApplicationListResponse
 )
+from app.services.email import EmailService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 optional_security = HTTPBearer(auto_error=False)
@@ -76,6 +81,25 @@ async def apply_volunteer(
     db.add(application)
     db.commit()
     db.refresh(application)
+    
+    # Send notification email to designated recipient
+    try:
+        notification_setting = db.query(NotificationSetting).filter(
+            NotificationSetting.notification_type == NotificationType.VOLUNTEER
+        ).first()
+        
+        if notification_setting and notification_setting.is_enabled and notification_setting.recipient_email:
+            await EmailService.send_volunteer_notification_email(
+                admin_email=notification_setting.recipient_email,
+                applicant_name=request.name,
+                applicant_email=request.email,
+                role=request.role.value,
+                background=request.background,
+                motivation=request.motivation
+            )
+    except Exception as e:
+        # Log error but don't fail the application submission
+        logger.warning(f"Failed to send volunteer notification email: {e}")
     
     return VolunteerApplicationResponse(
         success=True,
