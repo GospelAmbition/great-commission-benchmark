@@ -157,13 +157,14 @@ function DonationForm({ onSuccess }: { onSuccess: () => void }) {
               style: {
                 base: {
                   fontSize: "16px",
-                  color: "#424770",
+                  color: "#fafafa",
+                  fontFamily: "inherit",
                   "::placeholder": {
-                    color: "#aab7c4",
+                    color: "rgba(255, 255, 255, 0.5)",
                   },
                 },
                 invalid: {
-                  color: "#9e2146",
+                  color: "#ef4444",
                 },
               },
             }}

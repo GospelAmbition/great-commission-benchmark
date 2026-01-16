@@ -657,7 +657,7 @@ export class ApiClient {
     client_secret: string;
     amount: number;
   }> {
-    return this.request(`/api/v1/donations/create-intent`, {
+    return this.request(`/api/donations/create-intent`, {
       method: 'POST',
       body: JSON.stringify({
         amount,

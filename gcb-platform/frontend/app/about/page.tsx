@@ -991,17 +991,6 @@ export default function AboutPage() {
                         </div>
                       )}
 
-                      {/* Link to Insights */}
-                      <div className="pt-2 border-t border-white/[0.06]">
-                        <Link 
-                          href={`/insights?category=category-versions&search=${version.semantic_version}`}
-                          className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
-                        >
-                          <ArticleIcon className="h-4 w-4" />
-                          Read about this version in Insights
-                          <ChevronRight className="h-4 w-4" />
-                        </Link>
-                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -1051,7 +1040,7 @@ export default function AboutPage() {
                                 )}
                               </div>
                               <Link 
-                                href={`/insights?category=category-versions&search=${version.semantic_version}`}
+                                href={`/insights?category=versions&search=${version.semantic_version}`}
                                 className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
                               >
                                 View details
@@ -1081,7 +1070,7 @@ export default function AboutPage() {
                         </div>
                       </div>
                       <Link 
-                        href="/insights?category=category-versions"
+                        href="/insights?category=versions"
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
                       >
                         Browse in Insights
