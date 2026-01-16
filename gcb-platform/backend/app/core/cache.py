@@ -157,27 +157,27 @@ cache = SimpleCache()
 
 
 # Cache TTL settings (in seconds)
-# Fresh TTL = when background refresh is triggered
-# Stale TTL = when data is too old to serve (defaults to 24 hours for critical endpoints)
+# Fresh TTL = when background refresh is triggered (24 hours)
+# Stale TTL = when data is too old to serve (30 days for critical endpoints)
 # This ensures users always get instant responses while data is refreshed in background
 CACHE_TTL = {
-    "leaderboard": 3600,        # 1 hour fresh, then serve stale while refreshing
-    "category_rankings": 3600,  # 1 hour
-    "model_details": 3600,      # 1 hour
-    "public_stats": 3600,       # 1 hour
-    "versions": 3600,           # 1 hour
-    "models_list": 3600,        # 1 hour
+    "leaderboard": 86400,        # 24 hours fresh, then serve stale while refreshing
+    "category_rankings": 86400,  # 24 hours
+    "model_details": 86400,      # 24 hours
+    "public_stats": 86400,       # 24 hours
+    "versions": 86400,           # 24 hours
+    "models_list": 86400,        # 24 hours
 }
 
-# Stale TTL - how long to serve stale data while refreshing (24 hours for critical endpoints)
+# Stale TTL - how long to serve stale data while refreshing (30 days for critical endpoints)
 # This ensures that even if a refresh fails, users still get data
 CACHE_STALE_TTL = {
-    "leaderboard": 86400,       # 24 hours - serve stale rather than wait
-    "category_rankings": 86400, # 24 hours
-    "model_details": 86400,     # 24 hours
-    "public_stats": 86400,      # 24 hours
-    "versions": 86400,          # 24 hours
-    "models_list": 86400,       # 24 hours
+    "leaderboard": 2592000,       # 30 days - serve stale rather than wait
+    "category_rankings": 2592000, # 30 days
+    "model_details": 2592000,     # 30 days
+    "public_stats": 2592000,      # 30 days
+    "versions": 2592000,          # 30 days
+    "models_list": 2592000,       # 30 days
 }
 
 

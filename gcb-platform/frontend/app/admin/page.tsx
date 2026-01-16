@@ -20,6 +20,7 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [refreshingCache, setRefreshingCache] = useState(false);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -86,6 +87,26 @@ export default function AdminDashboardPage() {
       toast.error(error.message || "Failed to sync model descriptions");
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function refreshCache() {
+    setRefreshingCache(true);
+    try {
+      const response = await fetch("/api/admin/cache/refresh", {
+        method: "POST",
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to refresh cache");
+      }
+      const data = await response.json();
+      toast.success(data.message || "Cache refreshed successfully");
+    } catch (error: any) {
+      console.error("Failed to refresh cache:", error);
+      toast.error(error.message || "Failed to refresh cache");
+    } finally {
+      setRefreshingCache(false);
     }
   }
 
@@ -260,6 +281,22 @@ export default function AdminDashboardPage() {
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
               {syncing ? "Syncing..." : "Sync Model Descriptions"}
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Cache Management</CardTitle>
+            <CardDescription>Manually refresh the leaderboard and public data caches</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={refreshCache} 
+              disabled={refreshingCache}
+              variant="outline"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshingCache ? "animate-spin" : ""}`} />
+              {refreshingCache ? "Refreshing..." : "Refresh Cache"}
             </Button>
           </CardContent>
         </Card>

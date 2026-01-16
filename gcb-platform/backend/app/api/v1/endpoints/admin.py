@@ -1804,3 +1804,24 @@ async def sync_model_descriptions(
     except Exception as e:
         logger.error(f"Error syncing model descriptions: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cache/refresh")
+async def refresh_cache(
+    current_user: User = Depends(require_admin)
+):
+    """Manually refresh all caches"""
+    from app.services.cache_warmer import warm_all_caches
+    from app.core.cache import cache
+    
+    try:
+        # Clear existing cache first
+        await cache.clear()
+        
+        # Re-warm all caches
+        await warm_all_caches()
+        
+        return {"message": "Cache refreshed successfully"}
+    except Exception as e:
+        logger.error(f"Failed to refresh cache: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to refresh cache: {str(e)}")
