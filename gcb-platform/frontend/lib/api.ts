@@ -903,6 +903,68 @@ export class ApiClient {
     });
   }
 
+  // Admin sponsorship endpoints
+  async getAdminSponsorships(params?: {
+    status?: string;
+    request_type?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    items: Array<{
+      id: string;
+      request_type: string;
+      model_name: string;
+      user_id: string;
+      user_name: string;
+      user_email: string;
+      message?: string;
+      status: string;
+      payment_id?: string;
+      payment_status?: string;
+      created_at: string;
+      reviewed_at?: string;
+      reviewer_notes?: string;
+      assigned_moderator_id?: string;
+      assigned_moderator_name?: string;
+      assigned_at?: string;
+    }>;
+    total: number;
+  }> {
+    return this.request(`/api/admin/sponsorships${this.buildQueryString(params)}`);
+  }
+
+  async getAvailableModerators(): Promise<{
+    moderators: Array<{
+      id: string;
+      name?: string;
+      email: string;
+    }>;
+  }> {
+    return this.request('/api/admin/moderators');
+  }
+
+  async assignSponsorshipModerator(sponsorshipId: string, moderatorId: string): Promise<{
+    id: string;
+    assigned_moderator_id: string;
+    assigned_moderator_name: string;
+    assigned_at: string;
+    message: string;
+  }> {
+    return this.request(`/api/admin/sponsorships/${sponsorshipId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ moderator_id: moderatorId }),
+    });
+  }
+
+  async sendTestEmail(): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    return this.request('/api/admin/email/test', {
+      method: 'POST',
+    });
+  }
+
   // =============================================================================
   // Blog API endpoints
   // =============================================================================

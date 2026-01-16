@@ -62,6 +62,14 @@ from app.schemas.admin import (
     StripeChargesResponse,
     StripeRefundsResponse,
 )
+from app.schemas.sponsorship import (
+    AdminSponsorshipItem,
+    AdminSponsorshipListResponse,
+    AssignModeratorRequest,
+    AssignModeratorResponse,
+    ModeratorListItem,
+    ModeratorListResponse,
+)
 
 router = APIRouter()
 
@@ -1825,3 +1833,171 @@ async def refresh_cache(
     except Exception as e:
         logger.error(f"Failed to refresh cache: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to refresh cache: {str(e)}")
+
+
+@router.post("/email/test")
+async def send_test_email(
+    current_user: User = Depends(require_admin)
+):
+    """Send a test email to verify email service is working"""
+    from app.services.email import EmailService
+    
+    try:
+        success = await EmailService.send_test_email(
+            to_email=current_user.email,
+            user_name=current_user.name
+        )
+        
+        if success:
+            return {
+                "success": True,
+                "message": f"Test email sent successfully to {current_user.email}"
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Failed to send test email. Check email service configuration."
+            }
+    except Exception as e:
+        logger.error(f"Failed to send test email: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to send test email: {str(e)}"
+        )
+
+
+@router.get("/sponsorships", response_model=AdminSponsorshipListResponse)
+async def list_admin_sponsorships(
+    status: Optional[str] = Query(None, description="Filter by status"),
+    request_type: Optional[str] = Query(None, description="Filter by type (sponsorship or request)"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List all sponsorship requests for admin management"""
+    query = db.query(SponsorshipRequest).options(
+        joinedload(SponsorshipRequest.user),
+        joinedload(SponsorshipRequest.assigned_moderator)
+    )
+    
+    if status:
+        query = query.filter(SponsorshipRequest.status == status)
+    
+    if request_type:
+        query = query.filter(SponsorshipRequest.request_type == request_type)
+    
+    query = query.order_by(desc(SponsorshipRequest.created_at))
+    
+    total = query.count()
+    sponsorships = query.offset(offset).limit(limit).all()
+    
+    items = []
+    for s in sponsorships:
+        model_name = s.openrouter_model_id or s.custom_model_name or "Unknown"
+        assigned_moderator_name = None
+        if s.assigned_moderator:
+            assigned_moderator_name = s.assigned_moderator.name or s.assigned_moderator.email
+        
+        items.append(AdminSponsorshipItem(
+            id=s.id,
+            request_type=s.request_type,
+            model_name=model_name,
+            user_id=s.user_id,
+            user_name=s.user.name or s.user.email,
+            user_email=s.user.email,
+            message=s.message,
+            status=s.status,
+            payment_id=s.payment_id,
+            payment_status=s.payment_status,
+            created_at=s.created_at,
+            reviewed_at=s.reviewed_at,
+            reviewer_notes=s.reviewer_notes,
+            assigned_moderator_id=s.assigned_moderator_id,
+            assigned_moderator_name=assigned_moderator_name,
+            assigned_at=s.assigned_at
+        ))
+    
+    return AdminSponsorshipListResponse(items=items, total=total)
+
+
+@router.get("/moderators", response_model=ModeratorListResponse)
+async def list_moderators(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List all users with moderator permissions"""
+    moderators = db.query(User).filter(
+        User.can_moderate == True
+    ).order_by(User.name, User.email).all()
+    
+    items = []
+    for moderator in moderators:
+        items.append(ModeratorListItem(
+            id=moderator.id,
+            name=moderator.name,
+            email=moderator.email
+        ))
+    
+    return ModeratorListResponse(moderators=items)
+
+
+@router.post("/sponsorships/{sponsorship_id}/assign", response_model=AssignModeratorResponse)
+async def assign_sponsorship_moderator(
+    sponsorship_id: UUID,
+    request: AssignModeratorRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Assign a moderator to a sponsorship request"""
+    from app.services.email import EmailService
+    from datetime import datetime
+    
+    # Get sponsorship
+    sponsorship = db.query(SponsorshipRequest).options(
+        joinedload(SponsorshipRequest.assigned_moderator)
+    ).filter(SponsorshipRequest.id == sponsorship_id).first()
+    
+    if not sponsorship:
+        raise HTTPException(status_code=404, detail="Sponsorship request not found")
+    
+    # Get moderator
+    moderator = db.query(User).filter(User.id == request.moderator_id).first()
+    if not moderator:
+        raise HTTPException(status_code=404, detail="Moderator not found")
+    
+    if not moderator.can_moderate:
+        raise HTTPException(
+            status_code=400,
+            detail="User does not have moderator permissions"
+        )
+    
+    # Update assignment
+    sponsorship.assigned_moderator_id = request.moderator_id
+    sponsorship.assigned_at = datetime.utcnow()
+    db.commit()
+    db.refresh(sponsorship)
+    
+    # Send email notification to moderator
+    model_name = sponsorship.openrouter_model_id or sponsorship.custom_model_name or "Unknown"
+    try:
+        await EmailService.send_sponsorship_assigned_email(
+            moderator_email=moderator.email,
+            moderator_name=moderator.name or moderator.email,
+            model_name=model_name,
+            sponsorship_id=str(sponsorship.id),
+            request_type=sponsorship.request_type
+        )
+    except Exception as e:
+        logger.warning(f"Failed to send assignment email to moderator: {e}")
+        # Don't fail the assignment if email fails
+    
+    moderator_name = moderator.name or moderator.email
+    
+    return AssignModeratorResponse(
+        id=sponsorship.id,
+        assigned_moderator_id=sponsorship.assigned_moderator_id,
+        assigned_moderator_name=moderator_name,
+        assigned_at=sponsorship.assigned_at,
+        message=f"Sponsorship assigned to {moderator_name}"
+    )

@@ -3,7 +3,7 @@ from typing import Optional
 from decimal import Decimal
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc, or_, and_
 from uuid import UUID
 from datetime import datetime
@@ -371,7 +371,10 @@ async def get_sponsorship_queue(
     db: Session = Depends(get_db)
 ):
     """Get sponsorship requests queue for moderation"""
-    query = db.query(SponsorshipRequest)
+    query = db.query(SponsorshipRequest).options(
+        joinedload(SponsorshipRequest.user),
+        joinedload(SponsorshipRequest.assigned_moderator)
+    )
     
     if status:
         query = query.filter(SponsorshipRequest.status == status)
@@ -433,6 +436,10 @@ async def get_sponsorship_queue(
                 # Continue with current status if check fails
         
         model_name = s.openrouter_model_id or s.custom_model_name or "Unknown"
+        assigned_moderator_name = None
+        if s.assigned_moderator:
+            assigned_moderator_name = s.assigned_moderator.name or s.assigned_moderator.email
+        
         items.append(SponsorshipQueueItem(
             id=s.id,
             request_type=s.request_type,
@@ -442,7 +449,10 @@ async def get_sponsorship_queue(
             message=s.message,
             status=s.status,
             payment_status=s.payment_status,
-            created_at=s.created_at
+            created_at=s.created_at,
+            assigned_moderator_id=s.assigned_moderator_id,
+            assigned_moderator_name=assigned_moderator_name,
+            assigned_at=s.assigned_at
         ))
     
     return SponsorshipQueueResponse(items=items, total=total)
@@ -455,7 +465,10 @@ async def get_sponsorship_detail(
     db: Session = Depends(get_db)
 ):
     """Get sponsorship details for review"""
-    sponsorship = db.query(SponsorshipRequest).filter(
+    sponsorship = db.query(SponsorshipRequest).options(
+        joinedload(SponsorshipRequest.user),
+        joinedload(SponsorshipRequest.assigned_moderator)
+    ).filter(
         SponsorshipRequest.id == sponsorship_id
     ).first()
     
@@ -463,6 +476,9 @@ async def get_sponsorship_detail(
         raise HTTPException(status_code=404, detail="Sponsorship request not found")
     
     model_name = sponsorship.openrouter_model_id or sponsorship.custom_model_name or "Unknown"
+    assigned_moderator_name = None
+    if sponsorship.assigned_moderator:
+        assigned_moderator_name = sponsorship.assigned_moderator.name or sponsorship.assigned_moderator.email
     
     return SponsorshipDetailResponse(
         id=sponsorship.id,
@@ -479,7 +495,10 @@ async def get_sponsorship_detail(
         payment_status=sponsorship.payment_status,
         created_at=sponsorship.created_at,
         reviewed_at=sponsorship.reviewed_at,
-        reviewer_notes=sponsorship.reviewer_notes
+        reviewer_notes=sponsorship.reviewer_notes,
+        assigned_moderator_id=sponsorship.assigned_moderator_id,
+        assigned_moderator_name=assigned_moderator_name,
+        assigned_at=sponsorship.assigned_at
     )
 
 

@@ -38,6 +38,10 @@ class SponsorshipRequest(Base):
     reviewer_notes = Column(Text, nullable=True)
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
     
+    # Moderator assignment
+    assigned_moderator_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    assigned_at = Column(DateTime(timezone=True), nullable=True)
+    
     # Legacy funding fields
     funded_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     funded_at = Column(DateTime(timezone=True))
@@ -48,4 +52,5 @@ class SponsorshipRequest(Base):
     user = relationship("User", foreign_keys=[user_id], backref="sponsorship_requests")
     model = relationship("Model", backref="sponsorship_requests")
     reviewer = relationship("User", foreign_keys=[reviewer_id])
+    assigned_moderator = relationship("User", foreign_keys=[assigned_moderator_id])
     funder = relationship("User", foreign_keys=[funded_by])

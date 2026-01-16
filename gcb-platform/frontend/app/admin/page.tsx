@@ -9,7 +9,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useUserProfile } from "@/lib/useUserProfile";
 import { toast } from "sonner";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { ExternalLink, RefreshCw, Mail } from "lucide-react";
+import { apiClient } from "@/lib/api";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [refreshingCache, setRefreshingCache] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -107,6 +109,23 @@ export default function AdminDashboardPage() {
       toast.error(error.message || "Failed to refresh cache");
     } finally {
       setRefreshingCache(false);
+    }
+  }
+
+  async function testEmail() {
+    setTestingEmail(true);
+    try {
+      const result = await apiClient.sendTestEmail();
+      if (result.success) {
+        toast.success(result.message || "Test email sent successfully");
+      } else {
+        toast.error(result.message || "Failed to send test email");
+      }
+    } catch (error: any) {
+      console.error("Failed to send test email:", error);
+      toast.error(error.message || "Failed to send test email");
+    } finally {
+      setTestingEmail(false);
     }
   }
 
@@ -270,6 +289,17 @@ export default function AdminDashboardPage() {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>Sponsorship Management</CardTitle>
+            <CardDescription>Assign moderators to sponsorship requests and manage assignments</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/admin/sponsorships">Manage Sponsorships</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Model Utilities</CardTitle>
             <CardDescription>Sync model descriptions from OpenRouter API</CardDescription>
           </CardHeader>
@@ -297,6 +327,22 @@ export default function AdminDashboardPage() {
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${refreshingCache ? "animate-spin" : ""}`} />
               {refreshingCache ? "Refreshing..." : "Refresh Cache"}
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Email Service</CardTitle>
+            <CardDescription>Test email delivery to verify Resend configuration</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={testEmail} 
+              disabled={testingEmail}
+              variant="outline"
+            >
+              <Mail className={`h-4 w-4 mr-2 ${testingEmail ? "animate-pulse" : ""}`} />
+              {testingEmail ? "Sending..." : "Test Email Service"}
             </Button>
           </CardContent>
         </Card>

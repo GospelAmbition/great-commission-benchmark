@@ -206,3 +206,54 @@ class EmailService:
         </html>
         """
         return await EmailService.send_email(user_email, subject, html)
+    
+    @staticmethod
+    async def send_sponsorship_assigned_email(
+        moderator_email: str,
+        moderator_name: str,
+        model_name: str,
+        sponsorship_id: str,
+        request_type: str
+    ) -> bool:
+        """Send email notification when a sponsorship request is assigned to a moderator"""
+        request_type_label = "Sponsorship Request" if request_type == "sponsorship" else "Model Request"
+        subject = f"New {request_type_label} Assigned: {model_name}"
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #a11824;">New {request_type_label} Assigned</h1>
+            <p>Hello {moderator_name},</p>
+            <p>A new {request_type_label.lower()} for <strong>{model_name}</strong> has been assigned to you for review.</p>
+            <p>Please review the request and run the model test when ready.</p>
+            <p><a href="https://greatcommissionbenchmark.ai/moderator/sponsorship/{sponsorship_id}" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Review Request</a></p>
+            <hr>
+            <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
+        </body>
+        </html>
+        """
+        return await EmailService.send_email(moderator_email, subject, html)
+    
+    @staticmethod
+    async def send_test_email(
+        to_email: str,
+        user_name: Optional[str] = None
+    ) -> bool:
+        """Send a test email to verify email service is working"""
+        from datetime import datetime
+        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        name = user_name or "there"
+        subject = "Great Commission Benchmark - Email Service Test"
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #a11824;">Email Service Test</h1>
+            <p>Hello {name},</p>
+            <p>This is a test email from the Great Commission Benchmark platform to verify that the email service is working correctly.</p>
+            <p><strong>Test Timestamp:</strong> {timestamp}</p>
+            <p>If you received this email, the email service is configured and functioning properly.</p>
+            <hr>
+            <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
+        </body>
+        </html>
+        """
+        return await EmailService.send_email(to_email, subject, html)
