@@ -66,7 +66,7 @@ function InsightsContent() {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const pageSize = 60;
+  const pageSize = 50;
   const isInitialized = useRef(false);
   const prevCategoryRef = useRef<string | null>(null);
   const prevSearchRef = useRef<string | null>(null);
