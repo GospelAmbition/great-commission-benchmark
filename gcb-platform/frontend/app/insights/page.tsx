@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, Search, X, ChevronLeft } from "lucide-react";
+import { ChevronRight, Search, X, ChevronLeft, LayoutGrid, List } from "lucide-react";
 import { ArticleIcon } from "@/lib/icons";
 
 interface BlogCategory {
@@ -65,7 +65,8 @@ function InsightsContent() {
   
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
-  const pageSize = 12;
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const pageSize = 60;
   const isInitialized = useRef(false);
   const prevCategoryRef = useRef<string | null>(null);
   const prevSearchRef = useRef<string | null>(null);
@@ -249,28 +250,64 @@ function InsightsContent() {
             </div>
           </div>
           
-          <p className="text-sm text-muted-foreground">
-            {total} {total === 1 ? "article" : "articles"}
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-muted-foreground">
+              {total} {total === 1 ? "article" : "articles"}
+            </p>
+            <div className="flex items-center border rounded-lg">
+              <Button 
+                variant={viewMode === "grid" ? "secondary" : "ghost"} 
+                size="sm" 
+                onClick={() => setViewMode("grid")}
+                className="rounded-r-none"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant={viewMode === "list" ? "secondary" : "ghost"} 
+                size="sm" 
+                onClick={() => setViewMode("list")}
+                className="rounded-l-none"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
 
-        {/* Posts Grid */}
+        {/* Posts Grid/List */}
         {loading ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i}>
-                <Skeleton className="h-48 w-full rounded-t-lg" />
-                <CardHeader>
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-1/2 mt-2" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3 mt-2" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          viewMode === "grid" ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i}>
+                  <Skeleton className="h-48 w-full rounded-t-lg" />
+                  <CardHeader>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2 mt-2" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3 mt-2" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i} className="flex flex-col sm:flex-row overflow-hidden">
+                  <Skeleton className="h-32 sm:h-auto sm:w-48 flex-shrink-0" />
+                  <div className="flex-1 p-4">
+                    <Skeleton className="h-4 w-20 mb-2" />
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3 mt-1" />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )
         ) : posts.length === 0 ? (
           <Card className="p-12 text-center">
             <CardContent>
@@ -285,7 +322,7 @@ function InsightsContent() {
               </p>
             </CardContent>
           </Card>
-        ) : (
+        ) : viewMode === "grid" ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {posts.map((post) => (
               <Card key={post.id} className="overflow-hidden group border-glow">
@@ -347,6 +384,62 @@ function InsightsContent() {
                     </Button>
                   </Link>
                 </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {posts.map((post) => (
+              <Card key={post.id} className="overflow-hidden group border-glow">
+                <Link href={`/insights/${post.slug}`} className="flex flex-col sm:flex-row">
+                  {/* Thumbnail */}
+                  {post.featured_image_url ? (
+                    <div className="relative h-32 sm:h-auto sm:w-48 flex-shrink-0 bg-white/[0.02] overflow-hidden">
+                      {/* Blurred background */}
+                      <div className="absolute inset-0">
+                        <Image
+                          src={post.featured_image_url}
+                          alt=""
+                          fill
+                          className="object-cover blur-xl scale-110 opacity-40"
+                          unoptimized
+                          aria-hidden="true"
+                        />
+                      </div>
+                      {/* Main image centered */}
+                      <div className="relative h-full w-full flex items-center justify-center">
+                        <img
+                          src={post.featured_image_url}
+                          alt={post.title}
+                          className="h-full w-auto max-w-full object-contain"
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-32 sm:h-auto sm:w-48 flex-shrink-0 bg-gradient-to-br from-primary/10 to-white/[0.02] flex items-center justify-center">
+                      <span className="text-2xl font-bold text-primary/20">GCB</span>
+                    </div>
+                  )}
+                  {/* Content */}
+                  <div className="flex-1 p-4 flex flex-col justify-center">
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {post.categories.map((cat) => (
+                        <Badge key={cat.id} variant="muted" className="text-xs">
+                          {cat.name}
+                        </Badge>
+                      ))}
+                    </div>
+                    <h3 className="font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                      {post.title}
+                    </h3>
+                    {post.excerpt && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {post.excerpt}
+                      </p>
+                    )}
+                  </div>
+                </Link>
               </Card>
             ))}
           </div>
