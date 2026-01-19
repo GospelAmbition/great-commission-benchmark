@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -41,44 +41,92 @@ function InsightsContent() {
   const searchParams = useSearchParams();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState<BlogCategory[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 12;
-
-  // Initialize from URL params
-  useEffect(() => {
-    const categoryParam = searchParams.get("category");
-    const searchParam = searchParams.get("search");
-    const pageParam = searchParams.get("page");
-    
-    if (categoryParam) {
-      setSelectedCategory(categoryParam);
-    }
-    if (searchParam) {
-      setSearchQuery(searchParam);
-    }
+  
+  // Initialize state from URL params synchronously
+  const categoryParam = searchParams.get("category");
+  const searchParam = searchParams.get("search");
+  const pageParam = searchParams.get("page");
+  
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    () => categoryParam || "all"
+  );
+  const [searchQuery, setSearchQuery] = useState<string>(
+    () => searchParam || ""
+  );
+  const [currentPage, setCurrentPage] = useState<number>(() => {
     if (pageParam) {
       const page = parseInt(pageParam, 10);
-      if (page > 0) {
-        setCurrentPage(page);
-      }
+      return page > 0 ? page : 1;
     }
-  }, [searchParams]);
+    return 1;
+  });
+  
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const pageSize = 12;
+  const isInitialized = useRef(false);
+  const prevCategoryRef = useRef<string | null>(null);
+  const prevSearchRef = useRef<string | null>(null);
 
   useEffect(() => {
     loadCategories();
   }, []);
 
+  // Initial load after state is initialized from URL params
   useEffect(() => {
-    // Reset to page 1 when filters change
-    setCurrentPage(1);
+    if (!isInitialized.current) {
+      isInitialized.current = true;
+      prevCategoryRef.current = selectedCategory;
+      prevSearchRef.current = searchQuery;
+      loadPosts();
+    }
+  }, []);
+
+  // Update state when URL params change (but only after initial load)
+  useEffect(() => {
+    if (!isInitialized.current) {
+      return;
+    }
+    
+    const newCategoryParam = searchParams.get("category");
+    const newSearchParam = searchParams.get("search");
+    const newPageParam = searchParams.get("page");
+    
+    if (newCategoryParam !== selectedCategory) {
+      setSelectedCategory(newCategoryParam || "all");
+    }
+    
+    if (newSearchParam !== searchQuery) {
+      setSearchQuery(newSearchParam || "");
+    }
+    
+    if (newPageParam) {
+      const page = parseInt(newPageParam, 10);
+      if (page > 0 && page !== currentPage) {
+        setCurrentPage(page);
+      }
+    } else if (currentPage !== 1 && !newCategoryParam && !newSearchParam) {
+      // Only reset page if filters are cleared
+      setCurrentPage(1);
+    }
+  }, [searchParams, selectedCategory, searchQuery, currentPage]);
+
+  useEffect(() => {
+    // Reset to page 1 when filters change (but not on initial load)
+    if (isInitialized.current && 
+        (prevCategoryRef.current !== null || prevSearchRef.current !== null) &&
+        (prevCategoryRef.current !== selectedCategory || prevSearchRef.current !== searchQuery)) {
+      setCurrentPage(1);
+    }
+    prevCategoryRef.current = selectedCategory;
+    prevSearchRef.current = searchQuery;
   }, [selectedCategory, searchQuery]);
 
   useEffect(() => {
-    loadPosts();
+    // Load posts when filters or page change (but not on initial mount)
+    if (isInitialized.current) {
+      loadPosts();
+    }
   }, [selectedCategory, searchQuery, currentPage]);
 
   async function loadCategories() {
