@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,8 @@ interface BlogPost {
 
 function InsightsContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   
@@ -67,6 +69,7 @@ function InsightsContent() {
   const isInitialized = useRef(false);
   const prevCategoryRef = useRef<string | null>(null);
   const prevSearchRef = useRef<string | null>(null);
+  const isUpdatingUrlRef = useRef(false);
 
   useEffect(() => {
     loadCategories();
@@ -82,9 +85,10 @@ function InsightsContent() {
     }
   }, []);
 
-  // Update state when URL params change (but only after initial load)
+  // Update state when URL params change (e.g., browser back/forward) - but only after initial load
   useEffect(() => {
-    if (!isInitialized.current) {
+    if (!isInitialized.current || isUpdatingUrlRef.current) {
+      isUpdatingUrlRef.current = false; // Reset flag after skipping
       return;
     }
     
@@ -92,6 +96,8 @@ function InsightsContent() {
     const newSearchParam = searchParams.get("search");
     const newPageParam = searchParams.get("page");
     
+    // Only update state if URL params differ from current state
+    // This handles browser navigation (back/forward) but not our own URL updates
     if (newCategoryParam !== selectedCategory) {
       setSelectedCategory(newCategoryParam || "all");
     }
@@ -100,16 +106,14 @@ function InsightsContent() {
       setSearchQuery(newSearchParam || "");
     }
     
+    // Only update page if URL param differs from current state
     if (newPageParam) {
-      const page = parseInt(newPageParam, 10);
-      if (page > 0 && page !== currentPage) {
-        setCurrentPage(page);
+      const pageFromUrl = parseInt(newPageParam, 10);
+      if (pageFromUrl > 0 && pageFromUrl !== currentPage) {
+        setCurrentPage(pageFromUrl);
       }
-    } else if (currentPage !== 1 && !newCategoryParam && !newSearchParam) {
-      // Only reset page if filters are cleared
-      setCurrentPage(1);
     }
-  }, [searchParams, selectedCategory, searchQuery, currentPage]);
+  }, [searchParams]); // Only depend on searchParams - sync FROM URL TO state
 
   useEffect(() => {
     // Reset to page 1 when filters change (but not on initial load)
@@ -154,7 +158,8 @@ function InsightsContent() {
       params.append("limit", pageSize.toString());
       params.append("offset", ((currentPage - 1) * pageSize).toString());
       
-      // Update URL without reload
+      // Update URL without reload using Next.js router
+      isUpdatingUrlRef.current = true; // Flag that we're updating URL ourselves
       const urlParams = new URLSearchParams();
       if (selectedCategory && selectedCategory !== "all") {
         urlParams.set("category", selectedCategory);
@@ -166,9 +171,9 @@ function InsightsContent() {
         urlParams.set("page", currentPage.toString());
       }
       const newUrl = urlParams.toString() 
-        ? `${window.location.pathname}?${urlParams.toString()}`
-        : window.location.pathname;
-      window.history.replaceState({}, "", newUrl);
+        ? `${pathname}?${urlParams.toString()}`
+        : pathname;
+      router.replace(newUrl, { scroll: false });
       
       const response = await fetch(`/api/blog/posts?${params.toString()}`);
       if (response.ok) {
@@ -286,14 +291,29 @@ function InsightsContent() {
               <Card key={post.id} className="overflow-hidden group border-glow">
                 <Link href={`/insights/${post.slug}`}>
                   {post.featured_image_url ? (
-                    <div className="relative h-48 w-full bg-white/[0.02]">
-                      <Image
-                        src={post.featured_image_url}
-                        alt={post.title}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
+                    <div className="relative h-48 w-full bg-white/[0.02] overflow-hidden">
+                      {/* Blurred background */}
+                      <div className="absolute inset-0">
+                        <Image
+                          src={post.featured_image_url}
+                          alt=""
+                          fill
+                          className="object-cover blur-xl scale-110 opacity-40"
+                          unoptimized
+                          aria-hidden="true"
+                        />
+                      </div>
+                      {/* Main image centered */}
+                      <div className="relative h-full w-full flex items-center justify-center">
+                        <div className="relative h-full w-auto max-w-full">
+                          <img
+                            src={post.featured_image_url}
+                            alt={post.title}
+                            className="h-full w-auto max-w-full object-contain"
+                            loading="lazy"
+                          />
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="h-48 w-full bg-gradient-to-br from-primary/10 to-white/[0.02] flex items-center justify-center">
