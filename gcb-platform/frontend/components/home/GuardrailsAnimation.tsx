@@ -13,19 +13,19 @@ interface Ball {
 export function GuardrailsAnimation() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ballRef = useRef<Ball | null>(null);
-  const outerFlashRef = useRef<number>(0);
+  const innerFlashRef = useRef<number>(0);
   const animationRef = useRef<number | null>(null);
 
   const CANVAS_SIZE = 300;
-  const OUTER_RADIUS = 140;
-  const MIDDLE_RADIUS = 90;
+  const OUTER_RADIUS = 140; // Full potential - always visible
+  const INNER_RADIUS = 90;  // Guardrail - flashes red when hit
   const BALL_RADIUS = 12;
   const BALL_SPEED = 1.2;
 
   const initBall = useCallback(() => {
-    // Start ball at a random position within the middle circle
+    // Start ball at a random position within the inner guardrail circle
     const angle = Math.random() * Math.PI * 2;
-    const distance = Math.random() * (MIDDLE_RADIUS - BALL_RADIUS - 10);
+    const distance = Math.random() * (INNER_RADIUS - BALL_RADIUS - 10);
     const centerX = CANVAS_SIZE / 2;
     const centerY = CANVAS_SIZE / 2;
 
@@ -48,27 +48,27 @@ export function GuardrailsAnimation() {
     // Clear canvas
     ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-    // Draw outer circle (normally invisible, flashes red on collision)
-    if (outerFlashRef.current > 0) {
+    // Draw outer circle (always visible - represents full potential)
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, OUTER_RADIUS, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Draw inner guardrail circle (flashes red on collision)
+    if (innerFlashRef.current > 0) {
       ctx.beginPath();
-      ctx.arc(centerX, centerY, OUTER_RADIUS, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(220, 38, 38, ${outerFlashRef.current * 0.6})`;
+      ctx.arc(centerX, centerY, INNER_RADIUS, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(220, 38, 38, ${innerFlashRef.current * 0.6})`;
       ctx.lineWidth = 3;
       ctx.stroke();
 
       // Add glow effect
-      ctx.shadowColor = `rgba(220, 38, 38, ${outerFlashRef.current * 0.8})`;
+      ctx.shadowColor = `rgba(220, 38, 38, ${innerFlashRef.current * 0.8})`;
       ctx.shadowBlur = 20;
       ctx.stroke();
       ctx.shadowBlur = 0;
     }
-
-    // Draw middle circle (always visible, subtle)
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, MIDDLE_RADIUS, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
 
     // Draw ball
     if (ballRef.current) {
@@ -105,14 +105,14 @@ export function GuardrailsAnimation() {
     ball.x += ball.vx;
     ball.y += ball.vy;
 
-    // Check collision with outer circle
+    // Check collision with inner guardrail circle
     const dx = ball.x - centerX;
     const dy = ball.y - centerY;
     const distanceFromCenter = Math.sqrt(dx * dx + dy * dy);
 
-    if (distanceFromCenter + ball.radius >= OUTER_RADIUS) {
-      // Collision! Flash the outer circle
-      outerFlashRef.current = 1;
+    if (distanceFromCenter + ball.radius >= INNER_RADIUS) {
+      // Collision with guardrail! Flash the inner circle red
+      innerFlashRef.current = 1;
 
       // Calculate reflection
       const normalX = dx / distanceFromCenter;
@@ -123,15 +123,15 @@ export function GuardrailsAnimation() {
       ball.vx = ball.vx - 2 * dotProduct * normalX;
       ball.vy = ball.vy - 2 * dotProduct * normalY;
 
-      // Move ball back inside
-      const overlap = distanceFromCenter + ball.radius - OUTER_RADIUS;
+      // Move ball back inside the guardrail
+      const overlap = distanceFromCenter + ball.radius - INNER_RADIUS;
       ball.x -= normalX * overlap;
       ball.y -= normalY * overlap;
     }
 
     // Fade out the flash
-    if (outerFlashRef.current > 0) {
-      outerFlashRef.current = Math.max(0, outerFlashRef.current - 0.02);
+    if (innerFlashRef.current > 0) {
+      innerFlashRef.current = Math.max(0, innerFlashRef.current - 0.02);
     }
   }, []);
 

@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MenuBookIcon, ArticleIcon } from "@/lib/icons";
 import { Target, Grid3X3, Shield, Tag, Calendar, ChevronRight, FileText, Users } from "lucide-react";
 import { TestingCategoryCard } from "@/components/benchmark/TestingCategoryCard";
+import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 import { apiClient } from "@/lib/api";
 import {
   TIER_CATEGORIES,
@@ -76,6 +77,11 @@ export default function AboutPage() {
           <p className="text-muted-foreground font-light">
             Learn about the Great Commission Benchmark methodology and mission
           </p>
+        </div>
+        
+        {/* Guardrails Animation - positioned on right */}
+        <div className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+          <GuardrailsAnimation />
         </div>
       </div>
 

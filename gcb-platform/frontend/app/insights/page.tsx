@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { ChevronRight, Search, X, ChevronLeft, LayoutGrid, List } from "lucide-react";
 import { ArticleIcon } from "@/lib/icons";
+import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 
 interface BlogCategory {
   id: string;
@@ -207,6 +208,11 @@ function InsightsContent() {
             Practical guides, insights, and resources for Christian missionaries and outreach workers 
             navigating AI guardrails in their ministry work.
           </p>
+        </div>
+        
+        {/* Guardrails Animation - positioned on right */}
+        <div className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+          <GuardrailsAnimation />
         </div>
       </div>
 
