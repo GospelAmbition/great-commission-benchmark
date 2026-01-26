@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { AuthLink } from "@/components/ui/auth-link";
 
 export function Footer() {
   return (
@@ -30,9 +33,9 @@ export function Footer() {
             <h3 className="mb-3 text-sm font-semibold text-foreground">Community</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/sponsor" className="text-muted-foreground hover:text-primary transition-colors">
+                <AuthLink href="/sponsor" className="text-muted-foreground hover:text-primary transition-colors">
                   Sponsor a Model Test
-                </Link>
+                </AuthLink>
               </li>
               <li>
                 <Link href="/contribute/support" className="text-muted-foreground hover:text-primary transition-colors">
