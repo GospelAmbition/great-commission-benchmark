@@ -124,11 +124,12 @@ jobs:
 
 #### Frontend Service (`next-frontend`)
 
+The frontend uses **Railpack** (Railway’s current builder). Nixpacks is deprecated.
+
 ```toml
-# railway.toml (frontend)
+# railway.toml (frontend) — or railway.json with "builder": "RAILPACK"
 [build]
-builder = "nixpacks"
-buildCommand = "pnpm install && pnpm build"
+builder = "railpack"
 
 [deploy]
 startCommand = "pnpm start"
@@ -139,11 +140,13 @@ restartPolicyType = "on_failure"
 
 #### Backend Service (`fastapi-backend`)
 
+The backend uses a **Dockerfile** (not Nixpacks).
+
 ```toml
 # railway.toml (backend)
 [build]
-builder = "nixpacks"
-buildCommand = "pip install -e ."
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"

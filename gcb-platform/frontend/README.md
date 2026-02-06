@@ -290,7 +290,7 @@ Configuration in `railway.json`:
 ```json
 {
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "RAILPACK"
   },
   "deploy": {
     "startCommand": "npm start"
