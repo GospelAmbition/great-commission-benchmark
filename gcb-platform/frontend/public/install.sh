@@ -88,9 +88,11 @@ if ! MANIFEST=$(curl -fsSL "$MANIFEST_URL" 2>/dev/null); then
 fi
 
 # Parse manifest (basic JSON parsing with grep/sed since we want to avoid dependencies)
-VERSION=$(echo "$MANIFEST" | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"\([^"]*\)"$/\1/')
-FILENAME=$(echo "$MANIFEST" | grep -A5 "\"$PLATFORM\"" | grep '"filename"' | sed 's/.*"\([^"]*\)"$/\1/' | head -1)
-SHA256=$(echo "$MANIFEST" | grep -A5 "\"$PLATFORM\"" | grep '"sha256"' | sed 's/.*"\([^"]*\)"$/\1/' | head -1)
+# Strip carriage returns and trim whitespace to avoid malformed URLs (e.g. from CRLF manifest)
+trim() { echo "$1" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'; }
+VERSION=$(trim "$(echo "$MANIFEST" | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"\([^"]*\)"$/\1/')")
+FILENAME=$(trim "$(echo "$MANIFEST" | grep -A5 "\"$PLATFORM\"" | grep '"filename"' | sed 's/.*"\([^"]*\)"$/\1/' | head -1)")
+SHA256=$(trim "$(echo "$MANIFEST" | grep -A5 "\"$PLATFORM\"" | grep '"sha256"' | sed 's/.*"\([^"]*\)"$/\1/' | head -1)")
 
 if [[ -z "$FILENAME" ]]; then
     echo -e "${RED}Error: No download available for $PLATFORM${NC}"
