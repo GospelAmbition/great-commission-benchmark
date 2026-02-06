@@ -2,6 +2,15 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  // Prevent double _next in asset URLs (can occur with encoded slashes in path or proxy config)
+  basePath: "",
+  assetPrefix: "",
+  async rewrites() {
+    return [
+      // Fix erroneous /_next/_next/* requests → serve from /_next/*
+      { source: "/_next/_next/:path*", destination: "/_next/:path*" },
+    ];
+  },
   images: {
     remotePatterns: [
       // Production backend (custom domain)
@@ -27,6 +36,19 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // Ensure CSS is served with correct MIME type (fixes text/plain on some hosts/CDNs)
+      {
+        source: "/_next/static/chunks/:file(.+\\.css)",
+        headers: [
+          { key: "Content-Type", value: "text/css; charset=utf-8" },
+        ],
+      },
+      {
+        source: "/_next/static/css/:file(.+\\.css)",
+        headers: [
+          { key: "Content-Type", value: "text/css; charset=utf-8" },
+        ],
+      },
       {
         source: "/:path*",
         headers: [
