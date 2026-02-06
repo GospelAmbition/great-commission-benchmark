@@ -1,17 +1,23 @@
 """Runner API endpoints (for CLI)"""
 import os
+import logging
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Header, Request, Query
 from sqlalchemy.orm import Session
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, List
 
-from app.core.auth import get_db
+from app.core.auth import get_db, has_permission
 from app.db.models.user import User
 from app.db.models.user_api_key import UserAPIKey
 from app.db.models.question_set import QuestionSet
 from app.db.models.question import Question
 from app.db.models.methodology_version import MethodologyVersion
+from app.db.models.model import Model
+from app.db.models.test_run import TestRun
 from app.core.rate_limit import RateLimitDependency
 from app.api.v1.endpoints.api_keys import validate_api_key
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -284,3 +290,218 @@ async def get_user_info(
             "can_admin": has_permission(user, "can_admin")
         }
     }
+
+
+@router.get("/models")
+async def get_runner_models(
+    request: Request,
+    db: Session = Depends(get_db),
+    auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
+    _rate_limit: bool = Depends(runner_rate_limit)
+):
+    """Get all published models for bulk testing.
+    
+    Returns active models with their model_id strings (OpenRouter-style identifiers).
+    Restricted to admin or benchmark editor users for use by the bulk tester.
+    """
+    api_key_record, user = auth
+    
+    # Permission gate: require admin or benchmark editor
+    if not has_permission(user, "can_admin") and not has_permission(user, "can_edit_benchmark"):
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions. Requires admin or benchmark editor access."
+        )
+    
+    models = db.query(Model).filter(
+        Model.is_active == True
+    ).order_by(Model.name).all()
+    
+    # Get the current active question set for version context
+    active_qs = db.query(QuestionSet).filter(
+        QuestionSet.status == "active"
+    ).first()
+    current_version = active_qs.semantic_version if active_qs else None
+    
+    model_items = []
+    for model in models:
+        # Check if this model has already been tested on the current version
+        latest_test = None
+        if active_qs:
+            latest_test = db.query(TestRun).filter(
+                TestRun.model_id == model.id,
+                TestRun.question_set_id == active_qs.id,
+                TestRun.status == "completed"
+            ).order_by(TestRun.completed_at.desc()).first()
+        
+        model_items.append({
+            "id": str(model.id),
+            "model_id": model.model_id,
+            "name": model.name,
+            "provider": model.provider,
+            "last_tested_version": current_version if latest_test else None,
+            "last_tested_at": latest_test.completed_at.isoformat() if latest_test and latest_test.completed_at else None,
+        })
+    
+    return {
+        "models": model_items,
+        "total": len(model_items),
+        "current_version": current_version,
+    }
+
+
+@router.post("/bulk-submit")
+async def bulk_submit(
+    request: Request,
+    db: Session = Depends(get_db),
+    auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
+):
+    """Submit benchmark results directly, bypassing moderation.
+    
+    This endpoint is restricted to admin users and is designed for the
+    bulk benchmark tester to auto-publish results after testing all models.
+    
+    Creates TestRun + Result records directly (no CommunitySubmission,
+    no payment, no moderation queue). Results get trust_tier="automated".
+    """
+    api_key_record, user = auth
+    
+    # Permission gate: require admin only
+    if not has_permission(user, "can_admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions. Requires admin access for bulk submission."
+        )
+    
+    # Parse request body
+    body = await request.json()
+    export_data = body.get("export_data")
+    
+    if not export_data:
+        raise HTTPException(
+            status_code=400,
+            detail="Missing required field: export_data"
+        )
+    
+    # Validate export schema (reuse from submissions endpoint)
+    from app.api.v1.endpoints.submissions import validate_export_schema
+    
+    validation_errors = validate_export_schema(export_data)
+    if validation_errors:
+        return {
+            "status": "rejected",
+            "validation_errors": validation_errors,
+            "message": "Export validation failed"
+        }
+    
+    # Extract model and version information
+    test_run_data = export_data.get("test_run", {})
+    model_id_str = test_run_data.get("model", "Unknown")
+    model_name = model_id_str  # Use model_id as display name
+    version = test_run_data.get("benchmark_version", "1.0")
+    
+    # Use SubmissionProcessorService to create TestRun + Results
+    from app.services.submission_processor import SubmissionProcessorService
+    
+    processor = SubmissionProcessorService(db)
+    
+    try:
+        # Get or create the Model record
+        model = processor.get_or_create_model(model_id_str, model_name)
+        
+        # Get the QuestionSet
+        question_set = processor.get_question_set(version)
+        if not question_set:
+            return {
+                "status": "error",
+                "message": f"No question set found for version {version}"
+            }
+        
+        # Get or create methodology version
+        methodology_version = processor.get_or_create_methodology_version(question_set)
+        
+        # Parse completion time
+        completed_at = datetime.utcnow()
+        if test_run_data.get("completed_at"):
+            try:
+                completed_at = datetime.fromisoformat(
+                    test_run_data["completed_at"].replace("Z", "+00:00")
+                )
+            except Exception:
+                pass
+        
+        # Create the TestRun directly (bypassing CommunitySubmission)
+        test_run = TestRun(
+            user_id=user.id,
+            model_id=model.id,
+            question_set_id=question_set.id,
+            methodology_version_id=methodology_version.id,
+            status="completed",
+            trust_tier="automated",  # Distinguishes bulk tester runs
+            completed_at=completed_at,
+            started_at=completed_at,
+        )
+        db.add(test_run)
+        db.flush()
+        
+        # Build lookup for question matching
+        tier_cat_lookup = processor.build_tier_category_lookup(question_set.id)
+        
+        # Create Result records
+        from app.db.models.result import Result
+        
+        responses = export_data.get("responses", [])
+        results_created = 0
+        used_question_ids: set = set()
+        
+        for response_data in responses:
+            question = processor.find_question(
+                response_data,
+                question_set.id,
+                tier_cat_lookup,
+                used_question_ids
+            )
+            
+            if not question:
+                continue
+            
+            used_question_ids.add(question.id)
+            
+            result = Result(
+                test_run_id=test_run.id,
+                question_id=question.id,
+                response=response_data.get("response", ""),
+                verdict=response_data.get("verdict", "UNKNOWN"),
+                reasoning=response_data.get("judge_reasoning", ""),
+                thought_process=response_data.get("thought_process"),
+            )
+            db.add(result)
+            results_created += 1
+        
+        db.commit()
+        
+        # Extract scores
+        summary = export_data.get("summary", {})
+        
+        logger.info(
+            f"Bulk submit: model={model_id_str}, version={version}, "
+            f"results={results_created}, score={summary.get('score', 0)}, "
+            f"user={user.email}"
+        )
+        
+        return {
+            "status": "published",
+            "test_run_id": str(test_run.id),
+            "model_id": model_id_str,
+            "results_created": results_created,
+            "score": summary.get("score", 0),
+            "message": f"Results published directly for {model_id_str} ({results_created} results)"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Bulk submit failed for {model_id_str}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process submission: {str(e)}"
+        )

@@ -1,6 +1,8 @@
 """Test runner for executing benchmarks."""
 
+import io
 import time
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +20,27 @@ from gcb_runner.results import ResultsDB
 console = Console()
 
 
+@dataclass
+class BenchmarkResult:
+    """Structured result from a benchmark run."""
+    run_id: int
+    model: str
+    backend: str
+    benchmark_version: str
+    judge_model: str
+    judge_backend: str
+    score: float
+    tier1_score: float
+    tier2_score: float
+    tier3_score: float
+    tier_results: dict = field(default_factory=dict)
+    total_questions: int = 0
+    duration_seconds: float = 0.0
+    completed_at: datetime | None = None
+    is_draft: bool = False
+    error: str | None = None
+
+
 async def run_benchmark(
     model: str,
     backend: str,
@@ -28,8 +51,27 @@ async def run_benchmark(
     output_path: Path | None = None,
     resume: bool = False,
     is_draft: bool = False,
-) -> None:
-    """Run the benchmark against a model."""
+    quiet: bool = False,
+) -> BenchmarkResult | None:
+    """Run the benchmark against a model.
+    
+    Args:
+        model: Model identifier (e.g., "openai/gpt-4o")
+        backend: Backend name (e.g., "openrouter")
+        config: GCB Runner configuration
+        benchmark_version: Specific version to test, or None for current
+        judge_model: Model to use as judge
+        judge_backend: Backend for judge model
+        output_path: Optional path to save export JSON
+        resume: Whether to resume an interrupted run
+        is_draft: Whether testing a draft version
+        quiet: If True, suppress all console output (for batch/bulk usage)
+    
+    Returns:
+        BenchmarkResult with structured data, or None on early failure
+    """
+    # Use a quiet console that discards output when in quiet mode
+    out = Console(file=io.StringIO(), quiet=True) if quiet else console
     
     judge_model = judge_model or config.defaults.judge_model
     
@@ -47,12 +89,12 @@ async def run_benchmark(
     # Validate API key for cloud backends before initializing
     if backend in ["openrouter", "openai", "anthropic"]:
         if not backend_config.api_key or not backend_config.api_key.strip():
-            console.print(f"[red]Error: {backend.title()} API key is not configured.[/red]")
-            console.print()
-            console.print("Please configure it using one of these methods:")
-            console.print("  • Run: [cyan]gcb-runner config[/cyan]")
-            console.print("  • Run: [cyan]gcb-runner menu[/cyan] → Configure Backend")
-            console.print()
+            out.print(f"[red]Error: {backend.title()} API key is not configured.[/red]")
+            out.print()
+            out.print("Please configure it using one of these methods:")
+            out.print("  • Run: [cyan]gcb-runner config[/cyan]")
+            out.print("  • Run: [cyan]gcb-runner menu[/cyan] → Configure Backend")
+            out.print()
             raise ValueError(f"{backend.title()} API key is required")
     
     model_backend = get_backend(
@@ -71,7 +113,7 @@ async def run_benchmark(
             elif config.get_backend_config("openai").api_key:
                 judge_backend = "openai"
             else:
-                console.print("[yellow]Warning: Using local model for judging. Results may be less reliable.[/yellow]")
+                out.print("[yellow]Warning: Using local model for judging. Results may be less reliable.[/yellow]")
                 judge_backend = backend
         else:
             judge_backend = backend
@@ -82,12 +124,12 @@ async def run_benchmark(
     # Validate API key for cloud judge backends before initializing
     if judge_backend in ["openrouter", "openai", "anthropic"]:
         if not judge_backend_config.api_key or not judge_backend_config.api_key.strip():
-            console.print(f"[red]Error: {judge_backend.title()} API key is not configured for judge backend.[/red]")
-            console.print()
-            console.print("Please configure it using one of these methods:")
-            console.print("  • Run: [cyan]gcb-runner config[/cyan]")
-            console.print("  • Run: [cyan]gcb-runner menu[/cyan] → Configure Backend")
-            console.print()
+            out.print(f"[red]Error: {judge_backend.title()} API key is not configured for judge backend.[/red]")
+            out.print()
+            out.print("Please configure it using one of these methods:")
+            out.print("  • Run: [cyan]gcb-runner config[/cyan]")
+            out.print("  • Run: [cyan]gcb-runner menu[/cyan] → Configure Backend")
+            out.print()
             raise ValueError(f"{judge_backend.title()} API key is required for judge backend")
     
     judge_backend_instance = get_backend(
@@ -98,8 +140,8 @@ async def run_benchmark(
     
     try:
         # Fetch questions
-        console.print("Fetching questions from Platform API...")
-        console.print(f"[dim]API URL: {config.platform.url}[/dim]")
+        out.print("Fetching questions from Platform API...")
+        out.print(f"[dim]API URL: {config.platform.url}[/dim]")
         
         version = benchmark_version or "current"
         
@@ -111,15 +153,15 @@ async def run_benchmark(
             cached_data = cache.get(version)
             # Also skip cache if cached data indicates it's a draft (drafts can change)
             if cached_data and cached_data.get("is_draft", False):
-                console.print("[dim]Skipping cache for draft version (content may have changed)[/dim]")
+                out.print("[dim]Skipping cache for draft version (content may have changed)[/dim]")
                 cached_data = None
                 skip_cache = True
         
         if skip_cache:
-            console.print("[dim]Fetching fresh questions for draft version[/dim]")
+            out.print("[dim]Fetching fresh questions for draft version[/dim]")
         
         if cached_data and not cache.is_stale(version):
-            console.print("[green]✓ Using cached questions[/green]")
+            out.print("[green]✓ Using cached questions[/green]")
             questions_data = cached_data
         else:
             try:
@@ -130,20 +172,20 @@ async def run_benchmark(
                     cache.clear(version)
                 else:
                     cache.store(version, questions_data)
-                console.print("[green]✓ Connected to Platform API[/green]")
+                out.print("[green]✓ Connected to Platform API[/green]")
             except Exception as e:
                 error_msg = str(e)
                 if "not found" in error_msg.lower():
-                    console.print("[red]Error: No benchmark questions available.[/red]")
-                    console.print()
-                    console.print("[dim]This could mean:[/dim]")
-                    console.print("  • No benchmark version has been published yet")
-                    console.print("  • The requested version doesn't exist")
-                    console.print()
-                    console.print("[dim]Run 'gcb-runner menu' → Utilities → Diagnostics to troubleshoot.[/dim]")
+                    out.print("[red]Error: No benchmark questions available.[/red]")
+                    out.print()
+                    out.print("[dim]This could mean:[/dim]")
+                    out.print("  • No benchmark version has been published yet")
+                    out.print("  • The requested version doesn't exist")
+                    out.print()
+                    out.print("[dim]Run 'gcb-runner menu' → Utilities → Diagnostics to troubleshoot.[/dim]")
                     raise
                 if cached_data:
-                    console.print(f"[yellow]Warning: Could not fetch fresh questions ({e}), using cache[/yellow]")
+                    out.print(f"[yellow]Warning: Could not fetch fresh questions ({e}), using cache[/yellow]")
                     questions_data = cached_data
                 else:
                     raise
@@ -167,8 +209,8 @@ async def run_benchmark(
         # Check if this is a draft version
         is_draft_test = questions_data.get("is_draft", False)
         if is_draft_test:
-            console.print("[yellow]⚠️  Testing draft version - results won't be published to leaderboard[/yellow]")
-            console.print()
+            out.print("[yellow]⚠️  Testing draft version - results won't be published to leaderboard[/yellow]")
+            out.print()
         
         # Count questions by tier
         tier_counts: dict[int, int] = {1: 0, 2: 0, 3: 0}
@@ -176,9 +218,9 @@ async def run_benchmark(
             tier = q.get("tier", 1)
             tier_counts[tier] += 1
         
-        console.print(f"[green]✓ {len(questions)} questions loaded[/green]")
-        console.print(f"  Tier 1: {tier_counts[1]}, Tier 2: {tier_counts[2]}, Tier 3: {tier_counts[3]}")
-        console.print()
+        out.print(f"[green]✓ {len(questions)} questions loaded[/green]")
+        out.print(f"  Tier 1: {tier_counts[1]}, Tier 2: {tier_counts[2]}, Tier 3: {tier_counts[3]}")
+        out.print()
         
         # Check for resume
         run_id: int | None = None
@@ -189,7 +231,7 @@ async def run_benchmark(
             if existing_run:
                 run_id = existing_run.id
                 answered_ids = db.get_answered_question_ids(run_id)
-                console.print(f"[yellow]Resuming test run #{run_id} ({len(answered_ids)} questions answered)[/yellow]")
+                out.print(f"[yellow]Resuming test run #{run_id} ({len(answered_ids)} questions answered)[/yellow]")
         
         # Create new run if not resuming
         if run_id is None:
@@ -203,14 +245,14 @@ async def run_benchmark(
             )
             run_id = run.id
         
-        console.print(f"[bold]Testing: {model} via {backend}[/bold]")
-        console.print(f"[bold]Judge: {judge_model} via {judge_backend}[/bold]")
-        console.print()
+        out.print(f"[bold]Testing: {model} via {backend}[/bold]")
+        out.print(f"[bold]Judge: {judge_model} via {judge_backend}[/bold]")
+        out.print()
         
         # Record test start time
         test_start_time = datetime.now()
-        console.print(f"[dim]Test started: {test_start_time.strftime('%Y-%m-%d %H:%M:%S')}[/dim]")
-        console.print()
+        out.print(f"[dim]Test started: {test_start_time.strftime('%Y-%m-%d %H:%M:%S')}[/dim]")
+        out.print()
         
         # Initialize judge
         judge = Judge(judge_backend_instance, judge_model, judge_prompts)
@@ -240,7 +282,7 @@ async def run_benchmark(
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
             TaskProgressColumn(),
-            console=console,
+            console=out,
         ) as progress:
             for tier in [1, 2, 3]:
                 tier_questions = [q for q in questions if q.get("tier") == tier]
@@ -265,7 +307,7 @@ async def run_benchmark(
                         response_text = completion_result.text
                         thought_process = completion_result.thought_process
                     except Exception as e:
-                        console.print(f"[red]Error getting response for question {question_id}: {e}[/red]")
+                        out.print(f"[red]Error getting response for question {question_id}: {e}[/red]")
                         response_text = f"[ERROR: {e}]"
                         thought_process = None
                     
@@ -275,7 +317,7 @@ async def run_benchmark(
                     try:
                         verdict = await judge.evaluate(question, response_text)
                     except Exception as e:
-                        console.print(f"[red]Error judging question {question_id}: {e}[/red]")
+                        out.print(f"[red]Error judging question {question_id}: {e}[/red]")
                         # Default to REFUSED on judge error
                         from gcb_runner.judge import Verdict
                         verdict = Verdict(
@@ -338,18 +380,18 @@ async def run_benchmark(
         test_duration = test_end_time - test_start_time
         
         # Display results
-        console.print()
-        console.print("═" * 60)
-        console.print()
-        console.print(f"[dim]Test started:  {test_start_time.strftime('%Y-%m-%d %H:%M:%S')}[/dim]")
-        console.print(f"[dim]Test ended:    {test_end_time.strftime('%Y-%m-%d %H:%M:%S')}[/dim]")
-        console.print(f"[dim]Duration:      {test_duration}[/dim]")
-        console.print()
-        console.print("[bold]RESULTS SUMMARY[/bold]")
-        console.print()
-        console.print(f"Model: {model}")
-        console.print(f"Benchmark: v{actual_version}")
-        console.print()
+        out.print()
+        out.print("═" * 60)
+        out.print()
+        out.print(f"[dim]Test started:  {test_start_time.strftime('%Y-%m-%d %H:%M:%S')}[/dim]")
+        out.print(f"[dim]Test ended:    {test_end_time.strftime('%Y-%m-%d %H:%M:%S')}[/dim]")
+        out.print(f"[dim]Duration:      {test_duration}[/dim]")
+        out.print()
+        out.print("[bold]RESULTS SUMMARY[/bold]")
+        out.print()
+        out.print(f"Model: {model}")
+        out.print(f"Benchmark: v{actual_version}")
+        out.print()
         
         table = Table()
         table.add_column("Tier", style="cyan")
@@ -392,25 +434,44 @@ async def run_benchmark(
                 "[bold]100%[/bold]",
             )
         
-        console.print(table)
-        console.print()
+        out.print(table)
+        out.print()
         
         # Show scoring breakdown
-        console.print("[bold]Scoring breakdown:[/bold]")
-        console.print(f"  Tier 1: {tier_scores[1]:.1f}% × 0.70 = {tier_scores[1] * tier1_weight:.1f}")
-        console.print(f"  Tier 2: {tier_scores[2]:.1f}% × 0.20 = {tier_scores[2] * tier2_weight:.1f}")
-        console.print(f"  Tier 3: {tier_scores[3]:.1f}% × 0.10 = {tier_scores[3] * tier3_weight:.1f}")
-        console.print("  ─────────────────────────")
-        console.print(f"  [bold green]GCB Score: {final_score:.1f}[/bold green]")
-        console.print()
-        console.print(f"Results saved. Run 'gcb-runner export --run {run_id}' to submit to the platform.")
+        out.print("[bold]Scoring breakdown:[/bold]")
+        out.print(f"  Tier 1: {tier_scores[1]:.1f}% × 0.70 = {tier_scores[1] * tier1_weight:.1f}")
+        out.print(f"  Tier 2: {tier_scores[2]:.1f}% × 0.20 = {tier_scores[2] * tier2_weight:.1f}")
+        out.print(f"  Tier 3: {tier_scores[3]:.1f}% × 0.10 = {tier_scores[3] * tier3_weight:.1f}")
+        out.print("  ─────────────────────────")
+        out.print(f"  [bold green]GCB Score: {final_score:.1f}[/bold green]")
+        out.print()
+        out.print(f"Results saved. Run 'gcb-runner export --run {run_id}' to submit to the platform.")
         
         # Export if requested
         if output_path:
             from gcb_runner.export import export_run
             export_data = export_run(db, run_id)
             output_path.write_text(export_data)
-            console.print(f"[green]Results exported to {output_path}[/green]")
+            out.print(f"[green]Results exported to {output_path}[/green]")
+        
+        # Return structured result
+        return BenchmarkResult(
+            run_id=run_id,
+            model=model,
+            backend=backend,
+            benchmark_version=actual_version,
+            judge_model=judge_model,
+            judge_backend=judge_backend,
+            score=final_score,
+            tier1_score=tier_scores[1],
+            tier2_score=tier_scores[2],
+            tier3_score=tier_scores[3],
+            tier_results=tier_results,
+            total_questions=len(questions),
+            duration_seconds=test_duration.total_seconds(),
+            completed_at=test_end_time,
+            is_draft=is_draft_test,
+        )
         
     finally:
         await model_backend.close()
