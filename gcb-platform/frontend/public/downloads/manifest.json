@@ -1,13 +1,13 @@
 {
-  "version": "0.1.4",
-  "released_at": "2026-02-06T16:10:56.950137+00:00",
+  "version": "0.1.5",
+  "released_at": "2026-02-06T16:21:44.567717+00:00",
   "downloads": {
     "macos-arm64": {
       "filename": "gcb-runner-macos-arm64",
-      "sha256": "aaf8702934c4c5e31ef40a15fbb3ae89b272960564c1615b0a43c11ae482680f",
-      "size": 43835360
+      "sha256": "42a2fb6e1b3005982fd6c2faef12707dcc9e63579ef9403e278bccccf0bd9eb9",
+      "size": 43835136
     }
   },
-  "release_notes": "GCB Runner v0.1.4",
+  "release_notes": "GCB Runner v0.1.5",
   "minimum_version": "0.1.0"
 }
