@@ -4,6 +4,16 @@ This document defines the complete scoring methodology for the Great Commission 
 
 ---
 
+## Public Display: Most Recent Test
+
+The Great Commission Benchmark displays the **most recent test score** for each model on all public pages (leaderboard, category rankings, provider pages, etc.).
+
+**Rationale:** AI models are frequently updated by their providers. A model tested in January may behave differently in March. By showing the most recent test, we ensure the public leaderboard reflects the current state of each model's biblical compliance.
+
+**Test History:** While only the most recent test is displayed publicly, all historical test runs are preserved and viewable on the model detail page. This allows users to track performance trends over time and see how model updates affect biblical alignment.
+
+---
+
 ## Executive Summary
 
 The Great Commission Benchmark uses a **70/20/10 weighted scoring model** that prioritizes practical task capability:

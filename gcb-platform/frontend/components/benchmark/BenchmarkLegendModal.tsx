@@ -182,13 +182,13 @@ export function BenchmarkInlineLegend({ className }: { className?: string }) {
     <div className={`text-xs text-muted-foreground ${className || ""}`}>
       <div className="flex flex-wrap gap-x-4 gap-y-1">
         <span>
-          <span className="font-medium">3.x</span> = Task Capability
+          <span className="font-medium">1.x</span> = Task Capability
         </span>
         <span>
-          <span className="font-medium">4.x</span> = Gospel Core
+          <span className="font-medium">2.x</span> = Gospel Core
         </span>
         <span>
-          <span className="font-medium">5.x</span> = Worldview Confession
+          <span className="font-medium">3.x</span> = Worldview Confession
         </span>
       </div>
     </div>

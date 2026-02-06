@@ -13,11 +13,6 @@ export interface ApiError {
 }
 
 // Response types
-export interface ScoreRange {
-  min_score?: number;
-  max_score?: number;
-}
-
 export interface LeaderboardItem {
   id: string; // UUID for API operations (e.g., compare)
   model_id: string; // OpenRouter-style ID (e.g., "openai/gpt-4")
@@ -29,8 +24,6 @@ export interface LeaderboardItem {
   tier2_score?: number;
   tier3_score?: number;
   trust_tier?: string;
-  test_count: number; // Number of tests averaged (1 for legacy single-test)
-  score_range?: ScoreRange; // Min/max scores when test_count > 1
   category_scores?: Record<string, number>;
 }
 
@@ -45,8 +38,6 @@ interface BackendLeaderboardEntry {
   scores?: { overall?: number; tier1?: number; tier2?: number; tier3?: number };
   test_run?: { trust_tier?: string };
   category_scores?: Record<string, number>;
-  test_count?: number;
-  score_range?: { min_score?: number; max_score?: number };
 }
 
 interface BackendLeaderboardResponse {
@@ -68,7 +59,6 @@ export interface ModelResponse {
   tier3_score?: number;
   trust_tier?: string;
   test_count?: number;
-  score_range?: { min?: number; max?: number };
   category_scores?: Record<string, number>;
   version_history?: Array<{ version: string; score: number; date: string }>;
   test_history?: Array<{
@@ -346,8 +336,6 @@ export class ApiClient {
         tier2_score: entry.scores?.tier2,
         tier3_score: entry.scores?.tier3,
         trust_tier: entry.test_run?.trust_tier,
-        test_count: entry.test_count || 1, // Number of tests averaged
-        score_range: entry.score_range, // Min/max scores when multiple tests
         category_scores: entry.category_scores || {},
       })),
       total: response.total_models || 0,

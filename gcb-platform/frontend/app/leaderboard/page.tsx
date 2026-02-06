@@ -37,11 +37,6 @@ import { ArrowUpDown, BarChart3, Filter, ChevronUp, ChevronDown, ChevronRight, S
 import { ProviderIcon } from "@/components/ui/provider-icon";
 import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 
-interface ScoreRange {
-  min_score?: number;
-  max_score?: number;
-}
-
 interface LeaderboardItem {
   id: string;
   model_id: string;
@@ -52,8 +47,6 @@ interface LeaderboardItem {
   tier2_score?: number;
   tier3_score?: number;
   trust_tier?: string;
-  test_count: number; // Number of tests averaged
-  score_range?: ScoreRange; // Min/max scores when test_count > 1
 }
 
 // Helper to determine verdict based on score
@@ -573,18 +566,7 @@ function LeaderboardContent() {
                               </Link>
                             </TableCell>
                             <TableCell className="py-3">
-                              <div className="flex items-center gap-2">
-                                <TotalScore score={item.overall_score} />
-                                {item.test_count > 1 && (
-                                  <Badge 
-                                    variant="outline" 
-                                    className="text-xs bg-white/5 border-white/20 text-muted-foreground"
-                                    title={`Average of ${item.test_count} tests${item.score_range ? ` (${item.score_range.min_score?.toFixed(1)}-${item.score_range.max_score?.toFixed(1)}%)` : ''}`}
-                                  >
-                                    {item.test_count}×
-                                  </Badge>
-                                )}
-                              </div>
+                              <TotalScore score={item.overall_score} />
                             </TableCell>
                             <TableCell className="py-3">
                               <ScoreBar score={item.overall_score} />

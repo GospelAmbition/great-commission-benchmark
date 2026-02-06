@@ -80,7 +80,7 @@ The leaderboard provides:
 
 ### Leaderboard Entry
 
-Each leaderboard entry represents the **best result** for a model within the selected filter criteria.
+Each leaderboard entry represents the **most recent test result** for a model within the selected filter criteria. AI models change frequently, so the most recent test reflects the current state of the model's compliance.
 
 ```typescript
 interface LeaderboardEntry {
@@ -131,10 +131,10 @@ interface LeaderboardEntry {
 3. More recent test completion date
 4. Higher trust tier (validated > reviewed > automated)
 
-**Best Result Selection:**
-- When multiple test runs exist for the same model, select the run with the **highest overall score**
-- If scores are equal, prefer runs with higher trust tier
-- If trust tiers are equal, prefer most recent run
+**Most Recent Test Selection:**
+- When multiple test runs exist for the same model, display the **most recent test** (by completion date)
+- Rationale: AI models are frequently updated by their providers, so the most recent test reflects current compliance
+- Test history remains available on the model detail page for trend analysis
 
 ---
 
@@ -703,7 +703,7 @@ npm install chart.js
    - Recommendation: Separate "Community Leaderboard" tab
 
 2. **How should we handle models with multiple test runs from different users?**
-   - Recommendation: Show best result (highest score) as primary, with "View all runs" link
+   - Resolution: Show the most recent test result as the primary score, with full test history available on the model detail page
 
 3. **Should leaderboard be real-time or updated on a schedule?**
    - Recommendation: Real-time with 5-minute cache for performance

@@ -273,11 +273,6 @@ export default function ProviderDetailPage() {
                         </div>
                       </div>
 
-                      {model.test_count > 1 && (
-                        <div className="text-xs text-muted-foreground/60 text-center">
-                          Average of {model.test_count} tests
-                        </div>
-                      )}
                     </div>
                   </CardContent>
                 </Card>

@@ -555,12 +555,15 @@ POST /api/webhooks/stripe                # Stripe payment webhooks
 
 #### 7.1.1 Leaderboard
 
+**Score Display Policy:**
+The leaderboard displays the **most recent test score** for each model. AI models are frequently updated by their providers, so the most recent test reflects the current state of each model's compliance. Historical test runs are preserved and viewable on each model's detail page. The `ModelVersionStats` table is maintained for internal analytics but is not used for public-facing score display.
+
 **Display:**
-- Overall benchmark scores across all models
+- Most recent test score for each model
 - Category-specific leaderboards
 - Tier-specific rankings (Task, Doctrinal, Worldview)
 - Trust tier badges (Automated, Reviewed, Validated)
-- Historical tracking (model changes over time)
+- Historical tracking (model changes over time via test history)
 
 **Filtering:**
 - By benchmark version (default: current)
@@ -1030,9 +1033,11 @@ review    testing     reference
 
 ### 11.4 Leaderboard Display
 
-- **Default view:** Current version results
+- **Default view:** Current version results, showing the most recent test per model
+- **Score selection:** Most recent test score (not averaged) — models change frequently, so the latest test reflects current compliance
 - **Older versions:** Accessible via filter, not prominent
 - **Cross-version warning:** "Version 1 (1.x) and Version 2 (2.x) scores are not directly comparable"
+- **Test history:** Available on model detail pages for trend analysis
 
 ---
 

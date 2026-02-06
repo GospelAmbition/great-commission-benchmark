@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { apiClient } from "@/lib/api";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import Link from "next/link";
@@ -338,11 +338,9 @@ export default function ModelDetailPage() {
               <div className="flex items-center gap-3 mb-2">
                 <h2 className={`text-2xl font-bold ${verdict.textColor}`}>{verdict.label}</h2>
                 <div className="text-4xl font-bold text-foreground">{overallScore.toFixed(1)}</div>
-                {model.test_count && model.test_count > 1 && (
-                  <Badge variant="outline" className="text-sm ml-2">
-                    Average of {model.test_count} tests
-                  </Badge>
-                )}
+                <Badge variant="outline" className="text-sm ml-2">
+                  Most Recent Test
+                </Badge>
               </div>
               <p className="text-muted-foreground mb-4">{verdict.description}</p>
               <StrengthsWeaknesses 
@@ -414,209 +412,234 @@ export default function ModelDetailPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="tests">Recent Tests</TabsTrigger>
-        </TabsList>
+      {/* Overview Section */}
+      <section className="space-y-6 mb-10">
+        {/* Radar Chart - The Model Shape */}
+        {radarData.length > 0 && radarCategories.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Performance Profile</CardTitle>
+              </div>
+              <CardDescription>
+                Visual representation of performance across all evaluated categories
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadarChart data={radarData} categories={radarCategories} />
+            </CardContent>
+          </Card>
+        )}
 
-        <TabsContent value="overview" className="space-y-6">
-          {/* Radar Chart - The Model Shape */}
-          {radarData.length > 0 && radarCategories.length > 0 && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Performance Profile</CardTitle>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Model Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Model Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {model.description && (
+                <div>
+                  <span className="text-sm text-muted-foreground">Description</span>
+                  <p className="text-sm mt-1">{model.description}</p>
                 </div>
-                <CardDescription>
-                  Visual representation of performance across all evaluated categories
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RadarChart data={radarData} categories={radarCategories} />
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Model Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Model Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {model.description && (
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-sm text-muted-foreground">Provider</span>
+                  <p className="font-medium">{formatProvider(model.provider)}</p>
+                </div>
+                {model.model_id && (
                   <div>
-                    <span className="text-sm text-muted-foreground">Description</span>
-                    <p className="text-sm mt-1">{model.description}</p>
+                    <span className="text-sm text-muted-foreground">Model ID</span>
+                    <p className="font-medium text-sm break-all">{model.model_id}</p>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-4">
+                {model.test_count != null && (
                   <div>
-                    <span className="text-sm text-muted-foreground">Provider</span>
-                    <p className="font-medium">{formatProvider(model.provider)}</p>
+                    <span className="text-sm text-muted-foreground">Tests Run</span>
+                    <p className="font-medium">{model.test_count}</p>
                   </div>
-                  {model.model_id && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">Model ID</span>
-                      <p className="font-medium text-sm break-all">{model.model_id}</p>
-                    </div>
-                  )}
-                  {model.test_count != null && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">Tests Run</span>
-                      <p className="font-medium">{model.test_count}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link href={`/leaderboard/compare?models=${encodeURIComponent(model.id)}`}>
-                    Compare with other models
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link href="/leaderboard">
-                    View full leaderboard
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="categories" className="space-y-6">
-          {/* Category Heatmap */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Category Heatmap</CardTitle>
+                )}
               </div>
-              <CardDescription>
-                Performance breakdown by category - darker green indicates stronger alignment
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {model.category_scores ? (
-                <SingleModelHeatmap categoryScores={model.category_scores} />
-              ) : (
-                <p className="text-muted-foreground">No category data available</p>
-              )}
             </CardContent>
           </Card>
 
-          {/* Bar Chart View */}
+          {/* Quick Actions */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Category Breakdown (Bar Chart)</CardTitle>
-              </div>
-              <CardDescription>
-                Performance across different categories
-              </CardDescription>
+              <CardTitle>Actions</CardTitle>
             </CardHeader>
-            <CardContent>
-              {model.category_scores ? (
-                <CategoryChart data={model.category_scores} />
-              ) : (
-                <p className="text-muted-foreground">No category data available</p>
-              )}
+            <CardContent className="space-y-3">
+              <Button asChild variant="outline" className="w-full justify-start">
+                <Link href={`/leaderboard/compare?models=${encodeURIComponent(model.id)}`}>
+                  Compare with other models
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full justify-start">
+                <Link href="/leaderboard">
+                  View full leaderboard
+                </Link>
+              </Button>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      </section>
 
-        <TabsContent value="tests">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Test Runs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {model.test_history && model.test_history.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Version</TableHead>
-                      <TableHead className="text-center">Tier 1 (Task)</TableHead>
-                      <TableHead className="text-center">Tier 2 (Gospel)</TableHead>
-                      <TableHead className="text-center">Tier 3 (Worldview)</TableHead>
-                      <TableHead>Score</TableHead>
-                      <TableHead>Trust Tier</TableHead>
+      {/* Categories Section */}
+      <section className="space-y-6 mb-10">
+        <h2 className="text-2xl font-semibold tracking-tight">Categories</h2>
+
+        {/* Category Heatmap */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Category Heatmap</CardTitle>
+            </div>
+            <CardDescription>
+              Performance breakdown by category - darker green indicates stronger alignment
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {model.category_scores ? (
+              <SingleModelHeatmap categoryScores={model.category_scores} />
+            ) : (
+              <p className="text-muted-foreground">No category data available</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Bar Chart View */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Category Breakdown (Bar Chart)</CardTitle>
+            </div>
+            <CardDescription>
+              Performance across different categories
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {model.category_scores ? (
+              <CategoryChart data={model.category_scores} />
+            ) : (
+              <p className="text-muted-foreground">No category data available</p>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Recent Tests Section */}
+      <section className="space-y-6 mb-10">
+        <h2 className="text-2xl font-semibold tracking-tight">Recent Tests</h2>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Test Runs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {model.test_history && model.test_history.length > 0 ? (
+              <Table className="table-fixed">
+                <colgroup>
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "11%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "18%" }} />
+                  <col style={{ width: "14%" }} />
+                </colgroup>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-center px-4">Score</TableHead>
+                    <TableHead className="px-4">Version</TableHead>
+                    <TableHead className="text-center">Tier 1 (Task)</TableHead>
+                    <TableHead className="text-center">Tier 2 (Gospel)</TableHead>
+                    <TableHead className="text-center">Tier 3 (Worldview)</TableHead>
+                    <TableHead>Trust Tier</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {model.test_history.map((run: any) => {
+                    const score = run.overall_score;
+                    const scoreColor = score != null
+                      ? score >= 80 ? "text-emerald-300 border-emerald-400/50 bg-emerald-500/20"
+                      : score >= 61 ? "text-blue-300 border-blue-400/50 bg-blue-500/20"
+                      : score >= 40 ? "text-amber-300 border-amber-400/50 bg-amber-500/20"
+                      : "text-red-300 border-red-400/50 bg-red-500/20"
+                      : "text-muted-foreground/50 border-muted-foreground/30";
+                    return (
+                    <TableRow key={run.test_run_id}>
+                      <TableCell>
+                        {new Date(run.completed_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-center px-4">
+                        {score != null ? (
+                          <span className={`inline-flex items-center justify-center w-14 h-14 rounded-full border-2 font-bold text-lg ${scoreColor}`}>
+                            {score.toFixed(1)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-4">{run.benchmark_version}</TableCell>
+                      <TableCell className="text-center">
+                        {run.tier1_score != null ? (
+                          <span className={`text-sm font-medium ${
+                            run.tier1_score >= 80 ? "text-emerald-400" : 
+                            run.tier1_score >= 61 ? "text-blue-400" : 
+                            run.tier1_score >= 40 ? "text-amber-400" : 
+                            "text-red-400"
+                          }`}>
+                            {run.tier1_score.toFixed(1)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {run.tier2_score != null ? (
+                          <span className={`text-sm font-medium ${
+                            run.tier2_score >= 80 ? "text-emerald-400" : 
+                            run.tier2_score >= 61 ? "text-blue-400" : 
+                            run.tier2_score >= 40 ? "text-amber-400" : 
+                            "text-red-400"
+                          }`}>
+                            {run.tier2_score.toFixed(1)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {run.tier3_score != null ? (
+                          <span className={`text-sm font-medium ${
+                            run.tier3_score >= 80 ? "text-emerald-400" : 
+                            run.tier3_score >= 61 ? "text-blue-400" : 
+                            run.tier3_score >= 40 ? "text-amber-400" : 
+                            "text-red-400"
+                          }`}>
+                            {run.tier3_score.toFixed(1)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{run.trust_tier}</Badge>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {model.test_history.map((run: any) => (
-                      <TableRow key={run.test_run_id}>
-                        <TableCell>
-                          {new Date(run.completed_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>{run.benchmark_version}</TableCell>
-                        <TableCell className="text-center">
-                          {run.tier1_score != null ? (
-                            <span className={`text-sm font-medium ${
-                              run.tier1_score >= 80 ? "text-emerald-400" : 
-                              run.tier1_score >= 61 ? "text-blue-400" : 
-                              run.tier1_score >= 40 ? "text-amber-400" : 
-                              "text-red-400"
-                            }`}>
-                              {run.tier1_score.toFixed(1)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/50">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {run.tier2_score != null ? (
-                            <span className={`text-sm font-medium ${
-                              run.tier2_score >= 80 ? "text-emerald-400" : 
-                              run.tier2_score >= 61 ? "text-blue-400" : 
-                              run.tier2_score >= 40 ? "text-amber-400" : 
-                              "text-red-400"
-                            }`}>
-                              {run.tier2_score.toFixed(1)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/50">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {run.tier3_score != null ? (
-                            <span className={`text-sm font-medium ${
-                              run.tier3_score >= 80 ? "text-emerald-400" : 
-                              run.tier3_score >= 61 ? "text-blue-400" : 
-                              run.tier3_score >= 40 ? "text-amber-400" : 
-                              "text-red-400"
-                            }`}>
-                              {run.tier3_score.toFixed(1)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/50">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{run.overall_score?.toFixed(1) || "—"}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{run.trust_tier}</Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <p className="text-muted-foreground">No test runs available</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-muted-foreground">No test runs available</p>
+            )}
+          </CardContent>
+        </Card>
+      </section>
     </div>
   );
 }

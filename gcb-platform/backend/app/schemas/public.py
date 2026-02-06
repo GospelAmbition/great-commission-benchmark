@@ -55,9 +55,9 @@ class LeaderboardEntry(GCBBaseModel):
     verdict_distribution: VerdictDistribution
     total_questions: int
     metadata: Dict[str, str]
-    # Multi-test averaging fields
-    test_count: int = 1  # Number of tests averaged (1 for legacy single-test)
-    score_range: Optional[ScoreRange] = None  # Min/max scores when test_count > 1
+    # Legacy fields (retained for API compatibility, always 1/None with most-recent-test scoring)
+    test_count: int = 1  # Always 1 — leaderboard shows most recent test only
+    score_range: Optional[ScoreRange] = None  # Not used — no longer averaging across tests
 
 
 class LeaderboardResponse(GCBBaseModel):

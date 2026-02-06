@@ -39,7 +39,7 @@ All project documentation is in the [`benchmark/`](./benchmark/) folder:
 ### Start Here
 - **[Benchmark Vision](./benchmark/benchmark-vision.md)** — What we're building and why
 - **[Categories & Definitions](./benchmark/benchmark-categories.md)** — Canonical reference for all testing categories
-- **[Scoring Methodology](./benchmark/benchmark-scoring.md)** — How scores are calculated (70/20/10 weighting)
+- **[Scoring Methodology](./benchmark/benchmark-scoring.md)** — How scores are calculated (70/20/10 weighting, most recent test displayed)
 
 ### Platform
 - **[Deployment Vision](./benchmark/platform-deployment-vision.md)** — How we deploy as a public resource

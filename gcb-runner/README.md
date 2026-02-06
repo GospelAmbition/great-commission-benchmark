@@ -289,6 +289,8 @@ Upload your exported results via the web dashboard:
    - Your submission will be queued for moderator review
    - You'll receive notifications when your submission is approved or rejected
 
+> **Leaderboard Scoring:** The public leaderboard displays only the **most recent test** for each model. If you re-test a model, the new score will replace the previous one on the leaderboard. All historical test runs remain accessible on the model's detail page.
+
 ### Listing Benchmark Versions
 
 ```bash
