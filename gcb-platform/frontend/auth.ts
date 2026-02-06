@@ -30,6 +30,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.accessToken = token
       return session
     },
+    async redirect({ url, baseUrl }) {
+      // If a callbackUrl is provided and it's a relative URL, use it
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`
+      }
+      // If the URL is already absolute and on the same origin, use it
+      try {
+        const urlObj = new URL(url)
+        if (urlObj.origin === baseUrl) {
+          return url
+        }
+      } catch {
+        // Invalid URL, fall through to default
+      }
+      // Default: redirect to dashboard after login
+      return `${baseUrl}/dashboard`
+    },
   },
   session: {
     strategy: "jwt",
