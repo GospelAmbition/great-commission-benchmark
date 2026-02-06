@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -176,6 +177,9 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
         showCloseButton={false}
       >
         <DialogTitle className="sr-only">Search providers and models</DialogTitle>
+        <DialogDescription className="sr-only">
+          Search for AI models and providers on the leaderboard.
+        </DialogDescription>
         {/* Search Input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
           <SearchIcon className="h-5 w-5 text-muted-foreground shrink-0" />

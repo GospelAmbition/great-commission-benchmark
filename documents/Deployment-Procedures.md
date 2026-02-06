@@ -132,11 +132,13 @@ The frontend uses **Railpack** (Railway’s current builder). Nixpacks is deprec
 builder = "railpack"
 
 [deploy]
-startCommand = "pnpm start"
+startCommand = "npx next start --port $PORT"
 healthcheckPath = "/"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"
 ```
+
+**Production build (Next.js 16):** The frontend uses a **Webpack** production build (`next build --webpack`) so that `_next/static/chunks/*.js` are generated and served correctly. Next.js 16 defaults to Turbopack for `next build`, which can cause chunk 404s and "MIME type ('text/plain')" errors in production; using Webpack avoids this. The start command must be **`npx next start --port $PORT`** (not `next dev`). Ensure `NODE_ENV=production` during build and start (Railway sets this by default).
 
 #### Backend Service (`fastapi-backend`)
 
@@ -526,6 +528,20 @@ curl https://gcbenchmark.org/api/leaderboard | jq '.results | length'
 railway logs --service next-frontend --since 10m
 railway logs --service fastapi-backend --since 10m
 ```
+
+### Troubleshooting: Chunk 404s / Slow or Broken Search
+
+If the site loads but search (or other lazy-loaded features) is very slow or fails, and the browser console shows:
+
+- `GET .../_next/static/chunks/*.js net::ERR_ABORTED 404`
+- `Refused to execute script ... MIME type ('text/plain')`
+- References to `turbopack-*.js`
+
+Then production is either using a Turbopack dev/build output or the wrong start command. Fix:
+
+1. **Build with Webpack:** Use `next build --webpack` (see `package.json` scripts). Do not rely on the default Turbopack build in Next.js 16 for production.
+2. **Start with production server:** Start command must be `npx next start --port $PORT`, not `next dev` or `npm run dev`.
+3. **Redeploy** so the new build and start command are used. After deploy, hard-refresh or clear cache when testing.
 
 ### Monitoring Tools
 
