@@ -754,6 +754,83 @@ export class ApiClient {
     return this.request('/api/moderator/stats');
   }
 
+  // Automated (Bulk) Test Run moderation endpoints
+  async getAutomatedTestRuns(params?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    items: Array<{
+      test_run_id: string;
+      model_name: string;
+      model_id: string;
+      provider: string;
+      user_name: string;
+      benchmark_version: string;
+      status: string;
+      trust_tier: string;
+      result_count: number;
+      verdict_counts: Record<string, number>;
+      completed_at: string | null;
+      admin_notes: string | null;
+    }>;
+    total: number;
+  }> {
+    return this.request(`/api/moderator/automated-runs${this.buildQueryString(params)}`);
+  }
+
+  async getAutomatedTestRunDetail(testRunId: string): Promise<{
+    test_run_id: string;
+    model_name: string;
+    model_id: string;
+    provider: string;
+    user_name: string;
+    user_email: string;
+    benchmark_version: string;
+    status: string;
+    trust_tier: string;
+    overall_score: number;
+    tier1_score: number;
+    tier2_score: number;
+    tier3_score: number;
+    total_questions: number;
+    tier_stats: Record<number, Record<string, number>>;
+    completed_at: string | null;
+    admin_notes: string | null;
+    sample_responses: Array<{
+      question_id: string;
+      tier: number;
+      category: string;
+      response: string;
+      verdict: string;
+      judge_reasoning?: string;
+      thought_process?: string | null;
+    }>;
+    sample_size: number;
+  }> {
+    return this.request(`/api/moderator/automated-runs/${testRunId}`);
+  }
+
+  async rejectAutomatedTestRun(testRunId: string): Promise<{
+    test_run_id: string;
+    status: string;
+    message: string;
+  }> {
+    return this.request(`/api/moderator/automated-runs/${testRunId}/reject`, {
+      method: 'POST',
+    });
+  }
+
+  async restoreAutomatedTestRun(testRunId: string): Promise<{
+    test_run_id: string;
+    status: string;
+    message: string;
+  }> {
+    return this.request(`/api/moderator/automated-runs/${testRunId}/restore`, {
+      method: 'POST',
+    });
+  }
+
   // Sponsorship API endpoints
   async createSponsorship(data: {
     request_type: 'sponsorship' | 'request';

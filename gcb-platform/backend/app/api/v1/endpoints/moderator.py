@@ -1,7 +1,8 @@
 """Moderator API endpoints"""
+import logging
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc
 from uuid import UUID
 from datetime import datetime, timedelta
@@ -15,6 +16,9 @@ from app.db.models.sponsorship_request import SponsorshipRequest
 from app.db.models.question_set import QuestionSet
 from app.db.models.methodology_version import MethodologyVersion
 from app.db.models.question import Question
+from app.db.models.test_run import TestRun
+from app.db.models.result import Result
+from app.db.models.model import Model
 from app.services.judge import TIER1_JUDGE_PROMPT
 from app.services.submission_processor import SubmissionProcessorService
 from app.schemas.moderator import (
@@ -24,6 +28,8 @@ from app.schemas.moderator import (
     CommunitySubmissionReviewRequest,
     CommunitySubmissionReviewResponse
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -476,4 +482,290 @@ async def reprocess_community_submission(
         "test_run_id": str(test_run.id),
         "results_created": results_created,
         "message": f"Created TestRun with {results_created} results"
+    }
+
+
+# ──────────────────────────────────────────────────────────
+# Automated (Bulk) Test Run moderation endpoints
+# ──────────────────────────────────────────────────────────
+
+@router.get("/automated-runs")
+async def get_automated_test_runs(
+    status: Optional[str] = Query(None, description="Filter by status (completed, rejected)"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db)
+):
+    """List test runs created by the bulk tester (trust_tier='automated').
+    
+    These runs bypass the normal CommunitySubmission moderation flow and
+    are published directly. This endpoint lets moderators review and
+    reject bad automated runs after the fact.
+    """
+    query = db.query(TestRun).options(
+        joinedload(TestRun.model),
+        joinedload(TestRun.user),
+        joinedload(TestRun.question_set),
+    ).filter(
+        TestRun.trust_tier == "automated"
+    )
+    
+    if status:
+        query = query.filter(TestRun.status == status)
+    
+    query = query.order_by(TestRun.completed_at.desc())
+    
+    total = query.count()
+    runs = query.offset(offset).limit(limit).all()
+    
+    items = []
+    for run in runs:
+        # Count results for this run
+        result_count = db.query(func.count(Result.id)).filter(
+            Result.test_run_id == run.id
+        ).scalar() or 0
+        
+        # Count verdicts
+        verdict_counts = {}
+        verdict_rows = db.query(
+            Result.verdict, func.count(Result.id)
+        ).filter(
+            Result.test_run_id == run.id
+        ).group_by(Result.verdict).all()
+        for verdict, count in verdict_rows:
+            verdict_counts[verdict] = count
+        
+        items.append({
+            "test_run_id": str(run.id),
+            "model_name": run.model.name if run.model else "Unknown",
+            "model_id": run.model.model_id if run.model else "Unknown",
+            "provider": run.model.provider if run.model else "Unknown",
+            "user_name": run.user.name or run.user.email if run.user else "Unknown",
+            "benchmark_version": run.question_set.semantic_version if run.question_set else "Unknown",
+            "status": run.status,
+            "trust_tier": run.trust_tier,
+            "result_count": result_count,
+            "verdict_counts": verdict_counts,
+            "completed_at": run.completed_at.isoformat() if run.completed_at else None,
+            "admin_notes": run.admin_notes,
+        })
+    
+    return {
+        "items": items,
+        "total": total,
+    }
+
+
+@router.get("/automated-runs/{test_run_id}")
+async def get_automated_test_run_detail(
+    test_run_id: UUID,
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db)
+):
+    """Get detailed view of an automated test run for moderation review.
+    
+    Returns scores, verdict breakdown, and a sample of responses for review.
+    """
+    run = db.query(TestRun).options(
+        joinedload(TestRun.model),
+        joinedload(TestRun.user),
+        joinedload(TestRun.question_set),
+    ).filter(
+        TestRun.id == test_run_id
+    ).first()
+    
+    if not run:
+        raise HTTPException(status_code=404, detail="Test run not found")
+    
+    if run.trust_tier != "automated":
+        raise HTTPException(status_code=400, detail="This endpoint is for automated test runs only")
+    
+    # Get all results with question info
+    results = db.query(Result).options(
+        joinedload(Result.question)
+    ).filter(
+        Result.test_run_id == run.id
+    ).all()
+    
+    # Calculate scores from results
+    from app.services.scoring import ScoringService
+    try:
+        scores = ScoringService.calculate_scores(db, str(run.id))
+    except Exception:
+        scores = {"overall": 0, "tier1": 0, "tier2": 0, "tier3": 0}
+    
+    # Build verdict counts by tier
+    tier_stats = {1: {}, 2: {}, 3: {}}
+    for result in results:
+        tier = result.question.tier if result.question else 1
+        verdict = result.verdict
+        if tier not in tier_stats:
+            tier_stats[tier] = {}
+        tier_stats[tier][verdict] = tier_stats[tier].get(verdict, 0) + 1
+    
+    # Sample responses for review (up to 20, distributed across tiers)
+    tier_results = {1: [], 2: [], 3: []}
+    for result in results:
+        tier = result.question.tier if result.question else 1
+        tier_results.setdefault(tier, []).append(result)
+    
+    sample_size = min(20, len(results))
+    sample_responses = []
+    
+    if len(results) <= sample_size:
+        sample_results = results
+    else:
+        responses_per_tier = max(1, sample_size // 3)
+        sample_results = []
+        for tier in [1, 2, 3]:
+            tier_list = tier_results.get(tier, [])
+            if tier_list:
+                if len(tier_list) <= responses_per_tier:
+                    sample_results.extend(tier_list)
+                else:
+                    sample_results.extend(random.sample(tier_list, responses_per_tier))
+        # Fill remaining
+        if len(sample_results) < sample_size:
+            remaining = [r for r in results if r not in sample_results]
+            needed = sample_size - len(sample_results)
+            if remaining and needed > 0:
+                sample_results.extend(random.sample(remaining, min(needed, len(remaining))))
+        sample_results = sample_results[:sample_size]
+    
+    for result in sample_results:
+        sample_responses.append({
+            "question_id": str(result.question_id),
+            "tier": result.question.tier if result.question else 1,
+            "category": result.question.category if result.question else "unknown",
+            "response": result.response,
+            "verdict": result.verdict,
+            "judge_reasoning": result.reasoning,
+            "thought_process": result.thought_process,
+        })
+    
+    return {
+        "test_run_id": str(run.id),
+        "model_name": run.model.name if run.model else "Unknown",
+        "model_id": run.model.model_id if run.model else "Unknown",
+        "provider": run.model.provider if run.model else "Unknown",
+        "user_name": run.user.name or run.user.email if run.user else "Unknown",
+        "user_email": run.user.email if run.user else "",
+        "benchmark_version": run.question_set.semantic_version if run.question_set else "Unknown",
+        "status": run.status,
+        "trust_tier": run.trust_tier,
+        "overall_score": scores.get("overall", 0),
+        "tier1_score": scores.get("tier1", 0),
+        "tier2_score": scores.get("tier2", 0),
+        "tier3_score": scores.get("tier3", 0),
+        "total_questions": len(results),
+        "tier_stats": tier_stats,
+        "completed_at": run.completed_at.isoformat() if run.completed_at else None,
+        "admin_notes": run.admin_notes,
+        "sample_responses": sample_responses,
+        "sample_size": len(sample_responses),
+    }
+
+
+@router.post("/automated-runs/{test_run_id}/reject")
+async def reject_automated_test_run(
+    test_run_id: UUID,
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db)
+):
+    """Reject an automated test run, removing it from the leaderboard.
+    
+    Sets the test run status to 'rejected' so it no longer appears in
+    leaderboard calculations. The data is preserved for audit purposes
+    (not deleted).
+    """
+    run = db.query(TestRun).filter(
+        TestRun.id == test_run_id,
+        TestRun.trust_tier == "automated",
+    ).first()
+    
+    if not run:
+        raise HTTPException(
+            status_code=404,
+            detail="Automated test run not found"
+        )
+    
+    if run.status == "rejected":
+        raise HTTPException(
+            status_code=400,
+            detail="Test run is already rejected"
+        )
+    
+    # Mark as rejected (preserves data for audit)
+    previous_status = run.status
+    run.status = "rejected"
+    run.admin_notes = f"Rejected by moderator {current_user.name or current_user.email} on {datetime.utcnow().isoformat()} (was: {previous_status})"
+    
+    db.commit()
+    
+    # Recalculate model stats so leaderboard updates (the rejected run will be excluded)
+    try:
+        from app.services.aggregation import AggregationService
+        AggregationService.recalculate_model_stats(db, run.model_id, run.question_set_id)
+    except Exception as e:
+        logger.warning(f"Stats recalculation failed after rejecting test run: {e}")
+    
+    logger.info(
+        f"Automated test run {test_run_id} rejected by {current_user.email}"
+    )
+    
+    return {
+        "test_run_id": str(run.id),
+        "status": "rejected",
+        "message": f"Automated test run rejected and removed from leaderboard",
+    }
+
+
+@router.post("/automated-runs/{test_run_id}/restore")
+async def restore_automated_test_run(
+    test_run_id: UUID,
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db)
+):
+    """Restore a previously rejected automated test run.
+    
+    Sets the status back to 'completed' so it reappears on the leaderboard.
+    """
+    run = db.query(TestRun).filter(
+        TestRun.id == test_run_id,
+        TestRun.trust_tier == "automated",
+    ).first()
+    
+    if not run:
+        raise HTTPException(
+            status_code=404,
+            detail="Automated test run not found"
+        )
+    
+    if run.status != "rejected":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Can only restore rejected test runs. Current status: {run.status}"
+        )
+    
+    run.status = "completed"
+    run.admin_notes = (run.admin_notes or "") + f"\nRestored by {current_user.name or current_user.email} on {datetime.utcnow().isoformat()}"
+    
+    db.commit()
+    
+    # Recalculate model stats so leaderboard updates (the restored run will be included)
+    try:
+        from app.services.aggregation import AggregationService
+        AggregationService.update_stats_for_test_run(db, run)
+    except Exception as e:
+        logger.warning(f"Stats recalculation failed after restoring test run: {e}")
+    
+    logger.info(
+        f"Automated test run {test_run_id} restored by {current_user.email}"
+    )
+    
+    return {
+        "test_run_id": str(run.id),
+        "status": "completed",
+        "message": "Automated test run restored to leaderboard",
     }
