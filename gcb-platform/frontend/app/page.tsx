@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { QuickRankings } from "@/components/home/QuickRankings";
 import { apiClient, StatsResponse } from "@/lib/api";
-import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, BarChart3, BookOpen } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { BarChart3, BookOpen, ChevronRight } from "lucide-react";
 import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 
 export default function Home() {
@@ -74,6 +74,12 @@ export default function Home() {
                 Which AI models will actually help you make disciples? 
                 We measure task capability, gospel core fidelity, and worldview alignment.
               </p>
+              <Button asChild size="lg" className="text-base px-8">
+                <Link href="/leaderboard">
+                  View Full Leaderboard
+                  <ChevronRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
             </div>
             
             {/* Guardrails Animation - hidden on smaller screens */}
@@ -86,26 +92,18 @@ export default function Home() {
 
       {/* Quick Rankings */}
       <section className="container py-12">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <BarChart3 className="h-5 w-5 text-primary" />
-              </div>
-              <h2 className="text-2xl font-bold text-foreground">Leaderboard</h2>
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <BarChart3 className="h-5 w-5 text-primary" />
             </div>
-            <p className="text-muted-foreground">
-              Top performing models on the Great Commission Benchmark
-            </p>
+            <h2 className="text-2xl font-bold text-foreground">Leaderboard</h2>
           </div>
-          <Button asChild variant="outline" className="hidden md:flex">
-            <Link href="/leaderboard">
-              View All
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+          <p className="text-muted-foreground">
+            Sample of models on the Great Commission Benchmark:
+          </p>
         </div>
-        
+
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -115,15 +113,6 @@ export default function Home() {
         ) : (
           <QuickRankings rankings={rankings} />
         )}
-        
-        <div className="mt-6 text-center md:hidden">
-          <Button asChild variant="outline">
-            <Link href="/leaderboard">
-              View Full Leaderboard
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
       </section>
 
       {/* Stats Banner */}
