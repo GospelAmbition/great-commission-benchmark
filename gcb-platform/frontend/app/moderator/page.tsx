@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +37,11 @@ export default function ModeratorDashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modelItems, setModelItems] = useState<Array<{ id: string; model_id: string; name: string; provider: string; is_active: boolean; test_run_count: number; created_at: string | null }>>([]);
+  const [modelTotal, setModelTotal] = useState(0);
+  const [modelsFilter, setModelsFilter] = useState<"active" | "archived" | "all">("active");
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelActionId, setModelActionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -77,6 +82,29 @@ export default function ModeratorDashboardPage() {
     };
   }, [user, profileLoading]);
 
+  const loadModels = useCallback(async () => {
+    setModelsLoading(true);
+    try {
+      const data = await apiClient.getModeratorModels({
+        archived: modelsFilter === "active" ? false : modelsFilter === "archived" ? true : undefined,
+        limit: 50,
+        offset: 0,
+      });
+      setModelItems(data.items);
+      setModelTotal(data.total);
+    } catch (e) {
+      console.error("Failed to load models:", e);
+      toast.error("Failed to load models");
+    } finally {
+      setModelsLoading(false);
+    }
+  }, [modelsFilter]);
+
+  useEffect(() => {
+    if (!user || profileLoading || (!canModerate && !canAdmin && !isAdmin)) return;
+    loadModels();
+  }, [modelsFilter, user, profileLoading, canModerate, canAdmin, isAdmin, loadModels]);
+
   async function loadDashboardData() {
     setLoading(true);
     try {
@@ -113,6 +141,7 @@ export default function ModeratorDashboardPage() {
       }
       
       setHistory(historyData.items || []);
+      loadModels();
     } catch (error) {
       console.error("Failed to load moderator dashboard:", error);
     } finally {
@@ -405,6 +434,110 @@ export default function ModeratorDashboardPage() {
                 </div>
               )}
             </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Models – archive to clean up leaderboard and exclude from bulk testing */}
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Models</CardTitle>
+          <CardDescription>
+            Archive models that are no longer available to clean up the leaderboard. Archived models are excluded from the leaderboard and bulk testing.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={modelsFilter} onValueChange={(v) => setModelsFilter(v as "active" | "archived" | "all")} className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="active">Active</TabsTrigger>
+              <TabsTrigger value="archived">Archived</TabsTrigger>
+              <TabsTrigger value="all">All</TabsTrigger>
+            </TabsList>
+            <div className="mt-4">
+              {modelsLoading ? (
+                <div className="py-8 text-center text-muted-foreground">Loading models…</div>
+              ) : modelItems.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Model ID</TableHead>
+                      <TableHead>Provider</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Test runs</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {modelItems.map((model) => (
+                      <TableRow key={model.id}>
+                        <TableCell className="font-medium">{model.name}</TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">{model.model_id}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{model.provider}</TableCell>
+                        <TableCell>
+                          <Badge variant={model.is_active ? "default" : "secondary"}>
+                            {model.is_active ? "Active" : "Archived"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{model.test_run_count}</TableCell>
+                        <TableCell>
+                          {model.is_active ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={modelActionId === model.id}
+                              onClick={async () => {
+                                setModelActionId(model.id);
+                                try {
+                                  await apiClient.updateModelArchived(model.id, true);
+                                  toast.success(`${model.name} archived`);
+                                  loadModels();
+                                } catch (e: any) {
+                                  toast.error(e?.message || "Failed to archive model");
+                                } finally {
+                                  setModelActionId(null);
+                                }
+                              }}
+                            >
+                              Archive
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={modelActionId === model.id}
+                              onClick={async () => {
+                                setModelActionId(model.id);
+                                try {
+                                  await apiClient.updateModelArchived(model.id, false);
+                                  toast.success(`${model.name} unarchived`);
+                                  loadModels();
+                                } catch (e: any) {
+                                  toast.error(e?.message || "Failed to unarchive model");
+                                } finally {
+                                  setModelActionId(null);
+                                }
+                              }}
+                            >
+                              Unarchive
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  {modelsFilter === "active" ? "No active models" : modelsFilter === "archived" ? "No archived models" : "No models"}
+                </div>
+              )}
+              {!modelsLoading && modelTotal > 0 && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Showing {modelItems.length} of {modelTotal} model{modelTotal !== 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
           </Tabs>
         </CardContent>
       </Card>

@@ -26,7 +26,10 @@ from app.schemas.moderator import (
     ModeratorActivityResponse,
     ModeratorStatsResponse,
     CommunitySubmissionReviewRequest,
-    CommunitySubmissionReviewResponse
+    CommunitySubmissionReviewResponse,
+    ModeratorModelItem,
+    ModeratorModelsResponse,
+    ModelArchiveUpdateRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -859,4 +862,68 @@ async def restore_automated_test_run(
         "test_run_id": str(run.id),
         "status": "completed",
         "message": "Automated test run restored to leaderboard",
+    }
+
+
+# =============================================================================
+# Model archive (clean up leaderboard when models are no longer available)
+# =============================================================================
+
+
+@router.get("/models", response_model=ModeratorModelsResponse)
+async def list_moderator_models(
+    archived: Optional[bool] = Query(None, description="Filter by archived status (false=active, true=archived). Omit for all."),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db),
+):
+    """List models for moderator archive/unarchive. Archived means is_active=False."""
+    query = db.query(Model)
+    if archived is not None:
+        query = query.filter(Model.is_active == (not archived))
+    query = query.order_by(Model.name)
+    count_query = db.query(Model)
+    if archived is not None:
+        count_query = count_query.filter(Model.is_active == (not archived))
+    total = count_query.count()
+    models = query.offset(offset).limit(limit).all()
+    items = []
+    for model in models:
+        test_run_count = db.query(TestRun).filter(TestRun.model_id == model.id).count()
+        items.append(
+            ModeratorModelItem(
+                id=str(model.id),
+                model_id=model.model_id,
+                name=model.name,
+                provider=model.provider,
+                is_active=model.is_active,
+                test_run_count=test_run_count,
+                created_at=model.created_at.isoformat() if model.created_at else None,
+            )
+        )
+    return ModeratorModelsResponse(items=items, total=total)
+
+
+@router.patch("/models/{model_id}")
+async def update_model_archived(
+    model_id: UUID,
+    request: ModelArchiveUpdateRequest,
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db),
+):
+    """Archive or unarchive a model. Archived models are excluded from the leaderboard and bulk tester."""
+    model = db.query(Model).filter(Model.id == model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    model.is_active = not request.archived
+    db.commit()
+    from app.core.cache import invalidate_cache
+    await invalidate_cache("leaderboard")
+    return {
+        "model_id": str(model.id),
+        "model_id_str": model.model_id,
+        "name": model.name,
+        "archived": request.archived,
+        "message": f"Model {'archived' if request.archived else 'unarchived'} successfully",
     }

@@ -129,5 +129,13 @@ logger.info(f"CORS origins configured: {settings.CORS_ORIGINS}")
 if __name__ == "__main__":
     import os
     import uvicorn
+    # Port: 8001 for local dev (no PORT set), otherwise use PORT (e.g. Railway)
     port = int(os.environ.get("PORT", 8001))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    # Reload in dev only (when PORT is not set); production sets PORT so reload stays off
+    use_reload = "PORT" not in os.environ or os.environ.get("RELOAD", "").lower() in ("1", "true", "yes")
+    uvicorn.run(
+        "main:app",  # string so reloader can re-import
+        host="0.0.0.0",
+        port=port,
+        reload=use_reload,
+    )

@@ -84,3 +84,25 @@ class CommunitySubmissionReviewResponse(BaseModel):
     submission_id: UUID
     status: str
     message: str
+
+
+class ModeratorModelItem(GCBBaseModel):
+    """Model list item for moderator"""
+    id: str
+    model_id: str
+    name: str
+    provider: str
+    is_active: bool
+    test_run_count: int
+    created_at: Optional[str] = None
+
+
+class ModeratorModelsResponse(BaseModel):
+    """Moderator models list response"""
+    items: List[ModeratorModelItem]
+    total: int
+
+
+class ModelArchiveUpdateRequest(BaseModel):
+    """Request to archive or unarchive a model"""
+    archived: bool

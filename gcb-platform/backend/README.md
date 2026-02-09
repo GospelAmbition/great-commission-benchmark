@@ -50,9 +50,9 @@ The backend provides:
 
 5. **Run development server:**
    ```bash
-   uvicorn main:app --reload --port 8001
+   python main.py
    ```
-   Or: `./run_dev.sh`
+   This runs Uvicorn on **port 8001** with reload. (Production sets `PORT`; without it we default to 8001.)
 
    The API will be available at `http://localhost:8001`
 

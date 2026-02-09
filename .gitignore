@@ -114,5 +114,3 @@ dmypy.json
 .venv-clean/
 .venv-test/
 */build-env/
-.claude/
-.skills/

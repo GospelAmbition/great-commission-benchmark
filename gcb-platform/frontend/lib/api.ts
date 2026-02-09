@@ -754,6 +754,42 @@ export class ApiClient {
     return this.request('/api/moderator/stats');
   }
 
+  async getModeratorModels(params?: {
+    archived?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    items: Array<{
+      id: string;
+      model_id: string;
+      name: string;
+      provider: string;
+      is_active: boolean;
+      test_run_count: number;
+      created_at: string | null;
+    }>;
+    total: number;
+  }> {
+    const q: Record<string, string> = {};
+    if (params?.archived !== undefined) q.archived = String(params.archived);
+    if (params?.limit != null) q.limit = String(params.limit);
+    if (params?.offset != null) q.offset = String(params.offset);
+    return this.request(`/api/moderator/models${this.buildQueryString(q)}`);
+  }
+
+  async updateModelArchived(modelId: string, archived: boolean): Promise<{
+    model_id: string;
+    model_id_str: string;
+    name: string;
+    archived: boolean;
+    message: string;
+  }> {
+    return this.request(`/api/moderator/models/${modelId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ archived }),
+    });
+  }
+
   // Automated (Bulk) Test Run moderation endpoints
   async getAutomatedTestRuns(params?: {
     listType?: 'queue' | 'history';
