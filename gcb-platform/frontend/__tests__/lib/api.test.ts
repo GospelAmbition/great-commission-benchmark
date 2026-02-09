@@ -7,7 +7,7 @@ describe('ApiClient', () => {
   let apiClient: ApiClient;
 
   beforeEach(() => {
-    apiClient = new ApiClient('http://localhost:8000');
+    apiClient = new ApiClient('http://localhost:8001');
     (fetch as jest.Mock).mockClear();
   });
 
@@ -21,7 +21,7 @@ describe('ApiClient', () => {
       await apiClient.getLeaderboard({ limit: 10 });
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/public/leaderboard?limit=10',
+        'http://localhost:8001/api/public/leaderboard?limit=10',
         expect.objectContaining({
           method: 'GET',
         })
@@ -65,7 +65,7 @@ describe('ApiClient', () => {
       await apiClient.getModels();
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/public/models',
+        'http://localhost:8001/api/public/models',
         expect.objectContaining({
           method: 'GET',
         })
@@ -83,7 +83,7 @@ describe('ApiClient', () => {
       await apiClient.compareModels(['model1', 'model2']);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/public/leaderboard/compare?models=model1&models=model2',
+        'http://localhost:8001/api/public/leaderboard/compare?models=model1&models=model2',
         expect.objectContaining({
           method: 'GET',
         })

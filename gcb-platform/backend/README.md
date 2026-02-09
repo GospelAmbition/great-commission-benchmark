@@ -50,10 +50,11 @@ The backend provides:
 
 5. **Run development server:**
    ```bash
-   uvicorn main:app --reload
+   uvicorn main:app --reload --port 8001
    ```
+   Or: `./run_dev.sh`
 
-   The API will be available at `http://localhost:8000`
+   The API will be available at `http://localhost:8001`
 
 6. **Set up initial administrator account:**
    
@@ -82,8 +83,8 @@ The backend provides:
 ## API Documentation
 
 Interactive API documentation is available at:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
+- **Swagger UI**: `http://localhost:8001/docs`
+- **ReDoc**: `http://localhost:8001/redoc`
 
 ### API Structure
 
@@ -311,7 +312,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY . .
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/start.sh"]  # uses PORT (default 8080); for local dev run uvicorn --port 8001
 ```
 
 ### Railway
@@ -323,7 +324,7 @@ The backend auto-deploys from the `backend/` directory. Ensure all environment v
 ### Health Check
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8001/health
 # {"status": "ok"}
 ```
 
@@ -356,19 +357,19 @@ Application logs are output to stdout. In production, configure your hosting pro
 ### Get Leaderboard
 
 ```bash
-curl http://localhost:8000/api/public/leaderboard?limit=10
+curl http://localhost:8001/api/public/leaderboard?limit=10
 ```
 
 ### Get Platform Stats
 
 ```bash
-curl http://localhost:8000/api/public/stats
+curl http://localhost:8001/api/public/stats
 ```
 
 ### Create Test (authenticated)
 
 ```bash
-curl -X POST http://localhost:8000/api/tests \
+curl -X POST http://localhost:8001/api/tests \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"model_id": "uuid", "version": "1.0"}'
@@ -379,7 +380,7 @@ curl -X POST http://localhost:8000/api/tests \
 Upload test results exported from gcb-runner:
 
 ```bash
-curl -X POST http://localhost:8000/api/submissions \
+curl -X POST http://localhost:8001/api/submissions \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -431,4 +432,4 @@ curl -X POST http://localhost:8000/api/submissions \
 
 ---
 
-For more information, see the [main README](../README.md) or [API documentation](http://localhost:8000/docs).
+For more information, see the [main README](../README.md) or [API documentation](http://localhost:8001/docs).

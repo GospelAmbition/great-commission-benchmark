@@ -135,7 +135,7 @@ For the current Railway test deployment:
 
 **Backend:**
 ```env
-CORS_ORIGINS_STR=http://localhost:3000,https://frontend-production-8b79.up.railway.app
+CORS_ORIGINS_STR=http://localhost:3001,https://frontend-production-8b79.up.railway.app
 
 # Storage (Railway Simple Storage - private buckets, served via backend proxy)
 S3_ACCESS_KEY_ID=your-railway-access-key
@@ -292,7 +292,7 @@ Before going live:
 1. Check build logs in Railway
 2. Verify environment variables are set
 3. Check Dockerfile syntax
-4. Ensure port matches (8000 for backend, 3000 for frontend)
+4. For local dev, use port 8001 for backend and 3001 for frontend
 
 ### Database Connection Issues
 

@@ -37,7 +37,7 @@ The frontend provides:
    npm run dev
    ```
 
-   The app will be available at `http://localhost:3000`
+   The app will be available at `http://localhost:3001`
 
 ## Project Structure
 
@@ -159,7 +159,7 @@ Charts use Chart.js with react-chartjs-2.
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `AUTH_URL` | Base URL of your app (e.g., `http://localhost:3000`) | Yes |
+| `AUTH_URL` | Base URL of your app (e.g., `http://localhost:3001`) | Yes |
 | `NEXTAUTH_SECRET` | Session encryption secret (generate with `openssl rand -base64 32`) | Yes |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID | Yes |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Yes |
@@ -177,7 +177,7 @@ Charts use Chart.js with react-chartjs-2.
    - Go to **APIs & Services** → **Credentials**
    - Click **Create Credentials** → **OAuth client ID**
    - Application type: **Web application**
-   - Authorized redirect URIs: `http://localhost:3000/api/auth/callback`
+   - Authorized redirect URIs: `http://localhost:3001/api/auth/callback`
 5. Copy the Client ID and Client Secret to `.env.local`
 6. Generate `NEXTAUTH_SECRET`:
    ```bash

@@ -6,7 +6,7 @@
  * Base URL for the backend API
  * Centralized definition to avoid duplication across the codebase
  */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 
 export interface ApiError {
   detail: string;

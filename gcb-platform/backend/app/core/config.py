@@ -72,7 +72,7 @@ class Settings(BaseSettings):
     
     # Backend public URL for generating file proxy URLs
     # Railway buckets are private, so files are served through /api/files/{path}
-    BACKEND_PUBLIC_URL: str = "http://localhost:8000"
+    BACKEND_PUBLIC_URL: str = "http://localhost:8001"
     
     # Google reCAPTCHA v3
     RECAPTCHA_SECRET_KEY: str = ""

@@ -77,13 +77,14 @@ gcb-platform/
 
 7. **Start development server:**
    ```bash
-   uvicorn main:app --reload
+   uvicorn main:app --reload --port 8001
    ```
+   Or from backend: `./run_dev.sh`
 
-   Backend will be available at `http://localhost:8000`
-   - API docs (Swagger): `http://localhost:8000/docs`
-   - API docs (ReDoc): `http://localhost:8000/redoc`
-   - Health check: `http://localhost:8000/health`
+   Backend will be available at `http://localhost:8001`
+   - API docs (Swagger): `http://localhost:8001/docs`
+   - API docs (ReDoc): `http://localhost:8001/redoc`
+   - Health check: `http://localhost:8001/health`
 
 ### Frontend Setup
 
@@ -108,7 +109,7 @@ gcb-platform/
    npm run dev
    ```
 
-   Frontend will be available at `http://localhost:3000`
+   Frontend will be available at `http://localhost:3001`
 
 ## Development
 
@@ -180,7 +181,7 @@ npm run lint:fix              # Fix auto-fixable issues
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `AUTH_URL` | Base URL of your app (e.g., `http://localhost:3000`) | Yes |
+| `AUTH_URL` | Base URL of your app (e.g., `http://localhost:3001`) | Yes |
 | `NEXTAUTH_SECRET` | Session encryption secret (same as backend, generate with `openssl rand -base64 32`) | Yes |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID | Yes |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Yes |
@@ -192,8 +193,8 @@ npm run lint:fix              # Fix auto-fixable issues
 ## API Documentation
 
 The backend provides comprehensive API documentation via:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
+- **Swagger UI**: `http://localhost:8001/docs`
+- **ReDoc**: `http://localhost:8001/redoc`
 
 ### Key Endpoints
 
