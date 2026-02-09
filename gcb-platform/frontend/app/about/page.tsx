@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MenuBookIcon, ArticleIcon } from "@/lib/icons";
-import { Target, Grid3X3, Shield, Tag, Calendar, ChevronRight, FileText, Users } from "lucide-react";
+import { Target, Grid3X3, Shield, Tag, Calendar, ChevronRight, FileText, Users, Heart } from "lucide-react";
 import { TestingCategoryCard } from "@/components/benchmark/TestingCategoryCard";
 import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 import { apiClient } from "@/lib/api";
@@ -103,6 +103,10 @@ export default function AboutPage() {
             <TabsTrigger value="versions" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Tag className="h-4 w-4 mr-1.5" />
               Versions
+            </TabsTrigger>
+            <TabsTrigger value="sponsors" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Heart className="h-4 w-4 mr-1.5" />
+              Sponsors
             </TabsTrigger>
           </TabsList>
 
@@ -1087,6 +1091,98 @@ export default function AboutPage() {
                 </Card>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="sponsors" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Our Sponsors</CardTitle>
+                <p className="text-muted-foreground text-sm mt-2">
+                  The Great Commission Benchmark is made possible by the support of these partners.
+                </p>
+              </CardHeader>
+            </Card>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                      <Heart className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Gospel Ambition</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Partner in advancing the Great Commission Benchmark.
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Link
+                    href="https://gospelambition.org"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+                  >
+                    Visit website
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                      <Heart className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Digital Disciple Making Network</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Partner in advancing the Great Commission Benchmark.
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Link
+                    href="https://www.visualstory.org/category/digital-disciple-making-network/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+                  >
+                    Visit website
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                      <Heart className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Visual Story Network</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Partner in advancing the Great Commission Benchmark.
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Link
+                    href="https://www.visualstory.org/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+                  >
+                    Visit website
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
