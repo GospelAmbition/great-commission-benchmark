@@ -123,6 +123,37 @@ async def get_moderator_activity(
             created_at=sponsorship.reviewed_at  # Use reviewed_at as the activity timestamp
         ))
     
+    # Get automated (bulk) run reviews (TestRun with moderator_reviewed_at set)
+    automated_query = db.query(TestRun).options(
+        joinedload(TestRun.model),
+        joinedload(TestRun.moderator),
+        joinedload(TestRun.question_set),
+    ).filter(
+        TestRun.trust_tier == "automated",
+        TestRun.moderator_reviewed_at.isnot(None),
+    )
+    if moderator_id:
+        automated_query = automated_query.filter(TestRun.moderator_id == moderator_id)
+    if start_date:
+        automated_query = automated_query.filter(TestRun.moderator_reviewed_at >= start_date)
+    if end_date:
+        automated_query = automated_query.filter(TestRun.moderator_reviewed_at <= end_date)
+    automated_runs = automated_query.order_by(desc(TestRun.moderator_reviewed_at)).all()
+    
+    for run in automated_runs:
+        model_name = run.model.name if run.model else "Unknown"
+        items.append(ModeratorActivityItem(
+            review_id=run.id,  # Use test_run id as review_id for automated runs
+            test_id=run.id,
+            submission_id=None,
+            model_name=model_name,
+            action=run.moderator_decision or "unknown",
+            review_type="automated_run",
+            duration_seconds=None,
+            benchmark_version=run.question_set.semantic_version if run.question_set else None,
+            created_at=run.moderator_reviewed_at,
+        ))
+    
     # Sort all items by created_at/reviewed_at descending
     items.sort(key=lambda x: x.created_at, reverse=True)
     
@@ -491,7 +522,8 @@ async def reprocess_community_submission(
 
 @router.get("/automated-runs")
 async def get_automated_test_runs(
-    status: Optional[str] = Query(None, description="Filter by status (completed, rejected)"),
+    list_type: Optional[str] = Query("queue", description="'queue' = unreviewed (need action), 'history' = reviewed (accepted or rejected)"),
+    status: Optional[str] = Query(None, description="Filter by status (completed, rejected); only applies when list=history"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     current_user: User = Depends(require_moderator),
@@ -499,20 +531,24 @@ async def get_automated_test_runs(
 ):
     """List test runs created by the bulk tester (trust_tier='automated').
     
-    These runs bypass the normal CommunitySubmission moderation flow and
-    are published directly. This endpoint lets moderators review and
-    reject bad automated runs after the fact.
+    list=queue: runs not yet reviewed (moderator_reviewed_at IS NULL).
+    list=history: runs that have been accepted or rejected (moderator_reviewed_at IS NOT NULL).
     """
     query = db.query(TestRun).options(
         joinedload(TestRun.model),
         joinedload(TestRun.user),
         joinedload(TestRun.question_set),
+        joinedload(TestRun.moderator),
     ).filter(
         TestRun.trust_tier == "automated"
     )
     
-    if status:
-        query = query.filter(TestRun.status == status)
+    if (list_type or "queue").lower() == "queue":
+        query = query.filter(TestRun.moderator_reviewed_at.is_(None))
+    else:
+        query = query.filter(TestRun.moderator_reviewed_at.isnot(None))
+        if status:
+            query = query.filter(TestRun.status == status)
     
     query = query.order_by(TestRun.completed_at.desc())
     
@@ -549,6 +585,9 @@ async def get_automated_test_runs(
             "verdict_counts": verdict_counts,
             "completed_at": run.completed_at.isoformat() if run.completed_at else None,
             "admin_notes": run.admin_notes,
+            "moderator_reviewed_at": run.moderator_reviewed_at.isoformat() if run.moderator_reviewed_at else None,
+            "moderator_decision": run.moderator_decision,
+            "moderator_name": (run.moderator.name or run.moderator.email) if run.moderator else None,
         })
     
     return {
@@ -571,6 +610,7 @@ async def get_automated_test_run_detail(
         joinedload(TestRun.model),
         joinedload(TestRun.user),
         joinedload(TestRun.question_set),
+        joinedload(TestRun.moderator),
     ).filter(
         TestRun.id == test_run_id
     ).first()
@@ -662,8 +702,56 @@ async def get_automated_test_run_detail(
         "tier_stats": tier_stats,
         "completed_at": run.completed_at.isoformat() if run.completed_at else None,
         "admin_notes": run.admin_notes,
+        "moderator_reviewed_at": run.moderator_reviewed_at.isoformat() if run.moderator_reviewed_at else None,
+        "moderator_decision": run.moderator_decision,
+        "moderator_name": (run.moderator.name or run.moderator.email) if run.moderator else None,
         "sample_responses": sample_responses,
         "sample_size": len(sample_responses),
+    }
+
+
+@router.post("/automated-runs/{test_run_id}/accept")
+async def accept_automated_test_run(
+    test_run_id: UUID,
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db)
+):
+    """Accept an automated test run. Removes it from the queue and records it in history.
+    
+    Does not change status or leaderboard; run stays 'completed' and on the leaderboard.
+    """
+    run = db.query(TestRun).filter(
+        TestRun.id == test_run_id,
+        TestRun.trust_tier == "automated",
+    ).first()
+    
+    if not run:
+        raise HTTPException(
+            status_code=404,
+            detail="Automated test run not found"
+        )
+    
+    if run.moderator_reviewed_at is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Test run has already been reviewed (accepted or rejected)"
+        )
+    
+    run.moderator_reviewed_at = datetime.utcnow()
+    run.moderator_id = current_user.id
+    run.moderator_decision = "accepted"
+    
+    db.commit()
+    
+    logger.info(
+        f"Automated test run {test_run_id} accepted by {current_user.email}"
+    )
+    
+    return {
+        "test_run_id": str(run.id),
+        "status": "completed",
+        "moderator_decision": "accepted",
+        "message": "Automated test run accepted and moved to history",
     }
 
 
@@ -696,9 +784,12 @@ async def reject_automated_test_run(
             detail="Test run is already rejected"
         )
     
-    # Mark as rejected (preserves data for audit)
+    # Mark as rejected and as reviewed (removes from queue, adds to history)
     previous_status = run.status
     run.status = "rejected"
+    run.moderator_reviewed_at = datetime.utcnow()
+    run.moderator_id = current_user.id
+    run.moderator_decision = "rejected"
     run.admin_notes = f"Rejected by moderator {current_user.name or current_user.email} on {datetime.utcnow().isoformat()} (was: {previous_status})"
     
     db.commit()

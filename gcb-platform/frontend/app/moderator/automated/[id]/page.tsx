@@ -30,6 +30,9 @@ interface AutomatedRunDetail {
   tier_stats: Record<number, Record<string, number>>;
   completed_at: string | null;
   admin_notes: string | null;
+  moderator_reviewed_at: string | null;
+  moderator_decision: string | null;
+  moderator_name: string | null;
   sample_responses: Array<{
     question_id: string;
     tier: number;
@@ -88,6 +91,21 @@ export default function AutomatedRunReviewPage() {
   function goToPrevious() {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
+    }
+  }
+
+  async function handleAccept() {
+    if (!run) return;
+    setSubmitting(true);
+    try {
+      const data = await apiClient.acceptAutomatedTestRun(testRunId);
+      toast.success(data.message || "Test run accepted");
+      router.push("/moderator");
+    } catch (error: any) {
+      console.error("Failed to accept:", error);
+      toast.error(error.message || "Failed to accept test run");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -324,10 +342,12 @@ export default function AutomatedRunReviewPage() {
         <CardHeader>
           <CardTitle>Moderation Action</CardTitle>
           <CardDescription>
-            {run.status === "completed"
-              ? "This automated run is currently published on the leaderboard. You can reject it to remove it."
+            {run.moderator_reviewed_at == null
+              ? "Accept to keep on the leaderboard and move to history, or reject to remove from the leaderboard and move to history."
+              : run.moderator_decision === "accepted"
+              ? "You accepted this run. It remains on the leaderboard."
               : run.status === "rejected"
-              ? "This automated run has been rejected and is not on the leaderboard. You can restore it."
+              ? "This run was rejected and is not on the leaderboard. You can restore it."
               : `Current status: ${run.status}`}
           </CardDescription>
         </CardHeader>
@@ -335,12 +355,17 @@ export default function AutomatedRunReviewPage() {
           <Button variant="outline" onClick={() => router.push("/moderator")} disabled={submitting}>
             Back
           </Button>
-          {run.status === "completed" && (
-            <Button variant="destructive" onClick={handleReject} disabled={submitting}>
-              {submitting ? "Rejecting..." : "Reject & Remove from Leaderboard"}
-            </Button>
+          {run.moderator_reviewed_at == null && (
+            <>
+              <Button variant="default" onClick={handleAccept} disabled={submitting}>
+                {submitting ? "Accepting..." : "Accept (keep on leaderboard)"}
+              </Button>
+              <Button variant="destructive" onClick={handleReject} disabled={submitting}>
+                {submitting ? "Rejecting..." : "Reject (remove from leaderboard)"}
+              </Button>
+            </>
           )}
-          {run.status === "rejected" && (
+          {run.moderator_reviewed_at != null && run.status === "rejected" && (
             <Button onClick={handleRestore} disabled={submitting}>
               {submitting ? "Restoring..." : "Restore to Leaderboard"}
             </Button>

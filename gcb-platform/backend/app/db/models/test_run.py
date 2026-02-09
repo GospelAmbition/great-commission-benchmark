@@ -28,11 +28,16 @@ class TestRun(Base):
     validation_metrics = Column(JSONB)
     admin_assigned_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     admin_notes = Column(Text)
+    # Moderator review for automated (bulk) runs: queue vs history
+    moderator_reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    moderator_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    moderator_decision = Column(String(20), nullable=True)  # 'accepted' | 'rejected'
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     started_at = Column(DateTime(timezone=True))
     completed_at = Column(DateTime(timezone=True))
 
     user = relationship("User", foreign_keys=[user_id], backref="test_runs")
+    moderator = relationship("User", foreign_keys=[moderator_id])
     model = relationship("Model", backref="test_runs")
     question_set = relationship("QuestionSet", backref="test_runs")
     methodology_version = relationship("MethodologyVersion", backref="test_runs")

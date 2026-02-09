@@ -29,8 +29,11 @@ export default function ModeratorDashboardPage() {
   const { canModerate, canAdmin, isAdmin, loading: profileLoading } = useUserProfile();
   const [communityQueue, setCommunityQueue] = useState<any[]>([]);
   const [sponsorshipQueue, setSponsorshipQueue] = useState<any[]>([]);
-  const [automatedRuns, setAutomatedRuns] = useState<any[]>([]);
-  const [automatedTotal, setAutomatedTotal] = useState(0);
+  const [automatedQueue, setAutomatedQueue] = useState<any[]>([]);
+  const [automatedQueueTotal, setAutomatedQueueTotal] = useState(0);
+  const [automatedHistory, setAutomatedHistory] = useState<any[]>([]);
+  const [automatedHistoryTotal, setAutomatedHistoryTotal] = useState(0);
+  const [automatedSubTab, setAutomatedSubTab] = useState<"queue" | "history">("queue");
   const [stats, setStats] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,18 +80,21 @@ export default function ModeratorDashboardPage() {
   async function loadDashboardData() {
     setLoading(true);
     try {
-      const [communityData, sponsorshipData, automatedData, statsData, historyData] = await Promise.all([
+      const [communityData, sponsorshipData, automatedQueueData, automatedHistoryData, statsData, historyData] = await Promise.all([
         apiClient.getCommunitySubmissionQueue().catch(() => ({ items: [], total: 0 })),
         apiClient.getSponsorshipQueue().catch(() => ({ items: [], total: 0 })),
-        apiClient.getAutomatedTestRuns({ limit: 100 }).catch(() => ({ items: [], total: 0 })),
+        apiClient.getAutomatedTestRuns({ listType: "queue", limit: 100 }).catch(() => ({ items: [], total: 0 })),
+        apiClient.getAutomatedTestRuns({ listType: "history", limit: 100 }).catch(() => ({ items: [], total: 0 })),
         apiClient.getModeratorStats().catch(() => null),
         apiClient.getModeratorActivity({ limit: 20 }).catch(() => ({ items: [], total: 0 })),
       ]);
 
       setCommunityQueue(communityData.items || []);
       setSponsorshipQueue(sponsorshipData.items || []);
-      setAutomatedRuns(automatedData.items || []);
-      setAutomatedTotal(automatedData.total || 0);
+      setAutomatedQueue(automatedQueueData.items || []);
+      setAutomatedQueueTotal(automatedQueueData.total || 0);
+      setAutomatedHistory(automatedHistoryData.items || []);
+      setAutomatedHistoryTotal(automatedHistoryData.total || 0);
       
       const totalPending = (communityData.items?.length || 0) + (sponsorshipData.items?.length || 0);
       
@@ -194,7 +200,7 @@ export default function ModeratorDashboardPage() {
                 Runner Submissions ({communityQueue.length})
               </TabsTrigger>
               <TabsTrigger value="automated">
-                Bulk Runs ({automatedTotal})
+                Bulk Runs ({automatedQueueTotal})
               </TabsTrigger>
               <TabsTrigger value="sponsorship">
                 Sponsorships ({sponsorshipQueue.length})
@@ -247,55 +253,106 @@ export default function ModeratorDashboardPage() {
             </TabsContent>
 
             <TabsContent value="automated" className="mt-4">
-              {automatedRuns.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Model</TableHead>
-                      <TableHead>Provider</TableHead>
-                      <TableHead>Version</TableHead>
-                      <TableHead>Results</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Completed</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {automatedRuns.map((item) => (
-                      <TableRow key={item.test_run_id}>
-                        <TableCell className="font-medium">{item.model_name}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{item.provider}</TableCell>
-                        <TableCell className="font-mono text-sm">{item.benchmark_version}</TableCell>
-                        <TableCell className="text-sm">
-                          {item.result_count} questions
-                          {item.verdict_counts && (
-                            <span className="text-muted-foreground ml-1">
-                              ({item.verdict_counts.ACCEPTED || 0}A / {item.verdict_counts.COMPROMISED || 0}C / {item.verdict_counts.REFUSED || 0}R)
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={item.status === "completed" ? "default" : item.status === "rejected" ? "destructive" : "outline"}>
-                            {item.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {item.completed_at ? new Date(item.completed_at).toLocaleDateString() : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <Button asChild variant="ghost" size="sm">
-                            <Link href={`/moderator/automated/${item.test_run_id}`}>Review</Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No automated bulk test runs found</p>
-                </div>
-              )}
+              <Tabs value={automatedSubTab} onValueChange={(v) => setAutomatedSubTab(v as "queue" | "history")} className="mb-4">
+                <TabsList>
+                  <TabsTrigger value="queue">Queue ({automatedQueueTotal})</TabsTrigger>
+                  <TabsTrigger value="history">History ({automatedHistoryTotal})</TabsTrigger>
+                </TabsList>
+                <TabsContent value="queue" className="mt-4">
+                  {automatedQueue.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Model</TableHead>
+                          <TableHead>Provider</TableHead>
+                          <TableHead>Version</TableHead>
+                          <TableHead>Results</TableHead>
+                          <TableHead>Completed</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {automatedQueue.map((item) => (
+                          <TableRow key={item.test_run_id}>
+                            <TableCell className="font-medium">{item.model_name}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{item.provider}</TableCell>
+                            <TableCell className="font-mono text-sm">{item.benchmark_version}</TableCell>
+                            <TableCell className="text-sm">
+                              {item.result_count} questions
+                              {item.verdict_counts && (
+                                <span className="text-muted-foreground ml-1">
+                                  ({item.verdict_counts.ACCEPTED || 0}A / {item.verdict_counts.COMPROMISED || 0}C / {item.verdict_counts.REFUSED || 0}R)
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {item.completed_at ? new Date(item.completed_at).toLocaleDateString() : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <Button asChild variant="ghost" size="sm">
+                                <Link href={`/moderator/automated/${item.test_run_id}`}>Review</Link>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">No automated runs in queue</p>
+                    </div>
+                  )}
+                </TabsContent>
+                <TabsContent value="history" className="mt-4">
+                  {automatedHistory.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Model</TableHead>
+                          <TableHead>Provider</TableHead>
+                          <TableHead>Version</TableHead>
+                          <TableHead>Decision</TableHead>
+                          <TableHead>Reviewed</TableHead>
+                          <TableHead>Completed</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {automatedHistory.map((item) => (
+                          <TableRow key={item.test_run_id}>
+                            <TableCell className="font-medium">{item.model_name}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{item.provider}</TableCell>
+                            <TableCell className="font-mono text-sm">{item.benchmark_version}</TableCell>
+                            <TableCell>
+                              <Badge variant={item.moderator_decision === "accepted" ? "default" : "destructive"}>
+                                {item.moderator_decision === "accepted" ? "Accepted" : "Rejected"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {item.moderator_reviewed_at ? new Date(item.moderator_reviewed_at).toLocaleDateString() : "—"}
+                              {item.moderator_name && (
+                                <span className="block text-xs">by {item.moderator_name}</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {item.completed_at ? new Date(item.completed_at).toLocaleDateString() : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <Button asChild variant="ghost" size="sm">
+                                <Link href={`/moderator/automated/${item.test_run_id}`}>View</Link>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">No automated run history yet</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </TabsContent>
 
             <TabsContent value="sponsorship" className="mt-4">
@@ -383,6 +440,7 @@ export default function ModeratorDashboardPage() {
                       <Badge variant="outline" className="text-xs">
                         {item.review_type === "sponsorship_review" ? "Sponsorship" : 
                          item.review_type === "cli_submission" ? "Runner" : 
+                         item.review_type === "automated_run" ? "Bulk Run" : 
                          item.review_type || "Unknown"}
                       </Badge>
                     </TableCell>
@@ -405,6 +463,12 @@ export default function ModeratorDashboardPage() {
                         <Button asChild variant="ghost" size="sm">
                           <Link href={`/moderator/sponsorship/${item.review_id}`} className="font-mono text-sm">
                             {item.review_id.slice(0, 8)}...
+                          </Link>
+                        </Button>
+                      ) : item.review_type === "automated_run" && item.test_id ? (
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/moderator/automated/${item.test_id}`} className="font-mono text-sm">
+                            {String(item.test_id).slice(0, 8)}...
                           </Link>
                         </Button>
                       ) : item.submission_id ? (

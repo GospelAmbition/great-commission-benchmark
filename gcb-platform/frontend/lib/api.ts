@@ -725,7 +725,7 @@ export class ApiClient {
       submission_id?: string | null;
       model_name: string;
       action: string;
-      review_type: 'cli_submission' | 'sponsorship_review' | 'platform_test';
+      review_type: 'cli_submission' | 'sponsorship_review' | 'platform_test' | 'automated_run';
       duration_seconds?: number | null;
       benchmark_version?: string | null;
       created_at: string;
@@ -756,6 +756,7 @@ export class ApiClient {
 
   // Automated (Bulk) Test Run moderation endpoints
   async getAutomatedTestRuns(params?: {
+    listType?: 'queue' | 'history';
     status?: string;
     limit?: number;
     offset?: number;
@@ -773,10 +774,18 @@ export class ApiClient {
       verdict_counts: Record<string, number>;
       completed_at: string | null;
       admin_notes: string | null;
+      moderator_reviewed_at: string | null;
+      moderator_decision: string | null;
+      moderator_name: string | null;
     }>;
     total: number;
   }> {
-    return this.request(`/api/moderator/automated-runs${this.buildQueryString(params)}`);
+    const q: Record<string, string> = {};
+    if (params?.listType) q.list_type = params.listType;
+    if (params?.status) q.status = params.status;
+    if (params?.limit != null) q.limit = String(params.limit);
+    if (params?.offset != null) q.offset = String(params.offset);
+    return this.request(`/api/moderator/automated-runs${this.buildQueryString(q)}`);
   }
 
   async getAutomatedTestRunDetail(testRunId: string): Promise<{
@@ -797,6 +806,9 @@ export class ApiClient {
     tier_stats: Record<number, Record<string, number>>;
     completed_at: string | null;
     admin_notes: string | null;
+    moderator_reviewed_at: string | null;
+    moderator_decision: string | null;
+    moderator_name: string | null;
     sample_responses: Array<{
       question_id: string;
       tier: number;
@@ -809,6 +821,17 @@ export class ApiClient {
     sample_size: number;
   }> {
     return this.request(`/api/moderator/automated-runs/${testRunId}`);
+  }
+
+  async acceptAutomatedTestRun(testRunId: string): Promise<{
+    test_run_id: string;
+    status: string;
+    moderator_decision: string;
+    message: string;
+  }> {
+    return this.request(`/api/moderator/automated-runs/${testRunId}/accept`, {
+      method: 'POST',
+    });
   }
 
   async rejectAutomatedTestRun(testRunId: string): Promise<{
