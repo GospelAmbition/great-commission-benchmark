@@ -394,13 +394,22 @@ async def review_community_submission(
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
     
+    from datetime import datetime
+    
+    # If rejecting and already rejected, return success so client can clear from queue
+    if request.action == "reject" and submission.status == "rejected":
+        return CommunitySubmissionReviewResponse(
+            submission_id=submission.id,
+            status="rejected",
+            message="Submission was already rejected; removed from queue",
+            already_rejected=True,
+        )
+    
     if submission.status not in ["pending", "reviewing"]:
         raise HTTPException(
             status_code=400,
             detail=f"Cannot review submission with status: {submission.status}"
         )
-    
-    from datetime import datetime
     
     if request.action == "approve":
         submission.status = "approved"
@@ -782,10 +791,13 @@ async def reject_automated_test_run(
         )
     
     if run.status == "rejected":
-        raise HTTPException(
-            status_code=400,
-            detail="Test run is already rejected"
-        )
+        # Already rejected (e.g. by another tab or moderator) — return success so client can clear from queue
+        return {
+            "test_run_id": str(run.id),
+            "status": "rejected",
+            "message": "Test run was already rejected; removed from queue",
+            "already_rejected": True,
+        }
     
     # Mark as rejected and as reviewed (removes from queue, adds to history)
     previous_status = run.status

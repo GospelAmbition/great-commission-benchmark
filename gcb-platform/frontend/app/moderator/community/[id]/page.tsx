@@ -105,7 +105,11 @@ export default function CommunitySubmissionReviewPage() {
         action,
         notes.trim() || undefined
       );
-      toast.success(data.message || "Review submitted successfully");
+      toast.success(
+        data.already_rejected
+          ? "Already rejected — removed from queue"
+          : (data.message || "Review submitted successfully")
+      );
       router.push("/moderator");
     } catch (error: any) {
       console.error("Failed to submit review:", error);

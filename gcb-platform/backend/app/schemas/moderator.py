@@ -84,6 +84,7 @@ class CommunitySubmissionReviewResponse(BaseModel):
     submission_id: UUID
     status: str
     message: str
+    already_rejected: Optional[bool] = None
 
 
 class ModeratorModelItem(GCBBaseModel):

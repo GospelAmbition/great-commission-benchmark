@@ -114,7 +114,11 @@ export default function AutomatedRunReviewPage() {
     setSubmitting(true);
     try {
       const data = await apiClient.rejectAutomatedTestRun(testRunId);
-      toast.success(data.message || "Test run rejected");
+      toast.success(
+        data.already_rejected
+          ? "Already rejected — removed from queue"
+          : (data.message || "Test run rejected")
+      );
       router.push("/moderator");
     } catch (error: any) {
       console.error("Failed to reject:", error);

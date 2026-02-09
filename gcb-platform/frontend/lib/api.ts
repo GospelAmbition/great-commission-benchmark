@@ -706,6 +706,7 @@ export class ApiClient {
     submission_id: string;
     status: string;
     message: string;
+    already_rejected?: boolean;
   }> {
     return this.request(`/api/moderator/community/${submissionId}/review`, {
       method: 'POST',
@@ -874,6 +875,7 @@ export class ApiClient {
     test_run_id: string;
     status: string;
     message: string;
+    already_rejected?: boolean;
   }> {
     return this.request(`/api/moderator/automated-runs/${testRunId}/reject`, {
       method: 'POST',
