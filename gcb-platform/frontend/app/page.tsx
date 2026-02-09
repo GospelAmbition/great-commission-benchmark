@@ -110,10 +110,10 @@ export default function Home() {
             <div className="p-2 rounded-lg bg-primary/10">
               <BarChart3 className="h-5 w-5 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground">Leaderboard</h2>
+            <h2 className="text-2xl font-bold text-foreground">Leaderboard Top and Bottom</h2>
           </div>
           <p className="text-muted-foreground">
-            Top and bottom of the benchmark—illustrative range of scores.
+            Top and bottom of the benchmark.
           </p>
         </div>
 
