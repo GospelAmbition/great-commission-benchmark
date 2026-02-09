@@ -126,16 +126,34 @@ export function QuickRankings({ rankings }: QuickRankingsProps) {
   }
 
   const top5 = rankings.slice(0, 5);
-  const bottom5 = rankings.slice(5, 10);
+  const bottom5 = rankings.slice(5);
 
   return (
     <div className="space-y-2">
-      {/* Top 5 */}
+      {/* Label above highest scores */}
+      {top5.length > 0 && (
+        <div className="flex items-center gap-3 py-1">
+          <div className="flex-1 h-px bg-white/[0.08]" />
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">Highest scores</span>
+          <div className="flex-1 h-px bg-white/[0.08]" />
+        </div>
+      )}
+
+      {/* Top 5 highest scores */}
       {top5.map((item, index) => (
         <RankingRow key={item.model_id} item={item} index={index} />
       ))}
 
-      {/* Bottom 5 (ranks 6–10) */}
+      {/* Divider when we also show lowest scores (illustrative range) */}
+      {bottom5.length > 0 && (
+        <div className="flex items-center gap-3 py-1">
+          <div className="flex-1 h-px bg-white/[0.08]" />
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">Lowest scores</span>
+          <div className="flex-1 h-px bg-white/[0.08]" />
+        </div>
+      )}
+
+      {/* Bottom 5 lowest scores */}
       {bottom5.length > 0 &&
         bottom5.map((item, index) => (
           <RankingRow key={item.model_id} item={item} index={5 + index} />

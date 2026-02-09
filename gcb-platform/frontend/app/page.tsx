@@ -17,18 +17,31 @@ export default function Home() {
   useEffect(() => {
     async function loadData() {
       try {
-        // Load top 10 for quick rankings
-        const top10 = await apiClient.getLeaderboard({ limit: 10 });
-        if (top10?.items) {
-          setRankings(
-            top10.items.map((item, index) => ({
-              rank: index + 1,
+        // Load full leaderboard so we can show top 5 and bottom 5 (illustrative range)
+        const full = await apiClient.getLeaderboard({ limit: 100 });
+        if (full?.items && full.items.length > 0) {
+          const total = full.total;
+          const top5 = full.items.slice(0, 5).map((item, index) => ({
+            rank: index + 1,
+            model_id: item.model_id,
+            model_name: item.model_name,
+            provider: item.provider,
+            score: item.overall_score,
+          }));
+          const top5Ids = new Set(top5.map((r) => r.model_id));
+          const bottom5: Array<{ rank: number; model_id: string; model_name: string; provider: string; score: number }> = [];
+          for (let i = Math.max(5, full.items.length - 5); i < full.items.length; i++) {
+            const item = full.items[i];
+            if (top5Ids.has(item.model_id)) continue;
+            bottom5.push({
+              rank: i + 1,
               model_id: item.model_id,
               model_name: item.model_name,
               provider: item.provider,
               score: item.overall_score,
-            }))
-          );
+            });
+          }
+          setRankings([...top5, ...bottom5]);
         }
 
         // Load stats
@@ -100,7 +113,7 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-foreground">Leaderboard</h2>
           </div>
           <p className="text-muted-foreground">
-            Sample of models on the Great Commission Benchmark:
+            Top and bottom of the benchmark—illustrative range of scores.
           </p>
         </div>
 
