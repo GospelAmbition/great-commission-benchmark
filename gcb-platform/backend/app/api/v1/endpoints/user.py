@@ -1,6 +1,6 @@
 """User API endpoints"""
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Query, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -25,14 +25,17 @@ from app.schemas.user import (
 
 router = APIRouter()
 
+# In-memory cache for GET /profile to avoid duplicate work when multiple requests hit.
+# TTL 30s; cleared on profile update. Reduces load when frontend used to fire multiple requests.
+_PROFILE_CACHE: dict[UUID, tuple[UserProfileResponse, float]] = {}
+_PROFILE_CACHE_TTL_SECONDS = 30
 
-@router.get("/profile", response_model=UserProfileResponse)
-async def get_profile(
-    current_user: User = Depends(require_auth),
-    db: Session = Depends(get_db)
-):
-    """Get current user's profile"""
-    # Calculate stats (platform tests removed - only CLI submissions now)
+
+def _build_profile_response(current_user: User, db: Session) -> UserProfileResponse:
+    """Build profile response (shared by get and cache)."""
+    from app.core.auth import has_permission
+    from app.db.models.newsletter_subscriber import NewsletterSubscriber
+
     stats = UserStats(
         total_tests=0,
         completed_tests=0,
@@ -45,19 +48,14 @@ async def get_profile(
             CommunitySubmission.user_id == current_user.id,
             CommunitySubmission.status == "approved"
         ).count(),
-        total_contribution=0  # Platform tests removed - contribution tracking no longer applies
+        total_contribution=0,
     )
-    
-    # Check newsletter subscription status
-    from app.db.models.newsletter_subscriber import NewsletterSubscriber
     newsletter_subscriber = db.query(NewsletterSubscriber).filter(
         NewsletterSubscriber.email == current_user.email,
         NewsletterSubscriber.is_active == True
     ).first()
     is_newsletter_subscribed = newsletter_subscriber is not None
-    
-    from app.core.auth import has_permission
-    
+
     return UserProfileResponse(
         user=UserProfile(
             id=current_user.id,
@@ -65,7 +63,7 @@ async def get_profile(
             email=current_user.email,
             name=current_user.name,
             role=current_user.role,
-            organization=None,  # DEFERRED: Organization field not yet in User model schema
+            organization=None,
             tester_agreement_accepted=current_user.tester_agreement_accepted,
             created_at=current_user.created_at,
             is_newsletter_subscribed=is_newsletter_subscribed,
@@ -79,6 +77,25 @@ async def get_profile(
     )
 
 
+@router.get("/profile", response_model=UserProfileResponse)
+async def get_profile(
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Get current user's profile. Cached briefly to avoid duplicate work."""
+    now = datetime.now(timezone.utc).timestamp()
+    cached = _PROFILE_CACHE.get(current_user.id)
+    if cached:
+        resp, ts = cached
+        if now - ts < _PROFILE_CACHE_TTL_SECONDS:
+            return resp
+        _PROFILE_CACHE.pop(current_user.id, None)
+
+    response = _build_profile_response(current_user, db)
+    _PROFILE_CACHE[current_user.id] = (response, now)
+    return response
+
+
 @router.put("/profile", response_model=UserProfileResponse)
 async def update_profile(
     request: UpdateProfileRequest,
@@ -86,19 +103,21 @@ async def update_profile(
     db: Session = Depends(get_db)
 ):
     """Update user profile"""
+    _PROFILE_CACHE.pop(current_user.id, None)  # Invalidate cache so next GET is fresh
     if request.name is not None:
         current_user.name = request.name
-    
+
     # DEFERRED: Organization field support
     # When the User model is updated with an organization field, enable this:
     # if request.organization is not None:
     #     current_user.organization = request.organization
-    
+
     db.commit()
     db.refresh(current_user)
-    
-    # Return updated profile
-    return await get_profile(current_user, db)
+
+    response = _build_profile_response(current_user, db)
+    _PROFILE_CACHE[current_user.id] = (response, datetime.now(timezone.utc).timestamp())
+    return response
 
 
 @router.get("/submissions", response_model=UserSubmissionsResponse)

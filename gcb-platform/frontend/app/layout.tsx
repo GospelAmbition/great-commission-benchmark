@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { SessionProvider } from "@/components/providers/SessionProvider";
+import { UserProfileProvider } from "@/components/providers/UserProfileProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -114,6 +115,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased font-sans bg-background text-foreground">
         <SessionProvider>
+          <UserProfileProvider>
           {/* Skip to main content link for accessibility */}
           <a
             href="#main-content"
@@ -136,6 +138,7 @@ export default function RootLayout({
               strategy="afterInteractive"
             />
           )}
+          </UserProfileProvider>
         </SessionProvider>
       </body>
     </html>
