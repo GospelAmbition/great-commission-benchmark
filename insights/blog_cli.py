@@ -26,6 +26,8 @@ from typing import Optional
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
+import markdown as md
+
 # Load environment from .env file
 def load_env():
     """Load environment variables from .env file"""
@@ -72,6 +74,18 @@ def extract_excerpt(content: str, max_length: int = 300) -> str:
     return ""
 
 
+def markdown_to_html(content: str) -> str:
+    """Convert markdown content to HTML"""
+    extensions = [
+        "tables",
+        "fenced_code",
+        "sane_lists",
+        "smarty",
+        "attr_list",
+    ]
+    return md.markdown(content, extensions=extensions)
+
+
 def api_request(method: str, endpoint: str, data: Optional[dict] = None) -> dict:
     """Make an API request"""
     if not API_KEY:
@@ -114,14 +128,17 @@ def cmd_create(args):
         print(f"Error: File not found: {args.file}")
         sys.exit(1)
     
-    content = file_path.read_text()
-    
+    raw_content = file_path.read_text()
+
     # Generate slug if not provided
     slug = args.slug or generate_slug(args.title)
-    
-    # Extract excerpt if not provided
-    excerpt = args.excerpt or extract_excerpt(content)
-    
+
+    # Extract excerpt from raw markdown (before conversion)
+    excerpt = args.excerpt or extract_excerpt(raw_content)
+
+    # Convert markdown to HTML
+    content = markdown_to_html(raw_content)
+
     # Build request data
     data = {
         "title": args.title,
@@ -225,7 +242,7 @@ def cmd_update(args):
         if not file_path.exists():
             print(f"Error: File not found: {args.file}")
             sys.exit(1)
-        data["content"] = file_path.read_text()
+        data["content"] = markdown_to_html(file_path.read_text())
     
     if args.title:
         data["title"] = args.title

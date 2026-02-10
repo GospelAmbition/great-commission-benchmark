@@ -56,7 +56,7 @@ Do a deep analysis of the provided benchmark test (json). Look for unique insigh
 *   Keep body prose **light:** short paragraphs (2–4 sentences), more bullets, fewer long blocks. Full readers get the full argument; scanners get structure and bullets they can skim.
 *   Introduce the main technical/strategic concept clearly.
 *   Explore implications for Great Commission work, balancing technical reality with theological conviction—again, favor bullets where listing implications or options.
-*   End with 3–5 strategic next steps or reflection questions (can be bulleted) for ministry leadership teams.
+*   Add the blog category "Model Reviews" (model-reviews)
 
 ---
 

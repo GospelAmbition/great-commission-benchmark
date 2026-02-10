@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kimi K2.5 — Great Commission Benchmark Review</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Grotesk:wght@400;700&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #111;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .header {
+    width: 800px;
+    height: 250px;
+    background: #0e0a18;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    left: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 260px;
+    height: 260px;
+    background: radial-gradient(circle, rgba(126,87,194,0.1) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .logo-zone {
+    position: relative;
+    width: 220px;
+    height: 250px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  .logo-mark {
+    width: 140px;
+    height: 140px;
+    opacity: 0.15;
+  }
+
+  .logo-wordmark {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: lowercase;
+    color: #7E57C2;
+    opacity: 0.6;
+    white-space: nowrap;
+  }
+
+  .divider {
+    width: 1px;
+    height: 140px;
+    background: linear-gradient(to bottom, transparent, rgba(126,87,194,0.25), transparent);
+    flex-shrink: 0;
+    z-index: 2;
+  }
+
+  .content {
+    flex: 1;
+    padding: 0 36px;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    z-index: 2;
+  }
+
+  .version-block {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .version-number {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 86px;
+    font-weight: 700;
+    line-height: 0.85;
+    color: #7E57C2;
+    letter-spacing: -0.04em;
+    position: relative;
+  }
+
+  .version-number::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(126,87,194,0.3), transparent);
+  }
+
+  .model-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(126,87,194,0.5);
+    margin-top: 10px;
+    white-space: nowrap;
+  }
+
+  .text-block {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .benchmark-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15.5px;
+    font-weight: 500;
+    color: #dcd4f0;
+    letter-spacing: 0.01em;
+    line-height: 1.35;
+  }
+
+  .benchmark-title span {
+    color: rgba(126,87,194,0.85);
+  }
+
+  .subtitle {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+  }
+
+  .score-badge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 5px 14px;
+    background: rgba(126,87,194,0.08);
+    border: 1px solid rgba(126,87,194,0.18);
+    border-radius: 4px;
+    align-self: flex-start;
+  }
+
+  .score-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #7E57C2;
+    line-height: 1;
+  }
+
+  .score-total {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    color: rgba(126,87,194,0.45);
+    font-weight: 400;
+  }
+
+  .score-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(126,87,194,0.35);
+    margin-left: 8px;
+  }
+
+  .bottom-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(to right, #7E57C2, rgba(126,87,194,0.15) 60%, transparent);
+    z-index: 3;
+  }
+
+  .editorial-tag {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 8.5px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.18);
+    z-index: 3;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+
+  <div class="logo-zone">
+    <svg class="logo-mark" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#7E57C2"/>
+          <stop offset="100%" stop-color="#5e4191"/>
+        </linearGradient>
+      </defs>
+      
+      <g fill="none" stroke="url(#grad)" stroke-width="5" stroke-linecap="round">
+        <!-- Crescent moon for Moonshot AI — slightly different -->
+        <path d="M 128,58 A 55,55 0 1,1 128,142 A 40,40 0 1,0 128,58" fill="url(#grad)" stroke="none" opacity="0.25"/>
+        <path d="M 128,58 A 55,55 0 1,1 128,142 A 40,40 0 1,0 128,58" fill="none"/>
+        <circle cx="150" cy="68" r="3.5" fill="url(#grad)" stroke="none" opacity="0.5"/>
+        <circle cx="160" cy="88" r="2" fill="url(#grad)" stroke="none" opacity="0.35"/>
+        <circle cx="152" cy="52" r="1.5" fill="url(#grad)" stroke="none" opacity="0.25"/>
+      </g>
+    </svg>
+    <span class="logo-wordmark">moonshot ai</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="content">
+    <div class="version-block">
+      <div class="version-number">K2.5</div>
+      <div class="model-label">Kimi</div>
+    </div>
+
+    <div class="text-block">
+      <div class="benchmark-title"><span>Great Commission</span> Benchmark Review</div>
+      <div class="subtitle">Strategic AI Assessment for Ministry Leaders</div>
+      <div class="score-badge">
+        <span class="score-value">56.0</span>
+        <span class="score-total">/ 100</span>
+        <span class="score-label">overall score</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-line"></div>
+  <div class="editorial-tag">Editorial Review</div>
+
+</div>
+
+</body>
+</html>

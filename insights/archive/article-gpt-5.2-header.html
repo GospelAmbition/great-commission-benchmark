@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPT-5.2 — Great Commission Benchmark Review</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Mono:wght@400;700&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #111;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .header {
+    width: 800px;
+    height: 250px;
+    background: #0d0d0d;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Subtle grid pattern background — evokes OpenAI's minimal tech aesthetic */
+  .header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Soft green glow — OpenAI's signature color */
+  .header::after {
+    content: '';
+    position: absolute;
+    left: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 260px;
+    height: 260px;
+    background: radial-gradient(circle, rgba(16,163,127,0.1) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* OpenAI hexagonal logo zone */
+  .logo-zone {
+    position: relative;
+    width: 220px;
+    height: 250px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  .openai-mark {
+    width: 140px;
+    height: 140px;
+    opacity: 0.12;
+  }
+
+  .logo-wordmark {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: lowercase;
+    color: #10a37f;
+    opacity: 0.6;
+  }
+
+  /* Vertical divider */
+  .divider {
+    width: 1px;
+    height: 140px;
+    background: linear-gradient(to bottom, transparent, rgba(16,163,127,0.25), transparent);
+    flex-shrink: 0;
+    z-index: 2;
+  }
+
+  /* Main content */
+  .content {
+    flex: 1;
+    padding: 0 36px;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    z-index: 2;
+  }
+
+  /* The big 5.2 */
+  .version-block {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .version-number {
+    font-family: 'Space Mono', monospace;
+    font-size: 100px;
+    font-weight: 700;
+    line-height: 0.85;
+    color: #10a37f;
+    letter-spacing: -0.04em;
+    position: relative;
+  }
+
+  .version-number::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(16,163,127,0.3), transparent);
+  }
+
+  .model-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(16,163,127,0.5);
+    margin-top: 10px;
+  }
+
+  /* Text block */
+  .text-block {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .benchmark-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15.5px;
+    font-weight: 500;
+    color: #e0e0e0;
+    letter-spacing: 0.01em;
+    line-height: 1.35;
+  }
+
+  .benchmark-title span {
+    color: rgba(16,163,127,0.85);
+  }
+
+  .subtitle {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+  }
+
+  /* Score badge */
+  .score-badge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 5px 14px;
+    background: rgba(16,163,127,0.08);
+    border: 1px solid rgba(16,163,127,0.18);
+    border-radius: 4px;
+    align-self: flex-start;
+  }
+
+  .score-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: #10a37f;
+    line-height: 1;
+  }
+
+  .score-total {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    color: rgba(16,163,127,0.45);
+    font-weight: 400;
+  }
+
+  .score-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(16,163,127,0.35);
+    margin-left: 8px;
+  }
+
+  /* Bottom accent */
+  .bottom-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(to right, #10a37f, rgba(16,163,127,0.15) 60%, transparent);
+    z-index: 3;
+  }
+
+  /* Editorial tag */
+  .editorial-tag {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 8.5px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.18);
+    z-index: 3;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+
+  <!-- OpenAI logo zone -->
+  <div class="logo-zone">
+    <!-- OpenAI hexagonal knot mark — simplified SVG recreation -->
+    <svg class="openai-mark" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="oaiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#10a37f"/>
+          <stop offset="100%" stop-color="#0d8c6d"/>
+        </linearGradient>
+      </defs>
+      <g fill="none" stroke="url(#oaiGrad)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Outer hexagon -->
+        <polygon points="100,18 172,56 172,132 100,170 28,132 28,56"/>
+        <!-- Inner connecting lines — evokes the OpenAI knot -->
+        <line x1="100" y1="18" x2="100" y2="76"/>
+        <line x1="172" y1="56" x2="120" y2="86"/>
+        <line x1="172" y1="132" x2="120" y2="102"/>
+        <line x1="100" y1="170" x2="100" y2="112"/>
+        <line x1="28" y1="132" x2="80" y2="102"/>
+        <line x1="28" y1="56" x2="80" y2="86"/>
+        <!-- Inner hexagon -->
+        <polygon points="100,76 120,86 120,102 100,112 80,102 80,86"/>
+      </g>
+    </svg>
+    <span class="logo-wordmark">openai</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Main content -->
+  <div class="content">
+    <div class="version-block">
+      <div class="version-number">5.2</div>
+      <div class="model-label">GPT</div>
+    </div>
+
+    <div class="text-block">
+      <div class="benchmark-title"><span>Great Commission</span> Benchmark Review</div>
+      <div class="subtitle">Strategic AI Assessment for Ministry Leaders</div>
+      <div class="score-badge">
+        <span class="score-value">53.7</span>
+        <span class="score-total">/ 100</span>
+        <span class="score-label">overall score</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-line"></div>
+  <div class="editorial-tag">Editorial Review</div>
+
+</div>
+
+</body>
+</html>
