@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Opus 4.6 — Great Commission Benchmark Review</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Instrument+Serif:ital@0;1&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #1a1a1a;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .header {
+    width: 800px;
+    height: 250px;
+    background: #191716;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Subtle grain texture overlay */
+  .header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Warm glow behind the logo area */
+  .header::after {
+    content: '';
+    position: absolute;
+    left: -40px;
+    top: -60px;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(212,165,116,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Anthropic sunburst logo mark */
+  .logo-zone {
+    position: relative;
+    width: 220px;
+    height: 250px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  .sunburst {
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    opacity: 0.12;
+  }
+
+  .logo-wordmark {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    text-transform: lowercase;
+    color: #D4A574;
+    opacity: 0.7;
+  }
+
+  /* Vertical divider */
+  .divider {
+    width: 1px;
+    height: 140px;
+    background: linear-gradient(to bottom, transparent, rgba(212,165,116,0.25), transparent);
+    flex-shrink: 0;
+    z-index: 2;
+  }
+
+  /* Main content area */
+  .content {
+    flex: 1;
+    padding: 0 36px;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    z-index: 2;
+  }
+
+  /* The big 4.6 */
+  .version-block {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .version-number {
+    font-family: 'Instrument Serif', serif;
+    font-size: 108px;
+    font-weight: 400;
+    line-height: 0.85;
+    color: #D4A574;
+    letter-spacing: -0.03em;
+    position: relative;
+  }
+
+  .version-number::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(212,165,116,0.3), transparent);
+  }
+
+  .claude-opus-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(212,165,116,0.55);
+    margin-top: 8px;
+  }
+
+  /* Text block */
+  .text-block {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .benchmark-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15.5px;
+    font-weight: 500;
+    color: #e8e0d8;
+    letter-spacing: 0.01em;
+    line-height: 1.35;
+  }
+
+  .benchmark-title span {
+    color: rgba(212,165,116,0.85);
+  }
+
+  .subtitle {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(232,224,216,0.35);
+  }
+
+  /* Score badge */
+  .score-badge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 5px 14px;
+    background: rgba(212,165,116,0.08);
+    border: 1px solid rgba(212,165,116,0.15);
+    border-radius: 4px;
+    align-self: flex-start;
+  }
+
+  .score-value {
+    font-family: 'Instrument Serif', serif;
+    font-size: 20px;
+    color: #D4A574;
+    line-height: 1;
+  }
+
+  .score-total {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    color: rgba(212,165,116,0.45);
+    font-weight: 400;
+  }
+
+  .score-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(212,165,116,0.35);
+    margin-left: 8px;
+  }
+
+  /* Bottom accent line */
+  .bottom-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(to right, #D4A574, rgba(212,165,116,0.15) 60%, transparent);
+    z-index: 3;
+  }
+
+  /* Top-right editorial tag */
+  .editorial-tag {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 8.5px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(232,224,216,0.2);
+    z-index: 3;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+
+  <!-- Anthropic logo zone -->
+  <div class="logo-zone">
+    <svg class="sunburst" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <!-- Anthropic-inspired starburst / "A" mark -->
+      <defs>
+        <linearGradient id="burstGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#D4A574"/>
+          <stop offset="100%" stop-color="#c49060"/>
+        </linearGradient>
+      </defs>
+      <g transform="translate(100,100)">
+        <!-- Central radiating spikes — evokes the Anthropic starburst -->
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(0)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(25.7)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(51.4)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(77.1)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(102.8)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(128.5)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(154.2)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(180)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(205.7)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(231.4)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(257.1)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(282.8)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(308.5)"/>
+        <polygon points="0,-90 6,-28 0,-28" fill="url(#burstGrad)" transform="rotate(334.2)"/>
+      </g>
+    </svg>
+    <span class="logo-wordmark">anthropic</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Main content -->
+  <div class="content">
+
+    <!-- Big 4.6 -->
+    <div class="version-block">
+      <div class="version-number">4.6</div>
+      <div class="claude-opus-label">Claude Opus</div>
+    </div>
+
+    <!-- Text & score -->
+    <div class="text-block">
+      <div class="benchmark-title"><span>Great Commission</span> Benchmark Review</div>
+      <div class="subtitle">Strategic AI Assessment for Ministry Leaders</div>
+      <div class="score-badge">
+        <span class="score-value">48.0</span>
+        <span class="score-total">/ 100</span>
+        <span class="score-label">overall score</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottom-line"></div>
+  <div class="editorial-tag">Editorial Review</div>
+
+</div>
+
+</body>
+</html>

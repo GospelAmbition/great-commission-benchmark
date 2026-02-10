@@ -43,6 +43,7 @@ This article is part of a series that helps the Church think about Great Commiss
 **Task:**
 Write a clear, strategic blog article on this topic in 1,200–1,800 words.
 *   Start with a brief, professional context or a real-world ministry challenge that sets the stage.
+*   When covering a test do not reveal test questions, just refer to concepts and guardrails, but protect the actual test questions, while discussing the responses and judgments.
 *   Introduce the main technical/strategic concept clearly.
 *   Explore the implications of this concept for Great Commission work, balancing technical reality with theological conviction.
 *   End with 3–5 strategic next steps or reflection questions designed for a ministry leadership team.

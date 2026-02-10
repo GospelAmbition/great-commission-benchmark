@@ -15,10 +15,12 @@ Usage:
 """
 
 import argparse
+import mimetypes
 import os
 import re
 import sys
 import json
+import uuid
 from pathlib import Path
 from typing import Optional
 from urllib.request import Request, urlopen
@@ -264,16 +266,92 @@ def cmd_delete(args):
 def cmd_categories(args):
     """List all categories"""
     result = api_request("GET", "/categories")
-    
+
     print(f"Found {result['total']} categories:")
     print()
-    
+
     for cat in result["items"]:
         print(f"  • {cat['name']} ({cat['slug']})")
         print(f"    ID: {cat['id']}")
         if cat.get("description"):
             print(f"    {cat['description']}")
         print()
+
+
+def api_upload(file_path: Path) -> dict:
+    """Upload a file via multipart/form-data"""
+    if not API_KEY:
+        print("Error: GCB_API_KEY not set. Add it to insights/.env file.")
+        print("Get your API key from: https://greatcommissionbenchmark.ai/dashboard/settings")
+        sys.exit(1)
+
+    url = f"{API_URL}/runner/blog/upload-image"
+    boundary = uuid.uuid4().hex
+
+    content_type = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
+    file_data = file_path.read_bytes()
+    filename = file_path.name
+
+    # Build multipart body
+    lines = []
+    lines.append(f"--{boundary}".encode())
+    lines.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"'.encode())
+    lines.append(f"Content-Type: {content_type}".encode())
+    lines.append(b"")
+    lines.append(file_data)
+    lines.append(f"--{boundary}--".encode())
+    lines.append(b"")
+    body = b"\r\n".join(lines)
+
+    headers = {
+        "X-API-Key": API_KEY,
+        "Content-Type": f"multipart/form-data; boundary={boundary}",
+        "Content-Length": str(len(body)),
+    }
+
+    req = Request(url, data=body, headers=headers, method="POST")
+
+    try:
+        with urlopen(req) as response:
+            return json.loads(response.read().decode())
+    except HTTPError as e:
+        error_body = e.read().decode()
+        try:
+            error_data = json.loads(error_body)
+            detail = error_data.get("detail", error_body)
+        except Exception:
+            detail = error_body
+        print(f"Error {e.code}: {detail}")
+        sys.exit(1)
+    except URLError as e:
+        print(f"Connection error: {e.reason}")
+        sys.exit(1)
+
+
+def cmd_upload_image(args):
+    """Upload an image and print its URL"""
+    file_path = Path(args.file)
+    if not file_path.exists():
+        print(f"Error: File not found: {args.file}")
+        sys.exit(1)
+
+    # Validate file type
+    ext = file_path.suffix.lower()
+    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+        print(f"Error: Unsupported image type '{ext}'. Use JPG, PNG, GIF, or WebP.")
+        sys.exit(1)
+
+    size_mb = file_path.stat().st_size / (1024 * 1024)
+    if size_mb > 10:
+        print(f"Error: File too large ({size_mb:.1f}MB). Maximum is 10MB.")
+        sys.exit(1)
+
+    result = api_upload(file_path)
+
+    print(f"Uploaded: {result['filename']}")
+    print(f"  URL: {result['url']}")
+    print(f"  Size: {result['size']} bytes")
+    print(f"  Type: {result['content_type']}")
 
 
 def main():
@@ -354,6 +432,11 @@ Examples:
     # Categories command
     categories_parser = subparsers.add_parser("categories", help="List all categories")
     categories_parser.set_defaults(func=cmd_categories)
+
+    # Upload image command
+    upload_parser = subparsers.add_parser("upload-image", help="Upload an image and get its URL")
+    upload_parser.add_argument("--file", "-f", required=True, help="Image file to upload (JPG, PNG, GIF, WebP)")
+    upload_parser.set_defaults(func=cmd_upload_image)
     
     args = parser.parse_args()
     

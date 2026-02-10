@@ -1,6 +1,6 @@
 """Runner Blog API endpoints - API key authenticated blog management for CLI/scripts"""
 from typing import Optional, Tuple
-from fastapi import APIRouter, Depends, HTTPException, Query, Header
+from fastapi import APIRouter, Depends, HTTPException, Query, Header, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from uuid import UUID
@@ -24,7 +24,9 @@ from app.schemas.blog import (
     BlogPostListItem,
     BlogPostListResponse,
     BlogPostAuthor,
+    ImageUploadResponse,
 )
+from app.services.storage import upload_image
 
 router = APIRouter()
 
@@ -500,3 +502,20 @@ async def generate_slug_endpoint(
         "slug": slug,
         "is_unique": existing is None
     }
+
+
+@router.post("/upload-image", response_model=ImageUploadResponse)
+async def upload_blog_image(
+    file: UploadFile = File(...),
+    auth: Tuple[UserAPIKey, User] = Depends(require_blog_api_key),
+    _rate_limit: bool = Depends(blog_rate_limit)
+):
+    """
+    Upload an image for blog posts.
+
+    Returns a URL that can be used as the featured_image_url when creating or updating posts.
+    Max file size: 10MB. Allowed types: JPEG, PNG, GIF, WebP.
+    Requires API key with blog management permission.
+    """
+    result = await upload_image(file, folder="blog")
+    return ImageUploadResponse(**result)
