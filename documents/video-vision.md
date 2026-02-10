@@ -47,3 +47,7 @@
 - **Assets:** Can use existing GCB branding (logo, colors). Tier visuals can match About page methodology section.
 - **Accessibility:** Provide captions and, if possible, a transcript link next to the video on the About page.
 - **Placement in UI:** Render in the methodology grid’s third column (e.g. `lg:col-span-1`) so the video sits beside “Our Mission” on large screens and stacks on small screens.
+
+
+
+

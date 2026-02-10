@@ -1246,11 +1246,14 @@ async def delete_test_run(
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    """Delete a test run and all its results (cascade)"""
+    """Delete a test run and all its results. Recalculates leaderboard stats for the affected model."""
     test_run = db.query(TestRun).filter(TestRun.id == test_run_id).first()
     
     if not test_run:
         raise HTTPException(status_code=404, detail="Test run not found")
+    
+    model_id = test_run.model_id
+    question_set_id = test_run.question_set_id
     
     # Delete all results for this test run first
     deleted_results = db.query(Result).filter(
@@ -1261,10 +1264,23 @@ async def delete_test_run(
     db.delete(test_run)
     db.commit()
     
+    # Recalculate model_version_stats so leaderboard reflects the removal
+    try:
+        from app.services.aggregation import AggregationService
+        AggregationService.recalculate_model_stats(db, model_id, question_set_id)
+    except Exception as e:
+        logger.warning("Stats recalculation after test run delete failed: %s", e)
+    
+    try:
+        from app.core.cache import invalidate_cache
+        await invalidate_cache("leaderboard")
+    except Exception as e:
+        logger.warning("Leaderboard cache invalidation after test run delete failed: %s", e)
+    
     return {
-        "message": f"Test run deleted",
+        "message": "Test run deleted",
         "test_run_id": str(test_run_id),
-        "deleted_results": deleted_results
+        "deleted_results": deleted_results,
     }
 
 

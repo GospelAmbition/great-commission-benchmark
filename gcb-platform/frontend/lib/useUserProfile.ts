@@ -14,28 +14,51 @@ export function useUserProfile() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchProfile() {
-      if (status === "loading") return;
-      
-      if (!session?.user) {
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
+    if (status === "loading") return;
 
+    if (!session?.user) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+
+    // Defer profile fetch so priority loads (e.g. leaderboard, filter-options) can run first.
+    // Profile is non-critical for initial paint; load when idle or after a short delay.
+    const timeoutMs = 400;
+    let cancelled = false;
+
+    const fetchProfile = async () => {
+      if (cancelled) return;
       try {
         const data = await apiClient.getUserProfile();
+        if (cancelled) return;
         setProfile(data);
         setError(null);
       } catch (err) {
+        if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to fetch profile");
         setProfile(null);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    }
+    };
 
-    fetchProfile();
+    const schedule = typeof requestIdleCallback !== "undefined"
+      ? (fn: () => void) => requestIdleCallback(fn, { timeout: timeoutMs })
+      : (fn: () => void) => setTimeout(fn, timeoutMs);
+
+    const id = schedule(() => {
+      fetchProfile();
+    });
+
+    return () => {
+      cancelled = true;
+      if (typeof requestIdleCallback !== "undefined" && typeof id === "number") {
+        cancelIdleCallback(id);
+      } else if (typeof id === "number") {
+        clearTimeout(id);
+      }
+    };
   }, [session, status]);
 
   // Permission-based checks (preferred)
