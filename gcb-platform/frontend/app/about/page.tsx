@@ -282,14 +282,13 @@ export default function AboutPage() {
                 </div>
               </div>
 
-              {/* Video Placeholder - 1/3 */}
+              {/* Pullout quote - 1/3 */}
               <div className="lg:col-span-1">
                 <div className="sticky top-6">
                   <div className="bg-white/[0.03] border border-white/[0.08] rounded-lg p-4 space-y-4">
-                    <h3 className="text-lg font-semibold text-foreground">Video</h3>
-                    <div className="aspect-video bg-white/[0.02] border border-white/[0.06] rounded-lg flex items-center justify-center">
-                      <p className="text-sm text-muted-foreground">Video placeholder</p>
-                    </div>
+                    <blockquote className="text-xl md:text-2xl font-medium text-foreground leading-snug italic border-l-4 border-primary/50 pl-4">
+                      We&apos;re not measuring whether AI can do Bible study. We&apos;re measuring whether it can support the work of making disciples.
+                    </blockquote>
                   </div>
                 </div>
               </div>
@@ -877,14 +876,13 @@ export default function AboutPage() {
                   </div>
                   </div>
 
-                  {/* Video Placeholder - 1/3 */}
+                  {/* Pullout quote - 1/3 */}
                   <div className="lg:col-span-1">
                     <div className="sticky top-6">
                       <div className="bg-white/[0.03] border border-white/[0.08] rounded-lg p-4 space-y-4">
-                        <h3 className="text-lg font-semibold text-foreground">Video</h3>
-                        <div className="aspect-video bg-white/[0.02] border border-white/[0.06] rounded-lg flex items-center justify-center">
-                          <p className="text-sm text-muted-foreground">Video placeholder</p>
-                        </div>
+                        <blockquote className="text-xl md:text-2xl font-medium text-foreground leading-snug italic border-l-4 border-primary/50 pl-4">
+                          The Bible is not neutral on these topics, but the guardrails demand it.
+                        </blockquote>
                       </div>
                     </div>
                   </div>
