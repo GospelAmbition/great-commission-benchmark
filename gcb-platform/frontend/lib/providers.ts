@@ -38,6 +38,7 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
 
   // Infrastructure providers (with icons)
   groq: { id: "groq", displayName: "Groq", simpleIconSlug: "groq" },
+  ibm: { id: "ibm", displayName: "IBM", simpleIconSlug: "ibm" },
 
   // Providers without Simple Icons (fallback to letter)
   mistral: { id: "mistral", displayName: "Mistral", simpleIconSlug: null }, // Icon not available in Simple Icons
@@ -54,6 +55,8 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
   moonshot: { id: "moonshot", displayName: "Moonshot", simpleIconSlug: null },
   minimax: { id: "minimax", displayName: "MiniMax", simpleIconSlug: null },
   "01-ai": { id: "01-ai", displayName: "01.AI", simpleIconSlug: null },
+  essentialai: { id: "essentialai", displayName: "Essential AI", simpleIconSlug: null },
+  "z-ai": { id: "z-ai", displayName: "Z-AI", simpleIconSlug: null },
 };
 
 /**
@@ -70,8 +73,15 @@ export const PROVIDER_ALIASES: Record<string, string> = {
   // Hugging Face variations
   "hugging-face": "huggingface",
 
-  // xAI variations
+  // xAI variations (OpenRouter uses "x-ai" for xAI models)
+  "x-ai": "xai",
   x: "xai",
+
+  // Moonshot AI (OpenRouter uses "moonshotai")
+  moonshotai: "moonshot",
+
+  // IBM Granite
+  "ibm-granite": "ibm",
 };
 
 /**
