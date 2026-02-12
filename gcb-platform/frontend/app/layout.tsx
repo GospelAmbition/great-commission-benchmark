@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { UmamiAnalytics } from "@/components/analytics/UmamiAnalytics";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { SITE_CONFIG, getBaseUrl, getDefaultOpenGraph, getDefaultTwitterCard } from "@/lib/seo";
 import { buildOrganizationSchema, buildWebsiteSchema, JsonLdScript } from "@/lib/structured-data";
 import "./globals.css";
@@ -112,6 +113,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="//fonts.gstatic.com" />
         {/* Structured Data - Organization and Website schemas */}
         <JsonLdScript data={[organizationSchema, websiteSchema]} />
+        <GoogleAnalytics />
       </head>
       <body className="antialiased font-sans bg-background text-foreground">
         <SessionProvider>
