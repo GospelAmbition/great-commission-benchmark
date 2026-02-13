@@ -1,6 +1,6 @@
 """Newsletter service with MailerLite integration"""
 import httpx
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Tuple
 from app.core.config import settings
 
 
@@ -204,3 +204,59 @@ class NewsletterService:
         except Exception as e:
             print(f"MailerLite reactivate failed for {email}: {str(e)}")
             return None
+
+    @staticmethod
+    async def list_mailerlite_subscribers(
+        cursor: Optional[str] = None,
+        limit: int = 50
+    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        """
+        List subscribers from MailerLite with cursor-based pagination.
+        
+        If MAILERLITE_GROUP_ID is set, lists subscribers in that group.
+        Otherwise lists all subscribers.
+        
+        Args:
+            cursor: Pagination cursor from previous response
+            limit: Number of subscribers per page (max 50)
+        
+        Returns:
+            Tuple of (subscriber list, next_cursor or None)
+        """
+        if not NewsletterService.is_configured():
+            return [], None
+        
+        try:
+            params: Dict[str, Any] = {"limit": min(limit, 50)}
+            if cursor:
+                params["cursor"] = cursor
+            
+            # Use group-specific endpoint if group ID is configured
+            if settings.MAILERLITE_GROUP_ID:
+                url = f"{NewsletterService.MAILERLITE_API_BASE}/groups/{settings.MAILERLITE_GROUP_ID}/subscribers"
+            else:
+                url = f"{NewsletterService.MAILERLITE_API_BASE}/subscribers"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    url,
+                    headers=NewsletterService._get_headers(),
+                    params=params,
+                    timeout=15.0
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    subscribers = data.get("data", [])
+                    next_cursor = data.get("meta", {}).get("next_cursor")
+                    return subscribers, next_cursor
+                else:
+                    print(f"MailerLite list subscribers error: {response.status_code} - {response.text}")
+                    return [], None
+                    
+        except httpx.TimeoutException:
+            print("MailerLite API timeout listing subscribers")
+            return [], None
+        except Exception as e:
+            print(f"MailerLite list subscribers failed: {str(e)}")
+            return [], None

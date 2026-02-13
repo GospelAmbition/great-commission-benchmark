@@ -55,6 +55,8 @@ export default function AdminDashboardPage() {
         moderation_queue_size: data.moderation?.pending_reviews || 0,
         total_api_keys: data.api_keys?.total || 0,
         active_api_keys: data.api_keys?.active || 0,
+        newsletter_subscribers: data.newsletter?.total || 0,
+        newsletter_active: data.newsletter?.active || 0,
       });
     } catch (error) {
       console.error("Failed to load admin dashboard:", error);
@@ -66,6 +68,8 @@ export default function AdminDashboardPage() {
         moderation_queue_size: 0,
         total_api_keys: 0,
         active_api_keys: 0,
+        newsletter_subscribers: 0,
+        newsletter_active: 0,
       });
     } finally {
       setLoading(false);
@@ -133,8 +137,8 @@ export default function AdminDashboardPage() {
     return (
       <div className="container py-8">
         <Skeleton className="h-12 w-64 mb-8" />
-        <div className="grid gap-6 md:grid-cols-5">
-          {[1, 2, 3, 4, 5].map((i) => (
+        <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <Skeleton key={i} className="h-32" />
           ))}
         </div>
@@ -161,7 +165,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid gap-6 md:grid-cols-5 mb-8">
+      <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-6 mb-8">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -214,6 +218,19 @@ export default function AdminDashboardPage() {
             <div className="text-3xl font-bold">{stats?.active_api_keys || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
               {stats?.total_api_keys || 0} total ({stats?.total_api_keys - stats?.active_api_keys || 0} revoked)
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Newsletter Subscribers
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.newsletter_subscribers || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats?.newsletter_active || 0} active
             </p>
           </CardContent>
         </Card>
@@ -309,6 +326,20 @@ export default function AdminDashboardPage() {
           <CardContent>
             <Button asChild variant="outline">
               <Link href="/admin/contacts">View Submissions</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Newsletter Management
+            </CardTitle>
+            <CardDescription>View and manage newsletter subscribers and MailerLite sync status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/admin/newsletter">Manage Newsletter</Link>
             </Button>
           </CardContent>
         </Card>

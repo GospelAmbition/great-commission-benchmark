@@ -2,6 +2,7 @@
 from typing import Optional, List, Dict
 from pydantic import BaseModel
 from uuid import UUID
+from datetime import datetime
 
 
 class UserListItem(BaseModel):
@@ -149,6 +150,7 @@ class AdminStatsResponse(BaseModel):
     revenue: Dict
     moderation: Dict
     api_keys: Dict
+    newsletter: Optional[Dict] = None
 
 
 class CategoryDifficultyBreakdown(BaseModel):
@@ -354,3 +356,64 @@ class StripeRefundsResponse(BaseModel):
     """Response containing list of refunds"""
     data: List[StripeRefundItem]
     has_more: bool
+
+
+# =============================================================================
+# Newsletter Admin Schemas
+# =============================================================================
+
+class NewsletterSubscriberListItem(BaseModel):
+    """Newsletter subscriber list item for admin view"""
+    id: UUID
+    email: str
+    is_active: bool
+    mailerlite_subscriber_id: Optional[str] = None
+    subscribed_at: Optional[datetime] = None
+    unsubscribed_at: Optional[datetime] = None
+
+
+class NewsletterSubscriberListResponse(BaseModel):
+    """Newsletter subscriber list response"""
+    items: List[NewsletterSubscriberListItem]
+    total: int
+
+
+class NewsletterSubscriberDetail(BaseModel):
+    """Detailed newsletter subscriber view with optional MailerLite data"""
+    id: UUID
+    email: str
+    is_active: bool
+    mailerlite_subscriber_id: Optional[str] = None
+    subscribed_at: Optional[datetime] = None
+    unsubscribed_at: Optional[datetime] = None
+    # Live MailerLite data (populated when MailerLite is configured)
+    mailerlite_status: Optional[str] = None
+    mailerlite_subscribed_at: Optional[str] = None
+    mailerlite_opens_count: Optional[int] = None
+    mailerlite_clicks_count: Optional[int] = None
+
+
+class NewsletterStatsResponse(BaseModel):
+    """Newsletter stats for admin dashboard"""
+    total: int
+    active: int
+    unsubscribed: int
+    synced_to_mailerlite: int
+    mailerlite_configured: bool
+
+
+class MailerLiteSubscriberItem(BaseModel):
+    """A single subscriber from MailerLite API"""
+    id: str
+    email: str
+    status: str
+    subscribed_at: Optional[str] = None
+    opens_count: Optional[int] = None
+    clicks_count: Optional[int] = None
+
+
+class MailerLiteSubscriberListResponse(BaseModel):
+    """Response containing subscribers fetched from MailerLite"""
+    items: List[MailerLiteSubscriberItem]
+    next_cursor: Optional[str] = None
+    has_more: bool = False

@@ -61,6 +61,13 @@ from app.schemas.admin import (
     StripePaymentIntentsResponse,
     StripeChargesResponse,
     StripeRefundsResponse,
+    # Newsletter admin schemas
+    NewsletterSubscriberListItem,
+    NewsletterSubscriberListResponse,
+    NewsletterSubscriberDetail,
+    NewsletterStatsResponse,
+    MailerLiteSubscriberItem,
+    MailerLiteSubscriberListResponse,
 )
 from app.schemas.sponsorship import (
     AdminSponsorshipItem,
@@ -1211,6 +1218,11 @@ async def get_admin_stats(
     total_api_keys = db.query(UserAPIKey).count()
     active_api_keys = db.query(UserAPIKey).filter(UserAPIKey.is_active == True).count()
     
+    # Newsletter stats
+    from app.db.models.newsletter_subscriber import NewsletterSubscriber as NS
+    total_newsletter = db.query(NS).count()
+    active_newsletter = db.query(NS).filter(NS.is_active == True).count()
+    
     return AdminStatsResponse(
         users={
             "total": total_users,
@@ -1232,6 +1244,10 @@ async def get_admin_stats(
         api_keys={
             "total": total_api_keys,
             "active": active_api_keys
+        },
+        newsletter={
+            "total": total_newsletter,
+            "active": active_newsletter,
         }
     )
 
@@ -2222,3 +2238,261 @@ async def update_notification_setting(
         is_enabled=setting.is_enabled,
         message=f"Notification setting for {notification_type} updated successfully"
     )
+
+
+# =============================================================================
+# Newsletter Admin Endpoints
+# =============================================================================
+
+from app.db.models.newsletter_subscriber import NewsletterSubscriber
+from app.services.newsletter import NewsletterService
+
+
+@router.get("/newsletter/stats", response_model=NewsletterStatsResponse)
+async def get_newsletter_stats(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get newsletter subscriber statistics (admin only)"""
+    total = db.query(NewsletterSubscriber).count()
+    active = db.query(NewsletterSubscriber).filter(
+        NewsletterSubscriber.is_active == True
+    ).count()
+    unsubscribed = db.query(NewsletterSubscriber).filter(
+        NewsletterSubscriber.is_active == False
+    ).count()
+    synced = db.query(NewsletterSubscriber).filter(
+        NewsletterSubscriber.mailerlite_subscriber_id.isnot(None)
+    ).count()
+
+    return NewsletterStatsResponse(
+        total=total,
+        active=active,
+        unsubscribed=unsubscribed,
+        synced_to_mailerlite=synced,
+        mailerlite_configured=NewsletterService.is_configured()
+    )
+
+
+@router.get("/newsletter/subscribers", response_model=NewsletterSubscriberListResponse)
+async def list_newsletter_subscribers(
+    status: Optional[str] = Query(None, description="Filter by status: active, unsubscribed"),
+    search: Optional[str] = Query(None, description="Search by email"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List newsletter subscribers from platform database (admin only)"""
+    query = db.query(NewsletterSubscriber)
+
+    if status == "active":
+        query = query.filter(NewsletterSubscriber.is_active == True)
+    elif status == "unsubscribed":
+        query = query.filter(NewsletterSubscriber.is_active == False)
+
+    if search:
+        query = query.filter(NewsletterSubscriber.email.ilike(f"%{search}%"))
+
+    total = query.count()
+    subscribers = query.order_by(desc(NewsletterSubscriber.subscribed_at)).offset(offset).limit(limit).all()
+
+    items = [
+        NewsletterSubscriberListItem(
+            id=sub.id,
+            email=sub.email,
+            is_active=sub.is_active,
+            mailerlite_subscriber_id=sub.mailerlite_subscriber_id,
+            subscribed_at=sub.subscribed_at,
+            unsubscribed_at=sub.unsubscribed_at,
+        )
+        for sub in subscribers
+    ]
+
+    return NewsletterSubscriberListResponse(items=items, total=total)
+
+
+@router.get("/newsletter/subscribers/export")
+async def export_newsletter_subscribers(
+    status: Optional[str] = Query(None, description="Filter by status: active, unsubscribed"),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Export newsletter subscribers as CSV (admin only)"""
+    import csv
+    import io
+    from fastapi.responses import StreamingResponse
+
+    query = db.query(NewsletterSubscriber)
+
+    if status == "active":
+        query = query.filter(NewsletterSubscriber.is_active == True)
+    elif status == "unsubscribed":
+        query = query.filter(NewsletterSubscriber.is_active == False)
+
+    subscribers = query.order_by(desc(NewsletterSubscriber.subscribed_at)).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["email", "status", "subscribed_at", "unsubscribed_at", "mailerlite_subscriber_id"])
+
+    for sub in subscribers:
+        writer.writerow([
+            sub.email,
+            "active" if sub.is_active else "unsubscribed",
+            sub.subscribed_at.isoformat() if sub.subscribed_at else "",
+            sub.unsubscribed_at.isoformat() if sub.unsubscribed_at else "",
+            sub.mailerlite_subscriber_id or "",
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="newsletter_subscribers.csv"'},
+    )
+
+
+@router.get("/newsletter/subscribers/{subscriber_id}", response_model=NewsletterSubscriberDetail)
+async def get_newsletter_subscriber(
+    subscriber_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get detailed newsletter subscriber info, including live MailerLite data (admin only)"""
+    subscriber = db.query(NewsletterSubscriber).filter(
+        NewsletterSubscriber.id == subscriber_id
+    ).first()
+
+    if not subscriber:
+        raise HTTPException(status_code=404, detail="Subscriber not found")
+
+    detail = NewsletterSubscriberDetail(
+        id=subscriber.id,
+        email=subscriber.email,
+        is_active=subscriber.is_active,
+        mailerlite_subscriber_id=subscriber.mailerlite_subscriber_id,
+        subscribed_at=subscriber.subscribed_at,
+        unsubscribed_at=subscriber.unsubscribed_at,
+    )
+
+    # Fetch live data from MailerLite if configured
+    if NewsletterService.is_configured():
+        try:
+            ml_data = await NewsletterService.get_mailerlite_subscriber(subscriber.email)
+            if ml_data:
+                detail.mailerlite_status = ml_data.get("status")
+                detail.mailerlite_subscribed_at = ml_data.get("subscribed_datetime")
+                detail.mailerlite_opens_count = ml_data.get("opens_count")
+                detail.mailerlite_clicks_count = ml_data.get("clicks_count")
+        except Exception as e:
+            logger.warning(f"Failed to fetch MailerLite data for {subscriber.email}: {e}")
+
+    return detail
+
+
+@router.get("/newsletter/mailerlite", response_model=MailerLiteSubscriberListResponse)
+async def list_mailerlite_subscribers(
+    cursor: Optional[str] = Query(None, description="Pagination cursor"),
+    limit: int = Query(50, ge=1, le=50),
+    current_user: User = Depends(require_admin),
+):
+    """List subscribers directly from MailerLite API (admin only)"""
+    if not NewsletterService.is_configured():
+        raise HTTPException(
+            status_code=400,
+            detail="MailerLite is not configured. Set MAILERLITE_API_KEY to enable."
+        )
+
+    raw_subscribers, next_cursor = await NewsletterService.list_mailerlite_subscribers(
+        cursor=cursor, limit=limit
+    )
+
+    items = [
+        MailerLiteSubscriberItem(
+            id=str(sub.get("id", "")),
+            email=sub.get("email", ""),
+            status=sub.get("status", "unknown"),
+            subscribed_at=sub.get("subscribed_datetime"),
+            opens_count=sub.get("opens_count"),
+            clicks_count=sub.get("clicks_count"),
+        )
+        for sub in raw_subscribers
+    ]
+
+    return MailerLiteSubscriberListResponse(
+        items=items,
+        next_cursor=next_cursor,
+        has_more=next_cursor is not None,
+    )
+
+
+@router.post("/newsletter/subscribers/{subscriber_id}/sync")
+async def sync_newsletter_subscriber(
+    subscriber_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Force re-sync a subscriber to MailerLite (admin only)"""
+    subscriber = db.query(NewsletterSubscriber).filter(
+        NewsletterSubscriber.id == subscriber_id
+    ).first()
+
+    if not subscriber:
+        raise HTTPException(status_code=404, detail="Subscriber not found")
+
+    if not NewsletterService.is_configured():
+        raise HTTPException(
+            status_code=400,
+            detail="MailerLite is not configured. Set MAILERLITE_API_KEY to enable."
+        )
+
+    if subscriber.is_active:
+        mailerlite_id = await NewsletterService.sync_subscriber_to_mailerlite(subscriber.email)
+    else:
+        # For inactive subscribers, update MailerLite status to unsubscribed
+        await NewsletterService.remove_subscriber_from_mailerlite(subscriber.email)
+        mailerlite_id = subscriber.mailerlite_subscriber_id
+
+    if mailerlite_id:
+        subscriber.mailerlite_subscriber_id = str(mailerlite_id)
+        db.commit()
+
+    return {
+        "success": True,
+        "message": f"Subscriber {subscriber.email} synced to MailerLite",
+        "mailerlite_subscriber_id": subscriber.mailerlite_subscriber_id,
+    }
+
+
+@router.delete("/newsletter/subscribers/{subscriber_id}")
+async def delete_newsletter_subscriber(
+    subscriber_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Remove a subscriber from the platform and unsubscribe from MailerLite (admin only)"""
+    subscriber = db.query(NewsletterSubscriber).filter(
+        NewsletterSubscriber.id == subscriber_id
+    ).first()
+
+    if not subscriber:
+        raise HTTPException(status_code=404, detail="Subscriber not found")
+
+    email = subscriber.email
+
+    # Unsubscribe from MailerLite first
+    if NewsletterService.is_configured():
+        try:
+            await NewsletterService.remove_subscriber_from_mailerlite(email)
+        except Exception as e:
+            logger.warning(f"Failed to remove {email} from MailerLite: {e}")
+
+    # Remove from database
+    db.delete(subscriber)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Subscriber {email} removed",
+    }
