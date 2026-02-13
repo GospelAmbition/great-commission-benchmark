@@ -31,25 +31,41 @@ const staticPages: {
   { path: "/tester-agreement", priority: 0.3, changeFrequency: "yearly" },
 ];
 
-// Fetch models from API for dynamic routes
+const LEADERBOARD_PAGE_SIZE = 100; // Backend max for /api/public/leaderboard
+const BLOG_PAGE_SIZE = 50; // Backend max for /api/blog/posts
+
+// Fetch models from API for dynamic routes (paginated to include all models)
 async function fetchModels(): Promise<
   { model_id: string; updated_at?: string }[]
 > {
+  const cacheOpt = { next: { revalidate: 3600 } as const };
+  const all: { model_id: string; updated_at?: string }[] = [];
+  let offset = 0;
   try {
-    const response = await fetch(`${API_URL}/api/public/leaderboard?limit=1000`, {
-      next: { revalidate: 3600 }, // Cache for 1 hour
-    });
-    if (!response.ok) return [];
-
-    const data = await response.json();
-    return (data.entries || []).map(
-      (entry: { model?: { model_id?: string }; updated_at?: string }) => ({
-        model_id: entry.model?.model_id || "",
-        updated_at: entry.updated_at,
-      })
-    );
+    for (;;) {
+      const response = await fetch(
+        `${API_URL}/api/public/leaderboard?limit=${LEADERBOARD_PAGE_SIZE}&offset=${offset}`,
+        cacheOpt
+      );
+      if (!response.ok) break;
+      const data = await response.json();
+      const entries = data.entries || [];
+      for (const entry of entries) {
+        const modelId = entry.model?.model_id;
+        if (modelId) {
+          all.push({
+            model_id: modelId,
+            updated_at: entry.updated_at,
+          });
+        }
+      }
+      const hasMore = data.pagination?.has_more === true;
+      if (!hasMore || entries.length === 0) break;
+      offset += LEADERBOARD_PAGE_SIZE;
+    }
+    return all;
   } catch {
-    return [];
+    return all;
   }
 }
 
@@ -68,25 +84,37 @@ async function fetchCategories(): Promise<string[]> {
   }
 }
 
-// Fetch published blog posts
+// Fetch published blog posts (paginated to include all insights)
 async function fetchBlogPosts(): Promise<
   { slug: string; published_at?: string }[]
 > {
+  const cacheOpt = { next: { revalidate: 3600 } as const };
+  const all: { slug: string; published_at?: string }[] = [];
+  let offset = 0;
   try {
-    const response = await fetch(`${API_URL}/api/blog/posts?limit=1000`, {
-      next: { revalidate: 3600 }, // Cache for 1 hour
-    });
-    if (!response.ok) return [];
-
-    const data = await response.json();
-    return (data.items || []).map(
-      (post: { slug: string; published_at?: string }) => ({
-        slug: post.slug,
-        published_at: post.published_at,
-      })
-    );
+    for (;;) {
+      const response = await fetch(
+        `${API_URL}/api/blog/posts?limit=${BLOG_PAGE_SIZE}&offset=${offset}`,
+        cacheOpt
+      );
+      if (!response.ok) break;
+      const data = await response.json();
+      const items = data.items || [];
+      const total = typeof data.total === "number" ? data.total : 0;
+      for (const post of items) {
+        if (post.slug) {
+          all.push({
+            slug: post.slug,
+            published_at: post.published_at,
+          });
+        }
+      }
+      if (items.length < BLOG_PAGE_SIZE || offset + items.length >= total) break;
+      offset += BLOG_PAGE_SIZE;
+    }
+    return all;
   } catch {
-    return [];
+    return all;
   }
 }
 

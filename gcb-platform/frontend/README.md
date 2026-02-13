@@ -165,6 +165,7 @@ Charts use Chart.js with react-chartjs-2.
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Yes |
 | `NEXT_PUBLIC_API_URL` | Backend API URL | Yes |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe key (for payments and donations) | Production |
+| `WARM_SECRET` | Secret for post-deploy warm-up; generate with `openssl rand -hex 32` | Optional (Railway) |
 | `NEXT_PUBLIC_UMAMI_SCRIPT_URL` | Analytics URL | Optional |
 | `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Analytics ID | Optional |
 
@@ -286,17 +287,18 @@ const submissions = await apiClient.getUserSubmissions();
 
 The frontend auto-deploys from the `frontend/` directory.
 
-Configuration in `railway.json`:
+Configuration in `railway.json` uses a start script that runs Next.js and then triggers a warm-up of all public pages so the first real users get fast responses:
+
 ```json
 {
-  "build": {
-    "builder": "RAILPACK"
-  },
+  "build": { "builder": "RAILPACK" },
   "deploy": {
-    "startCommand": "npm start"
+    "startCommand": "node scripts/start-and-warm.js"
   }
 }
 ```
+
+**Post-deploy warm-up:** Set `WARM_SECRET` in Railway (Variables) to enable automatic warming. Generate a value with `openssl rand -hex 32` and add it as a variable. The start script waits for the server to be ready, then calls `/api/warm?secret=...` to prime every public route (static pages, leaderboard models, categories, insights). If `WARM_SECRET` is unset, the app still starts normally and warm-up is skipped.
 
 ### Vercel
 
