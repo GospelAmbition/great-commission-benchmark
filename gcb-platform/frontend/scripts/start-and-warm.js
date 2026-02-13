@@ -38,18 +38,19 @@ function warm() {
       let body = "";
       res.on("data", (c) => (body += c));
       res.on("end", () => {
-        try {
-          const j = JSON.parse(body);
-          console.log(
-            "[warm] result:",
-            j.warmed,
-            "ok,",
-            j.failed,
-            "failed, total",
-            j.total
-          );
-        } catch (_) {
-          console.log("[warm] non-JSON response");
+        if (res.statusCode === 202) {
+          console.log("[warm] started in background (pages will prime shortly)");
+        } else {
+          try {
+            const j = JSON.parse(body);
+            if (j.warmed != null) {
+              console.log("[warm] result:", j.warmed, "ok,", j.failed, "failed, total", j.total);
+            } else {
+              console.log("[warm] response:", res.statusCode, body.slice(0, 100));
+            }
+          } catch (_) {
+            console.log("[warm] response:", res.statusCode, body.slice(0, 100));
+          }
         }
         resolve();
       });
@@ -58,7 +59,7 @@ function warm() {
       console.warn("[warm] request error:", err.message);
       resolve();
     });
-    req.setTimeout(120000, () => {
+    req.setTimeout(30000, () => {
       req.destroy();
       resolve();
     });

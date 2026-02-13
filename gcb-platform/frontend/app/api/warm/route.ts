@@ -173,13 +173,27 @@ export async function GET(request: NextRequest) {
   const origin = new URL(request.url).origin;
   const baseUrl = origin.endsWith("/") ? origin.slice(0, -1) : origin;
 
-  const paths = await buildPaths();
-  const { ok, failed, errors } = await fetchInBatches(baseUrl, paths);
+  // Run warming in background so the client gets a quick response (avoids socket hang up)
+  void (async () => {
+    try {
+      const paths = await buildPaths();
+      const { ok, failed, errors } = await fetchInBatches(baseUrl, paths);
+      console.log(
+        "[warm] background done:",
+        ok,
+        "ok,",
+        failed,
+        "failed, total",
+        paths.length
+      );
+      if (errors.length) console.warn("[warm] sample errors:", errors);
+    } catch (e) {
+      console.warn("[warm] background error:", e);
+    }
+  })();
 
-  return NextResponse.json({
-    warmed: ok,
-    failed,
-    total: paths.length,
-    errors: errors.length ? errors : undefined,
-  });
+  return NextResponse.json(
+    { status: "started", message: "Warming in background" },
+    { status: 202 }
+  );
 }
