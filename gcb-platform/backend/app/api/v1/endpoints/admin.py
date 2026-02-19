@@ -1,6 +1,7 @@
 """Admin API endpoints"""
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Header
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc
 from uuid import UUID
@@ -10,7 +11,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from app.core.auth import get_db
+from app.core.auth import get_db, get_current_user, has_permission
 from app.core.auth import require_admin
 from app.db.models.user import User
 from app.db.models.test_run import TestRun
@@ -79,6 +80,30 @@ from app.schemas.sponsorship import (
 )
 
 router = APIRouter()
+
+_optional_bearer = HTTPBearer(auto_error=False)
+
+
+async def require_admin_flexible(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_optional_bearer),
+    x_api_key: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+) -> User:
+    """Accept either a Bearer (NextAuth JWT) or an X-API-Key for admin-level access."""
+    from app.api.v1.endpoints.api_keys import validate_api_key
+
+    if x_api_key:
+        api_key_record, user = validate_api_key(db, x_api_key)
+        if not api_key_record or not user:
+            raise HTTPException(status_code=401, detail="Invalid or expired API key")
+        if not has_permission(user, "can_admin"):
+            raise HTTPException(status_code=403, detail="Admin permission required")
+        return user
+
+    if credentials:
+        return await get_current_user(credentials, db)
+
+    raise HTTPException(status_code=401, detail="Authentication required")
 
 
 @router.get("/users", response_model=UserListResponse)
@@ -1848,7 +1873,7 @@ async def sync_model_descriptions(
 
 @router.post("/cache/refresh")
 async def refresh_cache(
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_flexible)
 ):
     """Manually refresh all caches"""
     from app.services.cache_warmer import warm_all_caches
