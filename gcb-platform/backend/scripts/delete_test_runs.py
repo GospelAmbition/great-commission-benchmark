@@ -2,6 +2,12 @@
 """
 Permanently delete test runs (and their results) from the database.
 Use for corrupted or erroneous submissions. Recalculates leaderboard stats after deletion.
+When the last run for a model+version is deleted, the corresponding model_version_stats
+row is removed so the model no longer appears on the leaderboard.
+
+Note: This script does not clear the API cache. If the platform is running, the leaderboard
+may show stale data until cache TTL or the next request; use Admin > Data > delete in the UI
+to also invalidate cache, or restart the backend.
 
 Usage:
     python scripts/delete_test_runs.py <test_run_id_1> [<test_run_id_2> ...]

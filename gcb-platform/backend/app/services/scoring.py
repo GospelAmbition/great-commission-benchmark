@@ -1,7 +1,7 @@
 """Scoring service for calculating benchmark scores"""
 from typing import Dict, List, Optional, TYPE_CHECKING
 import logging
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 
 from app.db.models.result import Result
@@ -120,8 +120,10 @@ class ScoringService:
         if not test_run:
             raise ValueError(f"Test run {test_run_id} not found")
         
-        # Get all results for this test run
-        results = db.query(Result).filter(Result.test_run_id == test_run_id).all()
+        # Get all results for this test run (eager-load question for tier/category)
+        results = db.query(Result).options(
+            joinedload(Result.question)
+        ).filter(Result.test_run_id == test_run_id).all()
         
         # Calculate tier scores
         tier1_score = cls.calculate_tier_score(results, 1)

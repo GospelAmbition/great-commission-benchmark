@@ -329,6 +329,7 @@ export default function AdminDataPage() {
         if (deleteDialog.type === "test-run") {
           setSelectedTestRuns(new Set());
           loadTestRuns();
+          loadModels(); // refresh model counts so placeholders update
         } else if (deleteDialog.type === "submission") {
           setSelectedSubmissions(new Set());
           loadSubmissions();
@@ -349,8 +350,10 @@ export default function AdminDataPage() {
         
         if (response.ok) {
           toast.success("Item deleted successfully");
-          if (deleteDialog.type === "test-run") loadTestRuns();
-          else if (deleteDialog.type === "submission") loadSubmissions();
+          if (deleteDialog.type === "test-run") {
+            loadTestRuns();
+            loadModels(); // refresh model counts so placeholders update
+          } else if (deleteDialog.type === "submission") loadSubmissions();
           else loadModels();
         } else {
           const error = await response.json();
