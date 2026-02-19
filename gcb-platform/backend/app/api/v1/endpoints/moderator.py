@@ -756,7 +756,16 @@ async def accept_automated_test_run(
     run.moderator_reviewed_at = datetime.utcnow()
     run.moderator_id = current_user.id
     run.moderator_decision = "accepted"
-    
+
+    # Ensure pre-computed scores exist (e.g. run created before migration or score write failed)
+    if run.overall_score is None:
+        try:
+            from app.services.scoring import compute_and_store_test_run_scores
+            compute_and_store_test_run_scores(db, run)
+        except Exception as e:
+            logger.warning(f"Score backfill failed for test run {test_run_id}: {e}")
+            # Continue accepting; admin can use Recalculate scores later
+
     db.commit()
     
     logger.info(
