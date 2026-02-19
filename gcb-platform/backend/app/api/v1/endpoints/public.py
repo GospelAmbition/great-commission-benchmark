@@ -204,7 +204,7 @@ async def get_leaderboard(
     tier: Optional[int] = Query(None),
     provider: Optional[str] = Query(None),
     trust_tier: Optional[str] = Query(None),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     sort: str = Query("score", regex="^(score|date|tier1|tier2|tier3)$"),
     order: str = Query("desc", regex="^(asc|desc)$"),

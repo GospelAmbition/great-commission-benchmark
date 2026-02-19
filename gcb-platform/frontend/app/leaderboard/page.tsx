@@ -30,6 +30,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { apiClient, FilterOptionsResponse } from "@/lib/api";
+import { useLeaderboardInitialData } from "@/components/leaderboard/LeaderboardDataProvider";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -122,9 +123,12 @@ function TotalScore({ score }: { score: number }) {
 
 function LeaderboardContent() {
   const searchParams = useSearchParams();
+  const { initialItems, initialTotal } = useLeaderboardInitialData();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>(
+    () => (initialItems?.slice(0, 50) ?? []) as LeaderboardItem[]
+  );
+  const [loading, setLoading] = useState(!(initialItems?.length));
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [filterOptions, setFilterOptions] = useState<FilterOptionsResponse | null>(null);
   const processedUrlParams = useRef<string | null>(null);
@@ -140,8 +144,13 @@ function LeaderboardContent() {
   const [pagination, setPagination] = useState({
     limit: 50,
     offset: 0,
-    total: 0,
+    total: initialTotal || 0,
   });
+  // Full dataset for default view: use server-provided initial data or client fetch
+  const [fullDataset, setFullDataset] = useState<LeaderboardItem[] | null>(initialItems || null);
+  const PAGE_SIZE = 50;
+
+  const hasActiveFilters = !!(filters.version || filters.category || filters.tier || filters.provider || filters.trust_tier);
 
   // Load filter options on mount
   useEffect(() => {
@@ -151,13 +160,14 @@ function LeaderboardContent() {
   // Pre-select models from URL query params (only on initial load or URL change)
   useEffect(() => {
     const modelsParam = searchParams.get("models");
+    const source = fullDataset ?? leaderboard;
     // Only process if URL params changed or leaderboard just loaded
-    if (modelsParam && leaderboard.length > 0 && modelsParam !== processedUrlParams.current) {
+    if (modelsParam && source.length > 0 && modelsParam !== processedUrlParams.current) {
       processedUrlParams.current = modelsParam;
       const modelIds = modelsParam.split(",").map(id => decodeURIComponent(id));
       // Match by either id (UUID) or model_id (OpenRouter-style ID)
       const matchingIds = new Set<string>();
-      leaderboard.forEach(item => {
+      source.forEach(item => {
         if (modelIds.includes(item.id) || modelIds.includes(item.model_id)) {
           matchingIds.add(item.id);
         }
@@ -167,9 +177,14 @@ function LeaderboardContent() {
         setSelectedModels(matchingIds);
       }
     }
-  }, [searchParams, leaderboard]);
+  }, [searchParams, leaderboard, fullDataset]);
 
   useEffect(() => {
+    // When we have full dataset and no filters, paginate in memory—no refetch
+    if (fullDataset && !hasActiveFilters) {
+      setLeaderboard(fullDataset.slice(pagination.offset, pagination.offset + PAGE_SIZE));
+      return;
+    }
     loadLeaderboard();
   }, [filters, pagination.offset]);
 
@@ -185,14 +200,29 @@ function LeaderboardContent() {
   async function loadLeaderboard() {
     setLoading(true);
     try {
-      const result = await apiClient.getLeaderboard({
-        ...filters,
-        limit: pagination.limit,
-        offset: pagination.offset,
-      });
-      if (result.items) {
-        setLeaderboard(result.items);
-        setPagination((prev) => ({ ...prev, total: result.total || 0 }));
+      if (!hasActiveFilters) {
+        // Default view: fetch from same-origin route (avoids cross-origin, edge-cached)
+        const res = await fetch("/api/leaderboard-data");
+        if (!res.ok) throw new Error("Failed to load leaderboard");
+        const result = await res.json();
+        const items = result.items || [];
+        if (items.length > 0) {
+          setFullDataset(items);
+          setLeaderboard(items.slice(0, PAGE_SIZE));
+          setPagination((prev) => ({ ...prev, offset: 0, total: result.total || items.length }));
+        }
+      } else {
+        // Filtered view: fetch paginated from API
+        setFullDataset(null);
+        const result = await apiClient.getLeaderboard({
+          ...filters,
+          limit: PAGE_SIZE,
+          offset: pagination.offset,
+        });
+        if (result.items) {
+          setLeaderboard(result.items);
+          setPagination((prev) => ({ ...prev, total: result.total || 0 }));
+        }
       }
     } catch (error) {
       console.error("Failed to load leaderboard:", error);

@@ -40,30 +40,31 @@ REFRESH_CHECK_INTERVAL = 300  # 5 minutes
 
 async def warm_leaderboard_cache(db: Session) -> None:
     """
-    Pre-populate the leaderboard cache with the default query parameters.
-    This is the most common query that users will make.
+    Pre-populate the leaderboard cache with the full dataset.
+    The entire leaderboard is small enough to load at once; a single cache entry
+    serves all requests. Frontend does client-side pagination/filtering.
     """
-    logger.info("Warming leaderboard cache...")
+    logger.info("Warming leaderboard cache (full dataset)...")
     
     try:
-        # Default parameters that match the frontend's initial load
-        default_params = {
+        # Full dataset - no artificial limits; single cache entry for entire leaderboard
+        full_params = {
             "version": "current",
             "category": None,
             "tier": None,
             "provider": None,
             "trust_tier": None,
-            "limit": 50,
+            "limit": 1000,  # Cap high enough to include all models
             "offset": 0,
             "sort": "score",
             "order": "desc"
         }
         
-        # Generate the leaderboard data
-        result = await _generate_leaderboard_data(db, **default_params)
+        # Generate the full leaderboard data
+        result = await _generate_leaderboard_data(db, **full_params)
         
         # Store in cache with long stale TTL
-        cache_key = make_cache_key("leaderboard", default_params)
+        cache_key = make_cache_key("leaderboard", full_params)
         await cache.set(
             cache_key, 
             result, 
@@ -71,7 +72,7 @@ async def warm_leaderboard_cache(db: Session) -> None:
             stale_ttl_seconds=CACHE_STALE_TTL["leaderboard"]
         )
         
-        logger.info(f"Leaderboard cache warmed successfully with {len(result.entries)} entries")
+        logger.info(f"Leaderboard cache warmed successfully with {len(result.entries)} entries (full dataset)")
         
     except Exception as e:
         # Log connection errors at info level, other errors at error level

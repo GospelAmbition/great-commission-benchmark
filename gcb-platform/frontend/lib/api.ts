@@ -184,10 +184,11 @@ export class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    { skipAuth = false }: { skipAuth?: boolean } = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const token = await this.getAuthToken();
+    const token = skipAuth ? null : await this.getAuthToken();
 
     const response = await fetch(url, {
       ...options,
@@ -218,6 +219,15 @@ export class ApiClient {
     }
 
     return response.json();
+  }
+
+  /**
+   * Request to public endpoints that don't require authentication.
+   * Skips getAuthToken() to avoid blocking on /api/auth/token, improving
+   * leaderboard and other public data load times.
+   */
+  private requestPublic<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    return this.request<T>(endpoint, options, { skipAuth: true });
   }
 
   private async getAuthToken(): Promise<string | null> {
@@ -322,7 +332,7 @@ export class ApiClient {
     } : undefined;
     
     const query = this.buildQueryString(transformedParams, { skipEmpty: true });
-    const response = await this.request<BackendLeaderboardResponse>(`/api/public/leaderboard${query}`);
+    const response = await this.requestPublic<BackendLeaderboardResponse>(`/api/public/leaderboard${query}`);
     
     // Transform backend response to frontend format
     return {
@@ -343,39 +353,39 @@ export class ApiClient {
   }
 
   async getModels(params?: { limit?: number; offset?: number }): Promise<ModelsResponse> {
-    return this.request<ModelsResponse>(`/api/public/models${this.buildQueryString(params)}`);
+    return this.requestPublic<ModelsResponse>(`/api/public/models${this.buildQueryString(params)}`);
   }
 
   async getAvailableModels(params?: { search?: string; limit?: number }): Promise<ModelsResponse> {
-    return this.request<ModelsResponse>(`/api/public/available-models${this.buildQueryString(params)}`);
+    return this.requestPublic<ModelsResponse>(`/api/public/available-models${this.buildQueryString(params)}`);
   }
 
   async getModel(id: string): Promise<ModelResponse> {
     // Model IDs with slashes (e.g., "qwen/qwen3-coder-30b") need special handling
     // Use query parameter instead of path parameter to avoid URL encoding issues
     const params = new URLSearchParams({ model_id: id });
-    return this.request<ModelResponse>(`/api/public/models/by-id?${params.toString()}`);
+    return this.requestPublic<ModelResponse>(`/api/public/models/by-id?${params.toString()}`);
   }
 
   async getVersions(): Promise<VersionsResponse> {
-    return this.request<VersionsResponse>('/api/public/versions');
+    return this.requestPublic<VersionsResponse>('/api/public/versions');
   }
 
   async getStats(): Promise<StatsResponse> {
-    return this.request<StatsResponse>('/api/public/stats');
+    return this.requestPublic<StatsResponse>('/api/public/stats');
   }
 
   async getFilterOptions(): Promise<FilterOptionsResponse> {
-    return this.request<FilterOptionsResponse>('/api/public/filter-options');
+    return this.requestPublic<FilterOptionsResponse>('/api/public/filter-options');
   }
 
   async getCategoryRankings(params?: { limit_per_category?: number }): Promise<CategoryRankingsResponse> {
     const query = this.buildQueryString(params);
-    return this.request<CategoryRankingsResponse>(`/api/public/category-rankings${query}`);
+    return this.requestPublic<CategoryRankingsResponse>(`/api/public/category-rankings${query}`);
   }
 
   async getStripePublishableKey(): Promise<StripePublishableKeyResponse> {
-    return this.request<StripePublishableKeyResponse>('/api/public/stripe/publishable-key');
+    return this.requestPublic<StripePublishableKeyResponse>('/api/public/stripe/publishable-key');
   }
 
   async compareModels(modelIds: string[]): Promise<CompareResponse> {
@@ -394,7 +404,7 @@ export class ApiClient {
       comparison: { score_delta?: { overall: number; tier1: number; tier2: number; tier3: number } };
     }
     
-    const response = await this.request<BackendCompareResponse>(`/api/public/leaderboard/compare?${params}`);
+    const response = await this.requestPublic<BackendCompareResponse>(`/api/public/leaderboard/compare?${params}`);
     
     // Transform to frontend format
     const allCategories = new Set<string>();

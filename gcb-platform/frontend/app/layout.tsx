@@ -9,9 +9,11 @@ import { UmamiAnalytics } from "@/components/analytics/UmamiAnalytics";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { SITE_CONFIG, getBaseUrl, getDefaultOpenGraph, getDefaultTwitterCard } from "@/lib/seo";
 import { buildOrganizationSchema, buildWebsiteSchema, JsonLdScript } from "@/lib/structured-data";
+import { API_URL } from "@/lib/api";
 import "./globals.css";
 
 const baseUrl = getBaseUrl();
+const apiOrigin = typeof API_URL === "string" ? new URL(API_URL).origin : "";
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -111,6 +113,13 @@ export default function RootLayout({
         {/* DNS prefetch for external resources */}
         <link rel="dns-prefetch" href="//fonts.googleapis.com" />
         <link rel="dns-prefetch" href="//fonts.gstatic.com" />
+        {/* Preconnect to backend API for faster leaderboard loads */}
+        {apiOrigin && (
+          <>
+            <link rel="preconnect" href={apiOrigin} />
+            <link rel="dns-prefetch" href={apiOrigin} />
+          </>
+        )}
         {/* Structured Data - Organization and Website schemas */}
         <JsonLdScript data={[organizationSchema, websiteSchema]} />
         <GoogleAnalytics />
