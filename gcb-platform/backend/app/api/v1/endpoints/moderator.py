@@ -640,11 +640,15 @@ async def get_automated_test_run_detail(
         Result.test_run_id == run.id
     ).all()
     
-    # Calculate scores from results
-    from app.services.scoring import ScoringService
-    try:
-        scores = ScoringService.calculate_scores(db, str(run.id))
-    except Exception:
+    # Use stored scores when present; otherwise show zeros (admins use recalculation utility to fix)
+    if run.overall_score is not None:
+        scores = {
+            "overall": float(run.overall_score),
+            "tier1": float(run.tier1_score or 0),
+            "tier2": float(run.tier2_score or 0),
+            "tier3": float(run.tier3_score or 0),
+        }
+    else:
         scores = {"overall": 0, "tier1": 0, "tier2": 0, "tier3": 0}
     
     # Build verdict counts by tier

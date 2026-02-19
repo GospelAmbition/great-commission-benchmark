@@ -19,7 +19,6 @@ from app.db.models.test_run import TestRun
 from app.db.models.model import Model
 from app.db.models.question_set import QuestionSet
 from app.db.models.question import Question
-from app.services.scoring import ScoringService
 from app.schemas.public import (
     LeaderboardResponse,
     LeaderboardEntry,
@@ -184,12 +183,7 @@ async def _generate_leaderboard_data(
     sort: str = "score",
     order: str = "desc"
 ) -> LeaderboardResponse:
-    """Generate leaderboard data using the most recent test per model.
-    
-    AI models change frequently, so only the most recent test score is used
-    to reflect the current state of each model's compliance.
-    """
-    from app.db.models.result import Result
+    """Generate leaderboard data using stored scores (no recalculation)."""
     
     # Get question set version
     if version == "current":
@@ -225,13 +219,14 @@ async def _generate_leaderboard_data(
     # Query most recent completed test run per model
     entries = []
     
-    # Build query for completed test runs with eager loading
+    # Build query for completed test runs with pre-computed scores
     query = db.query(TestRun).options(
         joinedload(TestRun.model),
         joinedload(TestRun.question_set)
     ).join(Model, TestRun.model_id == Model.id).filter(
         TestRun.status == "completed",
         TestRun.question_set_id == question_set.id,
+        TestRun.overall_score.isnot(None),
         Model.is_active == True
     )
     
@@ -251,21 +246,36 @@ async def _generate_leaderboard_data(
             seen_models.add(test_run.model_id)
             unique_test_runs.append(test_run)
     
-    # Calculate scores and build entries from most recent test per model
+    # Precompute tier categories for tier filter (if needed)
+    tier_categories = set()
+    if tier:
+        tier_cats = db.query(Question.category).filter(
+            Question.question_set_id == question_set.id,
+            Question.tier == tier
+        ).distinct().all()
+        tier_categories = {c[0] for c in tier_cats if c[0]}
+    
+    # Build entries from stored scores only
     for test_run in unique_test_runs:
-        scores_data = ScoringService.calculate_scores(db, str(test_run.id))
+        cat_scores = test_run.category_scores or {}
         
         # Filter by category/tier if specified
-        if category or tier:
-            results = db.query(Result).options(
-                joinedload(Result.question)
-            ).filter(Result.test_run_id == test_run.id).all()
-            if category:
-                results = [r for r in results if r.question.category == category]
-            if tier:
-                results = [r for r in results if r.question.tier == tier]
-            if not results:
-                continue
+        if category and category not in cat_scores:
+            continue
+        if tier and not (tier_categories & set(cat_scores.keys())):
+            continue
+        
+        scores_data = {
+            "overall": float(test_run.overall_score),
+            "tier1": float(test_run.tier1_score or 0),
+            "tier2": float(test_run.tier2_score or 0),
+            "tier3": float(test_run.tier3_score or 0),
+            "category_scores": cat_scores,
+            "verdict_distribution": test_run.verdict_distribution or {
+                "ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "ERROR": 0
+            },
+            "total_questions": test_run.total_questions or 0,
+        }
         
         entry = LeaderboardEntry(
             rank=0,
@@ -343,13 +353,7 @@ async def _generate_leaderboard_data(
 
 
 async def _generate_category_rankings_data(db: Session, limit_per_category: int = 5) -> dict:
-    """Generate category rankings data using the most recent test per model.
-    
-    AI models change frequently, so only the most recent test score is used
-    to reflect the current state of each model's compliance.
-    """
-    from app.db.models.result import Result
-    
+    """Generate category rankings data using stored scores (no recalculation)."""
     # Get active question set
     question_set = db.query(QuestionSet).filter(
         QuestionSet.status == "active"
@@ -364,13 +368,14 @@ async def _generate_category_rankings_data(db: Session, limit_per_category: int 
     ).distinct().all()
     category_codes = sorted([c[0] for c in categories if c[0]])
     
-    # Get all completed test runs for this question set
+    # Get all completed test runs with pre-computed scores for this question set
     test_runs = db.query(TestRun).options(
         joinedload(TestRun.model),
         joinedload(TestRun.question_set)
     ).join(Model, TestRun.model_id == Model.id).filter(
         TestRun.status == "completed",
         TestRun.question_set_id == question_set.id,
+        TestRun.overall_score.isnot(None),
         Model.is_active == True
     ).order_by(TestRun.completed_at.desc()).all()
     
@@ -384,18 +389,14 @@ async def _generate_category_rankings_data(db: Session, limit_per_category: int 
     
     total_models_count = len(unique_test_runs)
     
-    # Pre-calculate all scores once
+    # Build scores from stored data only
     test_run_scores = {}
     for test_run in unique_test_runs:
-        try:
-            scores = ScoringService.calculate_scores(db, str(test_run.id))
-            test_run_scores[test_run.id] = {
-                "test_run": test_run,
-                "scores": scores
-            }
-        except Exception as e:
-            logger.warning(f"Failed to calculate scores for test run {test_run.id}: {e}")
-            continue
+        cat_scores = test_run.category_scores or {}
+        test_run_scores[test_run.id] = {
+            "test_run": test_run,
+            "scores": {"category_scores": cat_scores}
+        }
     
     # Build category rankings from most recent test per model
     categories_data = {}

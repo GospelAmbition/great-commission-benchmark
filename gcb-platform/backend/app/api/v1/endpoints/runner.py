@@ -477,7 +477,10 @@ async def bulk_submit(
             )
             db.add(result)
             results_created += 1
-        
+
+        from app.services.scoring import compute_and_store_test_run_scores
+        compute_and_store_test_run_scores(db, test_run)
+
         db.commit()
         
         # Extract scores

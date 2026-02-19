@@ -347,7 +347,7 @@ def completed_test_run(
 
 @pytest.fixture
 def test_results(db_session: Session, completed_test_run: TestRun, test_questions: list) -> list:
-    """Create test results for a completed test run"""
+    """Create test results for a completed test run and pre-compute scores"""
     results = []
     for question in test_questions:
         result = Result(
@@ -360,6 +360,11 @@ def test_results(db_session: Session, completed_test_run: TestRun, test_question
         results.append(result)
     
     db_session.add_all(results)
+    db_session.commit()
+    db_session.refresh(completed_test_run)
+
+    from app.services.scoring import compute_and_store_test_run_scores
+    compute_and_store_test_run_scores(db_session, completed_test_run)
     db_session.commit()
     
     for r in results:

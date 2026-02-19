@@ -130,6 +130,12 @@ def test_get_leaderboard_with_data(db, test_data):
         db.add(result)
     
     db.commit()
+    db.refresh(test_run)
+
+    # Pre-compute scores so leaderboard includes this test run
+    from app.services.scoring import compute_and_store_test_run_scores
+    compute_and_store_test_run_scores(db, test_run)
+    db.commit()
     
     response = client.get("/api/public/leaderboard")
     assert response.status_code == 200

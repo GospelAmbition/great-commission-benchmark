@@ -17,7 +17,6 @@ from sqlalchemy import func
 from app.db.models.model_version_stats import ModelVersionStats
 from app.db.models.test_run import TestRun
 from app.db.models.result import Result
-from app.services.scoring import ScoringService
 
 logger = logging.getLogger(__name__)
 
@@ -72,11 +71,12 @@ class AggregationService:
         Returns:
             The updated or created ModelVersionStats record, or None if no tests exist
         """
-        # Get all completed test runs for this model+version
+        # Get all completed test runs with pre-computed scores for this model+version
         test_runs = db.query(TestRun).filter(
             TestRun.model_id == model_id,
             TestRun.question_set_id == question_set_id,
-            TestRun.status == "completed"
+            TestRun.status == "completed",
+            TestRun.overall_score.isnot(None),
         ).order_by(TestRun.completed_at.asc()).all()
         
         if not test_runs:
@@ -90,32 +90,26 @@ class AggregationService:
                 db.commit()
             return None
         
-        # Calculate scores for each test run
+        # Read stored scores from each test run (no recalculation)
         all_scores = []
         all_verdict_distributions = []
         all_category_scores: Dict[str, List[float]] = {}
         
         for test_run in test_runs:
-            try:
-                scores = ScoringService.calculate_scores(db, str(test_run.id))
-                all_scores.append({
-                    "overall": scores["overall"],
-                    "tier1": scores["tier1"],
-                    "tier2": scores["tier2"],
-                    "tier3": scores["tier3"],
-                    "completed_at": test_run.completed_at
-                })
-                all_verdict_distributions.append(scores["verdict_distribution"])
-                
-                # Collect category scores
-                for category, score in scores.get("category_scores", {}).items():
-                    if category not in all_category_scores:
-                        all_category_scores[category] = []
-                    all_category_scores[category].append(score)
-                    
-            except Exception as e:
-                logger.warning(f"Failed to calculate scores for test run {test_run.id}: {e}")
-                continue
+            all_scores.append({
+                "overall": float(test_run.overall_score),
+                "tier1": float(test_run.tier1_score or 0),
+                "tier2": float(test_run.tier2_score or 0),
+                "tier3": float(test_run.tier3_score or 0),
+                "completed_at": test_run.completed_at
+            })
+            all_verdict_distributions.append(test_run.verdict_distribution or {})
+            
+            # Collect category scores from stored data
+            for category, score in (test_run.category_scores or {}).items():
+                if category not in all_category_scores:
+                    all_category_scores[category] = []
+                all_category_scores[category].append(float(score))
         
         if not all_scores:
             return None
@@ -285,28 +279,24 @@ class AggregationService:
         test_runs = db.query(TestRun).filter(
             TestRun.model_id == model_id,
             TestRun.question_set_id == question_set_id,
-            TestRun.status == "completed"
+            TestRun.status == "completed",
+            TestRun.overall_score.isnot(None),
         ).order_by(TestRun.completed_at.desc()).all()
         
         results = []
         for test_run in test_runs:
-            try:
-                scores = ScoringService.calculate_scores(db, str(test_run.id))
-                results.append({
-                    "test_run_id": str(test_run.id),
-                    "overall_score": scores["overall"],
-                    "tier1_score": scores["tier1"],
-                    "tier2_score": scores["tier2"],
-                    "tier3_score": scores["tier3"],
-                    "category_scores": scores.get("category_scores", {}),
-                    "verdict_distribution": scores.get("verdict_distribution", {}),
-                    "completed_at": test_run.completed_at.isoformat() if test_run.completed_at else None,
-                    "trust_tier": test_run.trust_tier,
-                    "user_id": str(test_run.user_id) if test_run.user_id else None
-                })
-            except Exception as e:
-                logger.warning(f"Failed to calculate scores for test run {test_run.id}: {e}")
-                continue
+            results.append({
+                "test_run_id": str(test_run.id),
+                "overall_score": float(test_run.overall_score),
+                "tier1_score": float(test_run.tier1_score or 0),
+                "tier2_score": float(test_run.tier2_score or 0),
+                "tier3_score": float(test_run.tier3_score or 0),
+                "category_scores": test_run.category_scores or {},
+                "verdict_distribution": test_run.verdict_distribution or {},
+                "completed_at": test_run.completed_at.isoformat() if test_run.completed_at else None,
+                "trust_tier": test_run.trust_tier,
+                "user_id": str(test_run.user_id) if test_run.user_id else None
+            })
         
         return results
     

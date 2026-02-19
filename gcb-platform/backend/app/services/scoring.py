@@ -1,10 +1,13 @@
 """Scoring service for calculating benchmark scores"""
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.db.models.result import Result
+
+if TYPE_CHECKING:
+    from app.db.models.test_run import TestRun
 from app.db.models.question import Question
 from app.core.benchmark_config import (
     TIER1_WEIGHT,
@@ -180,3 +183,18 @@ class ScoringService:
         except Exception as e:
             logger.error(f"Unexpected error calculating scores for test run {test_run_id}: {e}")
             return None
+
+
+def compute_and_store_test_run_scores(db: Session, test_run: "TestRun") -> None:
+    """
+    Compute scores for a completed test run and store them on the TestRun record.
+    Call this once when a test run is created with Result rows.
+    """
+    scores = ScoringService.calculate_scores(db, str(test_run.id))
+    test_run.overall_score = scores["overall"]
+    test_run.tier1_score = scores["tier1"]
+    test_run.tier2_score = scores["tier2"]
+    test_run.tier3_score = scores["tier3"]
+    test_run.category_scores = scores["category_scores"]
+    test_run.verdict_distribution = scores["verdict_distribution"]
+    test_run.total_questions = scores["total_questions"]

@@ -14,7 +14,6 @@ from app.db.models.model import Model
 from app.db.models.question_set import QuestionSet
 from app.db.models.result import Result
 from app.db.models.question import Question
-from app.services.scoring import ScoringService
 from app.services.openrouter import OpenRouterClient
 from app.services.payment import PaymentService
 from app.schemas.public import (
@@ -51,70 +50,68 @@ def _get_model_detail_data(db: Session, model: Model) -> dict:
     frequently, so the most recent test reflects the current state of the
     model's compliance. Test history is preserved for trend analysis.
     """
-    # Get most recent completed test result with eager loading
+    # Get most recent completed test with pre-computed scores (exclude null)
     best_test = db.query(TestRun).options(
         joinedload(TestRun.question_set)
     ).filter(
         TestRun.model_id == model.id,
-        TestRun.status == "completed"
+        TestRun.status == "completed",
+        TestRun.overall_score.isnot(None),
     ).order_by(TestRun.completed_at.desc()).first()
     
     best_result = None
     if best_test:
-        scores = ScoringService.calculate_scores(db, str(best_test.id))
         best_result = {
             "test_run_id": str(best_test.id),
-            "scores": scores,
+            "scores": {
+                "overall": float(best_test.overall_score),
+                "tier1": float(best_test.tier1_score or 0),
+                "tier2": float(best_test.tier2_score or 0),
+                "tier3": float(best_test.tier3_score or 0),
+                "category_scores": best_test.category_scores or {},
+                "verdict_distribution": best_test.verdict_distribution or {
+                    "ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "ERROR": 0
+                },
+                "total_questions": best_test.total_questions or 0,
+            },
             "trust_tier": best_test.trust_tier,
             "completed_at": best_test.completed_at.isoformat() if best_test.completed_at else None,
             "benchmark_version": best_test.question_set.semantic_version
         }
     
-    # Get test history (last 10 completed tests) with eager loading
+    # Get test history (last 10 completed tests with scores)
     test_history = []
     tests = db.query(TestRun).options(
         joinedload(TestRun.question_set)
     ).filter(
         TestRun.model_id == model.id,
-        TestRun.status == "completed"
+        TestRun.status == "completed",
+        TestRun.overall_score.isnot(None),
     ).order_by(TestRun.completed_at.desc()).limit(10).all()
     
     for test in tests:
-        scores = ScoringService.calculate_scores(db, str(test.id))
         test_history.append({
             "test_run_id": str(test.id),
-            "overall_score": scores["overall"],
-            "tier1_score": scores["tier1"],
-            "tier2_score": scores["tier2"],
-            "tier3_score": scores["tier3"],
+            "overall_score": float(test.overall_score),
+            "tier1_score": float(test.tier1_score or 0),
+            "tier2_score": float(test.tier2_score or 0),
+            "tier3_score": float(test.tier3_score or 0),
             "benchmark_version": test.question_set.semantic_version,
             "completed_at": test.completed_at.isoformat() if test.completed_at else None,
             "trust_tier": test.trust_tier
         })
     
-    # Calculate category scores from most recent test
+    # Category breakdown from stored category_scores (total/passed for schema; score is the stored value)
     category_breakdown = {}
-    category_scores = {}
-    pass_verdicts = {"ACCEPTED"}
+    category_scores = best_test.category_scores or {} if best_test else {}
     
-    if best_test:
-        results = db.query(Result).options(
-            joinedload(Result.question)
-        ).filter(Result.test_run_id == best_test.id).all()
-        for result in results:
-            cat = result.question.category
-            if cat not in category_breakdown:
-                category_breakdown[cat] = {"total": 0, "passed": 0}
-            category_breakdown[cat]["total"] += 1
-            if result.verdict in pass_verdicts:
-                category_breakdown[cat]["passed"] += 1
-        
-        # Calculate percentage scores per category
-        for cat, data in category_breakdown.items():
-            category_scores[cat] = round((data["passed"] / data["total"]) * 100, 1) if data["total"] > 0 else 0
-            # Also add detailed score using ScoringService
-            cat_results = [r for r in results if r.question.category == cat]
-            category_breakdown[cat]["score"] = ScoringService.calculate_category_score(cat_results, cat)
+    if best_test and best_test.category_scores:
+        for cat, score in best_test.category_scores.items():
+            category_breakdown[cat] = {
+                "total": 100,
+                "passed": int(round(score)) if score is not None else 0,
+                "score": float(score) if score is not None else 0.0,
+            }
     
     return {
         "best_test": best_test,
@@ -280,12 +277,14 @@ async def get_leaderboard(
     entries = []
     
     # Build query for completed test runs with eager loading
+    # Exclude test runs without pre-computed scores (no recalculation for visitors)
     query = db.query(TestRun).options(
         joinedload(TestRun.model),
         joinedload(TestRun.question_set)
     ).join(Model, TestRun.model_id == Model.id).filter(
         TestRun.status == "completed",
         TestRun.question_set_id == question_set.id,
+        TestRun.overall_score.isnot(None),
         Model.is_active == True
     )
     
@@ -305,21 +304,36 @@ async def get_leaderboard(
             seen_models.add(test_run.model_id)
             unique_test_runs.append(test_run)
     
-    # Calculate scores and build entries from most recent test per model
+    # Precompute tier categories for tier filter (if needed)
+    tier_categories = set()
+    if tier:
+        tier_cats = db.query(Question.category).filter(
+            Question.question_set_id == question_set.id,
+            Question.tier == tier
+        ).distinct().all()
+        tier_categories = {c[0] for c in tier_cats if c[0]}
+    
+    # Build entries from stored scores only (no recalculation)
     for test_run in unique_test_runs:
-        scores_data = ScoringService.calculate_scores(db, str(test_run.id))
+        cat_scores = test_run.category_scores or {}
         
         # Filter by category/tier if specified
-        if category or tier:
-            results = db.query(Result).options(
-                joinedload(Result.question)
-            ).filter(Result.test_run_id == test_run.id).all()
-            if category:
-                results = [r for r in results if r.question.category == category]
-            if tier:
-                results = [r for r in results if r.question.tier == tier]
-            if not results:
-                continue
+        if category and category not in cat_scores:
+            continue
+        if tier and not (tier_categories & set(cat_scores.keys())):
+            continue
+        
+        scores_data = {
+            "overall": float(test_run.overall_score),
+            "tier1": float(test_run.tier1_score or 0),
+            "tier2": float(test_run.tier2_score or 0),
+            "tier3": float(test_run.tier3_score or 0),
+            "category_scores": cat_scores,
+            "verdict_distribution": test_run.verdict_distribution or {
+                "ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "ERROR": 0
+            },
+            "total_questions": test_run.total_questions or 0,
+        }
         
         entry = LeaderboardEntry(
             rank=0,
@@ -468,10 +482,11 @@ async def list_models(
     # Build response with stats
     model_items = []
     for model in models:
-        # Get latest test run
+        # Get latest test run with pre-computed scores
         latest_test = db.query(TestRun).filter(
             TestRun.model_id == model.id,
-            TestRun.status == "completed"
+            TestRun.status == "completed",
+            TestRun.overall_score.isnot(None),
         ).order_by(TestRun.completed_at.desc()).first()
         
         # Get test count
@@ -481,10 +496,7 @@ async def list_models(
         first_test = db.query(TestRun).filter(TestRun.model_id == model.id).order_by(TestRun.created_at.asc()).first()
         last_test = latest_test
         
-        latest_score = None
-        if latest_test:
-            scores = ScoringService.calculate_scores(db, str(latest_test.id))
-            latest_score = scores["overall"]
+        latest_score = float(latest_test.overall_score) if latest_test and latest_test.overall_score is not None else None
         
         model_items.append(ModelListItem(
             id=model.id,
@@ -774,50 +786,51 @@ async def get_stats(response: Response, db: Session = Depends(get_db)):
     current_qs = db.query(QuestionSet).filter(QuestionSet.status == "active").first()
     current_version = current_qs.semantic_version if current_qs else "1.0"
     
-    # Count models tested - only models with completed test runs for current benchmark
+    # Count models tested - only models with completed test runs (with scores) for current benchmark
     if current_qs:
         total_models_tested = db.query(Model).join(TestRun).filter(
             Model.is_active == True,
             TestRun.question_set_id == current_qs.id,
-            TestRun.status == "completed"
+            TestRun.status == "completed",
+            TestRun.overall_score.isnot(None),
         ).distinct().count()
     else:
         total_models_tested = 0
     
-    # Count test runs - only for current benchmark
+    # Count test runs - only for current benchmark (with scores)
     if current_qs:
         total_test_runs = db.query(TestRun).filter(
             TestRun.question_set_id == current_qs.id,
-            TestRun.status == "completed"
+            TestRun.status == "completed",
+            TestRun.overall_score.isnot(None),
         ).count()
     else:
         total_test_runs = 0
     
-    # Calculate top and average scores - only for current benchmark
+    # Top and average scores from stored values only
     if current_qs:
-        completed_tests = db.query(TestRun).filter(
+        top_score_result = db.query(func.max(TestRun.overall_score)).filter(
             TestRun.question_set_id == current_qs.id,
-            TestRun.status == "completed"
-        ).all()
+            TestRun.status == "completed",
+            TestRun.overall_score.isnot(None),
+        ).scalar()
+        avg_score_result = db.query(func.avg(TestRun.overall_score)).filter(
+            TestRun.question_set_id == current_qs.id,
+            TestRun.status == "completed",
+            TestRun.overall_score.isnot(None),
+        ).scalar()
+        top_score = float(top_score_result) if top_score_result is not None else 0.0
+        average_score = float(avg_score_result) if avg_score_result is not None else 0.0
     else:
-        completed_tests = []
+        top_score = 0.0
+        average_score = 0.0
     
-    scores = []
-    for test in completed_tests:
-        try:
-            test_scores = ScoringService.calculate_scores(db, str(test.id))
-            scores.append(test_scores["overall"])
-        except:
-            pass
-    
-    top_score = max(scores) if scores else 0.0
-    average_score = sum(scores) / len(scores) if scores else 0.0
-    
-    # Count providers - only providers with models tested in current benchmark
+    # Count providers - only providers with models tested (with scores) in current benchmark
     if current_qs:
         providers_represented = db.query(Model.provider).join(TestRun).filter(
             TestRun.question_set_id == current_qs.id,
-            TestRun.status == "completed"
+            TestRun.status == "completed",
+            TestRun.overall_score.isnot(None),
         ).distinct().count()
     else:
         providers_represented = 0
@@ -871,20 +884,30 @@ async def compare_models(
         if not model or not model.is_active:
             continue
         
-        # Get latest test run for this model and version with eager loading
+        # Get latest test run for this model and version with pre-computed scores
         test_run = db.query(TestRun).options(
             joinedload(TestRun.model),
             joinedload(TestRun.question_set)
         ).filter(
             TestRun.model_id == model_id,
             TestRun.question_set_id == question_set.id,
-            TestRun.status == "completed"
+            TestRun.status == "completed",
+            TestRun.overall_score.isnot(None),
         ).order_by(TestRun.completed_at.desc()).first()
         
         if not test_run:
             continue
         
-        scores = ScoringService.calculate_scores(db, str(test_run.id))
+        scores = {
+            "overall": float(test_run.overall_score),
+            "tier1": float(test_run.tier1_score or 0),
+            "tier2": float(test_run.tier2_score or 0),
+            "tier3": float(test_run.tier3_score or 0),
+            "category_scores": test_run.category_scores or {},
+            "verdict_distribution": test_run.verdict_distribution or {
+                "ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "ERROR": 0
+            },
+        }
         
         model_data = {
             "model": {
@@ -1066,14 +1089,14 @@ async def get_category_rankings(
     ).distinct().all()
     category_codes = sorted([c[0] for c in categories if c[0]])
     
-    # Get all completed test runs for this question set with eager loading
-    # Join with Model to filter by is_active
+    # Get all completed test runs with pre-computed scores for this question set
     test_runs = db.query(TestRun).options(
         joinedload(TestRun.model),
         joinedload(TestRun.question_set)
     ).join(Model, TestRun.model_id == Model.id).filter(
         TestRun.status == "completed",
         TestRun.question_set_id == question_set.id,
+        TestRun.overall_score.isnot(None),
         Model.is_active == True
     ).order_by(TestRun.completed_at.desc()).all()
     
@@ -1085,18 +1108,16 @@ async def get_category_rankings(
             seen_models.add(test_run.model_id)
             unique_test_runs.append(test_run)
     
-    # Pre-calculate all scores once (avoid recalculating for each category)
+    # Build scores from stored data only
     test_run_scores = {}
     for test_run in unique_test_runs:
-        try:
-            scores = ScoringService.calculate_scores(db, str(test_run.id))
-            test_run_scores[test_run.id] = {
-                "test_run": test_run,
-                "scores": scores
+        cat_scores = test_run.category_scores or {}
+        test_run_scores[test_run.id] = {
+            "test_run": test_run,
+            "scores": {
+                "category_scores": cat_scores,
             }
-        except Exception as e:
-            logger.warning(f"Failed to calculate scores for test run {test_run.id}: {e}")
-            continue
+        }
     
     # Build category rankings
     categories_data = {}

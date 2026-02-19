@@ -107,6 +107,7 @@ export default function AdminDataPage() {
   const [modelsTotal, setModelsTotal] = useState(0);
   const [modelSearch, setModelSearch] = useState("");
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
+  const [recalculatingModelId, setRecalculatingModelId] = useState<string | null>(null);
   
   // Delete dialog state
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -394,6 +395,26 @@ export default function AdminDataPage() {
       newSet.add(id);
     }
     setSelectedModels(newSet);
+  }
+
+  async function handleRecalculateScores(modelId: string, modelName: string) {
+    setRecalculatingModelId(modelId);
+    try {
+      const response = await fetch(`/api/admin/models/${modelId}/recalculate-scores`, {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(data.message || `Recalculated scores for ${data.updated_count ?? 0} test run(s)`);
+      } else {
+        toast.error(data.detail || "Failed to recalculate scores");
+      }
+    } catch (error) {
+      console.error("Recalculate scores error:", error);
+      toast.error("Failed to recalculate scores");
+    } finally {
+      setRecalculatingModelId(null);
+    }
   }
 
   function selectAllTestRuns() {
@@ -814,6 +835,17 @@ export default function AdminDataPage() {
                               : "—"}
                           </TableCell>
                           <TableCell>
+                            <div className="flex gap-2 flex-wrap">
+                            {model.test_run_count > 0 && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={recalculatingModelId === model.id}
+                                onClick={() => handleRecalculateScores(model.id, model.name)}
+                              >
+                                {recalculatingModelId === model.id ? "Recalculating…" : "Recalculate scores"}
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -825,6 +857,7 @@ export default function AdminDataPage() {
                             >
                               {model.test_run_count > 0 ? "Protected" : "Delete"}
                             </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))

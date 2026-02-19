@@ -19,6 +19,7 @@ from app.db.models.question_set import QuestionSet
 from app.db.models.methodology_version import MethodologyVersion
 from app.db.models.question import Question
 from app.db.models.result import Result
+from app.services.scoring import compute_and_store_test_run_scores
 
 
 def reprocess_approved_submissions():
@@ -197,7 +198,9 @@ def reprocess_approved_submissions():
                 )
                 db.add(result)
                 results_created += 1
-            
+
+            compute_and_store_test_run_scores(db, test_run)
+
             db.commit()
             print(f"  ✓ Created {results_created} results")
             if questions_not_found > 0:

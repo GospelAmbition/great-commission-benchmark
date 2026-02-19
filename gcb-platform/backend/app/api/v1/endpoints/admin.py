@@ -1399,6 +1399,61 @@ async def delete_model(
     }
 
 
+@router.post("/models/{model_id}/recalculate-scores")
+async def recalculate_model_scores(
+    model_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Recalculate and store scores for all completed test runs of a model.
+    Use this to backfill or fix test runs with null overall_score.
+    Invalidates caches after update.
+    """
+    from app.services.scoring import compute_and_store_test_run_scores
+    from app.services.aggregation import AggregationService
+    from app.core.cache import cache
+
+    model = db.query(Model).filter(Model.id == model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    # Find completed test runs with null scores (or all completed - we overwrite)
+    test_runs = db.query(TestRun).filter(
+        TestRun.model_id == model_id,
+        TestRun.status == "completed",
+    ).all()
+
+    updated_count = 0
+    affected_versions = set()
+    for test_run in test_runs:
+        try:
+            compute_and_store_test_run_scores(db, test_run)
+            db.commit()
+            updated_count += 1
+            affected_versions.add((test_run.model_id, test_run.question_set_id))
+        except Exception as e:
+            logger.warning(f"Failed to recalculate scores for test run {test_run.id}: {e}")
+            db.rollback()
+
+    # Update ModelVersionStats for each affected model+version
+    for mid, qsid in affected_versions:
+        try:
+            AggregationService.recalculate_model_stats(db, mid, qsid)
+        except Exception as e:
+            logger.warning(f"Failed to update ModelVersionStats for model {mid}: {e}")
+
+    # Invalidate caches so leaderboard reflects updated scores
+    await cache.clear()
+
+    return {
+        "message": f"Recalculated scores for {updated_count} test run(s)",
+        "model_id": str(model_id),
+        "model_name": model.name,
+        "updated_count": updated_count
+    }
+
+
 @router.get("/test-runs")
 async def list_test_runs(
     status: Optional[str] = Query(None, description="Filter by status"),

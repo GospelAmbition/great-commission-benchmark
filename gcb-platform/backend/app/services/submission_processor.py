@@ -16,6 +16,7 @@ from app.db.models.methodology_version import MethodologyVersion
 from app.db.models.question import Question
 from app.db.models.test_run import TestRun
 from app.db.models.result import Result
+from app.services.scoring import compute_and_store_test_run_scores
 
 
 class SubmissionProcessorService:
@@ -271,6 +272,8 @@ class SubmissionProcessorService:
             )
             self.db.add(result)
             results_created += 1
+
+        compute_and_store_test_run_scores(self.db, test_run)
         
         return test_run, results_created
     
