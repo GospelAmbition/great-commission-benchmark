@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     # Railway buckets are private, so files are served through /api/files/{path}
     BACKEND_PUBLIC_URL: str = "http://localhost:8001"
     
+    # Redis (optional) — when set, leaderboard and public caches use Redis
+    # so they persist across restarts and deploys.
+    # Railway: add a Redis service and set REDIS_URL to its connection string.
+    # Leave empty to use the in-memory cache (default for local dev).
+    REDIS_URL: str = ""
+
     # Google reCAPTCHA v3
     RECAPTCHA_SECRET_KEY: str = ""
     RECAPTCHA_SITE_KEY: str = ""  # For reference, not used in backend

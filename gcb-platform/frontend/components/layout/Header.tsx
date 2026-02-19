@@ -17,6 +17,7 @@ import { MenuIcon, SearchIcon } from "@/lib/icons";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useUserProfile } from "@/lib/useUserProfile";
 import { SearchModal } from "./SearchModal";
+import { prefetchLeaderboardPage } from "@/lib/leaderboard-prefetch";
 
 export function Header() {
   const { data: session, status } = useSession();
@@ -74,6 +75,8 @@ export function Header() {
           </Link>
           <Link
             href="/leaderboard"
+            onMouseEnter={prefetchLeaderboardPage}
+            onFocus={prefetchLeaderboardPage}
             className={`px-3 py-2 rounded-md transition-all ${
               isActive("/leaderboard")
                 ? "text-primary bg-primary/10 font-semibold"
@@ -215,6 +218,8 @@ export function Header() {
                 </Link>
                 <Link
                   href="/leaderboard"
+                  onMouseEnter={prefetchLeaderboardPage}
+                  onFocus={prefetchLeaderboardPage}
                   className={`text-base font-medium transition-all px-4 py-2.5 rounded-lg ${
                     isActive("/leaderboard") 
                       ? "text-primary bg-primary/10 border-l-2 border-primary" 

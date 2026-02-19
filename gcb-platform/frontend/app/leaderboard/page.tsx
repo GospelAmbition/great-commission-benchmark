@@ -29,14 +29,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { apiClient, FilterOptionsResponse } from "@/lib/api";
-import { useLeaderboardInitialData } from "@/components/leaderboard/LeaderboardDataProvider";
+import { FilterOptionsResponse } from "@/lib/api";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowUpDown, BarChart3, Filter, ChevronUp, ChevronDown, ChevronRight, Shield, ShieldAlert, ShieldX, CheckCircle2, HelpCircle, GitCompare } from "lucide-react";
 import { ProviderIcon } from "@/components/ui/provider-icon";
 import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
+import { useLeaderboardData } from "@/components/leaderboard/LeaderboardDataProvider";
 
 interface LeaderboardItem {
   id: string;
@@ -123,15 +123,12 @@ function TotalScore({ score }: { score: number }) {
 
 function LeaderboardContent() {
   const searchParams = useSearchParams();
-  const { initialItems, initialTotal } = useLeaderboardInitialData();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>(
-    () => (initialItems?.slice(0, 50) ?? []) as LeaderboardItem[]
-  );
-  const [loading, setLoading] = useState(!(initialItems?.length));
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
-  const [filterOptions, setFilterOptions] = useState<FilterOptionsResponse | null>(null);
   const processedUrlParams = useRef<string | null>(null);
+  // Whether initial context data has been consumed (prevents re-fetching on mount)
+  const initialConsumed = useRef(false);
+
   const [filters, setFilters] = useState({
     version: "",
     category: "",
@@ -144,30 +141,22 @@ function LeaderboardContent() {
   const [pagination, setPagination] = useState({
     limit: 50,
     offset: 0,
-    total: initialTotal || 0,
   });
-  // Full dataset for default view: use server-provided initial data or client fetch
-  const [fullDataset, setFullDataset] = useState<LeaderboardItem[] | null>(initialItems || null);
-  const PAGE_SIZE = 50;
 
-  const hasActiveFilters = !!(filters.version || filters.category || filters.tier || filters.provider || filters.trust_tier);
-
-  // Load filter options on mount
-  useEffect(() => {
-    loadFilterOptions();
-  }, []);
+  // All leaderboard data comes from the context (seeded by layout or fetched
+  // on-demand by the provider when no initialData was available).
+  const { items: leaderboard, total, filterOptions, loading, loadLeaderboard } = useLeaderboardData();
 
   // Pre-select models from URL query params (only on initial load or URL change)
   useEffect(() => {
     const modelsParam = searchParams.get("models");
-    const source = fullDataset ?? leaderboard;
     // Only process if URL params changed or leaderboard just loaded
-    if (modelsParam && source.length > 0 && modelsParam !== processedUrlParams.current) {
+    if (modelsParam && leaderboard.length > 0 && modelsParam !== processedUrlParams.current) {
       processedUrlParams.current = modelsParam;
       const modelIds = modelsParam.split(",").map(id => decodeURIComponent(id));
       // Match by either id (UUID) or model_id (OpenRouter-style ID)
       const matchingIds = new Set<string>();
-      source.forEach(item => {
+      leaderboard.forEach(item => {
         if (modelIds.includes(item.id) || modelIds.includes(item.model_id)) {
           matchingIds.add(item.id);
         }
@@ -177,59 +166,18 @@ function LeaderboardContent() {
         setSelectedModels(matchingIds);
       }
     }
-  }, [searchParams, leaderboard, fullDataset]);
+  }, [searchParams, leaderboard]);
 
+  // When filters or pagination change, delegate to context's loadLeaderboard
   useEffect(() => {
-    // When we have full dataset and no filters, paginate in memory—no refetch
-    if (fullDataset && !hasActiveFilters) {
-      setLeaderboard(fullDataset.slice(pagination.offset, pagination.offset + PAGE_SIZE));
+    if (!initialConsumed.current) {
+      // Skip the first run — context already has data from layout/bootstrap
+      initialConsumed.current = true;
       return;
     }
-    loadLeaderboard();
+    loadLeaderboard(filters, pagination);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, pagination.offset]);
-
-  async function loadFilterOptions() {
-    try {
-      const options = await apiClient.getFilterOptions();
-      setFilterOptions(options);
-    } catch (error) {
-      console.error("Failed to load filter options:", error);
-    }
-  }
-
-  async function loadLeaderboard() {
-    setLoading(true);
-    try {
-      if (!hasActiveFilters) {
-        // Default view: fetch from same-origin route (avoids cross-origin, edge-cached)
-        const res = await fetch("/api/leaderboard-data");
-        if (!res.ok) throw new Error("Failed to load leaderboard");
-        const result = await res.json();
-        const items = result.items || [];
-        if (items.length > 0) {
-          setFullDataset(items);
-          setLeaderboard(items.slice(0, PAGE_SIZE));
-          setPagination((prev) => ({ ...prev, offset: 0, total: result.total || items.length }));
-        }
-      } else {
-        // Filtered view: fetch paginated from API
-        setFullDataset(null);
-        const result = await apiClient.getLeaderboard({
-          ...filters,
-          limit: PAGE_SIZE,
-          offset: pagination.offset,
-        });
-        if (result.items) {
-          setLeaderboard(result.items);
-          setPagination((prev) => ({ ...prev, total: result.total || 0 }));
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load leaderboard:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function toggleModelSelection(id: string) {
     const newSelected = new Set(selectedModels);
@@ -484,8 +432,8 @@ function LeaderboardContent() {
               </Sheet>
             </div>
             <CardDescription>
-              {pagination.total > 0
-                ? `Showing ${pagination.offset + 1}-${Math.min(pagination.offset + pagination.limit, pagination.total)} of ${pagination.total} models • Select 2-5 models to compare`
+              {total > 0
+                ? `Showing ${pagination.offset + 1}-${Math.min(pagination.offset + pagination.limit, total)} of ${total} models • Select 2-5 models to compare`
                 : "No models to display"}
             </CardDescription>
           </CardHeader>
@@ -647,12 +595,12 @@ function LeaderboardContent() {
                   </Button>
                   <span className="text-sm text-muted-foreground">
                     Page {Math.floor(pagination.offset / pagination.limit) + 1} of{" "}
-                    {Math.ceil(pagination.total / pagination.limit) || 1}
+                    {Math.ceil(total / pagination.limit) || 1}
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={pagination.offset + pagination.limit >= pagination.total}
+                    disabled={pagination.offset + pagination.limit >= total}
                     onClick={() =>
                       setPagination((prev) => ({
                         ...prev,

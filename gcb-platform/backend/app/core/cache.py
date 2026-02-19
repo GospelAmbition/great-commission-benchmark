@@ -1,4 +1,10 @@
-"""Simple in-memory caching for API responses with stale-while-revalidate support"""
+"""Caching for API responses with stale-while-revalidate support.
+
+Two backends are available:
+- SimpleCache  – in-memory; default for local dev; lost on restart.
+- RedisCache   – backed by Redis; persists across restarts and deploys.
+                 Activated when REDIS_URL is set in the environment.
+"""
 from datetime import datetime, timedelta
 from typing import Any, Optional, Dict, Callable, Awaitable, Tuple
 from functools import wraps
@@ -152,8 +158,178 @@ class SimpleCache:
             await self.unmark_refreshing(key)
 
 
+# ---------------------------------------------------------------------------
+# Redis-backed cache
+# ---------------------------------------------------------------------------
+
+def _serialize(value: Any) -> str:
+    """Serialize a value to a JSON string, handling Pydantic models."""
+    if hasattr(value, "model_dump"):
+        value = value.model_dump(mode="json")
+    return json.dumps(value, default=str)
+
+
+def _deserialize(raw: str) -> Any:
+    return json.loads(raw)
+
+
+class RedisCache:
+    """Redis-backed cache with TTL and stale-while-revalidate support.
+
+    All keys are stored under the ``gcb:`` prefix so that ``clear()``
+    can remove only GCB keys without affecting other data on the same
+    Redis instance.
+
+    Each cache entry is a single Redis key whose value is a JSON object::
+
+        { "v": <payload>, "fe": <fresh_expiry_ts>, "se": <stale_expiry_ts> }
+
+    The key's Redis TTL is set to *stale_expiry* so Redis itself evicts
+    entries that are too old to serve.
+    """
+
+    KEY_PREFIX = "gcb:"
+    REFRESHING_SET = "gcb:refreshing"
+
+    def __init__(self, redis_url: str):
+        import redis.asyncio as aioredis
+        self._redis: aioredis.Redis = aioredis.from_url(
+            redis_url, encoding="utf-8", decode_responses=True
+        )
+
+    def _k(self, key: str) -> str:
+        return f"{self.KEY_PREFIX}{key}"
+
+    async def get(self, key: str) -> Optional[Any]:
+        """Return the value if the entry exists and is not fully expired."""
+        try:
+            raw = await self._redis.get(self._k(key))
+            if raw is None:
+                return None
+            entry = _deserialize(raw)
+            now = datetime.utcnow().timestamp()
+            se = entry.get("se", 0)
+            if now >= se:
+                # Too old — expired (Redis should have deleted it, but guard anyway)
+                return None
+            return entry["v"]
+        except Exception as exc:
+            logger.warning("RedisCache.get error for %s: %s", key, exc)
+            return None
+
+    async def get_with_stale(self, key: str) -> Tuple[Optional[Any], bool, bool]:
+        """Return ``(value, is_fresh, should_refresh)``."""
+        try:
+            raw = await self._redis.get(self._k(key))
+            if raw is None:
+                return None, False, False
+            entry = _deserialize(raw)
+            now = datetime.utcnow().timestamp()
+            fe = entry.get("fe", 0)
+            se = entry.get("se", 0)
+            if now >= se:
+                return None, False, False
+            if now < fe:
+                return entry["v"], True, False
+            # Stale but usable
+            refreshing = await self._redis.sismember(self.REFRESHING_SET, key)
+            should_refresh = not bool(refreshing)
+            return entry["v"], False, should_refresh
+        except Exception as exc:
+            logger.warning("RedisCache.get_with_stale error for %s: %s", key, exc)
+            return None, False, False
+
+    async def set(
+        self,
+        key: str,
+        value: Any,
+        ttl_seconds: int = 300,
+        stale_ttl_seconds: Optional[int] = None,
+    ) -> None:
+        if stale_ttl_seconds is None:
+            stale_ttl_seconds = ttl_seconds * 2
+        now = datetime.utcnow().timestamp()
+        entry = {
+            "v": json.loads(_serialize(value)),
+            "fe": now + ttl_seconds,
+            "se": now + stale_ttl_seconds,
+        }
+        try:
+            await self._redis.set(
+                self._k(key),
+                json.dumps(entry),
+                ex=stale_ttl_seconds,
+            )
+        except Exception as exc:
+            logger.warning("RedisCache.set error for %s: %s", key, exc)
+
+    async def delete(self, key: str) -> None:
+        try:
+            await self._redis.delete(self._k(key))
+        except Exception as exc:
+            logger.warning("RedisCache.delete error for %s: %s", key, exc)
+
+    async def clear(self) -> None:
+        """Delete all GCB-prefixed keys from Redis."""
+        try:
+            cursor = 0
+            pattern = f"{self.KEY_PREFIX}*"
+            while True:
+                cursor, keys = await self._redis.scan(cursor, match=pattern, count=200)
+                if keys:
+                    await self._redis.delete(*keys)
+                if cursor == 0:
+                    break
+        except Exception as exc:
+            logger.warning("RedisCache.clear error: %s", exc)
+
+    async def mark_refreshing(self, key: str) -> None:
+        try:
+            # Expire the membership after stale TTL + buffer so it doesn't leak
+            await self._redis.sadd(self.REFRESHING_SET, key)
+            await self._redis.expire(self.REFRESHING_SET, 3600)
+        except Exception as exc:
+            logger.warning("RedisCache.mark_refreshing error for %s: %s", key, exc)
+
+    async def unmark_refreshing(self, key: str) -> None:
+        try:
+            await self._redis.srem(self.REFRESHING_SET, key)
+        except Exception as exc:
+            logger.warning("RedisCache.unmark_refreshing error for %s: %s", key, exc)
+
+    # The remaining SimpleCache methods (cleanup_expired, register_refresh_callback,
+    # trigger_background_refresh) are not called externally so we provide no-ops.
+    async def cleanup_expired(self) -> None:
+        pass
+
+    def register_refresh_callback(self, key_prefix: str, callback: Callable[[], Awaitable[None]]) -> None:
+        pass
+
+    async def trigger_background_refresh(self, key: str) -> None:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Global cache instance — switched at import time based on config
+# ---------------------------------------------------------------------------
+
+def _make_cache() -> "SimpleCache | RedisCache":
+    try:
+        from app.core.config import settings
+        redis_url = settings.REDIS_URL
+    except Exception:
+        redis_url = ""
+
+    if redis_url:
+        logger.info("Cache backend: Redis (%s)", redis_url.split("@")[-1])
+        return RedisCache(redis_url)
+
+    logger.info("Cache backend: in-memory SimpleCache")
+    return SimpleCache()
+
+
 # Global cache instance
-cache = SimpleCache()
+cache = _make_cache()
 
 
 # Cache TTL settings (in seconds)

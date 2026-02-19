@@ -204,7 +204,7 @@ async def get_leaderboard(
     tier: Optional[int] = Query(None),
     provider: Optional[str] = Query(None),
     trust_tier: Optional[str] = Query(None),
-    limit: int = Query(50, ge=1, le=1000),
+    limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     sort: str = Query("score", regex="^(score|date|tier1|tier2|tier3)$"),
     order: str = Query("desc", regex="^(asc|desc)$"),
@@ -912,6 +912,109 @@ async def compare_models(
         }
     
     return comparison_data
+
+
+@router.get("/leaderboard-page")
+async def get_leaderboard_page(
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    """
+    Combined endpoint that returns both the default leaderboard and filter options
+    in a single request. Used by the frontend to load the leaderboard page with
+    one round-trip instead of two.
+
+    Returns the default view: limit=50, offset=0, sort=score, order=desc, version=current.
+    Filter options are returned in the same response so the page can render immediately.
+    """
+    import asyncio
+
+    # Build default leaderboard cache key (matches the frontend default params)
+    default_leaderboard_params = {
+        "version": "current",
+        "category": None,
+        "tier": None,
+        "provider": None,
+        "trust_tier": None,
+        "limit": 50,
+        "offset": 0,
+        "sort": "score",
+        "order": "desc",
+    }
+    lb_cache_key = make_cache_key("leaderboard", default_leaderboard_params)
+    fo_cache_key = make_cache_key("filter_options")
+
+    # Fetch both from cache concurrently
+    lb_cached, lb_fresh, lb_should_refresh = await cache.get_with_stale(lb_cache_key)
+    fo_cached = await cache.get(fo_cache_key)
+
+    # Trigger background leaderboard refresh if stale
+    if lb_cached is not None and not lb_fresh and lb_should_refresh:
+        asyncio.create_task(_refresh_leaderboard_cache(lb_cache_key, default_leaderboard_params, db))
+
+    # If both are cached, return immediately
+    if lb_cached is not None and fo_cached is not None:
+        response.headers["X-Cache"] = "HIT" if lb_fresh else "STALE"
+        return {"leaderboard": lb_cached, "filter_options": fo_cached}
+
+    # If leaderboard is missing from cache, compute it (cold start)
+    if lb_cached is None:
+        response.headers["X-Cache"] = "MISS"
+        from app.services.cache_warmer import _generate_leaderboard_data
+        lb_cached = await _generate_leaderboard_data(db, **default_leaderboard_params)
+        await cache.set(
+            lb_cache_key,
+            lb_cached,
+            ttl_seconds=CACHE_TTL["leaderboard"],
+            stale_ttl_seconds=CACHE_STALE_TTL["leaderboard"],
+        )
+
+    # If filter options are missing from cache, compute them
+    if fo_cached is None:
+        providers = db.query(Model.provider).join(
+            TestRun, TestRun.model_id == Model.id
+        ).filter(
+            TestRun.status == "completed",
+            Model.is_active == True,
+        ).distinct().all()
+        providers = sorted([p[0] for p in providers if p[0]])
+
+        active_qs = db.query(QuestionSet).filter(QuestionSet.status == "active").first()
+        categories = []
+        if active_qs:
+            cat_results = db.query(Question.category).filter(
+                Question.question_set_id == active_qs.id
+            ).distinct().all()
+            categories = sorted([c[0] for c in cat_results if c[0]])
+
+        trust_tiers = db.query(TestRun.trust_tier).filter(
+            TestRun.status == "completed",
+            TestRun.trust_tier.isnot(None),
+        ).distinct().all()
+        trust_tiers = sorted([t[0] for t in trust_tiers if t[0]])
+
+        versions = db.query(QuestionSet.semantic_version).filter(
+            or_(
+                QuestionSet.status == "active",
+                (QuestionSet.status == "archived") & (QuestionSet.is_publicly_visible == True),
+            )
+        ).distinct().all()
+        versions = sorted([v[0] for v in versions if v[0]], reverse=True)
+
+        fo_cached = {
+            "providers": providers,
+            "categories": categories,
+            "trust_tiers": trust_tiers,
+            "tiers": [
+                {"value": "tier1", "label": "Tier 1 (Task)"},
+                {"value": "tier2", "label": "Tier 2 (Doctrine)"},
+                {"value": "tier3", "label": "Tier 3 (Worldview)"},
+            ],
+            "versions": versions,
+        }
+        await cache.set(fo_cache_key, fo_cached, 300)
+
+    return {"leaderboard": lb_cached, "filter_options": fo_cached}
 
 
 @router.get("/category-rankings")

@@ -32,6 +32,12 @@ export interface LeaderboardResponse {
   total: number;
 }
 
+// Combined leaderboard-page response (one round-trip for initial load)
+export interface LeaderboardPageResponse {
+  leaderboard: LeaderboardResponse;
+  filter_options: FilterOptionsResponse;
+}
+
 // Backend response types (different structure from frontend)
 interface BackendLeaderboardEntry {
   model?: { id?: string; model_id?: string; name?: string; provider?: string };
@@ -43,6 +49,12 @@ interface BackendLeaderboardEntry {
 interface BackendLeaderboardResponse {
   entries: BackendLeaderboardEntry[];
   total_models: number;
+}
+
+// Backend combined leaderboard-page response
+interface BackendLeaderboardPageResponse {
+  leaderboard: BackendLeaderboardResponse;
+  filter_options: FilterOptionsResponse;
 }
 
 export interface ModelResponse {
@@ -184,11 +196,10 @@ export class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {},
-    { skipAuth = false }: { skipAuth?: boolean } = {}
+    options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const token = skipAuth ? null : await this.getAuthToken();
+    const token = await this.getAuthToken();
 
     const response = await fetch(url, {
       ...options,
@@ -221,13 +232,43 @@ export class ApiClient {
     return response.json();
   }
 
-  /**
-   * Request to public endpoints that don't require authentication.
-   * Skips getAuthToken() to avoid blocking on /api/auth/token, improving
-   * leaderboard and other public data load times.
-   */
-  private requestPublic<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    return this.request<T>(endpoint, options, { skipAuth: true });
+  // Public API request — no auth token, no /api/auth/token round-trip.
+  // Used for all /api/public/* endpoints so the leaderboard and other
+  // public data never wait on session resolution.
+  private async requestPublic<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      let errorDetail = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.detail) {
+          errorDetail = typeof errorData.detail === 'string'
+            ? errorData.detail
+            : JSON.stringify(errorData.detail);
+        } else if (errorData.message) {
+          errorDetail = errorData.message;
+        } else {
+          errorDetail = JSON.stringify(errorData);
+        }
+      } catch {
+        // ignore JSON parse failure
+      }
+      throw new Error(errorDetail);
+    }
+
+    return response.json();
   }
 
   private async getAuthToken(): Promise<string | null> {
@@ -349,6 +390,28 @@ export class ApiClient {
         category_scores: entry.category_scores || {},
       })),
       total: response.total_models || 0,
+    };
+  }
+
+  async getLeaderboardPage(): Promise<LeaderboardPageResponse> {
+    const raw = await this.requestPublic<BackendLeaderboardPageResponse>('/api/public/leaderboard-page');
+    return {
+      leaderboard: {
+        items: (raw.leaderboard?.entries || []).map((entry) => ({
+          id: entry.model?.id || '',
+          model_id: entry.model?.model_id || entry.model?.id || '',
+          model_name: entry.model?.name || '',
+          provider: entry.model?.provider || '',
+          overall_score: entry.scores?.overall || 0,
+          tier1_score: entry.scores?.tier1,
+          tier2_score: entry.scores?.tier2,
+          tier3_score: entry.scores?.tier3,
+          trust_tier: entry.test_run?.trust_tier,
+          category_scores: entry.category_scores || {},
+        })),
+        total: raw.leaderboard?.total_models || 0,
+      },
+      filter_options: raw.filter_options,
     };
   }
 

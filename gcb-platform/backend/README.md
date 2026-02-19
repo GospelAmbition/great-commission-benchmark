@@ -18,6 +18,7 @@ The backend provides:
 
 - Python 3.11+
 - PostgreSQL 15+
+- Redis 6+ (optional but strongly recommended for production — see [Redis Cache](#redis-cache) below)
 - Virtual environment tool (venv)
 
 ### Installation
@@ -192,6 +193,31 @@ View current revision:
 ```bash
 alembic current
 ```
+
+## Redis Cache
+
+The leaderboard and other public caches can be backed by Redis so that data
+persists across restarts and deploys — meaning the first user after a deploy
+always gets a cached response instead of a cold-start DB query.
+
+**Railway deployment:**
+
+1. In the Railway dashboard, add a **Redis** service to your project.
+2. In the backend service's **Variables** tab, add:
+   ```
+   REDIS_URL=${{Redis.REDIS_URL}}
+   ```
+   (Railway injects the connection string automatically.)
+3. Redeploy. The backend will log `Cache backend: Redis (host:port)` on startup.
+
+**Local development:** Leave `REDIS_URL` unset (or empty) to use the default
+in-memory cache. No Redis installation needed locally.
+
+**Fallback behavior:** If `REDIS_URL` is set but Redis is unreachable, cache
+operations fail silently and the endpoint falls back to computing data from
+the database.
+
+---
 
 ## Services
 
