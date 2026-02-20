@@ -26,7 +26,7 @@ async function getLeaderboardPageData(): Promise<{
 }> {
   try {
     const response = await fetch(`${API_URL}/api/public/leaderboard-page`, {
-      next: { revalidate: 3600 }, // Next.js server-side cache for 1 hour
+      next: { revalidate: 60 }, // 1 min — short TTL so admin cache clear takes effect quickly
     });
     if (!response.ok) return { initialData: null, rawEntries: null };
     const data = await response.json();

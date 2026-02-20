@@ -129,6 +129,10 @@ function LeaderboardContent() {
   // Whether initial context data has been consumed (prevents re-fetching on mount)
   const initialConsumed = useRef(false);
 
+  // Parse limit from URL (e.g. ?limit=100) — backend max is 100
+  const urlLimitParam = searchParams.get("limit");
+  const urlLimit = urlLimitParam ? Math.min(100, Math.max(50, parseInt(urlLimitParam, 10) || 50)) : 50;
+
   const [filters, setFilters] = useState({
     version: "",
     category: "",
@@ -139,7 +143,7 @@ function LeaderboardContent() {
     order: "desc" as "asc" | "desc",
   });
   const [pagination, setPagination] = useState({
-    limit: 50,
+    limit: urlLimit,
     offset: 0,
   });
 
@@ -168,16 +172,24 @@ function LeaderboardContent() {
     }
   }, [searchParams, leaderboard]);
 
+  // Sync pagination.limit from URL when ?limit= changes
+  useEffect(() => {
+    setPagination((prev) =>
+      prev.limit !== urlLimit ? { ...prev, limit: urlLimit, offset: 0 } : prev
+    );
+  }, [urlLimit]);
+
   // When filters or pagination change, delegate to context's loadLeaderboard
   useEffect(() => {
-    if (!initialConsumed.current) {
-      // Skip the first run — context already has data from layout/bootstrap
+    // Skip first run only when using default limit (layout data matches)
+    if (!initialConsumed.current && pagination.limit === 50) {
       initialConsumed.current = true;
       return;
     }
+    if (!initialConsumed.current) initialConsumed.current = true;
     loadLeaderboard(filters, pagination);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, pagination.offset]);
+  }, [filters, pagination.offset, pagination.limit]);
 
   function toggleModelSelection(id: string) {
     const newSelected = new Set(selectedModels);
