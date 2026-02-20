@@ -2687,3 +2687,34 @@ async def delete_newsletter_subscriber(
         "success": True,
         "message": f"Subscriber {email} removed",
     }
+
+
+# =============================================================================
+# Model archive (admin-level, supports X-API-Key for scheduler access)
+# =============================================================================
+
+
+@router.patch("/models/{model_id}/archive")
+async def archive_model(
+    model_id: UUID,
+    current_user: User = Depends(require_admin_flexible),
+    db: Session = Depends(get_db),
+):
+    """Archive a model. Archived models are excluded from the leaderboard.
+
+    Uses require_admin_flexible so the scheduler can call this with X-API-Key.
+    """
+    model = db.query(Model).filter(Model.id == model_id).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    model.is_active = False
+    db.commit()
+    from app.core.cache import invalidate_cache
+    await invalidate_cache("leaderboard")
+    return {
+        "model_id": str(model.id),
+        "model_id_str": model.model_id,
+        "name": model.name,
+        "archived": True,
+        "message": f"Model '{model.name}' archived successfully",
+    }
