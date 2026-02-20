@@ -1169,85 +1169,105 @@ async def get_admin_stats(
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    """Get admin statistics"""
-    # User stats
-    total_users = db.query(User).count()
-    new_users_30d = db.query(User).filter(
-        User.created_at >= datetime.utcnow() - timedelta(days=30)
-    ).count()
-    
-    # Test stats
-    total_tests = db.query(TestRun).count()
-    completed_tests = db.query(TestRun).filter(TestRun.status == "completed").count()
-    running_tests = db.query(TestRun).filter(TestRun.status == "running").count()
-    
-    # Revenue stats (from test runs)
-    test_run_revenue = db.query(func.sum(TestRun.total_cost)).filter(
-        TestRun.payment_status == "succeeded"
-    ).scalar() or 0
-    
-    test_run_revenue_30d = db.query(func.sum(TestRun.total_cost)).filter(
-        TestRun.payment_status == "succeeded",
-        TestRun.created_at >= datetime.utcnow() - timedelta(days=30)
-    ).scalar() or 0
-    
-    # Revenue from sponsorship payments
-    # Query sponsorships with succeeded payments and retrieve amounts from Stripe
+    """Get admin statistics. Each section is independently protected so a
+    single DB or external-service failure doesn't take down the whole response."""
+
+    total_users = 0
+    new_users_30d = 0
+    try:
+        total_users = db.query(User).count()
+        new_users_30d = db.query(User).filter(
+            User.created_at >= datetime.utcnow() - timedelta(days=30)
+        ).count()
+    except Exception as e:
+        logger.error(f"Admin stats - user stats failed: {e}")
+        db.rollback()
+
+    total_tests = 0
+    completed_tests = 0
+    running_tests = 0
+    try:
+        total_tests = db.query(TestRun).count()
+        completed_tests = db.query(TestRun).filter(TestRun.status == "completed").count()
+        running_tests = db.query(TestRun).filter(TestRun.status == "running").count()
+    except Exception as e:
+        logger.error(f"Admin stats - test stats failed: {e}")
+        db.rollback()
+
+    test_run_revenue = 0
+    test_run_revenue_30d = 0
+    try:
+        test_run_revenue = db.query(func.sum(TestRun.total_cost)).filter(
+            TestRun.payment_status == "succeeded"
+        ).scalar() or 0
+        test_run_revenue_30d = db.query(func.sum(TestRun.total_cost)).filter(
+            TestRun.payment_status == "succeeded",
+            TestRun.created_at >= datetime.utcnow() - timedelta(days=30)
+        ).scalar() or 0
+    except Exception as e:
+        logger.error(f"Admin stats - test run revenue failed: {e}")
+        db.rollback()
+
     sponsorship_revenue = 0
     sponsorship_revenue_30d = 0
-    
     try:
-        # Get all succeeded sponsorships
         succeeded_sponsorships = db.query(SponsorshipRequest).filter(
             SponsorshipRequest.payment_status == "succeeded",
             SponsorshipRequest.payment_id.isnot(None),
             SponsorshipRequest.request_type == "sponsorship"
         ).all()
-        
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-        
         for sponsorship in succeeded_sponsorships:
             try:
-                # Retrieve payment amount from Stripe
                 payment_intent = PaymentService.get_payment_intent(
                     sponsorship.payment_id,
                     db=db
                 )
                 amount = payment_intent.get("amount", 0)
                 sponsorship_revenue += amount
-                
-                # Check if within last 30 days
                 if sponsorship.created_at >= thirty_days_ago:
                     sponsorship_revenue_30d += amount
             except Exception as e:
-                logger.warning(f"Failed to retrieve payment amount for sponsorship {sponsorship.id}: {e}")
-                # Continue with other sponsorships even if one fails
+                logger.warning(f"Failed to retrieve payment for sponsorship {sponsorship.id}: {e}")
                 continue
     except Exception as e:
-        logger.error(f"Failed to calculate sponsorship revenue: {e}")
-        # Continue with test run revenue only
-    
-    # Total revenue = test runs + sponsorships
+        logger.error(f"Admin stats - sponsorship revenue failed: {e}")
+        db.rollback()
+
     total_revenue = float(test_run_revenue) + sponsorship_revenue
     revenue_30d = float(test_run_revenue_30d) + sponsorship_revenue_30d
-    
-    # Moderation stats
-    pending_reviews = db.query(TestRun).filter(
-        TestRun.status == "completed",
-        TestRun.trust_tier.in_(["pending_review", "automated"])
-    ).count()
-    
-    total_moderation_logs = db.query(ModerationLog).count()
-    
-    # API key stats
-    total_api_keys = db.query(UserAPIKey).count()
-    active_api_keys = db.query(UserAPIKey).filter(UserAPIKey.is_active == True).count()
-    
-    # Newsletter stats
-    from app.db.models.newsletter_subscriber import NewsletterSubscriber as NS
-    total_newsletter = db.query(NS).count()
-    active_newsletter = db.query(NS).filter(NS.is_active == True).count()
-    
+
+    pending_reviews = 0
+    total_moderation_logs = 0
+    try:
+        pending_reviews = db.query(TestRun).filter(
+            TestRun.status == "completed",
+            TestRun.trust_tier.in_(["pending_review", "automated"])
+        ).count()
+        total_moderation_logs = db.query(ModerationLog).count()
+    except Exception as e:
+        logger.error(f"Admin stats - moderation stats failed: {e}")
+        db.rollback()
+
+    total_api_keys = 0
+    active_api_keys = 0
+    try:
+        total_api_keys = db.query(UserAPIKey).count()
+        active_api_keys = db.query(UserAPIKey).filter(UserAPIKey.is_active == True).count()
+    except Exception as e:
+        logger.error(f"Admin stats - API key stats failed: {e}")
+        db.rollback()
+
+    total_newsletter = 0
+    active_newsletter = 0
+    try:
+        from app.db.models.newsletter_subscriber import NewsletterSubscriber as NS
+        total_newsletter = db.query(NS).count()
+        active_newsletter = db.query(NS).filter(NS.is_active == True).count()
+    except Exception as e:
+        logger.error(f"Admin stats - newsletter stats failed: {e}")
+        db.rollback()
+
     return AdminStatsResponse(
         users={
             "total": total_users,
