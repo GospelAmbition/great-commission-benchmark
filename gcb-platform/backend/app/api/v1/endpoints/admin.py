@@ -24,8 +24,10 @@ from app.db.models.result import Result
 from app.db.models.community_submission import CommunitySubmission
 from app.db.models.stripe_config import StripeConfig
 from app.db.models.sponsorship_request import SponsorshipRequest
+from app.db.models.action_log import ActionLog
 from app.services.payment import PaymentService, EncryptionService
 from app.services.model_sync import sync_all_model_descriptions
+from app.services.action_log import ActionLogService
 from app.schemas.admin import (
     UserListItem,
     UserListResponse,
@@ -78,10 +80,66 @@ from app.schemas.sponsorship import (
     ModeratorListItem,
     ModeratorListResponse,
 )
+from app.schemas.action_log import ActionLogListItem, ActionLogListResponse, ActionLogActor
 
 router = APIRouter()
 
 _optional_bearer = HTTPBearer(auto_error=False)
+
+
+@router.get("/action-logs", response_model=ActionLogListResponse)
+async def list_action_logs(
+    action: Optional[str] = Query(None, description="Filter by action code"),
+    entity_type: Optional[str] = Query(None, description="Filter by entity type"),
+    actor_user_id: Optional[UUID] = Query(None, description="Filter by actor user ID"),
+    since: Optional[datetime] = Query(None, description="Start of date range (inclusive)"),
+    until: Optional[datetime] = Query(None, description="End of date range (inclusive)"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """List action logs (audit trail) with optional filters. Admin only."""
+    query = db.query(ActionLog).options(
+        joinedload(ActionLog.actor_user)
+    )
+    if action:
+        query = query.filter(ActionLog.action == action)
+    if entity_type:
+        query = query.filter(ActionLog.entity_type == entity_type)
+    if actor_user_id:
+        query = query.filter(ActionLog.actor_user_id == actor_user_id)
+    if since:
+        query = query.filter(ActionLog.created_at >= since)
+    if until:
+        query = query.filter(ActionLog.created_at <= until)
+
+    total = query.count()
+    query = query.order_by(desc(ActionLog.created_at))
+    logs = query.offset(offset).limit(limit).all()
+
+    items = []
+    for log in logs:
+        actor_user = None
+        if log.actor_user:
+            actor_user = ActionLogActor(
+                id=log.actor_user.id,
+                name=log.actor_user.name,
+                email=log.actor_user.email,
+            )
+        items.append(ActionLogListItem(
+            id=log.id,
+            action=log.action,
+            actor_type=log.actor_type,
+            actor_user=actor_user,
+            actor_api_key_id=log.actor_api_key_id,
+            entity_type=log.entity_type,
+            entity_id=log.entity_id,
+            metadata=log.extra_data,
+            created_at=log.created_at,
+        ))
+
+    return ActionLogListResponse(items=items, total=total)
 
 
 async def require_admin_flexible(
@@ -910,6 +968,13 @@ async def archive_question_set(
     question_set.archived_at = datetime.utcnow()
     question_set.is_publicly_visible = is_publicly_visible
     db.commit()
+
+    ActionLogService.log_action(
+        db, "question_set.archive", "user",
+        actor_user_id=current_user.id,
+        entity_type="question_set", entity_id=str(question_set.id),
+        metadata={"version": question_set.semantic_version, "is_publicly_visible": is_publicly_visible}
+    )
     
     # Invalidate cache for versions endpoint since visibility/status changed
     from app.core.cache import invalidate_cache
@@ -950,6 +1015,13 @@ async def toggle_question_set_visibility(
     
     question_set.is_publicly_visible = is_publicly_visible
     db.commit()
+
+    ActionLogService.log_action(
+        db, "question_set.toggle_visibility", "user",
+        actor_user_id=current_user.id,
+        entity_type="question_set", entity_id=str(question_set.id),
+        metadata={"version": question_set.semantic_version, "is_publicly_visible": is_publicly_visible}
+    )
     
     # Invalidate cache for versions endpoint since visibility changed
     from app.core.cache import invalidate_cache
@@ -1062,7 +1134,14 @@ async def update_question_set_status(
     
     question_set.status = new_status
     db.commit()
-    
+
+    ActionLogService.log_action(
+        db, "question_set.status_update", "user",
+        actor_user_id=current_user.id,
+        entity_type="question_set", entity_id=str(question_set.id),
+        metadata={"old_status": old_status, "new_status": new_status, "version": question_set.semantic_version}
+    )
+
     return {
         "message": f"Question set {question_set.semantic_version} status changed from {old_status} to {new_status}",
         "version": question_set.semantic_version,
@@ -2200,6 +2279,13 @@ async def assign_sponsorship_moderator(
     sponsorship.assigned_at = datetime.utcnow()
     db.commit()
     db.refresh(sponsorship)
+
+    ActionLogService.log_action(
+        db, "sponsorship.assign", "user",
+        actor_user_id=current_user.id,
+        entity_type="sponsorship_request", entity_id=str(sponsorship.id),
+        metadata={"moderator_id": str(request.moderator_id)}
+    )
     
     # Send email notification to moderator
     model_name = sponsorship.openrouter_model_id or sponsorship.custom_model_name or "Unknown"
@@ -2335,6 +2421,13 @@ async def update_contact_status(
     
     db.commit()
     db.refresh(submission)
+
+    ActionLogService.log_action(
+        db, "contact.status_update", "user",
+        actor_user_id=current_user.id,
+        entity_type="contact_submission", entity_id=str(submission.id),
+        metadata={"status": request.status.value}
+    )
     
     return ContactStatusUpdateResponse(
         id=submission.id,

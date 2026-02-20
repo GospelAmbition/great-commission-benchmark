@@ -13,6 +13,7 @@ from app.schemas.contact import (
     ContactSubmitResponse
 )
 from app.services.email import EmailService
+from app.services.action_log import ActionLogService
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,12 @@ async def submit_contact_form(
     except Exception as e:
         # Log error but don't fail the submission
         logger.warning(f"Failed to send contact notification email: {e}")
+
+    ActionLogService.log_action(
+        db, "contact.submit", "anonymous",
+        entity_type="contact_submission", entity_id=str(submission.id),
+        metadata={"subject": request.subject.value}
+    )
     
     return ContactSubmitResponse(
         success=True,
