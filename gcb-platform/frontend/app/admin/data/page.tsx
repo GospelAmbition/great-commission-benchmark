@@ -108,6 +108,8 @@ export default function AdminDataPage() {
   const [modelSearch, setModelSearch] = useState("");
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [recalculatingModelId, setRecalculatingModelId] = useState<string | null>(null);
+  const [cleanupOrphanedLoading, setCleanupOrphanedLoading] = useState(false);
+  const [cleanupLogsLoading, setCleanupLogsLoading] = useState(false);
   
   // Delete dialog state
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -420,6 +422,47 @@ export default function AdminDataPage() {
     }
   }
 
+  async function handleCleanupOrphanedSubmissions() {
+    setCleanupOrphanedLoading(true);
+    try {
+      const response = await fetch("/api/admin/cleanup/orphaned-approved-submissions", {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(data.message || `Reverted ${data.count ?? 0} orphaned approved submission(s)`);
+        if (data.count > 0) loadSubmissions();
+      } else {
+        toast.error(data.detail || "Failed to cleanup");
+      }
+    } catch (error) {
+      console.error("Cleanup orphaned submissions error:", error);
+      toast.error("Failed to cleanup orphaned submissions");
+    } finally {
+      setCleanupOrphanedLoading(false);
+    }
+  }
+
+  async function handleCleanupOrphanedLogs() {
+    setCleanupLogsLoading(true);
+    try {
+      const response = await fetch("/api/admin/cleanup/orphaned-moderation-logs", {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(data.message || `Deleted ${data.deleted_count ?? 0} orphaned moderation log(s)`);
+      } else {
+        toast.error(data.detail || "Failed to cleanup");
+      }
+    } catch (error) {
+      console.error("Cleanup orphaned logs error:", error);
+      toast.error("Failed to cleanup orphaned moderation logs");
+    } finally {
+      setCleanupLogsLoading(false);
+    }
+  }
+
   function selectAllTestRuns() {
     if (selectedTestRuns.size === testRuns.length) {
       setSelectedTestRuns(new Set());
@@ -504,6 +547,34 @@ export default function AdminDataPage() {
           Delete test runs, submissions, and clean up database records
         </p>
       </div>
+
+      {/* Database health / cleanup utilities */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Database Health</CardTitle>
+          <CardDescription>
+            Remove orphaned review data. When a test run is deleted, its moderation logs are removed and linked community submissions are reverted automatically. These utilities fix any records left orphaned (e.g. from earlier deletes).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex gap-3 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={cleanupOrphanedLoading}
+            onClick={handleCleanupOrphanedSubmissions}
+          >
+            {cleanupOrphanedLoading ? "Running…" : "Revert orphaned approved submissions"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={cleanupLogsLoading}
+            onClick={handleCleanupOrphanedLogs}
+          >
+            {cleanupLogsLoading ? "Running…" : "Delete orphaned moderation logs"}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="test-runs" className="space-y-6">
         <TabsList>

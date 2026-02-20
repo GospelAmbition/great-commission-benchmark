@@ -787,6 +787,16 @@ export class ApiClient {
     });
   }
 
+  async revertCommunitySubmissionToRejected(submissionId: string): Promise<{
+    submission_id: string;
+    status: string;
+    message: string;
+  }> {
+    return this.request(`/api/moderator/community/${submissionId}/revert-to-rejected`, {
+      method: 'POST',
+    });
+  }
+
   async getModeratorActivity(params?: {
     start_date?: string;
     end_date?: string;

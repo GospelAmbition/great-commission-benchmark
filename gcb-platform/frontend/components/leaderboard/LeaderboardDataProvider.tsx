@@ -13,7 +13,7 @@ import {
   type LeaderboardItem,
   type FilterOptionsResponse,
 } from "@/lib/api";
-import { getPrefetchedLeaderboardPage } from "@/lib/leaderboard-prefetch";
+import { getPrefetchedLeaderboardPage } from "../../lib/leaderboard-prefetch";
 
 export interface LeaderboardFilters {
   version: string;

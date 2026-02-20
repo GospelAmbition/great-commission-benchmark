@@ -471,6 +471,75 @@ async def review_community_submission(
         raise HTTPException(status_code=400, detail="Invalid action. Must be 'approve' or 'reject'")
 
 
+@router.post("/community/{submission_id}/revert-to-rejected")
+async def revert_community_submission_to_rejected(
+    submission_id: UUID,
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db)
+):
+    """Revert an approved community submission to rejected. Removes its TestRun from the leaderboard."""
+    submission = db.query(CommunitySubmission).filter(
+        CommunitySubmission.id == submission_id
+    ).first()
+
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+
+    if submission.status != "approved":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Can only revert approved submissions. Current status: {submission.status}"
+        )
+
+    # Find the TestRun created from this submission
+    test_run = db.query(TestRun).filter(
+        TestRun.community_submission_id == submission_id,
+        TestRun.trust_tier == "community",
+    ).first()
+
+    if not test_run:
+        raise HTTPException(
+            status_code=400,
+            detail="No TestRun found for this submission. It may have been created before the linkage was added."
+        )
+
+    model_id = test_run.model_id
+    question_set_id = test_run.question_set_id
+
+    # Revert submission
+    submission.status = "rejected"
+    submission.reviewer_id = current_user.id
+    submission.reviewed_at = datetime.utcnow()
+
+    # Remove from leaderboard by marking TestRun as rejected
+    test_run.status = "rejected"
+
+    db.commit()
+
+    # Recalculate model stats so leaderboard updates
+    try:
+        from app.services.aggregation import AggregationService
+        AggregationService.recalculate_model_stats(db, model_id, question_set_id)
+    except Exception as e:
+        logger.warning("Stats recalculation after revert failed: %s", e)
+
+    try:
+        from app.core.cache import invalidate_cache
+        await invalidate_cache("leaderboard")
+    except Exception as e:
+        logger.warning("Leaderboard cache invalidation after revert failed: %s", e)
+
+    logger.info(
+        f"Reverted community submission {submission_id} to rejected by {current_user.email}"
+    )
+
+    return {
+        "submission_id": str(submission.id),
+        "status": "rejected",
+        "message": "Submission reverted to rejected and removed from leaderboard",
+    }
+
+
 @router.post("/community/{submission_id}/reprocess")
 async def reprocess_community_submission(
     submission_id: UUID,

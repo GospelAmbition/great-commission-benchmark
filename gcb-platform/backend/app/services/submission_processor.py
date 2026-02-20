@@ -227,12 +227,13 @@ class SubmissionProcessorService:
             except:
                 pass
         
-        # Create the TestRun
+        # Create the TestRun (link to submission for revert-approved flow)
         test_run = TestRun(
             user_id=submission.user_id,
             model_id=model.id,
             question_set_id=question_set.id,
             methodology_version_id=methodology_version.id,
+            community_submission_id=submission.id,
             status="completed",
             trust_tier="community",
             completed_at=completed_at,

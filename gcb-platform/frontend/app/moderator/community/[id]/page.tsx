@@ -119,6 +119,24 @@ export default function CommunitySubmissionReviewPage() {
     }
   }
 
+  async function handleRevertToRejected() {
+    if (!submission) return;
+    if (!window.confirm("Revert this approved submission to rejected? It will be removed from the leaderboard.")) {
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const data = await apiClient.revertCommunitySubmissionToRejected(submissionId);
+      toast.success(data.message || "Submission reverted to rejected");
+      loadSubmissionData();
+    } catch (error: any) {
+      console.error("Failed to revert:", error);
+      toast.error(error.message || "Failed to revert submission");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   if (userLoading || loading) {
     return (
       <div className="container py-8">
@@ -311,52 +329,79 @@ export default function CommunitySubmissionReviewPage() {
         <CardHeader>
           <CardTitle>Review Decision</CardTitle>
           <CardDescription>
-            Approve or reject this submission based on your review
+            {submission.status === "approved"
+              ? "This submission was approved and is on the leaderboard. You can revert it to rejected."
+              : submission.status === "rejected"
+              ? "This submission was rejected."
+              : "Approve or reject this submission based on your review"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label className="text-base font-semibold mb-3 block">Action</Label>
-            <RadioGroup value={action} onValueChange={(value) => setAction(value as "approve" | "reject")}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="approve" id="approve" />
-                <Label htmlFor="approve" className="font-normal cursor-pointer">
-                  Approve - Submission looks good and will be added to leaderboard
-                </Label>
+          {submission.status === "approved" ? (
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => router.push("/moderator")} disabled={submitting}>
+                Back
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleRevertToRejected}
+                disabled={submitting}
+              >
+                {submitting ? "Reverting..." : "Revert to rejected"}
+              </Button>
+            </div>
+          ) : submission.status === "rejected" ? (
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => router.push("/moderator")}>
+                Back
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div>
+                <Label className="text-base font-semibold mb-3 block">Action</Label>
+                <RadioGroup value={action} onValueChange={(value) => setAction(value as "approve" | "reject")}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="approve" id="approve" />
+                    <Label htmlFor="approve" className="font-normal cursor-pointer">
+                      Approve - Submission looks good and will be added to leaderboard
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="reject" id="reject" />
+                    <Label htmlFor="reject" className="font-normal cursor-pointer">
+                      Reject - Submission has issues that need to be addressed
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="reject" id="reject" />
-                <Label htmlFor="reject" className="font-normal cursor-pointer">
-                  Reject - Submission has issues that need to be addressed
+
+              <div>
+                <Label htmlFor="notes" className="text-base font-semibold mb-2 block">
+                  Notes {action === "reject" && <span className="text-destructive">*</span>}
                 </Label>
+                <textarea
+                  id="notes"
+                  className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder={action === "reject" ? "Please provide feedback on why this submission is being rejected..." : "Optional notes for the submitter..."}
+                />
               </div>
-            </RadioGroup>
-          </div>
 
-          <div>
-            <Label htmlFor="notes" className="text-base font-semibold mb-2 block">
-              Notes {action === "reject" && <span className="text-destructive">*</span>}
-            </Label>
-            <textarea
-              id="notes"
-              className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={action === "reject" ? "Please provide feedback on why this submission is being rejected..." : "Optional notes for the submitter..."}
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => router.push("/moderator")} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmitReview}
-              disabled={submitting || !action || (action === "reject" && !notes.trim())}
-            >
-              {submitting ? "Submitting..." : "Submit Review"}
-            </Button>
-          </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => router.push("/moderator")} disabled={submitting}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmitReview}
+                  disabled={submitting || !action || (action === "reject" && !notes.trim())}
+                >
+                  {submitting ? "Submitting..." : "Submit Review"}
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

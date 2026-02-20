@@ -43,45 +43,6 @@ export default function ModeratorDashboardPage() {
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelActionId, setModelActionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!userLoading && !user) {
-      router.push("/api/auth/signin");
-      return;
-    }
-    // Check if user has moderator permission
-    if (user && !profileLoading) {
-      if (!canModerate && !canAdmin && !isAdmin) {
-        toast.error("You don't have permission to access this page");
-        router.push("/dashboard");
-        return;
-      }
-      loadDashboardData();
-    }
-  }, [user, userLoading, profileLoading, canModerate, canAdmin, isAdmin, router]);
-
-  // Refresh data when page becomes visible or window regains focus (e.g., returning from review page)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && user && !profileLoading) {
-        loadDashboardData();
-      }
-    };
-    
-    const handleFocus = () => {
-      if (user && !profileLoading) {
-        loadDashboardData();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [user, profileLoading]);
-
   const loadModels = useCallback(async () => {
     setModelsLoading(true);
     try {
@@ -100,12 +61,7 @@ export default function ModeratorDashboardPage() {
     }
   }, [modelsFilter]);
 
-  useEffect(() => {
-    if (!user || profileLoading || (!canModerate && !canAdmin && !isAdmin)) return;
-    loadModels();
-  }, [modelsFilter, user, profileLoading, canModerate, canAdmin, isAdmin, loadModels]);
-
-  async function loadDashboardData() {
+  const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
       const [communityData, sponsorshipData, automatedQueueData, automatedHistoryData, statsData, historyData] = await Promise.all([
@@ -123,9 +79,9 @@ export default function ModeratorDashboardPage() {
       setAutomatedQueueTotal(automatedQueueData.total || 0);
       setAutomatedHistory(automatedHistoryData.items || []);
       setAutomatedHistoryTotal(automatedHistoryData.total || 0);
-      
+
       const totalPending = (communityData.items?.length || 0) + (sponsorshipData.items?.length || 0);
-      
+
       if (statsData) {
         setStats({
           pending_reviews: totalPending,
@@ -139,7 +95,7 @@ export default function ModeratorDashboardPage() {
           agreement_rate: 0,
         });
       }
-      
+
       setHistory(historyData.items || []);
       loadModels();
     } catch (error) {
@@ -147,7 +103,47 @@ export default function ModeratorDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [loadModels]);
+
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push("/api/auth/signin");
+      return;
+    }
+    if (user && !profileLoading) {
+      if (!canModerate && !canAdmin && !isAdmin) {
+        toast.error("You don't have permission to access this page");
+        router.push("/dashboard");
+        return;
+      }
+      loadDashboardData();
+    }
+  }, [user, userLoading, profileLoading, canModerate, canAdmin, isAdmin, router, loadDashboardData]);
+
+  // Refresh when tab becomes visible or window gains focus (e.g. after deleting a run in Admin)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && user && !profileLoading) {
+        loadDashboardData();
+      }
+    };
+    const handleFocus = () => {
+      if (user && !profileLoading) {
+        loadDashboardData();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [user, profileLoading, loadDashboardData]);
+
+  useEffect(() => {
+    if (!user || profileLoading || (!canModerate && !canAdmin && !isAdmin)) return;
+    loadModels();
+  }, [modelsFilter, user, profileLoading, canModerate, canAdmin, isAdmin, loadModels]);
 
   if (userLoading || profileLoading || (loading && !user)) {
     return (
@@ -216,11 +212,21 @@ export default function ModeratorDashboardPage() {
 
       {/* Moderation Queue */}
       <Card>
-        <CardHeader>
-          <CardTitle>Moderation Queue</CardTitle>
-          <CardDescription>
-            Tests and submissions awaiting review
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between space-y-0">
+          <div>
+            <CardTitle>Moderation Queue</CardTitle>
+            <CardDescription>
+              Tests and submissions awaiting review
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { loadDashboardData(); toast.success("Refreshed"); }}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="community" className="w-full">

@@ -3,7 +3,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, exists
 from uuid import UUID
 from datetime import datetime, timedelta
 import json
@@ -1287,7 +1287,7 @@ async def delete_test_run(
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    """Delete a test run and all its results. Recalculates leaderboard stats for the affected model."""
+    """Delete a test run and all its results. Removes moderation logs. Recalculates leaderboard stats for the affected model."""
     test_run = db.query(TestRun).filter(TestRun.id == test_run_id).first()
     
     if not test_run:
@@ -1295,11 +1295,26 @@ async def delete_test_run(
     
     model_id = test_run.model_id
     question_set_id = test_run.question_set_id
+    community_submission_id = test_run.community_submission_id
     
-    # Delete all results for this test run first
+    # Delete moderation logs (must precede test run delete due to FK)
+    deleted_logs = db.query(ModerationLog).filter(ModerationLog.test_run_id == test_run_id).delete(synchronize_session=False)
+    
+    # Delete all results for this test run
     deleted_results = db.query(Result).filter(
         Result.test_run_id == test_run_id
     ).delete(synchronize_session=False)
+    
+    # Revert linked community submission to rejected so it's not orphaned approved
+    if community_submission_id:
+        submission = db.query(CommunitySubmission).filter(CommunitySubmission.id == community_submission_id).first()
+        if submission and submission.status == "approved":
+            submission.status = "rejected"
+            submission.reviewer_id = None
+            submission.reviewed_at = None
+            submission.reviewer_notes = (
+                (submission.reviewer_notes or "") + "\n[Review cleared: associated test run was deleted]"
+            ).strip() or None
     
     # Delete the test run
     db.delete(test_run)
@@ -1322,6 +1337,53 @@ async def delete_test_run(
         "message": "Test run deleted",
         "test_run_id": str(test_run_id),
         "deleted_results": deleted_results,
+        "deleted_moderation_logs": deleted_logs,
+    }
+
+
+@router.post("/cleanup/orphaned-approved-submissions")
+async def cleanup_orphaned_approved_submissions(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Revert approved community submissions that have no associated test run (orphaned after run deletion)."""
+    subquery = db.query(TestRun.id).filter(TestRun.community_submission_id == CommunitySubmission.id)
+    orphaned = db.query(CommunitySubmission).filter(
+        CommunitySubmission.status == "approved",
+        ~exists(subquery)
+    ).all()
+    reverted = []
+    for submission in orphaned:
+        submission.status = "rejected"
+        submission.reviewer_id = None
+        submission.reviewed_at = None
+        submission.reviewer_notes = (
+            (submission.reviewer_notes or "") + "\n[Review cleared: no associated test run found]"
+        ).strip() or None
+        reverted.append(str(submission.id))
+    db.commit()
+    return {
+        "message": "Orphaned approved submissions reverted",
+        "count": len(reverted),
+        "submission_ids": reverted,
+    }
+
+
+@router.post("/cleanup/orphaned-moderation-logs")
+async def cleanup_orphaned_moderation_logs(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete ModerationLog rows whose test_run_id no longer exists (orphaned after run deletion)."""
+    # Subquery: test_run_ids that exist
+    existing_run_ids = db.query(TestRun.id).subquery()
+    deleted = db.query(ModerationLog).filter(
+        ~ModerationLog.test_run_id.in_(existing_run_ids)
+    ).delete(synchronize_session=False)
+    db.commit()
+    return {
+        "message": "Orphaned moderation logs deleted",
+        "deleted_count": deleted,
     }
 
 

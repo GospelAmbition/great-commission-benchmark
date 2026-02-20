@@ -8,8 +8,8 @@
  *     the preloaded data immediately on mount.
  */
 
-import type { LeaderboardItem, FilterOptionsResponse } from "@/lib/api";
-import { API_URL } from "@/lib/api";
+import type { LeaderboardItem, FilterOptionsResponse } from "./api";
+import { API_URL } from "./api";
 
 export interface PrefetchedLeaderboardPage {
   leaderboard: { items: LeaderboardItem[]; total: number };

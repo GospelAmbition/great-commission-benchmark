@@ -17,6 +17,7 @@ class TestRun(Base):
     model_id = Column(UUID(as_uuid=True), ForeignKey("models.id"), nullable=False, index=True)
     question_set_id = Column(UUID(as_uuid=True), ForeignKey("question_sets.id"), nullable=False, index=True)
     methodology_version_id = Column(UUID(as_uuid=True), ForeignKey("methodology_versions.id"), nullable=False)
+    community_submission_id = Column(UUID(as_uuid=True), ForeignKey("community_submissions.id"), nullable=True, index=True)
     status = Column(String(50), nullable=False, index=True)  # 'pending', 'running', 'completed', etc.
     retry_count = Column(Integer, default=0)
     last_error = Column(Text)
@@ -49,4 +50,5 @@ class TestRun(Base):
     model = relationship("Model", backref="test_runs")
     question_set = relationship("QuestionSet", backref="test_runs")
     methodology_version = relationship("MethodologyVersion", backref="test_runs")
+    community_submission = relationship("CommunitySubmission", backref="test_runs")
     admin_assigned = relationship("User", foreign_keys=[admin_assigned_id])

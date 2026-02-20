@@ -374,6 +374,11 @@ export default function AutomatedRunReviewPage() {
               {submitting ? "Restoring..." : "Restore to Leaderboard"}
             </Button>
           )}
+          {run.moderator_reviewed_at != null && run.moderator_decision === "accepted" && (
+            <Button variant="destructive" onClick={handleReject} disabled={submitting}>
+              {submitting ? "Rejecting..." : "Reject (revoke from leaderboard)"}
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>

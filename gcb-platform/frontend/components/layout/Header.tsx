@@ -17,7 +17,7 @@ import { MenuIcon, SearchIcon } from "@/lib/icons";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useUserProfile } from "@/lib/useUserProfile";
 import { SearchModal } from "./SearchModal";
-import { prefetchLeaderboardPage } from "@/lib/leaderboard-prefetch";
+import { prefetchLeaderboardPage } from "../../lib/leaderboard-prefetch";
 
 export function Header() {
   const { data: session, status } = useSession();
