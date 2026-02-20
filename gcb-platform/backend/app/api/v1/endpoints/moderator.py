@@ -21,6 +21,7 @@ from app.db.models.result import Result
 from app.db.models.model import Model
 from app.services.judge import TIER1_JUDGE_PROMPT
 from app.services.submission_processor import SubmissionProcessorService
+from app.services.action_log import ActionLogService
 from app.schemas.moderator import (
     ModeratorActivityItem,
     ModeratorActivityResponse,
@@ -430,6 +431,13 @@ async def review_community_submission(
         from app.services.aggregation import AggregationService
         AggregationService.update_stats_for_test_run(db, test_run)
         
+        ActionLogService.log_action(
+            db, "community_submission.approve", "user",
+            actor_user_id=current_user.id,
+            entity_type="community_submission", entity_id=str(submission.id),
+            metadata={"model_name": submission.model_name}
+        )
+
         # Send approval email
         from app.services.email import EmailService
         await EmailService.send_submission_approved_email(
@@ -451,6 +459,13 @@ async def review_community_submission(
         submission.reviewed_at = datetime.utcnow()
         
         db.commit()
+
+        ActionLogService.log_action(
+            db, "community_submission.reject", "user",
+            actor_user_id=current_user.id,
+            entity_type="community_submission", entity_id=str(submission.id),
+            metadata={"model_name": submission.model_name}
+        )
         
         # Send rejection email
         from app.services.email import EmailService
@@ -529,6 +544,13 @@ async def revert_community_submission_to_rejected(
     except Exception as e:
         logger.warning("Leaderboard cache invalidation after revert failed: %s", e)
 
+    ActionLogService.log_action(
+        db, "community_submission.revert", "user",
+        actor_user_id=current_user.id,
+        entity_type="community_submission", entity_id=str(submission.id),
+        metadata={"model_name": submission.model_name}
+    )
+
     logger.info(
         f"Reverted community submission {submission_id} to rejected by {current_user.email}"
     )
@@ -587,6 +609,13 @@ async def reprocess_community_submission(
     # Update model version stats for averaging (also handles cache invalidation)
     from app.services.aggregation import AggregationService
     AggregationService.update_stats_for_test_run(db, test_run)
+
+    ActionLogService.log_action(
+        db, "community_submission.reprocess", "user",
+        actor_user_id=current_user.id,
+        entity_type="community_submission", entity_id=str(submission.id),
+        metadata={"model_name": submission.model_name, "test_run_id": str(test_run.id)}
+    )
     
     return {
         "submission_id": str(submission.id),
@@ -836,6 +865,13 @@ async def accept_automated_test_run(
             # Continue accepting; admin can use Recalculate scores later
 
     db.commit()
+
+    ActionLogService.log_action(
+        db, "automated_run.accept", "user",
+        actor_user_id=current_user.id,
+        entity_type="test_run", entity_id=str(run.id),
+        metadata={"model_name": run.model.name if run.model else "Unknown"}
+    )
     
     logger.info(
         f"Automated test run {test_run_id} accepted by {current_user.email}"
@@ -890,6 +926,13 @@ async def reject_automated_test_run(
     run.admin_notes = f"Rejected by moderator {current_user.name or current_user.email} on {datetime.utcnow().isoformat()} (was: {previous_status})"
     
     db.commit()
+
+    ActionLogService.log_action(
+        db, "automated_run.reject", "user",
+        actor_user_id=current_user.id,
+        entity_type="test_run", entity_id=str(run.id),
+        metadata={"model_name": run.model.name if run.model else "Unknown"}
+    )
     
     # Recalculate model stats so leaderboard updates (the rejected run will be excluded)
     try:
@@ -940,6 +983,13 @@ async def restore_automated_test_run(
     run.admin_notes = (run.admin_notes or "") + f"\nRestored by {current_user.name or current_user.email} on {datetime.utcnow().isoformat()}"
     
     db.commit()
+
+    ActionLogService.log_action(
+        db, "automated_run.restore", "user",
+        actor_user_id=current_user.id,
+        entity_type="test_run", entity_id=str(run.id),
+        metadata={"model_name": run.model.name if run.model else "Unknown"}
+    )
     
     # Recalculate model stats so leaderboard updates (the restored run will be included)
     try:
@@ -1012,6 +1062,15 @@ async def update_model_archived(
         raise HTTPException(status_code=404, detail="Model not found")
     model.is_active = not request.archived
     db.commit()
+
+    action_code = "model.archive" if request.archived else "model.unarchive"
+    ActionLogService.log_action(
+        db, action_code, "user",
+        actor_user_id=current_user.id,
+        entity_type="model", entity_id=str(model.id),
+        metadata={"archived": request.archived, "model_name": model.name}
+    )
+
     from app.core.cache import invalidate_cache
     await invalidate_cache("leaderboard")
     return {

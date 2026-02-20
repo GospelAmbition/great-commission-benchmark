@@ -27,6 +27,7 @@ from app.schemas.blog import (
     ImageUploadResponse,
 )
 from app.services.storage import upload_image
+from app.services.action_log import ActionLogService
 
 router = APIRouter()
 
@@ -226,6 +227,13 @@ async def create_post(
     db.add(post)
     db.commit()
     db.refresh(post)
+
+    ActionLogService.log_action(
+        db, "blog_post.create", "api_key",
+        actor_user_id=user.id, actor_api_key_id=api_key_record.id,
+        entity_type="blog_post", entity_id=str(post.id),
+        metadata={"slug": post.slug, "title": post.title}
+    )
     
     # Reload with relationships
     post = db.query(BlogPost).options(
@@ -314,6 +322,13 @@ async def update_post(
     
     db.commit()
     db.refresh(post)
+
+    ActionLogService.log_action(
+        db, "blog_post.update", "api_key",
+        actor_user_id=user.id, actor_api_key_id=api_key_record.id,
+        entity_type="blog_post", entity_id=str(post.id),
+        metadata={"slug": post.slug, "title": post.title}
+    )
     
     return _build_post_response(post, user)
 
@@ -330,13 +345,22 @@ async def delete_post(
     
     Requires API key with blog management permission.
     """
+    api_key_record, user = auth
     post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
     
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     
+    post_slug, post_title = post.slug, post.title
     db.delete(post)
     db.commit()
+
+    ActionLogService.log_action(
+        db, "blog_post.delete", "api_key",
+        actor_user_id=user.id, actor_api_key_id=api_key_record.id,
+        entity_type="blog_post", entity_id=str(post_id),
+        metadata={"slug": post_slug, "title": post_title}
+    )
     
     return {"message": "Post deleted successfully", "id": str(post_id)}
 
@@ -371,6 +395,13 @@ async def publish_post(
     
     db.commit()
     db.refresh(post)
+
+    ActionLogService.log_action(
+        db, "blog_post.publish", "api_key",
+        actor_user_id=user.id, actor_api_key_id=api_key_record.id,
+        entity_type="blog_post", entity_id=str(post.id),
+        metadata={"slug": post.slug, "title": post.title}
+    )
     
     return _build_post_response(post, user)
 
@@ -404,6 +435,13 @@ async def unpublish_post(
     
     db.commit()
     db.refresh(post)
+
+    ActionLogService.log_action(
+        db, "blog_post.unpublish", "api_key",
+        actor_user_id=user.id, actor_api_key_id=api_key_record.id,
+        entity_type="blog_post", entity_id=str(post.id),
+        metadata={"slug": post.slug, "title": post.title}
+    )
     
     return _build_post_response(post, user)
 
@@ -450,6 +488,7 @@ async def create_category(
     
     Requires API key with blog management permission.
     """
+    api_key_record, user = auth
     # Check if slug already exists
     existing = db.query(BlogCategory).filter(
         (BlogCategory.slug == request.slug) | (BlogCategory.name == request.name)
@@ -466,6 +505,13 @@ async def create_category(
     db.add(category)
     db.commit()
     db.refresh(category)
+
+    ActionLogService.log_action(
+        db, "blog_category.create", "api_key",
+        actor_user_id=user.id, actor_api_key_id=api_key_record.id,
+        entity_type="blog_category", entity_id=str(category.id),
+        metadata={"slug": category.slug, "name": category.name}
+    )
     
     return BlogCategoryResponse(
         id=category.id,

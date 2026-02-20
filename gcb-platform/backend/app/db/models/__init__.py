@@ -20,6 +20,7 @@ from app.db.models.stripe_config import StripeConfig
 from app.db.models.volunteer_application import VolunteerApplication
 from app.db.models.contact_submission import ContactSubmission
 from app.db.models.notification_setting import NotificationSetting
+from app.db.models.action_log import ActionLog
 
 __all__ = [
     "User",
@@ -42,4 +43,5 @@ __all__ = [
     "VolunteerApplication",
     "ContactSubmission",
     "NotificationSetting",
+    "ActionLog",
 ]

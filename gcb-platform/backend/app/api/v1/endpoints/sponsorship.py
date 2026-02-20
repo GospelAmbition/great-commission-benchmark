@@ -16,6 +16,7 @@ from app.db.models.notification_setting import NotificationSetting, Notification
 from app.services.payment import PaymentService
 from app.services.pricing import PricingService
 from app.services.email import EmailService
+from app.services.action_log import ActionLogService
 from app.schemas.sponsorship import (
     CreateSponsorshipRequest,
     CreateSponsorshipResponse,
@@ -146,6 +147,13 @@ async def create_sponsorship(
                     logger.warning(f"Failed to send sponsorship notification email: {e}")
             
             db.commit()
+
+            ActionLogService.log_action(
+                db, "sponsorship.create", "user",
+                actor_user_id=current_user.id,
+                entity_type="sponsorship_request", entity_id=str(sponsorship.id),
+                metadata={"request_type": "sponsorship", "model_name": model_name}
+            )
             
             # Determine response status and message based on whether payment was auto-completed
             response_status = "pending" if (is_test_mode and payment_intent["status"] == "succeeded") else "pending_payment"
@@ -204,6 +212,13 @@ async def create_sponsorship(
         except Exception as e:
             # Log error but don't fail the request submission
             logger.warning(f"Failed to send sponsorship request notification email: {e}")
+
+        ActionLogService.log_action(
+            db, "sponsorship.create", "user",
+            actor_user_id=current_user.id,
+            entity_type="sponsorship_request", entity_id=str(sponsorship.id),
+            metadata={"request_type": "request", "model_name": model_name}
+        )
         
         return CreateSponsorshipResponse(
             id=sponsorship.id,
@@ -637,6 +652,13 @@ async def review_sponsorship(
     sponsorship.reviewed_at = datetime.utcnow()
     
     db.commit()
+
+    ActionLogService.log_action(
+        db, "sponsorship.review", "user",
+        actor_user_id=current_user.id,
+        entity_type="sponsorship_request", entity_id=str(sponsorship.id),
+        metadata={"action": request.action, "request_type": sponsorship.request_type}
+    )
     
     # DEFERRED: Sponsorship review email notifications
     # When EmailService has sponsorship methods, implement here:

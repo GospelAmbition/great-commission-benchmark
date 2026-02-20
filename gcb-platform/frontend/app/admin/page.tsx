@@ -9,7 +9,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useUserProfile } from "@/lib/useUserProfile";
 import { toast } from "sonner";
-import { ExternalLink, RefreshCw, Mail, MessageSquare, Bell } from "lucide-react";
+import { ExternalLink, RefreshCw, Mail, MessageSquare, Bell, ScrollText } from "lucide-react";
 import { apiClient } from "@/lib/api";
 
 export default function AdminDashboardPage() {
@@ -356,6 +356,20 @@ export default function AdminDashboardPage() {
           <CardContent>
             <Button asChild variant="outline">
               <Link href="/admin/notifications">Configure Recipients</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ScrollText className="h-5 w-5" />
+              Action Log
+            </CardTitle>
+            <CardDescription>Audit trail of administrative and registration actions — who did what and when</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/admin/action-logs">View Action Log</Link>
             </Button>
           </CardContent>
         </Card>

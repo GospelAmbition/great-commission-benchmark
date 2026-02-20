@@ -20,6 +20,7 @@ from app.schemas.submissions import (
 )
 from app.services.payment import PaymentService
 from app.services.pricing import PricingService
+from app.services.action_log import ActionLogService
 
 router = APIRouter()
 
@@ -97,6 +98,13 @@ async def upload_submission(
         except Exception as e:
             logger.warning(f"Failed to send moderation notification email: {e}")
 
+        ActionLogService.log_action(
+            db, "model_submission.upload", "user",
+            actor_user_id=current_user.id,
+            entity_type="community_submission", entity_id=str(submission.id),
+            metadata={"model_name": model_name, "fee_waived": True}
+        )
+
         return SubmissionUploadResponse(
             submission_id=submission.id,
             status=submission.status,
@@ -142,7 +150,14 @@ async def upload_submission(
         db.add(submission)
         db.commit()
         db.refresh(submission)
-        
+
+        ActionLogService.log_action(
+            db, "model_submission.upload", "user",
+            actor_user_id=current_user.id,
+            entity_type="community_submission", entity_id=str(submission.id),
+            metadata={"model_name": model_name, "fee_waived": False, "status": "pending_payment"}
+        )
+
         return SubmissionUploadResponse(
             submission_id=submission.id,
             status=submission.status,

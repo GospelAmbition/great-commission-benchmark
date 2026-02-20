@@ -14,6 +14,7 @@ from app.schemas.newsletter import (
     NewsletterUnsubscribeResponse
 )
 from app.services.newsletter import NewsletterService
+from app.services.action_log import ActionLogService
 
 router = APIRouter()
 
@@ -60,6 +61,11 @@ async def subscribe_newsletter(
                 existing.mailerlite_subscriber_id = mailerlite_id
             
             db.commit()
+            ActionLogService.log_action(
+                db, "newsletter.subscribe", "anonymous",
+                entity_type="newsletter_subscriber", entity_id=str(existing.id),
+                metadata={"action": "reactivate"}
+            )
             return NewsletterSubscribeResponse(
                 success=True,
                 message="Subscription reactivated"
@@ -79,7 +85,13 @@ async def subscribe_newsletter(
         subscriber.mailerlite_subscriber_id = mailerlite_id
     
     db.commit()
-    
+
+    ActionLogService.log_action(
+        db, "newsletter.subscribe", "anonymous",
+        entity_type="newsletter_subscriber", entity_id=str(subscriber.id),
+        metadata={}
+    )
+
     return NewsletterSubscribeResponse(
         success=True,
         message="Successfully subscribed to newsletter"
@@ -118,6 +130,12 @@ async def unsubscribe_newsletter(
     await NewsletterService.remove_subscriber_from_mailerlite(request.email)
     
     db.commit()
+
+    ActionLogService.log_action(
+        db, "newsletter.unsubscribe", "anonymous",
+        entity_type="newsletter_subscriber", entity_id=str(subscriber.id),
+        metadata={}
+    )
     
     return NewsletterUnsubscribeResponse(
         success=True,

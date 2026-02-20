@@ -17,6 +17,7 @@ from app.schemas.volunteer import (
     VolunteerApplicationListResponse
 )
 from app.services.email import EmailService
+from app.services.action_log import ActionLogService
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +101,15 @@ async def apply_volunteer(
     except Exception as e:
         # Log error but don't fail the application submission
         logger.warning(f"Failed to send volunteer notification email: {e}")
+
+    actor_type = "user" if current_user else "anonymous"
+    actor_user_id = current_user.id if current_user else None
+    ActionLogService.log_action(
+        db, "volunteer.apply", actor_type,
+        actor_user_id=actor_user_id,
+        entity_type="volunteer_application", entity_id=str(application.id),
+        metadata={"role": request.role.value}
+    )
     
     return VolunteerApplicationResponse(
         success=True,

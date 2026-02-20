@@ -25,6 +25,7 @@ from app.schemas.blog import (
     ImageUploadResponse,
 )
 from app.services.storage import upload_image
+from app.services.action_log import ActionLogService
 
 # Create routers for public and admin endpoints
 public_router = APIRouter()
@@ -276,6 +277,13 @@ async def create_post(
     db.add(post)
     db.commit()
     db.refresh(post)
+
+    ActionLogService.log_action(
+        db, "blog_post.create", "user",
+        actor_user_id=current_user.id,
+        entity_type="blog_post", entity_id=str(post.id),
+        metadata={"slug": post.slug, "title": post.title}
+    )
     
     return BlogPostResponse(
         id=post.id,
@@ -392,6 +400,13 @@ async def update_post(
     
     db.commit()
     db.refresh(post)
+
+    ActionLogService.log_action(
+        db, "blog_post.update", "user",
+        actor_user_id=current_user.id,
+        entity_type="blog_post", entity_id=str(post.id),
+        metadata={"slug": post.slug, "title": post.title}
+    )
     
     return BlogPostResponse(
         id=post.id,
@@ -432,8 +447,16 @@ async def delete_post(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     
+    post_slug, post_title = post.slug, post.title
     db.delete(post)
     db.commit()
+
+    ActionLogService.log_action(
+        db, "blog_post.delete", "user",
+        actor_user_id=current_user.id,
+        entity_type="blog_post", entity_id=str(post_id),
+        metadata={"slug": post_slug, "title": post_title}
+    )
     
     return {"message": "Post deleted successfully"}
 
@@ -461,6 +484,13 @@ async def publish_post(
     
     db.commit()
     db.refresh(post)
+
+    ActionLogService.log_action(
+        db, "blog_post.publish", "user",
+        actor_user_id=current_user.id,
+        entity_type="blog_post", entity_id=str(post.id),
+        metadata={"slug": post.slug, "title": post.title}
+    )
     
     return BlogPostResponse(
         id=post.id,
@@ -511,6 +541,13 @@ async def unpublish_post(
     
     db.commit()
     db.refresh(post)
+
+    ActionLogService.log_action(
+        db, "blog_post.unpublish", "user",
+        actor_user_id=current_user.id,
+        entity_type="blog_post", entity_id=str(post.id),
+        metadata={"slug": post.slug, "title": post.title}
+    )
     
     return BlogPostResponse(
         id=post.id,
@@ -597,6 +634,13 @@ async def create_category(
     db.add(category)
     db.commit()
     db.refresh(category)
+
+    ActionLogService.log_action(
+        db, "blog_category.create", "user",
+        actor_user_id=current_user.id,
+        entity_type="blog_category", entity_id=str(category.id),
+        metadata={"slug": category.slug, "name": category.name}
+    )
     
     return BlogCategoryResponse(
         id=category.id,
@@ -648,6 +692,13 @@ async def update_category(
     
     db.commit()
     db.refresh(category)
+
+    ActionLogService.log_action(
+        db, "blog_category.update", "user",
+        actor_user_id=current_user.id,
+        entity_type="blog_category", entity_id=str(category.id),
+        metadata={"slug": category.slug, "name": category.name}
+    )
     
     return BlogCategoryResponse(
         id=category.id,
@@ -671,8 +722,16 @@ async def delete_category(
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     
+    cat_slug, cat_name = category.slug, category.name
     db.delete(category)
     db.commit()
+
+    ActionLogService.log_action(
+        db, "blog_category.delete", "user",
+        actor_user_id=current_user.id,
+        entity_type="blog_category", entity_id=str(category_id),
+        metadata={"slug": cat_slug, "name": cat_name}
+    )
     
     return {"message": "Category deleted successfully"}
 
