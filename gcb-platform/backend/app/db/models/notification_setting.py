@@ -14,6 +14,7 @@ class NotificationType(str, enum.Enum):
     SPONSORSHIP = "sponsorship"  # New sponsorship/model requests
     VOLUNTEER = "volunteer"      # New volunteer applications
     CONTACT = "contact"          # New contact form submissions
+    MODERATION = "moderation"    # Community submissions needing moderator review
 
 
 class NotificationSetting(Base):

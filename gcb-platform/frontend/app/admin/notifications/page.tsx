@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useUserProfile } from "@/lib/useUserProfile";
-import { Bell, ChevronRight, Sparkles, Shield, MessageSquare, Save } from "lucide-react";
+import { Bell, ChevronRight, Sparkles, Shield, MessageSquare, ClipboardCheck, Save } from "lucide-react";
 
 interface NotificationSetting {
   id: string;
@@ -44,6 +44,11 @@ const NOTIFICATION_TYPE_CONFIG: Record<string, {
     title: "Contact Form Submissions",
     icon: <MessageSquare className="h-5 w-5 text-primary" />,
     description: "Notified when someone submits the contact form on the website.",
+  },
+  moderation: {
+    title: "Moderation Alerts",
+    icon: <ClipboardCheck className="h-5 w-5 text-primary" />,
+    description: "Notified when a community submission enters the moderation queue.",
   },
 };
 
@@ -197,7 +202,7 @@ export default function AdminNotificationsPage() {
       </div>
 
       <div className="space-y-4">
-        {["sponsorship", "volunteer", "contact"].map((type) => {
+        {["sponsorship", "volunteer", "contact", "moderation"].map((type) => {
           const config = NOTIFICATION_TYPE_CONFIG[type];
           const setting = settings.find((s) => s.notification_type === type);
           const edited = editedSettings[type] || { recipient_email: "", is_enabled: true };
@@ -300,6 +305,10 @@ export default function AdminNotificationsPage() {
             <li>
               <span className="font-medium text-foreground">Contact Form:</span> Sent when someone submits
               the website contact form.
+            </li>
+            <li>
+              <span className="font-medium text-foreground">Moderation Alerts:</span> Sent when a community
+              submission enters the moderation queue and needs reviewer attention.
             </li>
           </ul>
           <p>

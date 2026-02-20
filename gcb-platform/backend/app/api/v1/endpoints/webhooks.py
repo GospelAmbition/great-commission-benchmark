@@ -87,7 +87,9 @@ async def stripe_webhook(
         else:
             # Handle CLI submission payments (only if not a sponsorship)
             if payment_type == "cli_submission":
-                submission = db.query(CommunitySubmission).filter(
+                submission = db.query(CommunitySubmission).options(
+                    joinedload(CommunitySubmission.user)
+                ).filter(
                     CommunitySubmission.payment_id == payment_intent_id
                 ).first()
                 
@@ -96,15 +98,31 @@ async def stripe_webhook(
                     submission.status = "pending"
                     db.commit()
                     
-                    # Send confirmation email
+                    # Send confirmation email to submitter
                     try:
                         await EmailService.send_submission_payment_confirmed_email(
                             submission.user.email,
                             str(submission.id),
                             submission.model_name
                         )
-                    except:
+                    except Exception:
                         pass
+
+                    # Send moderation notification to designated recipient
+                    try:
+                        notification_setting = db.query(NotificationSetting).filter(
+                            NotificationSetting.notification_type == NotificationType.MODERATION
+                        ).first()
+                        if notification_setting and notification_setting.is_enabled and notification_setting.recipient_email:
+                            await EmailService.send_moderation_notification_email(
+                                admin_email=notification_setting.recipient_email,
+                                submitter_name=submission.user.name or submission.user.email,
+                                submitter_email=submission.user.email,
+                                model_name=submission.model_name,
+                                submission_id=str(submission.id)
+                            )
+                    except Exception as e:
+                        logger.warning(f"Failed to send moderation notification email: {e}")
     
     elif event_type == "payment_intent.payment_failed":
         # Payment failed - update status

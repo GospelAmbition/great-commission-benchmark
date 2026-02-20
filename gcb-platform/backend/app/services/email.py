@@ -259,6 +259,43 @@ class EmailService:
         return await EmailService.send_email(to_email, subject, html)
     
     @staticmethod
+    async def send_moderation_notification_email(
+        admin_email: str,
+        submitter_name: str,
+        submitter_email: str,
+        model_name: str,
+        submission_id: str
+    ) -> bool:
+        """Send notification email when a community submission enters the moderation queue"""
+        subject = f"New Submission Awaiting Moderation: {model_name}"
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #a11824;">New Submission Awaiting Moderation</h1>
+            <p>A community submission has been submitted and is awaiting moderator review.</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Submitted By:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">{submitter_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Email:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;"><a href="mailto:{submitter_email}">{submitter_email}</a></td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Model:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">{model_name}</td>
+                </tr>
+            </table>
+            <p><a href="https://greatcommissionbenchmark.ai/moderator" style="background-color: #a11824; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Moderation Queue</a></p>
+            <hr>
+            <p style="color: #666; font-size: 12px;">Great Commission Benchmark</p>
+        </body>
+        </html>
+        """
+        return await EmailService.send_email(admin_email, subject, html)
+
+    @staticmethod
     async def send_contact_notification_email(
         admin_email: str,
         contact_name: str,

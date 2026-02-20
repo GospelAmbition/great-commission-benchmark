@@ -1,4 +1,5 @@
 """Submissions API endpoints"""
+import logging
 from typing import List
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,6 +10,10 @@ from app.core.auth import get_db
 from app.core.auth import require_auth, is_fee_waived
 from app.db.models.user import User
 from app.db.models.community_submission import CommunitySubmission
+from app.db.models.notification_setting import NotificationSetting, NotificationType
+from app.services.email import EmailService
+
+logger = logging.getLogger(__name__)
 from app.schemas.submissions import (
     SubmissionUploadRequest,
     SubmissionUploadResponse
@@ -75,7 +80,23 @@ async def upload_submission(
         db.add(submission)
         db.commit()
         db.refresh(submission)
-        
+
+        # Send moderation notification to designated recipient
+        try:
+            notification_setting = db.query(NotificationSetting).filter(
+                NotificationSetting.notification_type == NotificationType.MODERATION
+            ).first()
+            if notification_setting and notification_setting.is_enabled and notification_setting.recipient_email:
+                await EmailService.send_moderation_notification_email(
+                    admin_email=notification_setting.recipient_email,
+                    submitter_name=current_user.name or current_user.email,
+                    submitter_email=current_user.email,
+                    model_name=model_name,
+                    submission_id=str(submission.id)
+                )
+        except Exception as e:
+            logger.warning(f"Failed to send moderation notification email: {e}")
+
         return SubmissionUploadResponse(
             submission_id=submission.id,
             status=submission.status,
