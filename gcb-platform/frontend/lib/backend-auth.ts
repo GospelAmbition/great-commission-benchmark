@@ -21,15 +21,16 @@ const BACKEND_URL = API_URL.replace(/\/+$/, '');
  * @returns The JWT token string, or null if no session exists
  */
 export async function getBackendToken(request?: Request): Promise<string | null> {
-  // In NextAuth v5, auth() automatically reads from request context when called
-  // from within an API route handler. Since we're calling this from route handlers,
-  // auth() should automatically have access to the request context.
-  // The request parameter is kept for potential future use but may not be needed.
+  // auth() reads from request context. trustHost: true in auth.ts helps production proxies.
   const session = await auth();
-  
+
   if (!session) return null;
 
-  const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET!);
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    console.error("[proxy] NEXTAUTH_SECRET is not set");
+    throw new Error("Auth not configured");
+  }
   const token = await new jose.SignJWT({
     sub: session.user?.id,
     email: session.user?.email,
@@ -38,7 +39,7 @@ export async function getBackendToken(request?: Request): Promise<string | null>
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("1h")
-    .sign(secret);
+    .sign(new TextEncoder().encode(secret));
 
   return token;
 }
@@ -73,24 +74,40 @@ export async function proxyToBackend(
   request?: Request
 ): Promise<NextResponse> {
   const { method = "GET", body, headers = {}, queryString, allowPublic = false } = options;
-  
-  const token = await getBackendToken(request);
-  
+
+  // Validate config (helps diagnose production 500s)
+  if (!BACKEND_URL || BACKEND_URL.includes("localhost")) {
+    const msg = process.env.NODE_ENV === "production"
+      ? "NEXT_PUBLIC_API_URL must be set to production backend URL"
+      : "Backend URL not configured";
+    console.error(`[proxy] ${msg}. BACKEND_URL=${BACKEND_URL || "(empty)"}`);
+  }
+
+  let token: string | null = null;
+  try {
+    token = await getBackendToken(request);
+  } catch (authError) {
+    console.error(`[proxy] Auth error for ${endpoint}:`, authError);
+    return NextResponse.json(
+      { error: "Authentication error", detail: "Failed to get session" },
+      { status: 500 }
+    );
+  }
+
   // If authentication is required and no token exists, return 401
   if (!token && !allowPublic) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const url = queryString 
-    ? `${BACKEND_URL}${endpoint}?${queryString}` 
+  const url = queryString
+    ? `${BACKEND_URL}${endpoint}?${queryString}`
     : `${BACKEND_URL}${endpoint}`;
 
   const fetchHeaders: Record<string, string> = {
     "Content-Type": "application/json",
     ...headers,
   };
-  
-  // Only add Authorization header if we have a token
+
   if (token) {
     fetchHeaders.Authorization = `Bearer ${token}`;
   }
@@ -112,7 +129,6 @@ export async function proxyToBackend(
       return NextResponse.json(error, { status: response.status });
     }
 
-    // Handle empty responses (e.g., 204 No Content)
     const text = await response.text();
     if (!text) {
       return NextResponse.json({ success: true });
@@ -121,9 +137,13 @@ export async function proxyToBackend(
     const data = JSON.parse(text);
     return NextResponse.json(data);
   } catch (error) {
-    console.error(`Backend request failed for ${endpoint}:`, error);
+    const errMsg = (error as Error)?.message || String(error);
+    console.error(`[proxy] Backend request failed for ${endpoint} url=${url}:`, errMsg);
     return NextResponse.json(
-      { error: "Failed to communicate with backend" },
+      {
+        error: "Failed to communicate with backend",
+        ...(process.env.NODE_ENV === "development" && { detail: errMsg }),
+      },
       { status: 500 }
     );
   }

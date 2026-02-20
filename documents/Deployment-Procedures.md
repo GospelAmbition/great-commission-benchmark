@@ -464,7 +464,8 @@ pip install gcb-runner==1.2.0
 | Category | Variables | Management |
 |----------|-----------|------------|
 | **Database** | `DATABASE_URL` | Railway auto-injected |
-| **Auth** | `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Railway variables |
+| **Auth** | `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Railway variables |
+| **API** | `NEXT_PUBLIC_API_URL` (production backend URL; required for admin proxy) | Railway variables (frontend) |
 | **Payments** | `STRIPE_*` | Railway variables |
 | **LLM** | `OPENROUTER_API_KEY`, `OPENROUTER_REFERER` | Railway variables |
 | **Email** | `RESEND_API_KEY`, `EMAIL_FROM` | Railway variables |
@@ -542,6 +543,24 @@ Then production is either using a Turbopack dev/build output or the wrong start 
 1. **Build with Webpack:** Use `next build --webpack` (see `package.json` scripts). Do not rely on the default Turbopack build in Next.js 16 for production.
 2. **Start with production server:** Start command must be `npx next start --port $PORT`, not `next dev` or `npm run dev`.
 3. **Redeploy** so the new build and start command are used. After deploy, hard-refresh or clear cache when testing.
+
+### Troubleshooting: Admin 500 (stats, users, etc.)
+
+If `/api/admin/stats`, `/api/admin/users`, or other admin endpoints return 500:
+
+1. **Check Railway logs** for the frontend service. Look for `[proxy]` messages:
+   - `NEXT_PUBLIC_API_URL must be set` → Set `NEXT_PUBLIC_API_URL` to the production backend URL (e.g. `https://your-backend.up.railway.app`).
+   - `Auth error` or `NEXTAUTH_SECRET is not set` → Ensure `NEXTAUTH_SECRET` is set and matches the backend.
+   - `Backend request failed... url=http://localhost:8001` → `NEXT_PUBLIC_API_URL` is missing or wrong; frontend is trying to reach localhost.
+   - `Backend request failed` (fetch error) → Frontend cannot reach backend (network, CORS, or wrong URL).
+
+2. **Required env vars on the frontend service:**
+   - `NEXT_PUBLIC_API_URL` — production backend URL (must not be localhost).
+   - `NEXTAUTH_SECRET` — same value as backend.
+   - `NEXTAUTH_URL` — production frontend URL.
+   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — OAuth credentials.
+
+3. **Verify backend is reachable** from the frontend service (same Railway project, or correct URL if external).
 
 ### Monitoring Tools
 
