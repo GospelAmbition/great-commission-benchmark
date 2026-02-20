@@ -57,6 +57,7 @@ def _get_model_detail_data(db: Session, model: Model) -> dict:
         TestRun.model_id == model.id,
         TestRun.status == "completed",
         TestRun.overall_score.isnot(None),
+        or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
     ).order_by(TestRun.completed_at.desc()).first()
     
     best_result = None
@@ -87,6 +88,7 @@ def _get_model_detail_data(db: Session, model: Model) -> dict:
         TestRun.model_id == model.id,
         TestRun.status == "completed",
         TestRun.overall_score.isnot(None),
+        or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
     ).order_by(TestRun.completed_at.desc()).limit(10).all()
     
     for test in tests:
@@ -278,6 +280,7 @@ async def get_leaderboard(
     
     # Build query for completed test runs with eager loading
     # Exclude test runs without pre-computed scores (no recalculation for visitors)
+    # Exclude bogus 0-question runs (e.g. failed/deleted tests that left a 0% record)
     query = db.query(TestRun).options(
         joinedload(TestRun.model),
         joinedload(TestRun.question_set)
@@ -285,6 +288,7 @@ async def get_leaderboard(
         TestRun.status == "completed",
         TestRun.question_set_id == question_set.id,
         TestRun.overall_score.isnot(None),
+        or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
         Model.is_active == True
     )
     
@@ -468,25 +472,32 @@ async def list_models(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ):
-    """List all tested models"""
-    query = db.query(Model).filter(Model.is_active == True)
-    
+    """List all tested models. Excludes models with no valid completed test (e.g. failed/deleted)."""
+    # Only models that have at least one valid completed test run
+    has_valid_test = db.query(TestRun.model_id).filter(
+        TestRun.status == "completed",
+        TestRun.overall_score.isnot(None),
+        or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
+    ).distinct().subquery()
+    query = db.query(Model).filter(
+        Model.is_active == True,
+        Model.id.in_(db.query(has_valid_test.c.model_id))
+    )
     if provider:
         query = query.filter(Model.provider == provider)
-    
     if search:
         query = query.filter(Model.name.ilike(f"%{search}%"))
-    
     models = query.order_by(Model.created_at.desc()).offset(offset).limit(limit).all()
     
     # Build response with stats
     model_items = []
     for model in models:
-        # Get latest test run with pre-computed scores
+        # Get latest valid test run with pre-computed scores
         latest_test = db.query(TestRun).filter(
             TestRun.model_id == model.id,
             TestRun.status == "completed",
             TestRun.overall_score.isnot(None),
+            or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
         ).order_by(TestRun.completed_at.desc()).first()
         
         # Get test count
@@ -610,13 +621,15 @@ async def get_model_by_model_id(
     model_id: str = Query(..., description="Model identifier string (e.g., 'qwen/qwen3-coder-30b')"),
     db: Session = Depends(get_db)
 ):
-    """Get detailed model information by model_id string"""
+    """Get detailed model information by model_id string. Returns 404 if model has no valid completed test."""
     model = db.query(Model).filter(Model.model_id == model_id).first()
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
     
     # Use shared helper to get model detail data
     data = _get_model_detail_data(db, model)
+    if not data["best_result"]:
+        raise HTTPException(status_code=404, detail="Model has no valid benchmark results")
     best_result = data["best_result"]
     test_history = data["test_history"]
     category_scores = data["category_scores"]
@@ -660,13 +673,15 @@ async def get_model_detail(
     model_id: UUID,
     db: Session = Depends(get_db)
 ):
-    """Get detailed model information by UUID"""
+    """Get detailed model information by UUID. Returns 404 if model has no valid completed test."""
     model = db.query(Model).filter(Model.id == model_id).first()
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
     
     # Use shared helper to get model detail data
     data = _get_model_detail_data(db, model)
+    if not data["best_result"]:
+        raise HTTPException(status_code=404, detail="Model has no valid benchmark results")
     
     # Calculate leaderboard rank (simplified)
     leaderboard_rank = None
@@ -893,6 +908,7 @@ async def compare_models(
             TestRun.question_set_id == question_set.id,
             TestRun.status == "completed",
             TestRun.overall_score.isnot(None),
+            or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
         ).order_by(TestRun.completed_at.desc()).first()
         
         if not test_run:
@@ -1090,6 +1106,7 @@ async def get_category_rankings(
     category_codes = sorted([c[0] for c in categories if c[0]])
     
     # Get all completed test runs with pre-computed scores for this question set
+    # Exclude bogus 0-question runs (e.g. failed/deleted tests)
     test_runs = db.query(TestRun).options(
         joinedload(TestRun.model),
         joinedload(TestRun.question_set)
@@ -1097,6 +1114,7 @@ async def get_category_rankings(
         TestRun.status == "completed",
         TestRun.question_set_id == question_set.id,
         TestRun.overall_score.isnot(None),
+        or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
         Model.is_active == True
     ).order_by(TestRun.completed_at.desc()).all()
     

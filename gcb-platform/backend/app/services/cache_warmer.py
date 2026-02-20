@@ -11,7 +11,7 @@ from typing import Optional
 from datetime import datetime
 
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import text
+from sqlalchemy import text, or_
 
 from app.core.cache import cache, make_cache_key, CACHE_TTL, CACHE_STALE_TTL
 from app.core.auth import get_db_sync
@@ -220,6 +220,7 @@ async def _generate_leaderboard_data(
     entries = []
     
     # Build query for completed test runs with pre-computed scores
+    # Exclude bogus 0-question runs (e.g. failed/deleted tests that left a 0% record)
     query = db.query(TestRun).options(
         joinedload(TestRun.model),
         joinedload(TestRun.question_set)
@@ -227,6 +228,7 @@ async def _generate_leaderboard_data(
         TestRun.status == "completed",
         TestRun.question_set_id == question_set.id,
         TestRun.overall_score.isnot(None),
+        or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
         Model.is_active == True
     )
     
@@ -369,6 +371,7 @@ async def _generate_category_rankings_data(db: Session, limit_per_category: int 
     category_codes = sorted([c[0] for c in categories if c[0]])
     
     # Get all completed test runs with pre-computed scores for this question set
+    # Exclude bogus 0-question runs (e.g. failed/deleted tests)
     test_runs = db.query(TestRun).options(
         joinedload(TestRun.model),
         joinedload(TestRun.question_set)
@@ -376,6 +379,7 @@ async def _generate_category_rankings_data(db: Session, limit_per_category: int 
         TestRun.status == "completed",
         TestRun.question_set_id == question_set.id,
         TestRun.overall_score.isnot(None),
+        or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
         Model.is_active == True
     ).order_by(TestRun.completed_at.desc()).all()
     
