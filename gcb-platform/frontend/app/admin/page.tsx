@@ -48,11 +48,13 @@ export default function AdminDashboardPage() {
         throw new Error("Failed to fetch stats");
       }
       const data = await response.json();
+      const communityQueue = data.moderation?.community_queue ?? 0;
+      const sponsorshipQueue = data.moderation?.sponsorship_queue ?? 0;
       setStats({
         total_users: data.users?.total || 0,
         total_tests: data.tests?.total || 0,
         total_revenue: data.revenue?.total || 0,
-        moderation_queue_size: data.moderation?.pending_reviews || 0,
+        moderation_queue_size: communityQueue + sponsorshipQueue,
         total_api_keys: data.api_keys?.total || 0,
         active_api_keys: data.api_keys?.active || 0,
         newsletter_subscribers: data.newsletter?.total || 0,

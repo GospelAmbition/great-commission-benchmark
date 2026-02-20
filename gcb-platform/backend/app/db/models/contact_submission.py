@@ -32,9 +32,17 @@ class ContactSubmission(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False)
     email = Column(String(255), nullable=False, index=True)
-    subject = Column(SQLEnum(ContactSubject), nullable=False, default=ContactSubject.GENERAL)
+    subject = Column(
+        SQLEnum(ContactSubject, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=ContactSubject.GENERAL,
+    )
     message = Column(Text, nullable=False)
-    status = Column(SQLEnum(ContactStatus), default=ContactStatus.NEW, nullable=False)
+    status = Column(
+        SQLEnum(ContactStatus, values_callable=lambda x: [e.value for e in x]),
+        default=ContactStatus.NEW,
+        nullable=False,
+    )
     admin_notes = Column(Text, nullable=True)  # Notes from admin handling the submission
     responded_at = Column(DateTime(timezone=True), nullable=True)
     responded_by = Column(UUID(as_uuid=True), nullable=True)  # Admin who responded

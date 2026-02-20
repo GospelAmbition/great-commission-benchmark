@@ -3,7 +3,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, desc, exists
+from sqlalchemy import func, desc, or_, and_
 from uuid import UUID
 from datetime import datetime, timedelta
 import json
@@ -1239,12 +1239,37 @@ async def get_admin_stats(
 
     pending_reviews = 0
     total_moderation_logs = 0
+    community_queue = 0
+    sponsorship_queue = 0
     try:
         pending_reviews = db.query(TestRun).filter(
             TestRun.status == "completed",
             TestRun.trust_tier.in_(["pending_review", "automated"])
         ).count()
         total_moderation_logs = db.query(ModerationLog).count()
+        # Community submissions awaiting review (matches moderator queue)
+        community_queue = db.query(CommunitySubmission).filter(
+            CommunitySubmission.status.in_(["pending", "reviewing"])
+        ).count()
+        # Sponsorship requests awaiting review (same filter as moderator get_sponsorship_queue)
+        sponsorship_queue = db.query(SponsorshipRequest).filter(
+            or_(
+                SponsorshipRequest.status == "pending",
+                and_(
+                    SponsorshipRequest.status == "pending_payment",
+                    or_(
+                        SponsorshipRequest.payment_status == "succeeded",
+                        and_(
+                            SponsorshipRequest.payment_id.isnot(None),
+                            or_(
+                                SponsorshipRequest.payment_status.is_(None),
+                                SponsorshipRequest.payment_status == "pending"
+                            )
+                        )
+                    )
+                )
+            )
+        ).count()
     except Exception as e:
         logger.error(f"Admin stats - moderation stats failed: {e}")
         db.rollback()
@@ -1284,7 +1309,9 @@ async def get_admin_stats(
         },
         moderation={
             "pending_reviews": pending_reviews,
-            "total_reviews": total_moderation_logs
+            "total_reviews": total_moderation_logs,
+            "community_queue": community_queue,
+            "sponsorship_queue": sponsorship_queue,
         },
         api_keys={
             "total": total_api_keys,
@@ -1367,11 +1394,13 @@ async def cleanup_orphaned_approved_submissions(
     db: Session = Depends(get_db)
 ):
     """Revert approved community submissions that have no associated test run (orphaned after run deletion)."""
-    subquery = db.query(TestRun.id).filter(TestRun.community_submission_id == CommunitySubmission.id)
-    orphaned = db.query(CommunitySubmission).filter(
-        CommunitySubmission.status == "approved",
-        ~exists(subquery)
-    ).all()
+    # Use left outer join: approved submissions with no matching test run (TestRun.id IS NULL)
+    orphaned = (
+        db.query(CommunitySubmission)
+        .outerjoin(TestRun, TestRun.community_submission_id == CommunitySubmission.id)
+        .filter(CommunitySubmission.status == "approved", TestRun.id.is_(None))
+        .all()
+    )
     reverted = []
     for submission in orphaned:
         submission.status = "rejected"
