@@ -10,6 +10,7 @@ import { Mail, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { API_URL } from "@/lib/api";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
+import { RecaptchaScript } from "@/components/recaptcha/RecaptchaScript";
 import { trackNewsletterSignup } from "@/lib/analytics";
 
 export default function NewsletterPage() {
@@ -94,7 +95,9 @@ export default function NewsletterPage() {
   }
 
   return (
-    <div className="flex flex-col">
+    <>
+      <RecaptchaScript />
+      <div className="flex flex-col">
       {/* Page Header */}
       <div className="relative border-b border-white/[0.06] overflow-hidden">
         <div className="absolute inset-0 gradient-hero" />
@@ -205,5 +208,6 @@ export default function NewsletterPage() {
         </Card>
       </div>
     </div>
+    </>
   );
 }

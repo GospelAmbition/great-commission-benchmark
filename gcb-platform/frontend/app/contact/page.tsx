@@ -17,6 +17,7 @@ import { MessageSquare, CheckCircle2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { API_URL } from "@/lib/api";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
+import { RecaptchaScript } from "@/components/recaptcha/RecaptchaScript";
 
 const CONTACT_SUBJECTS = [
   { value: "general", label: "General Inquiry" },
@@ -118,7 +119,9 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="flex flex-col">
+    <>
+      <RecaptchaScript />
+      <div className="flex flex-col">
       {/* Page Header */}
       <div className="relative border-b border-white/[0.06] overflow-hidden">
         <div className="absolute inset-0 gradient-hero" />
@@ -292,5 +295,6 @@ export default function ContactPage() {
         </Card>
       </div>
     </div>
+    </>
   );
 }
