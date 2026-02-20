@@ -39,18 +39,20 @@ async function getLeaderboardPageData(): Promise<{
       category_scores?: Record<string, number>;
     }> = data.leaderboard?.entries || [];
 
-    const items = backendEntries.map((entry) => ({
-      id: entry.model?.id || "",
-      model_id: entry.model?.model_id || entry.model?.id || "",
-      model_name: entry.model?.name || "",
-      provider: entry.model?.provider || "",
-      overall_score: entry.scores?.overall || 0,
-      tier1_score: entry.scores?.tier1,
-      tier2_score: entry.scores?.tier2,
-      tier3_score: entry.scores?.tier3,
-      trust_tier: entry.test_run?.trust_tier,
-      category_scores: entry.category_scores || {},
-    }));
+    const items = backendEntries
+      .map((entry) => ({
+        id: entry.model?.id || "",
+        model_id: entry.model?.model_id || entry.model?.id || "",
+        model_name: entry.model?.name || "",
+        provider: entry.model?.provider || "",
+        overall_score: entry.scores?.overall || 0,
+        tier1_score: entry.scores?.tier1,
+        tier2_score: entry.scores?.tier2,
+        tier3_score: entry.scores?.tier3,
+        trust_tier: entry.test_run?.trust_tier,
+        category_scores: entry.category_scores || {},
+      }))
+      .filter((item) => item.overall_score > 0);
 
     const initialData: LeaderboardInitialData = {
       leaderboard: {

@@ -376,8 +376,8 @@ export class ApiClient {
     const response = await this.requestPublic<BackendLeaderboardResponse>(`/api/public/leaderboard${query}`);
     
     // Transform backend response to frontend format
-    return {
-      items: (response.entries || []).map((entry) => ({
+    const items = (response.entries || [])
+      .map((entry) => ({
         id: entry.model?.id || '', // UUID for API operations
         model_id: entry.model?.model_id || entry.model?.id || '', // OpenRouter-style ID for display/routing
         model_name: entry.model?.name || '',
@@ -388,27 +388,33 @@ export class ApiClient {
         tier3_score: entry.scores?.tier3,
         trust_tier: entry.test_run?.trust_tier,
         category_scores: entry.category_scores || {},
-      })),
+      }))
+      .filter((item) => item.overall_score > 0);
+    return {
+      items,
       total: response.total_models || 0,
     };
   }
 
   async getLeaderboardPage(): Promise<LeaderboardPageResponse> {
     const raw = await this.requestPublic<BackendLeaderboardPageResponse>('/api/public/leaderboard-page');
+    const pageItems = (raw.leaderboard?.entries || [])
+      .map((entry) => ({
+        id: entry.model?.id || '',
+        model_id: entry.model?.model_id || entry.model?.id || '',
+        model_name: entry.model?.name || '',
+        provider: entry.model?.provider || '',
+        overall_score: entry.scores?.overall || 0,
+        tier1_score: entry.scores?.tier1,
+        tier2_score: entry.scores?.tier2,
+        tier3_score: entry.scores?.tier3,
+        trust_tier: entry.test_run?.trust_tier,
+        category_scores: entry.category_scores || {},
+      }))
+      .filter((item) => item.overall_score > 0);
     return {
       leaderboard: {
-        items: (raw.leaderboard?.entries || []).map((entry) => ({
-          id: entry.model?.id || '',
-          model_id: entry.model?.model_id || entry.model?.id || '',
-          model_name: entry.model?.name || '',
-          provider: entry.model?.provider || '',
-          overall_score: entry.scores?.overall || 0,
-          tier1_score: entry.scores?.tier1,
-          tier2_score: entry.scores?.tier2,
-          tier3_score: entry.scores?.tier3,
-          trust_tier: entry.test_run?.trust_tier,
-          category_scores: entry.category_scores || {},
-        })),
+        items: pageItems,
         total: raw.leaderboard?.total_models || 0,
       },
       filter_options: raw.filter_options,
