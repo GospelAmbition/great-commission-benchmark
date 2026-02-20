@@ -274,6 +274,7 @@ class SubmissionProcessorService:
             self.db.add(result)
             results_created += 1
 
+        self.db.flush()  # Ensure all results are visible to the score calculation query
         compute_and_store_test_run_scores(self.db, test_run)
         
         return test_run, results_created
