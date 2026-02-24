@@ -105,6 +105,19 @@ export function Footer() {
             </div>
             <span className="hidden sm:inline text-muted-foreground/50">•</span>
             <p>© {new Date().getFullYear()} All rights reserved.</p>
+            <span className="hidden sm:inline text-muted-foreground/50">•</span>
+            <p>
+              A project of{" "}
+              <a
+                href="https://gospelambition.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                gospelambition.org
+              </a>
+              .
+            </p>
           </div>
         </div>
       </div>
