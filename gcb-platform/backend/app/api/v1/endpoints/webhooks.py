@@ -10,6 +10,7 @@ from app.db.models.community_submission import CommunitySubmission
 from app.db.models.sponsorship_request import SponsorshipRequest
 from app.db.models.notification_setting import NotificationSetting, NotificationType
 from app.services.email import EmailService
+from app.services.action_log import ActionLogService
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +124,20 @@ async def stripe_webhook(
                             )
                     except Exception as e:
                         logger.warning(f"Failed to send moderation notification email: {e}")
-    
+
+            if payment_type == "donation":
+                ActionLogService.log_action(
+                    db,
+                    action="donation.succeeded",
+                    actor_type="anonymous",
+                    entity_type="donation",
+                    entity_id=payment_intent_id,
+                    metadata={
+                        "amount_cents": event_data.get("amount", 0),
+                        "email": event_data.get("receipt_email"),
+                    },
+                )
+
     elif event_type == "payment_intent.payment_failed":
         # Payment failed - update status
         payment_intent_id = event_data["id"]

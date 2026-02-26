@@ -6,9 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Request, Query
 from sqlalchemy.orm import Session
 from typing import Optional, Tuple, Dict, List
 
+from sqlalchemy.orm import joinedload
+
 from app.core.auth import get_db, has_permission
 from app.db.models.user import User
 from app.db.models.user_api_key import UserAPIKey
+from app.db.models.action_log import ActionLog
+from app.schemas.action_log import ActionLogListItem, ActionLogListResponse, ActionLogActor
 from app.db.models.question_set import QuestionSet
 from app.db.models.question import Question
 from app.db.models.methodology_version import MethodologyVersion
@@ -509,3 +513,56 @@ async def bulk_submit(
             status_code=500,
             detail=f"Failed to process submission: {str(e)}"
         )
+
+
+@router.get("/action-logs", response_model=ActionLogListResponse)
+async def list_action_logs(
+    request: Request,
+    actions: List[str] = Query([], description="Filter by action codes"),
+    since: Optional[datetime] = Query(None, description="Return events after this timestamp (exclusive)"),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
+):
+    """List action logs for scheduler polling. Requires admin API key.
+
+    Returns events sorted ascending by created_at so the caller can use
+    the last item's timestamp as the next watermark.
+    """
+    api_key_record, user = auth
+
+    if not has_permission(user, "can_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    query = db.query(ActionLog).options(joinedload(ActionLog.actor_user))
+
+    if actions:
+        query = query.filter(ActionLog.action.in_(actions))
+    if since:
+        query = query.filter(ActionLog.created_at > since)
+
+    total = query.count()
+    logs = query.order_by(ActionLog.created_at.asc()).limit(limit).all()
+
+    items = []
+    for log in logs:
+        actor_user = None
+        if log.actor_user:
+            actor_user = ActionLogActor(
+                id=log.actor_user.id,
+                name=log.actor_user.name,
+                email=log.actor_user.email,
+            )
+        items.append(ActionLogListItem(
+            id=log.id,
+            action=log.action,
+            actor_type=log.actor_type,
+            actor_user=actor_user,
+            actor_api_key_id=log.actor_api_key_id,
+            entity_type=log.entity_type,
+            entity_id=log.entity_id,
+            metadata=log.extra_data,
+            created_at=log.created_at,
+        ))
+
+    return ActionLogListResponse(items=items, total=total)
