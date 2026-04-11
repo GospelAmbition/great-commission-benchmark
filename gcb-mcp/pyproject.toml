@@ -1,0 +1,16 @@
+[project]
+name = "gcb-mcp"
+version = "0.1.0"
+description = "MCP server for Great Commission Benchmark (active models via runner API)"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "mcp[cli]>=1.2",
+]
+
+[project.scripts]
+gcb-mcp = "gcb_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
