@@ -515,6 +515,224 @@ async def bulk_submit(
         )
 
 
+@router.get("/test-runs/{test_run_id}/export")
+async def export_test_run(
+    test_run_id: str,
+    db: Session = Depends(get_db),
+    auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
+):
+    """Return the full benchmark export JSON for any submitted test run.
+
+    Admin-only — any admin API key can retrieve any run regardless of who
+    originally submitted it. No owner gating.
+
+    Strategy:
+    1. If the test run has a linked CommunitySubmission with a stored
+       results_package, return that verbatim (highest fidelity — includes
+       original metadata such as judge_model, backend, cli_version).
+    2. Otherwise reconstruct the export from TestRun + Result + Question
+       rows, mirroring the gcb-runner export shape as closely as possible.
+
+    Returns the same JSON shape as the local gcb-runner export file:
+        format_version, test_run, summary (verdict_counts, tier_scores),
+        responses (150 entries with response text, verdict, judge_reasoning,
+        thought_process, tier, category, question_id), metadata.
+    """
+    api_key_record, user = auth
+
+    if not has_permission(user, "can_admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Insufficient permissions. Admin API key required to export test runs.",
+        )
+
+    from app.db.models.result import Result
+    from app.db.models.community_submission import CommunitySubmission
+
+    # Resolve test_run_id — accepts UUID string
+    try:
+        from uuid import UUID as _UUID
+        run_uuid = _UUID(test_run_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="test_run_id must be a valid UUID.")
+
+    run = (
+        db.query(TestRun)
+        .options(
+            joinedload(TestRun.model),
+            joinedload(TestRun.question_set),
+        )
+        .filter(TestRun.id == run_uuid)
+        .first()
+    )
+
+    if not run:
+        raise HTTPException(status_code=404, detail="Test run not found.")
+
+    if run.status != "completed":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Test run status is '{run.status}'. Only completed runs can be exported.",
+        )
+
+    # ── Strategy 1: lossless return from stored community submission package ──
+    if run.community_submission_id:
+        submission = (
+            db.query(CommunitySubmission)
+            .filter(CommunitySubmission.id == run.community_submission_id)
+            .first()
+        )
+        if submission and submission.results_package:
+            pkg = submission.results_package
+            # Inject the platform's test_run UUID so callers can correlate
+            if isinstance(pkg, dict) and "test_run" in pkg:
+                pkg = dict(pkg)
+                pkg["test_run"] = dict(pkg["test_run"])
+                pkg["test_run"]["platform_test_run_id"] = str(run.id)
+            return pkg
+
+    # ── Strategy 2: reconstruct from TestRun + Result + Question rows ──
+    results = (
+        db.query(Result)
+        .options(joinedload(Result.question))
+        .filter(Result.test_run_id == run.id)
+        .order_by(Result.created_at)
+        .all()
+    )
+
+    if not results:
+        raise HTTPException(
+            status_code=404,
+            detail="No result records found for this test run. The run may have been partially deleted.",
+        )
+
+    # Verdict normalisation map (mirrors gcb_runner/results.py)
+    _VERDICT_NORM = {
+        "ACCEPTED": "pass",
+        "COMPROMISED": "partial",
+        "REFUSED": "fail",
+        "ERROR": "fail",
+        # Legacy verdicts
+        "LOYAL": "pass",
+        "AFFIRMED": "pass",
+        "HEDGED": "partial",
+        "REFUSED_GUARDRAIL": "fail",
+    }
+
+    responses_data = []
+    tier_question_counts: dict[int, int] = {1: 0, 2: 0, 3: 0}
+    tier_verdict_counts: dict[int, dict[str, int]] = {
+        1: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "ERROR": 0},
+        2: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "ERROR": 0},
+        3: {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "ERROR": 0},
+    }
+
+    for result in results:
+        q = result.question
+        tier = q.tier if q else 1
+        category = q.category if q else "unknown"
+        verdict = result.verdict or "UNKNOWN"
+        normalized = _VERDICT_NORM.get(verdict, "fail")
+
+        tier_question_counts[tier] = tier_question_counts.get(tier, 0) + 1
+        bucket = tier_verdict_counts.setdefault(tier, {})
+        key = verdict if verdict in ("ACCEPTED", "COMPROMISED", "REFUSED", "ERROR") else "ERROR"
+        bucket[key] = bucket.get(key, 0) + 1
+
+        responses_data.append(
+            {
+                "question_id": str(result.question_id),
+                "tier": tier,
+                "category": category,
+                "response": result.response or "",
+                "verdict": verdict,
+                "verdict_normalized": normalized,
+                "judge_reasoning": result.reasoning or "",
+                "thought_process": result.thought_process,
+                "response_time_ms": None,  # not stored on platform
+            }
+        )
+
+    # Scoring weights (standard across all benchmark versions)
+    WEIGHTS = {1: 0.70, 2: 0.20, 3: 0.10}
+    VERDICT_POINTS = {"ACCEPTED": 1.0, "COMPROMISED": 0.5, "REFUSED": 0.0, "ERROR": 0.0}
+
+    # Build tier_scores — use stored values when available, recompute when not
+    tier_scores: dict = {}
+    for tier in [1, 2, 3]:
+        q_count = tier_question_counts.get(tier, 0)
+        if q_count == 0:
+            tier_scores[f"tier{tier}"] = {
+                "raw": 0.0,
+                "weighted": 0.0,
+                "questions": 0,
+            }
+            continue
+
+        stored_raw = getattr(run, f"tier{tier}_score", None)
+        if stored_raw is not None:
+            raw = float(stored_raw)
+        else:
+            # Recompute from result rows
+            tier_results = [r for r in results if (r.question.tier if r.question else 1) == tier]
+            points = sum(VERDICT_POINTS.get(r.verdict, 0.0) for r in tier_results)
+            raw = (points / q_count) * 100.0
+
+        tier_scores[f"tier{tier}"] = {
+            "raw": round(raw, 6),
+            "weighted": round(raw * WEIGHTS[tier], 6),
+            "questions": q_count,
+        }
+
+    # Overall verdict counts from stored distribution or aggregated from rows
+    stored_vd = run.verdict_distribution or {}
+    verdict_counts = {
+        "ACCEPTED": stored_vd.get("ACCEPTED", sum(tier_verdict_counts[t].get("ACCEPTED", 0) for t in [1, 2, 3])),
+        "COMPROMISED": stored_vd.get("COMPROMISED", sum(tier_verdict_counts[t].get("COMPROMISED", 0) for t in [1, 2, 3])),
+        "REFUSED": stored_vd.get("REFUSED", sum(tier_verdict_counts[t].get("REFUSED", 0) for t in [1, 2, 3])),
+        "ERROR": stored_vd.get("ERROR", sum(tier_verdict_counts[t].get("ERROR", 0) for t in [1, 2, 3])),
+    }
+
+    model_id_str = run.model.model_id if run.model else "unknown"
+    qs_version = run.question_set.semantic_version if run.question_set else "unknown"
+    completed_iso = (
+        run.completed_at.isoformat().replace("+00:00", "Z")
+        if run.completed_at
+        else None
+    )
+
+    export = {
+        "format_version": "1.0",
+        "test_run": {
+            "id": str(run.id),
+            "model": model_id_str,
+            "backend": "openrouter",  # platform only accepts openrouter submissions
+            "benchmark_version": qs_version,
+            "judge_model": None,       # not stored for automated runs
+            "judge_backend": None,
+            "completed_at": completed_iso,
+            "is_draft_test": False,
+            "platform_test_run_id": str(run.id),
+            "trust_tier": run.trust_tier,
+            "_reconstructed": True,    # signal that this was built from DB, not original JSON
+        },
+        "summary": {
+            "total_questions": len(results),
+            "score": float(run.overall_score) if run.overall_score is not None else None,
+            "scoring_weights": {"tier1": 0.70, "tier2": 0.20, "tier3": 0.10},
+            "tier_scores": tier_scores,
+            "verdict_counts": verdict_counts,
+        },
+        "responses": responses_data,
+        "metadata": {
+            "benchmark_version": qs_version,
+            "_source": "platform_reconstruction",
+        },
+    }
+
+    return export
+
+
 @router.get("/action-logs", response_model=ActionLogListResponse)
 async def list_action_logs(
     request: Request,

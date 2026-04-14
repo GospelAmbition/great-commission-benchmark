@@ -731,8 +731,16 @@ async def list_published_models(limit: int = 30) -> dict[str, Any]:
     """List models published on the GCB leaderboard, most recently tested first.
 
     Use this to discover which models have been benchmarked and pick one to
-    write an article about. Returns model_id, name, provider, overall score,
-    tier scores, completed_at, and test_run_id.
+    write an article about.
+
+    Each entry includes:
+        rank, model_id, name, provider, overall_score, tier1/2/3_score,
+        completed_at, test_run_id, trust_tier, benchmark_version,
+        verdict_distribution, total_questions
+
+    The test_run_id field is a platform UUID you can pass directly to
+    get_remote_test_json(test_run_id) to retrieve the full 150-response
+    benchmark export for article writing.
 
     Args:
         limit: Maximum number of models to return (default 30, max 200).
@@ -746,11 +754,15 @@ async def list_published_models(limit: int = 30) -> dict[str, Any]:
 async def get_model_test_result(model_id: str) -> dict[str, Any]:
     """Fetch the full published benchmark result for a model by its OpenRouter model_id.
 
-    Returns the complete structured data needed to write a benchmark review article:
-    overall score, tier 1/2/3 scores, all 19 category scores, verdict distribution
-    (Accepted / Compromised / Refused), test history, benchmark version, and rank.
+    Returns aggregate score data plus test_run_id for article writing:
+        overall_score, tier1/2/3_score, all 19 category_scores,
+        verdict_distribution (Accepted / Compromised / Refused),
+        test_history, benchmark_version, trust_tier, test_run_id
 
-    This replaces the manual step of locating and passing a local JSON export file.
+    The test_run_id in the response is the platform UUID you can pass directly
+    to get_remote_test_json(test_run_id) to retrieve the full 150-response
+    export with individual response text and judge reasoning — the richest
+    source of article-writing material.
 
     Args:
         model_id: OpenRouter model identifier, e.g. "anthropic/claude-3-opus"
@@ -1408,6 +1420,79 @@ async def get_local_test_json(job_id: str) -> dict[str, Any]:
         "category_breakdown": category_breakdown,
         "refusal_opening_phrases": refusal_openings,
         "export_path": str(export_path),
+    }
+
+
+@mcp.tool()
+async def get_remote_test_json(test_run_id: str) -> dict[str, Any]:
+    """Fetch the full benchmark export JSON for a submitted test run from the live platform.
+
+    Use this when the original local export file is unavailable — for example when
+    writing an article about a historical run that predates the local job database,
+    or when you need to recover a run on a different machine.
+
+    Requires an admin GCB_API_KEY. Any completed run on the platform can be fetched
+    regardless of who originally submitted it.
+
+    The tool applies the same convenience analysis as get_local_test_json:
+    - category_breakdown: per-category exact counts (9A / 2C / 4R) + pass_rate
+    - refusal_opening_phrases: first words of every refused response for pattern detection
+
+    Args:
+        test_run_id: Platform UUID of the test run. Obtain from:
+            - get_model_test_result(model_id)["test_run_id"]
+            - list_published_models()  → entries include test_run_id
+            - The GCB admin dashboard
+
+    Returns a dict with keys:
+        format_version, test_run (includes _reconstructed flag if built from DB),
+        summary (verdict_counts, tier_scores, score),
+        responses (list of entries with response text + verdict + judge_reasoning),
+        category_breakdown, refusal_opening_phrases, _source
+        error (if the fetch failed or permissions were insufficient)
+    """
+    from gcb_mcp.blog import fetch_remote_test_export  # noqa: PLC0415
+
+    raw = await fetch_remote_test_export(test_run_id)
+    if "error" in raw:
+        return raw
+
+    # Apply the same convenience analysis as get_local_test_json
+    responses = raw.get("responses", [])
+    category_breakdown: dict[str, dict] = {}
+    refusal_openings: list[str] = []
+
+    for resp in responses:
+        cat = resp.get("category", "unknown")
+        verdict = resp.get("verdict", "UNKNOWN")
+        if cat not in category_breakdown:
+            category_breakdown[cat] = {
+                "ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0,
+                "total": 0,
+            }
+        category_breakdown[cat][verdict] = category_breakdown[cat].get(verdict, 0) + 1
+        category_breakdown[cat]["total"] += 1
+
+        if verdict == "REFUSED":
+            text = resp.get("response", "")
+            opening = " ".join(text.split()[:12])
+            if opening:
+                refusal_openings.append(opening)
+
+    for cat, counts in category_breakdown.items():
+        total = counts["total"]
+        accepted = counts.get("ACCEPTED", 0)
+        compromised = counts.get("COMPROMISED", 0)
+        if total > 0:
+            counts["pass_rate"] = round(
+                (accepted + 0.5 * compromised) / total * 100, 1
+            )
+
+    return {
+        **raw,
+        "category_breakdown": category_breakdown,
+        "refusal_opening_phrases": refusal_openings,
+        "_source": "remote_platform",
     }
 
 

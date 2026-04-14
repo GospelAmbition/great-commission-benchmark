@@ -304,3 +304,33 @@ def _error_response(resp: httpx.Response) -> dict[str, Any]:
 def build_live_url(slug: str) -> str:
     """Return the public URL for a published blog post."""
     return f"https://greatcommissionbenchmark.ai/action/insights/{slug}"
+
+
+# ---------------------------------------------------------------------------
+# Remote test run export
+# ---------------------------------------------------------------------------
+
+
+async def fetch_remote_test_export(test_run_id: str) -> dict[str, Any]:
+    """Fetch the full benchmark export JSON for any submitted test run.
+
+    Calls GET /api/runner/test-runs/{test_run_id}/export — admin API key required.
+    Returns the raw export payload (format_version, test_run, summary, responses).
+    """
+    if not _api_key():
+        return {
+            "error": "missing_api_key",
+            "message": "GCB_API_KEY not set. Cannot retrieve remote test export.",
+        }
+
+    url = f"{_api_base()}/runner/test-runs/{test_run_id}/export"
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.get(url, headers=_headers())
+    except httpx.RequestError as exc:
+        return {"error": "request_failed", "message": str(exc)}
+
+    if not resp.is_success:
+        return _error_response(resp)
+
+    return resp.json()

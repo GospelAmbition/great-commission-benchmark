@@ -182,7 +182,8 @@ async def get_model_test_result(model_id: str) -> dict[str, Any]:
             test_history[0].get("completed_at") if test_history else None
         ),
         "test_run_id": (
-            test_history[0].get("id") if test_history else None
+            test_history[0].get("test_run_id") or test_history[0].get("id")
+            if test_history else None
         ),
         "test_history": test_history,
         "test_count": data.get("test_count"),
