@@ -641,6 +641,10 @@ async def get_model_by_model_id(
     tier2_score = best_result["scores"]["tier2"] if best_result else None
     tier3_score = best_result["scores"]["tier3"] if best_result else None
     
+    verdict_distribution = (
+        best_result["scores"].get("verdict_distribution") if best_result else None
+    ) or {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "ERROR": 0}
+
     return {
         "id": str(model.id),
         "model_id": model.model_id,
@@ -653,6 +657,10 @@ async def get_model_by_model_id(
         "tier1_score": tier1_score,
         "tier2_score": tier2_score,
         "tier3_score": tier3_score,
+        "verdict_distribution": verdict_distribution,
+        "total_questions": (
+            best_result["scores"].get("total_questions") if best_result else None
+        ) or 0,
         "trust_tier": best_result["trust_tier"] if best_result else None,
         "test_count": test_count,
         "category_scores": category_scores,

@@ -1,11 +1,12 @@
 [project]
 name = "gcb-mcp"
-version = "0.1.0"
-description = "MCP server for Great Commission Benchmark (active models via runner API)"
+version = "0.2.0"
+description = "MCP server for Great Commission Benchmark (active models, job orchestration)"
 requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.27",
     "mcp[cli]>=1.2",
+    "pydantic>=2.0",
 ]
 
 [project.scripts]
@@ -14,3 +15,14 @@ gcb-mcp = "gcb_mcp.server:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["gcb_mcp"]
+include = ["gcb_mcp/prompts/*.md"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "gcb_mcp/**/*.py",
+    "gcb_mcp/prompts/*.md",
+    "pyproject.toml",
+]
