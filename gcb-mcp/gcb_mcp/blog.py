@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 from pathlib import Path
 from typing import Any
 
@@ -13,31 +12,6 @@ import httpx
 logger = logging.getLogger(__name__)
 
 _DEFAULT_API_BASE = "https://api.greatcommissionbenchmark.ai/api"
-
-
-# HTML block-level tags that indicate content is already HTML
-_HTML_BLOCK_RE = re.compile(
-    r"^\s*<(p|h[1-6]|ul|ol|li|blockquote|div|table|figure|section|article|header|footer|pre|hr)\b",
-    re.IGNORECASE,
-)
-
-
-def _to_html(content: str) -> str:
-    """Convert Markdown content to HTML.
-
-    If the content already appears to be HTML (starts with a block-level tag),
-    it is returned unchanged.  Otherwise it is processed by the ``markdown``
-    library with the ``extra`` and ``nl2br`` extensions so that standard
-    Markdown, tables, and fenced code blocks are rendered correctly.
-    """
-    if _HTML_BLOCK_RE.match(content):
-        return content
-    try:
-        import markdown as _md
-        return _md.markdown(content, extensions=["extra", "nl2br"])
-    except ImportError:
-        # Fallback: wrap bare text in a paragraph so editors don't reject it
-        return f"<p>{content}</p>"
 
 
 def _api_base() -> str:
@@ -122,11 +96,10 @@ async def create_post(
 ) -> dict[str, Any]:
     """Create a blog post as draft (or publish immediately if publish=True).
 
-    ``content`` may be plain Markdown or HTML; Markdown is automatically
-    converted to HTML before submission because the blog editor stores and
-    renders HTML.
+    ``content`` should be Markdown; it is stored as-is and rendered to HTML
+    by the frontend at read time.
     """
-    body: dict[str, Any] = {"title": title, "content": _to_html(content)}
+    body: dict[str, Any] = {"title": title, "content": content}
     if excerpt:
         body["excerpt"] = excerpt
     if slug:
@@ -161,12 +134,12 @@ async def update_post(
 ) -> dict[str, Any]:
     """Update an existing blog post. Only supplied fields are changed.
 
-    ``content`` may be plain Markdown or HTML; Markdown is automatically
-    converted to HTML before submission.
+    ``content`` should be Markdown; it is stored as-is and rendered to HTML
+    by the frontend at read time.
     """
     body: dict[str, Any] = {}
     if content is not None:
-        body["content"] = _to_html(content)
+        body["content"] = content
     if title is not None:
         body["title"] = title
     if excerpt is not None:

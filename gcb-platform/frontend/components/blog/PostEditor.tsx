@@ -1,7 +1,12 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import { Editor } from "@tinymce/tinymce-react";
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import "@uiw/react-md-editor/markdown-editor.css";
+import "@uiw/react-markdown-preview/markdown.css";
+
+// MDEditor uses browser APIs — load client-side only to avoid SSR hydration issues
+const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 
 interface PostEditorProps {
   value: string;
@@ -10,42 +15,12 @@ interface PostEditorProps {
 }
 
 export function PostEditor({ value, onChange, onImageUpload }: PostEditorProps) {
-  const editorRef = useRef<any>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  const apiKey = process.env.NEXT_PUBLIC_TINYMCE_API_KEY;
 
   useEffect(() => {
     setIsMounted(true);
-    // Check dark mode preference after mount
-    if (typeof window !== "undefined") {
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      setIsDarkMode(mediaQuery.matches);
-      
-      // Listen for changes
-      const handleChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
-      mediaQuery.addEventListener("change", handleChange);
-      return () => mediaQuery.removeEventListener("change", handleChange);
-    }
   }, []);
 
-  // Custom image upload handler
-  const handleImageUpload = async (
-    blobInfo: any,
-    progress: (percent: number) => void
-  ): Promise<string> => {
-    if (onImageUpload) {
-      const file = blobInfo.blob();
-      progress(50);
-      const url = await onImageUpload(file);
-      progress(100);
-      return url;
-    }
-    throw new Error("Image upload handler not provided");
-  };
-
-  // Only render TinyMCE on the client to avoid hydration mismatches
   if (!isMounted) {
     return (
       <div className="h-[500px] border rounded-md flex items-center justify-center bg-muted">
@@ -54,86 +29,51 @@ export function PostEditor({ value, onChange, onImageUpload }: PostEditorProps) 
     );
   }
 
+  // Build an extra toolbar command for image upload when a handler is provided
+  const extraCommands = onImageUpload
+    ? [
+        {
+          name: "upload-image",
+          keyCommand: "upload-image",
+          buttonProps: { "aria-label": "Upload image", title: "Upload image" },
+          icon: (
+            <svg viewBox="0 0 16 16" width="12px" height="12px">
+              <path
+                fill="currentColor"
+                d="M14 9a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-4a1 1 0 0 1 2 0v3h10v-3a1 1 0 0 1 1-1zM8 1a1 1 0 0 1 .707.293l3 3a1 1 0 0 1-1.414 1.414L9 4.414V9a1 1 0 0 1-2 0V4.414L5.707 5.707A1 1 0 0 1 4.293 4.293l3-3A1 1 0 0 1 8 1z"
+              />
+            </svg>
+          ),
+          execute: (_state: unknown, _api: unknown) => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = "image/*,.svg";
+            input.onchange = async () => {
+              const file = input.files?.[0];
+              if (!file || !onImageUpload) return;
+              try {
+                const url = await onImageUpload(file);
+                const api = _api as { replaceSelection: (text: string) => void };
+                api.replaceSelection(`![${file.name}](${url})`);
+              } catch {
+                // upload failed — do nothing, let the caller surface the error
+              }
+            };
+            input.click();
+          },
+        },
+      ]
+    : [];
+
   return (
-    <Editor
-      apiKey={apiKey}
-      onInit={(evt, editor) => {
-        editorRef.current = editor;
-      }}
-      value={value}
-      onEditorChange={(content) => onChange(content)}
-      init={{
-        height: 500,
-        menubar: true,
-        plugins: [
-          "advlist",
-          "autolink",
-          "lists",
-          "link",
-          "image",
-          "charmap",
-          "preview",
-          "anchor",
-          "searchreplace",
-          "visualblocks",
-          "code",
-          "fullscreen",
-          "insertdatetime",
-          "media",
-          "table",
-          "help",
-          "wordcount",
-        ],
-        toolbar:
-          "undo redo | blocks | " +
-          "bold italic forecolor | alignleft aligncenter " +
-          "alignright alignjustify | bullist numlist outdent indent | " +
-          "link image | removeformat | code fullscreen | help",
-        // Disable telemetry/analytics to reduce console errors
-        promotion: false,
-        branding: false,
-        content_style: `
-          body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            font-size: 16px;
-            line-height: 1.6;
-            max-width: 100%;
-            padding: 1rem;
-          }
-          img { max-width: 100%; height: auto; }
-          h1, h2, h3, h4, h5, h6 { margin-top: 1.5em; margin-bottom: 0.5em; }
-          p { margin-bottom: 1em; }
-          blockquote { 
-            border-left: 4px solid #dc2626; 
-            padding-left: 1rem; 
-            margin-left: 0;
-            font-style: italic;
-          }
-          pre { 
-            background: #f4f4f5; 
-            padding: 1rem; 
-            border-radius: 0.5rem;
-            overflow-x: auto;
-          }
-          code { 
-            background: #f4f4f5; 
-            padding: 0.125rem 0.25rem; 
-            border-radius: 0.25rem;
-          }
-        `,
-        images_upload_handler: onImageUpload ? handleImageUpload : undefined,
-        automatic_uploads: !!onImageUpload,
-        file_picker_types: "image",
-        image_advtab: true,
-        image_caption: true,
-        link_default_target: "_blank",
-        link_assume_external_targets: true,
-        paste_data_images: true,
-        // Dark mode support
-        skin: isDarkMode ? "oxide-dark" : "oxide",
-        content_css: isDarkMode ? "dark" : "default",
-      }}
-    />
+    <div data-color-mode="dark">
+      <MDEditor
+        value={value}
+        onChange={(val) => onChange(val ?? "")}
+        height={500}
+        visibleDragbar={false}
+        extraCommands={extraCommands}
+      />
+    </div>
   );
 }
-

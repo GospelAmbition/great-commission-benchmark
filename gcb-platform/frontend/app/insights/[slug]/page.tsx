@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -190,8 +193,9 @@ export default function BlogPostPage() {
 
       <Separator className="mb-8" />
 
-      {/* Content */}
-      <div 
+      {/* Content — stored as Markdown, rendered to HTML at read time.
+           rehype-raw allows legacy HTML content to pass through unchanged. */}
+      <div
         className="prose prose-lg prose-invert max-w-full
           prose-headings:font-bold prose-headings:text-foreground
           prose-p:text-muted-foreground prose-p:leading-relaxed
@@ -203,8 +207,11 @@ export default function BlogPostPage() {
           prose-img:rounded-lg prose-img:shadow-md
           prose-ul:text-muted-foreground prose-ol:text-muted-foreground
           prose-li:marker:text-primary"
-        dangerouslySetInnerHTML={{ __html: post.content || "" }}
-      />
+      >
+        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+          {post.content || ""}
+        </ReactMarkdown>
+      </div>
 
       <Separator className="my-12" />
 
