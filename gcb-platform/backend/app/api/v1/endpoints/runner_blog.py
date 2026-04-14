@@ -560,7 +560,7 @@ async def upload_blog_image(
     Upload an image for blog posts.
 
     Returns a URL that can be used as the featured_image_url when creating or updating posts.
-    Max file size: 10MB. Allowed types: JPEG, PNG, GIF, WebP.
+    Max file size: 10MB. Allowed types: JPEG, PNG, GIF, WebP, SVG.
     Requires API key with blog management permission.
     """
     result = await upload_image(file, folder="blog")

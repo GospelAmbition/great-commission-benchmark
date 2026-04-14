@@ -22,6 +22,7 @@ ALLOWED_IMAGE_TYPES = {
     "image/png": [".png"],
     "image/gif": [".gif"],
     "image/webp": [".webp"],
+    "image/svg+xml": [".svg"],
 }
 
 
@@ -114,9 +115,20 @@ async def upload_image(
     """
     if allowed_types is None:
         allowed_types = list(ALLOWED_IMAGE_TYPES.keys())
+
+    # Normalise SVG content type: some HTTP clients (e.g. httpx, curl) send
+    # text/xml, application/xml, or application/octet-stream for .svg files.
+    # Detect by extension and canonicalise before validation.
+    content_type = file.content_type or ""
+    if (
+        file.filename
+        and file.filename.lower().endswith(".svg")
+        and content_type not in ("image/svg+xml",)
+    ):
+        content_type = "image/svg+xml"
     
     # Validate content type
-    if file.content_type not in allowed_types:
+    if content_type not in allowed_types:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid file type. Allowed types: {', '.join(allowed_types)}"
@@ -146,7 +158,7 @@ async def upload_image(
             Bucket=settings.S3_BUCKET,
             Key=unique_filename,
             Body=content,
-            ContentType=file.content_type
+            ContentType=content_type,
         )
         
         # Generate proxy URL (served through backend)
@@ -158,7 +170,7 @@ async def upload_image(
             "url": url,
             "filename": unique_filename,
             "size": file_size,
-            "content_type": file.content_type
+            "content_type": content_type,
         }
         
     except ClientError as e:
