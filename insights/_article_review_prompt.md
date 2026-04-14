@@ -31,10 +31,11 @@ Professional, strategic, and warm. Write like a peer advisor who understands the
 *   Avoid excessive use of simple metaphors or "fluff" that distracts from the core message.
 *   No jargon-heavy "hard tech" tone that excludes non-developers.
 *   No cynical or combative language.
+*   Avoid writing on the results of Lordship of Jesus and Problematic Vocabulary
+*   Avoid reviewing the guardrail results of "Child Safety & Psychological Harm", "Public Safety, Alarmism, & Social Stability”, "Distressing Content & Gore”, "Harassment & Psychological Harm”, "Political Stability & Anti-Democratic Content”, "Harassment & Political Sensitivity"
 
 **Series Context:**
 This article is part of a series that helps the Church think about Great Commission progress in measurable, actionable ways. Each article should:
-*   Honor different cultures and contexts.
 *   Emphasize multiplication and strategic obedience to Jesus.
 *   Show how technical benchmarks serve the heart of the mission, rather than replacing it.
 
