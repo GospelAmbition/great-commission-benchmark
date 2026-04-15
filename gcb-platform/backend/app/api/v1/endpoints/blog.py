@@ -11,6 +11,7 @@ from app.core.auth import get_db, require_blog_manager, get_current_user
 from app.db.models.user import User
 from app.db.models.blog_post import BlogPost
 from app.db.models.blog_category import BlogCategory
+from app.db.models.model import Model
 from app.schemas.blog import (
     BlogCategoryCreate,
     BlogCategoryUpdate,
@@ -22,6 +23,7 @@ from app.schemas.blog import (
     BlogPostListItem,
     BlogPostListResponse,
     BlogPostAuthor,
+    BlogRelatedModel,
     ImageUploadResponse,
 )
 from app.services.storage import upload_image
@@ -41,6 +43,35 @@ def generate_slug(title: str) -> str:
     return slug.strip('-')
 
 
+def _resolve_model_ids(db: Session, model_id_strings: List[str]) -> list:
+    """Resolve OpenRouter model_id strings to Model ORM objects."""
+    if not model_id_strings:
+        return []
+    return db.query(Model).filter(Model.model_id.in_(model_id_strings)).all()
+
+
+def _build_related_models(post: BlogPost) -> List[BlogRelatedModel]:
+    """Build list of BlogRelatedModel from a post's linked models."""
+    return [
+        BlogRelatedModel(
+            id=m.id,
+            model_id=m.model_id,
+            name=m.name,
+            provider=m.provider,
+        )
+        for m in (post.models or [])
+    ]
+
+
+def _post_query(db: Session):
+    """Return a base query with standard eager-loads for blog posts."""
+    return db.query(BlogPost).options(
+        joinedload(BlogPost.author),
+        joinedload(BlogPost.categories),
+        joinedload(BlogPost.models),
+    )
+
+
 # =============================================================================
 # Public Endpoints (no auth required)
 # =============================================================================
@@ -49,21 +80,25 @@ def generate_slug(title: str) -> str:
 async def list_published_posts(
     category: Optional[str] = Query(None, description="Filter by category slug"),
     search: Optional[str] = Query(None, description="Search in title or excerpt"),
+    model_id: Optional[str] = Query(None, description="Filter by OpenRouter model_id"),
+    provider: Optional[str] = Query(None, description="Filter by provider slug"),
     limit: int = Query(10, ge=1, le=50),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ):
-    """List published blog posts"""
-    query = db.query(BlogPost).options(
-        joinedload(BlogPost.author),
-        joinedload(BlogPost.categories)
-    ).filter(BlogPost.status == "published")
+    """List published blog posts, optionally filtered by category, model, or provider."""
+    query = _post_query(db).filter(BlogPost.status == "published")
     
-    # Filter by category if provided
     if category:
         query = query.join(BlogPost.categories).filter(BlogCategory.slug == category)
 
-    # Search in title or excerpt if provided
+    if model_id or provider:
+        query = query.join(BlogPost.models)
+        if model_id:
+            query = query.filter(Model.model_id == model_id)
+        if provider:
+            query = query.filter(Model.provider == provider)
+
     if search:
         search_filter = f"%{search}%"
         query = query.filter(
@@ -72,13 +107,18 @@ async def list_published_posts(
             (BlogPost.content.ilike(search_filter))
         )
     
-    # Order by published date, most recent first
     query = query.order_by(desc(BlogPost.published_at))
     
-    # Get total count after filtering
+    # Count query (mirrors filters above but without eager loads)
     total_query = db.query(BlogPost).filter(BlogPost.status == "published")
     if category:
         total_query = total_query.join(BlogPost.categories).filter(BlogCategory.slug == category)
+    if model_id or provider:
+        total_query = total_query.join(BlogPost.models)
+        if model_id:
+            total_query = total_query.filter(Model.model_id == model_id)
+        if provider:
+            total_query = total_query.filter(Model.provider == provider)
     if search:
         search_filter = f"%{search}%"
         total_query = total_query.filter(
@@ -112,6 +152,7 @@ async def list_published_posts(
                 created_at=cat.created_at,
                 updated_at=cat.updated_at
             ) for cat in post.categories],
+            related_models=_build_related_models(post),
             created_at=post.created_at,
             published_at=post.published_at
         ))
@@ -125,10 +166,7 @@ async def get_published_post(
     db: Session = Depends(get_db)
 ):
     """Get a single published post by slug"""
-    post = db.query(BlogPost).options(
-        joinedload(BlogPost.author),
-        joinedload(BlogPost.categories)
-    ).filter(
+    post = _post_query(db).filter(
         BlogPost.slug == slug,
         BlogPost.status == "published"
     ).first()
@@ -157,6 +195,7 @@ async def get_published_post(
             created_at=cat.created_at,
             updated_at=cat.updated_at
         ) for cat in post.categories],
+        related_models=_build_related_models(post),
         created_at=post.created_at,
         updated_at=post.updated_at,
         published_at=post.published_at
@@ -196,18 +235,13 @@ async def admin_list_posts(
     db: Session = Depends(get_db)
 ):
     """List all blog posts (including drafts) - Blog Manager or higher"""
-    query = db.query(BlogPost).options(
-        joinedload(BlogPost.author),
-        joinedload(BlogPost.categories)
-    )
+    query = _post_query(db)
     
     if status:
         query = query.filter(BlogPost.status == status)
     
-    # Order by updated date, most recent first
     query = query.order_by(desc(BlogPost.updated_at))
     
-    # Get total count
     count_query = db.query(BlogPost)
     if status:
         count_query = count_query.filter(BlogPost.status == status)
@@ -237,6 +271,7 @@ async def admin_list_posts(
                 created_at=cat.created_at,
                 updated_at=cat.updated_at
             ) for cat in post.categories],
+            related_models=_build_related_models(post),
             created_at=post.created_at,
             published_at=post.published_at
         ))
@@ -274,6 +309,10 @@ async def create_post(
         ).all()
         post.categories = categories
     
+    # Link models if provided
+    if request.model_ids:
+        post.models = _resolve_model_ids(db, request.model_ids)
+    
     db.add(post)
     db.commit()
     db.refresh(post)
@@ -306,6 +345,7 @@ async def create_post(
             created_at=cat.created_at,
             updated_at=cat.updated_at
         ) for cat in post.categories],
+        related_models=_build_related_models(post),
         created_at=post.created_at,
         updated_at=post.updated_at,
         published_at=post.published_at
@@ -319,10 +359,7 @@ async def admin_get_post(
     db: Session = Depends(get_db)
 ):
     """Get a post by ID - Blog Manager or higher"""
-    post = db.query(BlogPost).options(
-        joinedload(BlogPost.author),
-        joinedload(BlogPost.categories)
-    ).filter(BlogPost.id == post_id).first()
+    post = _post_query(db).filter(BlogPost.id == post_id).first()
     
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -348,6 +385,7 @@ async def admin_get_post(
             created_at=cat.created_at,
             updated_at=cat.updated_at
         ) for cat in post.categories],
+        related_models=_build_related_models(post),
         created_at=post.created_at,
         updated_at=post.updated_at,
         published_at=post.published_at
@@ -362,15 +400,11 @@ async def update_post(
     db: Session = Depends(get_db)
 ):
     """Update a blog post - Blog Manager or higher"""
-    post = db.query(BlogPost).options(
-        joinedload(BlogPost.author),
-        joinedload(BlogPost.categories)
-    ).filter(BlogPost.id == post_id).first()
+    post = _post_query(db).filter(BlogPost.id == post_id).first()
     
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     
-    # Check slug uniqueness if changing
     if request.slug and request.slug != post.slug:
         existing = db.query(BlogPost).filter(
             BlogPost.slug == request.slug,
@@ -379,7 +413,6 @@ async def update_post(
         if existing:
             raise HTTPException(status_code=400, detail="A post with this slug already exists")
     
-    # Update fields
     if request.title is not None:
         post.title = request.title
     if request.slug is not None:
@@ -391,12 +424,14 @@ async def update_post(
     if request.featured_image_url is not None:
         post.featured_image_url = request.featured_image_url
     
-    # Update categories if provided
     if request.category_ids is not None:
         categories = db.query(BlogCategory).filter(
             BlogCategory.id.in_(request.category_ids)
         ).all()
         post.categories = categories
+    
+    if request.model_ids is not None:
+        post.models = _resolve_model_ids(db, request.model_ids)
     
     db.commit()
     db.refresh(post)
@@ -429,6 +464,7 @@ async def update_post(
             created_at=cat.created_at,
             updated_at=cat.updated_at
         ) for cat in post.categories],
+        related_models=_build_related_models(post),
         created_at=post.created_at,
         updated_at=post.updated_at,
         published_at=post.published_at
@@ -468,10 +504,7 @@ async def publish_post(
     db: Session = Depends(get_db)
 ):
     """Publish a draft post - Blog Manager or higher"""
-    post = db.query(BlogPost).options(
-        joinedload(BlogPost.author),
-        joinedload(BlogPost.categories)
-    ).filter(BlogPost.id == post_id).first()
+    post = _post_query(db).filter(BlogPost.id == post_id).first()
     
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -513,6 +546,7 @@ async def publish_post(
             created_at=cat.created_at,
             updated_at=cat.updated_at
         ) for cat in post.categories],
+        related_models=_build_related_models(post),
         created_at=post.created_at,
         updated_at=post.updated_at,
         published_at=post.published_at
@@ -526,10 +560,7 @@ async def unpublish_post(
     db: Session = Depends(get_db)
 ):
     """Unpublish a post (revert to draft) - Blog Manager or higher"""
-    post = db.query(BlogPost).options(
-        joinedload(BlogPost.author),
-        joinedload(BlogPost.categories)
-    ).filter(BlogPost.id == post_id).first()
+    post = _post_query(db).filter(BlogPost.id == post_id).first()
     
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -570,6 +601,7 @@ async def unpublish_post(
             created_at=cat.created_at,
             updated_at=cat.updated_at
         ) for cat in post.categories],
+        related_models=_build_related_models(post),
         created_at=post.created_at,
         updated_at=post.updated_at,
         published_at=post.published_at

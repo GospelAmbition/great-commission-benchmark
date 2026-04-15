@@ -12,6 +12,7 @@ import { ProviderIcon } from "@/components/ui/provider-icon";
 import { apiClient, LeaderboardItem } from "@/lib/api";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import { Shield, ShieldAlert, ShieldX, CheckCircle2 } from "lucide-react";
+import { RelatedArticles } from "@/components/blog/RelatedArticles";
 
 function getVerdictInfo(score: number) {
   if (score >= 80) {
@@ -57,11 +58,13 @@ export default function ProviderDetailPage() {
   })();
 
   const [models, setModels] = useState<LeaderboardItem[]>([]);
+  const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (provider) {
       loadProviderModels();
+      loadProviderArticles();
     }
   }, [provider]);
 
@@ -74,6 +77,25 @@ export default function ProviderDetailPage() {
       console.error("Failed to load provider models:", error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadProviderArticles() {
+    try {
+      const res = await fetch(`/api/blog/posts?provider=${encodeURIComponent(provider)}&limit=5`);
+      if (res.ok) {
+        const data = await res.json();
+        setArticles((data.items || []).map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          slug: p.slug,
+          excerpt: p.excerpt,
+          featured_image_url: p.featured_image_url,
+          published_at: p.published_at,
+        })));
+      }
+    } catch (error) {
+      console.error("Failed to load provider articles:", error);
     }
   }
 
@@ -160,6 +182,18 @@ export default function ProviderDetailPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Related Articles */}
+      {articles.length > 0 && (
+        <div className="mb-8">
+          <RelatedArticles
+            articles={articles}
+            title={`${providerDisplayName} Insights`}
+            viewAllHref={`/insights?provider=${encodeURIComponent(provider)}`}
+            viewAllLabel="View all articles"
+          />
         </div>
       )}
 

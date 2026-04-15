@@ -49,12 +49,20 @@ function InsightsContent() {
   const categoryParam = searchParams.get("category");
   const searchParam = searchParams.get("search");
   const pageParam = searchParams.get("page");
+  const modelIdParam = searchParams.get("model_id");
+  const providerParam = searchParams.get("provider");
   
   const [selectedCategory, setSelectedCategory] = useState<string>(
     () => categoryParam || "all"
   );
   const [searchQuery, setSearchQuery] = useState<string>(
     () => searchParam || ""
+  );
+  const [modelIdFilter, setModelIdFilter] = useState<string>(
+    () => modelIdParam || ""
+  );
+  const [providerFilter, setProviderFilter] = useState<string>(
+    () => providerParam || ""
   );
   const [currentPage, setCurrentPage] = useState<number>(() => {
     if (pageParam) {
@@ -97,9 +105,9 @@ function InsightsContent() {
     const newCategoryParam = searchParams.get("category");
     const newSearchParam = searchParams.get("search");
     const newPageParam = searchParams.get("page");
+    const newModelIdParam = searchParams.get("model_id");
+    const newProviderParam = searchParams.get("provider");
     
-    // Only update state if URL params differ from current state
-    // This handles browser navigation (back/forward) but not our own URL updates
     if (newCategoryParam !== selectedCategory) {
       setSelectedCategory(newCategoryParam || "all");
     }
@@ -107,18 +115,24 @@ function InsightsContent() {
     if (newSearchParam !== searchQuery) {
       setSearchQuery(newSearchParam || "");
     }
+
+    if ((newModelIdParam || "") !== modelIdFilter) {
+      setModelIdFilter(newModelIdParam || "");
+    }
+
+    if ((newProviderParam || "") !== providerFilter) {
+      setProviderFilter(newProviderParam || "");
+    }
     
-    // Only update page if URL param differs from current state
     if (newPageParam) {
       const pageFromUrl = parseInt(newPageParam, 10);
       if (pageFromUrl > 0 && pageFromUrl !== currentPage) {
         setCurrentPage(pageFromUrl);
       }
     }
-  }, [searchParams]); // Only depend on searchParams - sync FROM URL TO state
+  }, [searchParams]);
 
   useEffect(() => {
-    // Reset to page 1 when filters change (but not on initial load)
     if (isInitialized.current && 
         (prevCategoryRef.current !== null || prevSearchRef.current !== null) &&
         (prevCategoryRef.current !== selectedCategory || prevSearchRef.current !== searchQuery)) {
@@ -129,11 +143,10 @@ function InsightsContent() {
   }, [selectedCategory, searchQuery]);
 
   useEffect(() => {
-    // Load posts when filters or page change (but not on initial mount)
     if (isInitialized.current) {
       loadPosts();
     }
-  }, [selectedCategory, searchQuery, currentPage]);
+  }, [selectedCategory, searchQuery, modelIdFilter, providerFilter, currentPage]);
 
   async function loadCategories() {
     try {
@@ -157,17 +170,29 @@ function InsightsContent() {
       if (searchQuery) {
         params.append("search", searchQuery);
       }
+      if (modelIdFilter) {
+        params.append("model_id", modelIdFilter);
+      }
+      if (providerFilter) {
+        params.append("provider", providerFilter);
+      }
       params.append("limit", pageSize.toString());
       params.append("offset", ((currentPage - 1) * pageSize).toString());
       
       // Update URL without reload using Next.js router
-      isUpdatingUrlRef.current = true; // Flag that we're updating URL ourselves
+      isUpdatingUrlRef.current = true;
       const urlParams = new URLSearchParams();
       if (selectedCategory && selectedCategory !== "all") {
         urlParams.set("category", selectedCategory);
       }
       if (searchQuery) {
         urlParams.set("search", searchQuery);
+      }
+      if (modelIdFilter) {
+        urlParams.set("model_id", modelIdFilter);
+      }
+      if (providerFilter) {
+        urlParams.set("provider", providerFilter);
       }
       if (currentPage > 1) {
         urlParams.set("page", currentPage.toString());
@@ -280,6 +305,35 @@ function InsightsContent() {
             </div>
           </div>
         </div>
+
+        {/* Active model/provider filter banner */}
+        {(modelIdFilter || providerFilter) && (
+          <div className="flex items-center gap-2 mb-6 p-3 rounded-lg bg-primary/5 border border-primary/10">
+            <span className="text-sm text-muted-foreground">Filtering by:</span>
+            {modelIdFilter && (
+              <Badge variant="secondary" className="gap-1">
+                Model: {modelIdFilter}
+                <button
+                  onClick={() => setModelIdFilter("")}
+                  className="ml-1 hover:text-foreground"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {providerFilter && (
+              <Badge variant="secondary" className="gap-1">
+                Provider: {providerFilter}
+                <button
+                  onClick={() => setProviderFilter("")}
+                  className="ml-1 hover:text-foreground"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+          </div>
+        )}
 
         {/* Posts Grid/List */}
         {loading ? (

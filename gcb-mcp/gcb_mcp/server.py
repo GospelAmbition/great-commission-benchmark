@@ -26,6 +26,9 @@ mcp = FastMCP(
         "active models (OpenRouter-style model_id values) plus metadata. "
         "compare_models compares GCB active models against OpenRouter's "
         "published model list. "
+        "suggest_models_to_test returns a prioritized list of new text-based "
+        "OpenRouter models from the last N days that have not yet been "
+        "benchmarked on GCB — use this to decide what to test next. "
         "preview_archive_candidates and archive_missing_on_openrouter support "
         "archiving models no longer available on OpenRouter. "
         "upload_json and upload_runner_json upload an exported gcb-runner JSON "
@@ -37,7 +40,12 @@ mcp = FastMCP(
         "list_blog_posts, get_blog_post, create_blog_draft, update_blog_post, and publish_blog_post "
         "manage the GCB blog for agentic article authoring. "
         "create_model_review_draft generates a style-guide aligned benchmark article draft from published model results. "
-        "generate_and_upload_header creates a programmatic SVG article header image."
+        "generate_and_upload_header creates a programmatic SVG article header image. "
+        "Authentication: GCB_API_KEY in the MCP environment is optional if "
+        "platform.api_key is already set in ~/.gcb-runner/config.json (same file "
+        "gcb-runner uses). Tool arguments must be valid JSON: string fields such as "
+        "featured_image_url must be JSON strings in double quotes (e.g. "
+        "\"https://...\"), never bare URLs."
     ),
 )
 
@@ -49,7 +57,9 @@ def _base_url() -> str:
 
 
 def _api_key() -> str:
-    return os.environ.get("GCB_API_KEY", "").strip()
+    from gcb_mcp.credentials import resolve_gcb_api_key
+
+    return resolve_gcb_api_key()
 
 
 def _load_json_file(path: str) -> dict[str, Any]:
@@ -70,13 +80,11 @@ async def _fetch_gcb_active_models() -> dict[str, Any]:
     """Fetch active model payload from the GCB runner API."""
     key = _api_key()
     if not key:
+        from gcb_mcp.credentials import missing_gcb_api_key_message
+
         return {
             "error": "missing_api_key",
-            "message": (
-                "Set GCB_API_KEY to your dashboard API key "
-                "(https://greatcommissionbenchmark.ai/dashboard/settings). "
-                "Account needs admin or benchmark editor access."
-            ),
+            "message": missing_gcb_api_key_message(),
         }
 
     url = f"{_base_url()}/api/runner/models"
@@ -145,6 +153,65 @@ async def _fetch_openrouter_model_ids() -> dict[str, Any]:
     return {"ids": openrouter_model_ids, "total": len(openrouter_model_ids)}
 
 
+async def _fetch_openrouter_models_full() -> dict[str, Any]:
+    """Fetch full OpenRouter model objects including metadata fields."""
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.get(OPENROUTER_MODELS_URL)
+    except httpx.RequestError as exc:
+        logger.exception("OpenRouter models request failed")
+        return {
+            "error": "openrouter_request_failed",
+            "message": str(exc),
+            "url": OPENROUTER_MODELS_URL,
+        }
+
+    try:
+        payload = response.json()
+    except json.JSONDecodeError:
+        payload = {"raw": response.text}
+
+    if not response.is_success:
+        return {
+            "error": "openrouter_api_error",
+            "status_code": response.status_code,
+            "url": OPENROUTER_MODELS_URL,
+            "detail": payload if isinstance(payload, dict) else response.text,
+        }
+
+    models = payload.get("data", [])
+    if not isinstance(models, list):
+        return {
+            "error": "openrouter_unexpected_payload",
+            "message": "OpenRouter response missing list field `data`.",
+            "detail": payload,
+        }
+
+    return {"models": models, "total": len(models)}
+
+
+def _is_text_model(model: dict[str, Any], include_multimodal: bool) -> bool:
+    """Return True if the model produces text and matches the multimodal filter."""
+    output_mods = model.get("architecture", {}).get("output_modalities", [])
+    if not isinstance(output_mods, list):
+        return False
+    if "text" not in output_mods:
+        return False
+    # Never include embedding-only or rerank-only models even if text sneaks in
+    if set(output_mods) <= {"embeddings", "rerank"}:
+        return False
+    if not include_multimodal:
+        non_text = {"image", "audio", "video"}
+        if any(m in output_mods for m in non_text):
+            return False
+    return True
+
+
+def _extract_provider(model_id: str) -> str:
+    """Extract provider slug from an OpenRouter model id like 'provider/model-name'."""
+    return model_id.split("/")[0] if "/" in model_id else "unknown"
+
+
 def _archive_candidates(
     gcb_models_raw: list[dict[str, Any]], openrouter_model_ids: set[str]
 ) -> list[dict[str, str]]:
@@ -172,7 +239,8 @@ async def list_active_models() -> dict[str, Any]:
     includes total and current_version.
 
     Environment:
-        GCB_API_KEY: required. Dashboard API key (X-API-Key).
+        GCB_API_KEY: optional if platform.api_key exists in ~/.gcb-runner/config.json;
+        otherwise set this env var to your dashboard API key (X-API-Key).
         GCB_API_BASE_URL: optional. Default https://greatcommissionbenchmark.ai
 
     The API key's user must have admin or benchmark editor (can_edit_benchmark)
@@ -230,6 +298,146 @@ async def compare_models() -> dict[str, Any]:
         "gcb_not_on_openrouter": gcb_not_on_openrouter,
         "openrouter_not_on_gcb_total": len(openrouter_not_on_gcb),
         "openrouter_not_on_gcb_sample": openrouter_not_on_gcb[:50],
+    }
+
+
+@mcp.tool()
+async def suggest_models_to_test(
+    days_back: int = 30,
+    limit: int = 25,
+    include_multimodal: bool = False,
+) -> dict[str, Any]:
+    """Suggest new OpenRouter text models to benchmark on GCB.
+
+    Compares the live GCB active model list against the full OpenRouter catalog
+    and returns models that:
+      - Produce text output (output_modalities includes 'text')
+      - Are NOT embedding-only or rerank-only
+      - Were added to OpenRouter within `days_back` days of today
+      - Are NOT already in the GCB active model list
+
+    Results are sorted newest first.
+
+    Args:
+        days_back:          How many days back to consider a model "new"
+                            (default 30).
+        limit:              Maximum number of suggestions to return
+                            (default 25, max 200).
+        include_multimodal: When True, also include models whose output
+                            modalities contain image, audio, or video in
+                            addition to text (default False — text-only).
+
+    Returns:
+        suggestions:        List of candidate models, each with model_id,
+                            name, provider, created_date, days_ago,
+                            description, context_length, output_modalities,
+                            and pricing fields.
+        gcb_active_total:   Number of models currently active on GCB.
+        openrouter_total:   Total models in OpenRouter catalog.
+        new_in_period:      OpenRouter models added within the window that
+                            are not on GCB (before text/multimodal filter).
+        text_models_found:  Count after text and multimodal filtering.
+        suggestions_total:  Number of suggestions actually returned.
+        filter_settings:    Echo of applied filter parameters.
+    """
+    if days_back < 1:
+        return {"error": "invalid_argument", "message": "days_back must be >= 1"}
+    limit = min(max(1, limit), 200)
+
+    gcb_payload = await _fetch_gcb_active_models()
+    if "error" in gcb_payload:
+        return gcb_payload
+
+    gcb_models_raw = gcb_payload.get("models", [])
+    if not isinstance(gcb_models_raw, list):
+        return {
+            "error": "unexpected_payload",
+            "message": "GCB response missing list field `models`.",
+            "detail": gcb_payload,
+        }
+
+    gcb_model_ids: set[str] = {
+        item["model_id"]
+        for item in gcb_models_raw
+        if isinstance(item, dict) and isinstance(item.get("model_id"), str)
+    }
+
+    or_payload = await _fetch_openrouter_models_full()
+    if "error" in or_payload:
+        return or_payload
+
+    openrouter_models: list[dict[str, Any]] = or_payload["models"]
+
+    now_ts = datetime.now(tz=None).timestamp()
+    cutoff_ts = now_ts - days_back * 86400
+
+    new_not_on_gcb: list[dict[str, Any]] = []
+    for model in openrouter_models:
+        if not isinstance(model, dict):
+            continue
+        model_id = model.get("id")
+        if not isinstance(model_id, str):
+            continue
+        if model_id in gcb_model_ids:
+            continue
+        created = model.get("created")
+        if not isinstance(created, (int, float)):
+            continue
+        if created < cutoff_ts:
+            continue
+        new_not_on_gcb.append(model)
+
+    new_in_period_count = len(new_not_on_gcb)
+
+    text_candidates = [
+        m for m in new_not_on_gcb
+        if _is_text_model(m, include_multimodal)
+    ]
+
+    text_candidates.sort(key=lambda m: m.get("created", 0), reverse=True)
+
+    suggestions: list[dict[str, Any]] = []
+    for model in text_candidates[:limit]:
+        model_id = model["id"]
+        created_ts = model.get("created", 0)
+        created_dt = datetime.utcfromtimestamp(created_ts)
+        created_date = created_dt.strftime("%Y-%m-%d")
+        days_ago = max(0, int((now_ts - created_ts) / 86400))
+
+        arch = model.get("architecture") or {}
+        output_mods = arch.get("output_modalities") or []
+
+        pricing_raw = model.get("pricing") or {}
+        pricing: dict[str, Any] = {}
+        for key in ("prompt", "completion", "image", "request"):
+            val = pricing_raw.get(key)
+            if val is not None:
+                pricing[key] = str(val)
+
+        suggestions.append({
+            "model_id": model_id,
+            "name": model.get("name") or model_id,
+            "provider": _extract_provider(model_id),
+            "created_date": created_date,
+            "days_ago": days_ago,
+            "description": (model.get("description") or "")[:300],
+            "context_length": model.get("context_length"),
+            "output_modalities": output_mods,
+            "pricing": pricing,
+        })
+
+    return {
+        "suggestions": suggestions,
+        "gcb_active_total": len(gcb_model_ids),
+        "openrouter_total": or_payload["total"],
+        "new_in_period": new_in_period_count,
+        "text_models_found": len(text_candidates),
+        "suggestions_total": len(suggestions),
+        "filter_settings": {
+            "days_back": days_back,
+            "include_multimodal": include_multimodal,
+            "limit": limit,
+        },
     }
 
 
@@ -363,12 +571,11 @@ async def upload_json(
     """
     api_key = _api_key()
     if not api_key:
+        from gcb_mcp.credentials import missing_gcb_api_key_message
+
         return {
             "error": "missing_api_key",
-            "message": (
-                "Set GCB_API_KEY in MCP env. This endpoint requires an admin "
-                "API key for direct publish."
-            ),
+            "message": missing_gcb_api_key_message(),
         }
 
     try:
@@ -1057,6 +1264,7 @@ async def create_model_review_draft(
         slug=slug,
         featured_image_url=featured_image_url,
         category_ids=category_ids,
+        model_ids=[model_id],
         publish=False,
     )
     if "error" in created:
@@ -1119,6 +1327,7 @@ async def create_blog_draft(
     slug: str | None = None,
     featured_image_url: str | None = None,
     category_ids: list[str] | None = None,
+    model_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     """Create a new GCB blog post as a draft (never auto-publishes).
 
@@ -1132,8 +1341,12 @@ async def create_blog_draft(
                            Auto-extracted from first paragraph if omitted.
         slug:              URL slug (e.g. "gpt-4o-benchmark-review").
                            Auto-generated from title if omitted.
-        featured_image_url: URL of the header image (from generate_and_upload_header).
+        featured_image_url: JSON string, full https URL of the header image from
+            generate_and_upload_header (must be quoted in the tool arguments object).
         category_ids:      List of category UUIDs. Use list_blog_categories() to find IDs.
+        model_ids:         List of OpenRouter model identifiers (e.g. ["openai/gpt-4o"])
+                           to cross-reference this article with benchmark model pages.
+                           Visitors will see links between the article and model detail pages.
 
     Returns:
         {id, title, slug, status, url}
@@ -1147,6 +1360,7 @@ async def create_blog_draft(
         slug=slug,
         featured_image_url=featured_image_url,
         category_ids=category_ids or [],
+        model_ids=model_ids or [],
         publish=False,
     )
 
@@ -1170,6 +1384,7 @@ async def update_blog_post(
     featured_image_url: str | None = None,
     slug: str | None = None,
     category_ids: list[str] | None = None,
+    model_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     """Update an existing blog post (draft or published).
 
@@ -1182,9 +1397,11 @@ async def update_blog_post(
         content:           Revised markdown body.
         title:             New title.
         excerpt:           New excerpt.
-        featured_image_url: New header image URL.
+        featured_image_url: New header image URL as a JSON string (quoted https URL).
         slug:              New URL slug (must be unique).
         category_ids:      Replace category list with these UUIDs.
+        model_ids:         Replace linked models with these OpenRouter model identifiers
+                           (e.g. ["openai/gpt-4o"]). Pass empty list to unlink all models.
     """
     from gcb_mcp.blog import update_post  # noqa: PLC0415
 
@@ -1196,6 +1413,7 @@ async def update_blog_post(
         featured_image_url=featured_image_url,
         slug=slug,
         category_ids=category_ids,
+        model_ids=model_ids,
     )
 
 
@@ -1204,7 +1422,7 @@ async def publish_blog_post(post_id: str) -> dict[str, Any]:
     """Publish a draft blog post to the live GCB website.
 
     This is the final step of the article authoring workflow. The post will
-    appear at greatcommissionbenchmark.ai/action/insights/{slug}.
+    appear at greatcommissionbenchmark.ai/insights/{slug}.
 
     Args:
         post_id: UUID of the draft post to publish.
@@ -1431,7 +1649,7 @@ async def get_remote_test_json(test_run_id: str) -> dict[str, Any]:
     writing an article about a historical run that predates the local job database,
     or when you need to recover a run on a different machine.
 
-    Requires an admin GCB_API_KEY. Any completed run on the platform can be fetched
+    Requires an admin platform API key (GCB_API_KEY or ~/.gcb-runner config). Any completed run on the platform can be fetched
     regardless of who originally submitted it.
 
     The tool applies the same convenience analysis as get_local_test_json:

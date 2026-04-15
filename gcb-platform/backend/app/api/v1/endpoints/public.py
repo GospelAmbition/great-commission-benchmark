@@ -14,6 +14,7 @@ from app.db.models.model import Model
 from app.db.models.question_set import QuestionSet
 from app.db.models.result import Result
 from app.db.models.question import Question
+from app.db.models.blog_post import BlogPost, blog_post_models
 from app.services.openrouter import OpenRouterClient
 from app.services.payment import PaymentService
 from app.schemas.public import (
@@ -123,6 +124,60 @@ def _get_model_detail_data(db: Session, model: Model) -> dict:
         "category_scores": category_scores,
         "test_count": len(test_history)
     }
+
+
+def _get_related_articles(db: Session, model: Model, limit: int = 5) -> list:
+    """Get published blog posts linked to a specific model."""
+    posts = (
+        db.query(BlogPost)
+        .join(blog_post_models, blog_post_models.c.post_id == BlogPost.id)
+        .filter(
+            blog_post_models.c.model_id == model.id,
+            BlogPost.status == "published",
+        )
+        .order_by(BlogPost.published_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": str(p.id),
+            "title": p.title,
+            "slug": p.slug,
+            "excerpt": p.excerpt,
+            "featured_image_url": p.featured_image_url,
+            "published_at": p.published_at.isoformat() if p.published_at else None,
+        }
+        for p in posts
+    ]
+
+
+def _get_provider_articles(db: Session, provider: str, limit: int = 5) -> list:
+    """Get published blog posts linked to any model from a given provider."""
+    posts = (
+        db.query(BlogPost)
+        .join(blog_post_models, blog_post_models.c.post_id == BlogPost.id)
+        .join(Model, blog_post_models.c.model_id == Model.id)
+        .filter(
+            Model.provider == provider,
+            BlogPost.status == "published",
+        )
+        .distinct()
+        .order_by(BlogPost.published_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": str(p.id),
+            "title": p.title,
+            "slug": p.slug,
+            "excerpt": p.excerpt,
+            "featured_image_url": p.featured_image_url,
+            "published_at": p.published_at.isoformat() if p.published_at else None,
+        }
+        for p in posts
+    ]
 
 
 @router.get("/filter-options")
@@ -651,7 +706,7 @@ async def get_model_by_model_id(
         "model_name": model.name,
         "name": model.name,
         "provider": model.provider,
-        "description": model.description,  # Model description from OpenRouter
+        "description": model.description,
         "overall_score": overall_score,
         "score": overall_score,
         "tier1_score": tier1_score,
@@ -672,7 +727,8 @@ async def get_model_by_model_id(
             }
             for t in test_history
         ],
-        "test_history": test_history  # Include individual test details
+        "test_history": test_history,
+        "related_articles": _get_related_articles(db, model),
     }
 
 
@@ -707,8 +763,19 @@ async def get_model_detail(
         "test_history": data["test_history"],
         "category_breakdown": data["category_breakdown"],
         "leaderboard_rank": leaderboard_rank,
-        "total_models_tested": total_models_tested
+        "total_models_tested": total_models_tested,
+        "related_articles": _get_related_articles(db, model),
     }
+
+
+@router.get("/providers/{provider}/articles")
+async def get_provider_articles(
+    provider: str,
+    limit: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db)
+):
+    """Get published blog posts linked to models from a given provider."""
+    return {"articles": _get_provider_articles(db, provider, limit)}
 
 
 @router.get("/versions", response_model=VersionsResponse)
