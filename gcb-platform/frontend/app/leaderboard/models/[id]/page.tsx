@@ -26,7 +26,6 @@ import { CATEGORY_NAMES, CATEGORY_DESCRIPTIONS } from "@/lib/benchmark-definitio
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SocialShare } from "@/components/marketing/SocialShare";
 import { ProviderIcon } from "@/components/ui/provider-icon";
-import { RelatedArticles } from "@/components/blog/RelatedArticles";
 
 // Verdict helper functions
 function getVerdict(score: number): { label: string; description: string; icon: React.ReactNode; bgColor: string; borderColor: string; textColor: string; iconBg: string } {
@@ -482,26 +481,9 @@ export default function ModelDetailPage() {
                   View full leaderboard
                 </Link>
               </Button>
-              {model.related_articles && model.related_articles.length > 0 && (
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link href={`/insights?model_id=${encodeURIComponent(model.model_id)}`}>
-                    View all articles about this model
-                  </Link>
-                </Button>
-              )}
             </CardContent>
           </Card>
         </div>
-
-        {/* Related Articles */}
-        {model.related_articles && model.related_articles.length > 0 && (
-          <RelatedArticles
-            articles={model.related_articles}
-            title="Insights & Analysis"
-            viewAllHref={`/insights?model_id=${encodeURIComponent(model.model_id)}`}
-            viewAllLabel="View all articles"
-          />
-        )}
       </section>
 
       {/* Categories Section */}

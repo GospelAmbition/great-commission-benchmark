@@ -13,20 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, Tag } from "lucide-react";
-import { ModelBenchmarkLink } from "@/components/blog/ModelBenchmarkLink";
 
 interface BlogCategory {
   id: string;
   name: string;
   slug: string;
   description?: string;
-}
-
-interface RelatedModel {
-  id: string;
-  model_id: string;
-  name: string;
-  provider: string;
 }
 
 interface BlogPost {
@@ -43,7 +35,6 @@ interface BlogPost {
     email: string;
   };
   categories: BlogCategory[];
-  related_models?: RelatedModel[];
   created_at: string;
   updated_at: string;
   published_at?: string;
@@ -221,13 +212,6 @@ export default function BlogPostPage() {
           {post.content || ""}
         </ReactMarkdown>
       </div>
-
-      {/* Benchmark Results Link */}
-      {post.related_models && post.related_models.length > 0 && (
-        <div className="my-8">
-          <ModelBenchmarkLink models={post.related_models} />
-        </div>
-      )}
 
       <Separator className="my-12" />
 

@@ -23,7 +23,7 @@ if env_file.exists():
 
 API_KEY = os.environ.get("GCB_API_KEY")
 API_URL = os.environ.get("GCB_API_URL", "https://greatcommissionbenchmark.ai/api/v1")
-BLOG_URL = os.environ.get("GCB_BLOG_URL", "https://greatcommissionbenchmark.ai/insights")
+BLOG_URL = os.environ.get("GCB_BLOG_URL", "https://greatcommissionbenchmark.ai/action/insights")
 CATEGORY_ID = "8ba408ed-d51a-4a78-afd5-1293be77afac"  # Model Reviews
 
 import markdown as md

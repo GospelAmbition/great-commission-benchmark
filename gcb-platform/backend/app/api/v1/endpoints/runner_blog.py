@@ -12,7 +12,6 @@ from app.core.rate_limit import RateLimitDependency
 from app.db.models.user import User
 from app.db.models.blog_post import BlogPost
 from app.db.models.blog_category import BlogCategory
-from app.db.models.model import Model
 from app.db.models.user_api_key import UserAPIKey
 from app.api.v1.endpoints.api_keys import validate_api_key
 from app.schemas.blog import (
@@ -25,7 +24,6 @@ from app.schemas.blog import (
     BlogPostListItem,
     BlogPostListResponse,
     BlogPostAuthor,
-    BlogRelatedModel,
     ImageUploadResponse,
 )
 from app.services.storage import upload_image
@@ -83,19 +81,6 @@ def generate_slug(title: str) -> str:
     return slug.strip('-')
 
 
-def _build_related_models(post: BlogPost) -> list:
-    return [
-        BlogRelatedModel(id=m.id, model_id=m.model_id, name=m.name, provider=m.provider)
-        for m in (post.models or [])
-    ]
-
-
-def _resolve_model_ids(db: Session, model_id_strings: list) -> list:
-    if not model_id_strings:
-        return []
-    return db.query(Model).filter(Model.model_id.in_(model_id_strings)).all()
-
-
 def _build_post_response(post: BlogPost, user: User) -> BlogPostResponse:
     """Helper to build BlogPostResponse from a post"""
     return BlogPostResponse(
@@ -119,7 +104,6 @@ def _build_post_response(post: BlogPost, user: User) -> BlogPostResponse:
             created_at=cat.created_at,
             updated_at=cat.updated_at
         ) for cat in post.categories],
-        related_models=_build_related_models(post),
         created_at=post.created_at,
         updated_at=post.updated_at,
         published_at=post.published_at
@@ -148,7 +132,6 @@ def _build_post_list_item(post: BlogPost) -> BlogPostListItem:
             created_at=cat.created_at,
             updated_at=cat.updated_at
         ) for cat in post.categories],
-        related_models=_build_related_models(post),
         created_at=post.created_at,
         published_at=post.published_at
     )
@@ -174,15 +157,16 @@ async def list_posts(
     """
     query = db.query(BlogPost).options(
         joinedload(BlogPost.author),
-        joinedload(BlogPost.categories),
-        joinedload(BlogPost.models),
+        joinedload(BlogPost.categories)
     )
     
     if status:
         query = query.filter(BlogPost.status == status)
     
+    # Order by updated date, most recent first
     query = query.order_by(desc(BlogPost.updated_at))
     
+    # Get total count
     count_query = db.query(BlogPost)
     if status:
         count_query = count_query.filter(BlogPost.status == status)
@@ -240,10 +224,6 @@ async def create_post(
         ).all()
         post.categories = categories
     
-    # Link models if provided
-    if request.model_ids:
-        post.models = _resolve_model_ids(db, request.model_ids)
-    
     db.add(post)
     db.commit()
     db.refresh(post)
@@ -258,8 +238,7 @@ async def create_post(
     # Reload with relationships
     post = db.query(BlogPost).options(
         joinedload(BlogPost.author),
-        joinedload(BlogPost.categories),
-        joinedload(BlogPost.models),
+        joinedload(BlogPost.categories)
     ).filter(BlogPost.id == post.id).first()
     
     return _build_post_response(post, user)
@@ -281,8 +260,7 @@ async def get_post(
     
     post = db.query(BlogPost).options(
         joinedload(BlogPost.author),
-        joinedload(BlogPost.categories),
-        joinedload(BlogPost.models),
+        joinedload(BlogPost.categories)
     ).filter(BlogPost.id == post_id).first()
     
     if not post:
@@ -308,13 +286,13 @@ async def update_post(
     
     post = db.query(BlogPost).options(
         joinedload(BlogPost.author),
-        joinedload(BlogPost.categories),
-        joinedload(BlogPost.models),
+        joinedload(BlogPost.categories)
     ).filter(BlogPost.id == post_id).first()
     
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     
+    # Check slug uniqueness if changing
     if request.slug and request.slug != post.slug:
         existing = db.query(BlogPost).filter(
             BlogPost.slug == request.slug,
@@ -323,6 +301,7 @@ async def update_post(
         if existing:
             raise HTTPException(status_code=400, detail="A post with this slug already exists")
     
+    # Update fields
     if request.title is not None:
         post.title = request.title
     if request.slug is not None:
@@ -334,14 +313,12 @@ async def update_post(
     if request.featured_image_url is not None:
         post.featured_image_url = request.featured_image_url
     
+    # Update categories if provided
     if request.category_ids is not None:
         categories = db.query(BlogCategory).filter(
             BlogCategory.id.in_(request.category_ids)
         ).all()
         post.categories = categories
-    
-    if request.model_ids is not None:
-        post.models = _resolve_model_ids(db, request.model_ids)
     
     db.commit()
     db.refresh(post)
@@ -404,8 +381,7 @@ async def publish_post(
     
     post = db.query(BlogPost).options(
         joinedload(BlogPost.author),
-        joinedload(BlogPost.categories),
-        joinedload(BlogPost.models),
+        joinedload(BlogPost.categories)
     ).filter(BlogPost.id == post_id).first()
     
     if not post:
@@ -446,8 +422,7 @@ async def unpublish_post(
     
     post = db.query(BlogPost).options(
         joinedload(BlogPost.author),
-        joinedload(BlogPost.categories),
-        joinedload(BlogPost.models),
+        joinedload(BlogPost.categories)
     ).filter(BlogPost.id == post_id).first()
     
     if not post:

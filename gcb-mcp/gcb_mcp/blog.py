@@ -28,9 +28,7 @@ def _api_base() -> str:
 
 
 def _api_key() -> str:
-    from gcb_mcp.credentials import resolve_gcb_api_key
-
-    return resolve_gcb_api_key()
+    return os.environ.get("GCB_API_KEY", "").strip()
 
 
 def _headers() -> dict[str, str]:
@@ -94,15 +92,12 @@ async def create_post(
     slug: str | None = None,
     featured_image_url: str | None = None,
     category_ids: list[str] | None = None,
-    model_ids: list[str] | None = None,
     publish: bool = False,
 ) -> dict[str, Any]:
     """Create a blog post as draft (or publish immediately if publish=True).
 
     ``content`` should be Markdown; it is stored as-is and rendered to HTML
     by the frontend at read time.
-    ``model_ids`` are OpenRouter model identifiers (e.g. "openai/gpt-4o") to
-    cross-reference the article with benchmark model pages.
     """
     body: dict[str, Any] = {"title": title, "content": content}
     if excerpt:
@@ -113,8 +108,6 @@ async def create_post(
         body["featured_image_url"] = featured_image_url
     if category_ids:
         body["category_ids"] = category_ids
-    if model_ids:
-        body["model_ids"] = model_ids
 
     params = {"publish": "true"} if publish else {}
     url = _blog_url("/posts")
@@ -138,14 +131,11 @@ async def update_post(
     featured_image_url: str | None = None,
     slug: str | None = None,
     category_ids: list[str] | None = None,
-    model_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     """Update an existing blog post. Only supplied fields are changed.
 
     ``content`` should be Markdown; it is stored as-is and rendered to HTML
     by the frontend at read time.
-    ``model_ids`` are OpenRouter model identifiers to cross-reference with
-    benchmark model pages. Pass an empty list to clear all model links.
     """
     body: dict[str, Any] = {}
     if content is not None:
@@ -160,8 +150,6 @@ async def update_post(
         body["slug"] = slug
     if category_ids is not None:
         body["category_ids"] = category_ids
-    if model_ids is not None:
-        body["model_ids"] = model_ids
 
     if not body:
         return {"error": "no_fields", "message": "No fields provided to update."}
@@ -256,11 +244,9 @@ async def upload_image(file_path: Path, content_type: str = "image/svg+xml") -> 
     Returns: {url, filename, size, content_type}
     """
     if not _api_key():
-        from gcb_mcp.credentials import missing_gcb_api_key_message
-
         return {
             "error": "missing_api_key",
-            "message": missing_gcb_api_key_message(),
+            "message": "GCB_API_KEY not set. Cannot upload image.",
         }
 
     if not file_path.exists():
@@ -324,8 +310,8 @@ def _error_response(resp: httpx.Response) -> dict[str, Any]:
 
 
 def build_live_url(slug: str) -> str:
-    """Return the canonical public URL for a published blog post."""
-    return f"https://greatcommissionbenchmark.ai/insights/{slug}"
+    """Return the public URL for a published blog post."""
+    return f"https://greatcommissionbenchmark.ai/action/insights/{slug}"
 
 
 # ---------------------------------------------------------------------------
@@ -340,11 +326,9 @@ async def fetch_remote_test_export(test_run_id: str) -> dict[str, Any]:
     Returns the raw export payload (format_version, test_run, summary, responses).
     """
     if not _api_key():
-        from gcb_mcp.credentials import missing_gcb_api_key_message
-
         return {
             "error": "missing_api_key",
-            "message": missing_gcb_api_key_message(),
+            "message": "GCB_API_KEY not set. Cannot retrieve remote test export.",
         }
 
     url = f"{_api_base()}/runner/test-runs/{test_run_id}/export"
