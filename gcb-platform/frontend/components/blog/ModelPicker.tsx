@@ -17,15 +17,22 @@ interface ModelPickerProps {
 export function ModelPicker({ value, onChange }: ModelPickerProps) {
   const [allModels, setAllModels] = useState<LeaderboardItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Backend GET /api/public/leaderboard enforces limit <= 100; higher values return 422.
     apiClient
-      .getLeaderboard({ limit: 200 })
-      .then((res) => setAllModels(res.items))
-      .catch(() => {})
+      .getLeaderboard({ limit: 100 })
+      .then((res) => {
+        setAllModels(res.items);
+        setLoadError(null);
+      })
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Failed to load models");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -75,6 +82,10 @@ export function ModelPicker({ value, onChange }: ModelPickerProps) {
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
+        ) : loadError ? (
+          <p className="text-sm text-destructive" role="alert">
+            {loadError}
+          </p>
         ) : (
           <>
             {selectedModels.length > 0 && (
