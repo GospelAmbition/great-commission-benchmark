@@ -39,6 +39,7 @@ interface BlogPost {
     email: string;
   };
   categories: BlogCategory[];
+  related_models?: { id: string; model_id: string; name: string; provider: string }[];
   created_at: string;
   updated_at: string;
   published_at?: string;
@@ -66,6 +67,7 @@ export default function EditBlogPostPage() {
     content: "",
     featured_image_url: "",
     category_ids: [] as string[],
+    model_ids: [] as string[],
   });
 
   useEffect(() => {
@@ -108,6 +110,7 @@ export default function EditBlogPostPage() {
           content: data.content || "",
           featured_image_url: data.featured_image_url || "",
           category_ids: data.categories.map((c: BlogCategory) => c.id),
+          model_ids: (data.related_models || []).map((m: { model_id: string }) => m.model_id),
         });
       } else {
         toast.error("Post not found");
@@ -186,6 +189,7 @@ export default function EditBlogPostPage() {
           content: form.content || null,
           featured_image_url: form.featured_image_url || null,
           category_ids: form.category_ids,
+          model_ids: form.model_ids,
         }),
       });
 
@@ -208,7 +212,6 @@ export default function EditBlogPostPage() {
     setPublishing(true);
 
     try {
-      // First save any changes
       await fetch(`/api/blog-manager/posts/${postId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -219,6 +222,7 @@ export default function EditBlogPostPage() {
           content: form.content || null,
           featured_image_url: form.featured_image_url || null,
           category_ids: form.category_ids,
+          model_ids: form.model_ids,
         }),
       });
 
@@ -495,6 +499,12 @@ export default function EditBlogPostPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Linked Models */}
+          <ModelPicker
+            value={form.model_ids}
+            onChange={(model_ids) => setForm((prev) => ({ ...prev, model_ids }))}
+          />
 
           {/* Post Info */}
           <Card>
