@@ -24,10 +24,13 @@ export function ModelPicker({ value, onChange }: ModelPickerProps) {
 
   useEffect(() => {
     // Use /api/public/models — returns all active benchmarked models without score filtering.
+    // The backend returns { models: [...] } but the shared ModelsResponse type says { items: [...] }.
+    // Cast to any to access the actual backend key safely.
     apiClient
       .getModels({ limit: 200 })
-      .then((res) => {
-        setAllModels(res.items);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((res: any) => {
+        setAllModels(res.models ?? res.items ?? []);
         setLoadError(null);
       })
       .catch((err) => {
