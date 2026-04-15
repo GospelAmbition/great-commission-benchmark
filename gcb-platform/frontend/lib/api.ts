@@ -57,13 +57,22 @@ interface BackendLeaderboardPageResponse {
   filter_options: FilterOptionsResponse;
 }
 
+export interface RelatedArticle {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  featured_image_url?: string;
+  published_at?: string;
+}
+
 export interface ModelResponse {
   id: string;
   model_id: string;
   model_name?: string;
   name?: string;
   provider: string;
-  description?: string; // Model description from OpenRouter
+  description?: string;
   overall_score?: number;
   score?: number;
   tier1_score?: number;
@@ -83,6 +92,7 @@ export interface ModelResponse {
     completed_at: string;
     trust_tier: string;
   }>;
+  related_articles?: RelatedArticle[];
 }
 
 export interface ModelsResponse {

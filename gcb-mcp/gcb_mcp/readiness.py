@@ -257,14 +257,13 @@ async def check_openrouter(api_key: str | None = None) -> dict[str, Any]:
 
 async def check_gcb_api(api_key: str | None = None) -> dict[str, Any]:
     """Verify GCB platform API key for upload capability."""
-    key = api_key or os.environ.get("GCB_API_KEY", "").strip()
+    from gcb_mcp.credentials import missing_gcb_api_key_message, resolve_gcb_api_key
+
+    key = (api_key or "").strip() or resolve_gcb_api_key()
     result: dict[str, Any] = {"ready": False, "error": None}
 
     if not key:
-        result["error"] = (
-            "GCB_API_KEY not set. Set it in the MCP environment to enable upload. "
-            "Get your key at https://greatcommissionbenchmark.ai/dashboard/settings"
-        )
+        result["error"] = missing_gcb_api_key_message()
         return result
 
     base_url = os.environ.get("GCB_API_BASE_URL", GCB_API_BASE_URL).rstrip("/")

@@ -24,5 +24,6 @@ include = ["gcb_mcp/prompts/*.md"]
 include = [
     "gcb_mcp/**/*.py",
     "gcb_mcp/prompts/*.md",
+    "scripts/*.sh",
     "pyproject.toml",
 ]

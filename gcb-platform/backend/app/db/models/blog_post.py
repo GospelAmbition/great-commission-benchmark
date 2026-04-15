@@ -16,6 +16,14 @@ blog_post_categories = Table(
     Column('category_id', UUID(as_uuid=True), ForeignKey('blog_categories.id', ondelete='CASCADE'), primary_key=True)
 )
 
+# Junction table for many-to-many relationship between posts and models
+blog_post_models = Table(
+    'blog_post_models',
+    Base.metadata,
+    Column('post_id', UUID(as_uuid=True), ForeignKey('blog_posts.id', ondelete='CASCADE'), primary_key=True),
+    Column('model_id', UUID(as_uuid=True), ForeignKey('models.id', ondelete='CASCADE'), primary_key=True)
+)
+
 
 class BlogPost(Base):
     """Blog post for Action section"""
@@ -39,5 +47,10 @@ class BlogPost(Base):
         "BlogCategory",
         secondary=blog_post_categories,
         back_populates="posts"
+    )
+    models = relationship(
+        "Model",
+        secondary=blog_post_models,
+        backref="blog_posts"
     )
 

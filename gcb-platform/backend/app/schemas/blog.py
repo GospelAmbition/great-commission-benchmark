@@ -6,6 +6,21 @@ from datetime import datetime
 
 
 # =============================================================================
+# Related Model Schema (lightweight, used in blog responses)
+# =============================================================================
+
+class BlogRelatedModel(BaseModel):
+    """Lightweight model info returned inside blog post responses"""
+    id: UUID
+    model_id: str
+    name: str
+    provider: str
+
+    class Config:
+        from_attributes = True
+
+
+# =============================================================================
 # Category Schemas
 # =============================================================================
 
@@ -60,6 +75,10 @@ class BlogPostBase(BaseModel):
 class BlogPostCreate(BlogPostBase):
     """Schema for creating a post"""
     category_ids: Optional[List[UUID]] = None
+    model_ids: Optional[List[str]] = Field(
+        None,
+        description="OpenRouter model_id strings (e.g. 'openai/gpt-4o') to link to this post"
+    )
 
 
 class BlogPostUpdate(BaseModel):
@@ -70,6 +89,10 @@ class BlogPostUpdate(BaseModel):
     content: Optional[str] = None
     featured_image_url: Optional[str] = None
     category_ids: Optional[List[UUID]] = None
+    model_ids: Optional[List[str]] = Field(
+        None,
+        description="OpenRouter model_id strings to link to this post (replaces existing links)"
+    )
 
 
 class BlogPostAuthor(BaseModel):
@@ -88,6 +111,7 @@ class BlogPostResponse(BlogPostBase):
     status: str
     author: BlogPostAuthor
     categories: List[BlogCategoryResponse]
+    related_models: List[BlogRelatedModel] = []
     created_at: datetime
     updated_at: datetime
     published_at: Optional[datetime] = None
@@ -106,6 +130,7 @@ class BlogPostListItem(BaseModel):
     status: str
     author: BlogPostAuthor
     categories: List[BlogCategoryResponse]
+    related_models: List[BlogRelatedModel] = []
     created_at: datetime
     published_at: Optional[datetime] = None
 
