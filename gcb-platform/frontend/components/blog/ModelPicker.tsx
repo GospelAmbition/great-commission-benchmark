@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ProviderIcon } from "@/components/ui/provider-icon";
 import { BarChart3, X, Loader2 } from "lucide-react";
-import { apiClient, LeaderboardItem } from "@/lib/api";
+import { apiClient, ModelResponse } from "@/lib/api";
 import { formatProvider } from "@/lib/model-utils";
 
 interface ModelPickerProps {
@@ -15,7 +15,7 @@ interface ModelPickerProps {
 }
 
 export function ModelPicker({ value, onChange }: ModelPickerProps) {
-  const [allModels, setAllModels] = useState<LeaderboardItem[]>([]);
+  const [allModels, setAllModels] = useState<ModelResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -23,9 +23,9 @@ export function ModelPicker({ value, onChange }: ModelPickerProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Backend GET /api/public/leaderboard enforces limit <= 100; higher values return 422.
+    // Use /api/public/models — returns all active benchmarked models without score filtering.
     apiClient
-      .getLeaderboard({ limit: 100 })
+      .getModels({ limit: 200 })
       .then((res) => {
         setAllModels(res.items);
         setLoadError(null);
@@ -53,7 +53,7 @@ export function ModelPicker({ value, onChange }: ModelPickerProps) {
     .filter((m) => !value.includes(m.model_id))
     .filter(
       (m) =>
-        m.model_name.toLowerCase().includes(query) ||
+        (m.name || m.model_id).toLowerCase().includes(query) ||
         m.model_id.toLowerCase().includes(query) ||
         m.provider.toLowerCase().includes(query)
     )
@@ -98,7 +98,7 @@ export function ModelPicker({ value, onChange }: ModelPickerProps) {
                   >
                     <ProviderIcon provider={m.provider} size={14} />
                     <span className="max-w-[120px] truncate text-xs">
-                      {m.model_name}
+                      {m.name || m.model_id}
                     </span>
                     <button
                       type="button"
@@ -139,7 +139,7 @@ export function ModelPicker({ value, onChange }: ModelPickerProps) {
                         <ProviderIcon provider={m.provider} size={18} />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium truncate">
-                            {m.model_name}
+                            {m.name || m.model_id}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {formatProvider(m.provider)}

@@ -523,7 +523,7 @@ async def _refresh_leaderboard_cache(cache_key: str, params: dict, db: Session):
 async def list_models(
     provider: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(200, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ):
