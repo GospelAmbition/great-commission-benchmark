@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PostEditor } from "@/components/blog/PostEditor";
 import { ImageUploader } from "@/components/blog/ImageUploader";
+import { ModelPicker } from "@/components/blog/ModelPicker";
 import { ChevronLeft, Save, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useUserProfile } from "@/lib/useUserProfile";
@@ -39,6 +40,7 @@ export default function NewBlogPostPage() {
     content: "",
     featured_image_url: "",
     category_ids: [] as string[],
+    model_ids: [] as string[],
   });
 
   useEffect(() => {
@@ -138,6 +140,7 @@ export default function NewBlogPostPage() {
           content: form.content || null,
           featured_image_url: form.featured_image_url || null,
           category_ids: form.category_ids,
+          model_ids: form.model_ids,
         }),
       });
 
@@ -351,6 +354,12 @@ export default function NewBlogPostPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Linked Models */}
+          <ModelPicker
+            value={form.model_ids}
+            onChange={(model_ids) => setForm((prev) => ({ ...prev, model_ids }))}
+          />
         </div>
       </div>
     </div>
