@@ -1,6 +1,6 @@
 # Insights - Blog Publishing Workspace
 
-This folder is the working directory for writing and publishing articles to the Great Commission Benchmark blog at [greatcommissionbenchmark.ai/action/insights](https://greatcommissionbenchmark.ai/action/insights).
+This folder is the working directory for writing and publishing articles to the Great Commission Benchmark blog at [greatcommissionbenchmark.ai/insights](https://greatcommissionbenchmark.ai/insights).
 
 Articles are written here as markdown files, then published to the live site via `blog_cli.py` which authenticates against the backend API using an API key.
 
@@ -113,7 +113,7 @@ python3 /Users/chris/Documents/PROJECTS/great-commission-benchmark/insights/blog
 
 On success, the CLI prints the post ID and URL. The live article will be at:
 ```
-https://greatcommissionbenchmark.ai/action/insights/{slug}
+https://greatcommissionbenchmark.ai/insights/{slug}
 ```
 
 ### Step-by-Step: Two-Stage Publish (Draft First)

@@ -45,7 +45,7 @@ load_env()
 # Configuration
 API_KEY = os.environ.get("GCB_API_KEY")
 API_URL = os.environ.get("GCB_API_URL", "https://greatcommissionbenchmark.ai/api/v1")
-BLOG_URL = os.environ.get("GCB_BLOG_URL", "https://greatcommissionbenchmark.ai/action/insights")
+BLOG_URL = os.environ.get("GCB_BLOG_URL", "https://greatcommissionbenchmark.ai/insights")
 
 
 def generate_slug(title: str) -> str:

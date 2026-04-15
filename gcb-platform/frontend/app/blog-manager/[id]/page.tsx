@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PostEditor } from "@/components/blog/PostEditor";
 import { ImageUploader } from "@/components/blog/ImageUploader";
+import { ModelPicker } from "@/components/blog/ModelPicker";
 import { ChevronLeft, Save, Send, Eye, EyeOff, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useUserProfile } from "@/lib/useUserProfile";
