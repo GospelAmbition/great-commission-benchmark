@@ -563,11 +563,18 @@ async def archive_missing_on_openrouter(
 async def upload_json(
     export_json_path: str,
     dry_run: bool = False,
+    allow_invalid: bool = False,
 ) -> dict[str, Any]:
     """Upload a gcb-runner export JSON for direct publish.
 
     Uses API-key auth and posts to the runner bulk-submit endpoint. This is
     admin-only and bypasses moderation/payment.
+
+    Upload gate: this tool refuses to publish exports that are not marked
+    COMPLETE_VALID by the runner (i.e. runs where at least one question
+    produced no trustworthy model answer). Pass ``allow_invalid=True`` only
+    with explicit operator intent; the rejection includes a reason and the
+    structured validity information from the export so you can decide.
     """
     api_key = _api_key()
     if not api_key:
@@ -587,15 +594,23 @@ async def upload_json(
     except Exception as exc:
         return {"error": "invalid_input", "message": str(exc)}
 
-    test_run = export_data.get("test_run", {})
-    summary = export_data.get("summary", {})
+    test_run = export_data.get("test_run", {}) if isinstance(export_data.get("test_run"), dict) else {}
+    summary = export_data.get("summary", {}) if isinstance(export_data.get("summary"), dict) else {}
     responses = export_data.get("responses", [])
-    model = test_run.get("model") if isinstance(test_run, dict) else None
-    benchmark_version = (
-        test_run.get("benchmark_version") if isinstance(test_run, dict) else None
-    )
-    score = summary.get("score") if isinstance(summary, dict) else None
+    model = test_run.get("model")
+    benchmark_version = test_run.get("benchmark_version")
+    score = summary.get("score")
     response_count = len(responses) if isinstance(responses, list) else 0
+
+    validity = summary.get("validity") or test_run.get("validity")
+    extraction_error_count = (
+        test_run.get("extraction_error_count")
+        if isinstance(test_run.get("extraction_error_count"), int)
+        else summary.get("test_error_counts", {}).get("total")
+        if isinstance(summary.get("test_error_counts"), dict)
+        else None
+    )
+    validity_reason = test_run.get("validity_reason")
 
     preview = {
         "path": str(Path(export_json_path).expanduser()),
@@ -603,7 +618,25 @@ async def upload_json(
         "benchmark_version": benchmark_version,
         "score": score,
         "response_count": response_count,
+        "validity": validity,
+        "extraction_error_count": extraction_error_count,
+        "validity_reason": validity_reason,
     }
+
+    # Upload gate: refuse to publish any export the runner marked invalid.
+    # Legacy exports that predate the validity field (validity is None) are
+    # passed through so we don't break historical uploads.
+    if validity is not None and validity != "COMPLETE_VALID" and not allow_invalid:
+        return {
+            "uploaded": False,
+            "error": "run_invalid",
+            "message": (
+                f"Export is marked {validity!r} and will not be published. "
+                "Investigate the extraction failures before uploading, or "
+                "pass allow_invalid=True to override (not recommended)."
+            ),
+            "preview": preview,
+        }
 
     if dry_run:
         return {"dry_run": True, "preview": preview}
@@ -667,9 +700,14 @@ async def upload_json(
 async def upload_runner_json(
     export_json_path: str,
     dry_run: bool = False,
+    allow_invalid: bool = False,
 ) -> dict[str, Any]:
     """Alias for upload_json with the same behavior."""
-    return await upload_json(export_json_path=export_json_path, dry_run=dry_run)
+    return await upload_json(
+        export_json_path=export_json_path,
+        dry_run=dry_run,
+        allow_invalid=allow_invalid,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -822,15 +860,22 @@ async def list_jobs(status: str | None = None, limit: int = 50) -> dict[str, Any
 
 
 @mcp.tool()
-async def upload_result(job_id: str, dry_run: bool = False) -> dict[str, Any]:
+async def upload_result(
+    job_id: str,
+    dry_run: bool = False,
+    allow_invalid: bool = False,
+) -> dict[str, Any]:
     """Upload a succeeded benchmark test result to the GCB platform.
 
-    Only valid when the job status is 'succeeded' and an export JSON exists.
-    Uses the existing admin bulk-submit endpoint (bypasses moderation).
+    Only valid when the job status is 'succeeded', an export JSON exists,
+    and the export is marked COMPLETE_VALID. Runs that finished but failed
+    to capture trustworthy model output (COMPLETE_INVALID) are refused by
+    default; pass ``allow_invalid=True`` to override with explicit intent.
 
     Args:
-        job_id:  The UUID returned by start_gcb_test.
-        dry_run: If True, validate the export but do not actually upload.
+        job_id:        The UUID returned by start_gcb_test.
+        dry_run:       If True, validate the export but do not actually upload.
+        allow_invalid: If True, upload even if the export is COMPLETE_INVALID.
 
     Returns upload confirmation or an error description.
     """
@@ -869,8 +914,11 @@ async def upload_result(job_id: str, dry_run: bool = False) -> dict[str, Any]:
             "job_id": job_id,
         }
 
-    # Delegate to the existing upload_json tool implementation
-    result = await upload_json(export_json_path=job.export_path, dry_run=dry_run)
+    result = await upload_json(
+        export_json_path=job.export_path,
+        dry_run=dry_run,
+        allow_invalid=allow_invalid,
+    )
     result["job_id"] = job_id
     result["model_id"] = job.model_id
     result["score"] = job.score

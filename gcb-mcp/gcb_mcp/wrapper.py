@@ -214,8 +214,12 @@ def run_job(job_id: str, model_id: str) -> None:
         end_ts = datetime.now(timezone.utc).isoformat()
         log_file.write(f"\n[{end_ts}] gcb-runner exited with code {proc.returncode}\n")
 
-        if proc.returncode == 0:
-            # Try to extract score from export JSON if not parsed from stdout
+        # Exit code 2 from gcb-runner means the run completed but is
+        # COMPLETE_INVALID (extraction failures). The export file is real
+        # and worth inspecting, so we record it as succeeded — but the
+        # upload gate in MCP (upload_json / upload_result) will refuse to
+        # publish it without an explicit allow_invalid=True override.
+        if proc.returncode in (0, 2):
             if final_score is None and export_path.exists():
                 try:
                     data = json.loads(export_path.read_text())
@@ -228,9 +232,15 @@ def run_job(job_id: str, model_id: str) -> None:
                 score=final_score or 0.0,
                 export_path=str(export_path) if export_path.exists() else None,
             )
-            log_file.write(f"[{end_ts}] Job {job_id} SUCCEEDED. Score: {final_score}\n")
+            if proc.returncode == 0:
+                log_file.write(f"[{end_ts}] Job {job_id} SUCCEEDED. Score: {final_score}\n")
+            else:
+                log_file.write(
+                    f"[{end_ts}] Job {job_id} SUCCEEDED but marked "
+                    "COMPLETE_INVALID by runner; upload will be refused "
+                    "unless allow_invalid=True.\n"
+                )
         else:
-            # Collect last 20 lines as error context
             log_file.flush()
             error_context = _tail_log(log_path, 20)
             error_msg = f"gcb-runner exited with code {proc.returncode}. Last output:\n{error_context}"
