@@ -8,9 +8,8 @@ from datetime import datetime
 import re
 
 from app.core.auth import get_db, has_permission
-from app.core.rate_limit import RateLimitDependency
 from app.db.models.user import User
-from app.db.models.blog_post import BlogPost
+from app.db.models.blog_post import BlogPost, blog_post_models
 from app.db.models.blog_category import BlogCategory
 from app.db.models.model import Model
 from app.db.models.user_api_key import UserAPIKey
@@ -32,9 +31,6 @@ from app.services.storage import upload_image
 from app.services.action_log import ActionLogService
 
 router = APIRouter()
-
-# Rate limiter for blog endpoints: reuse runner rate limit pattern
-blog_rate_limit = RateLimitDependency("runner")
 
 
 class BlogAPIKeyAuth:
@@ -161,11 +157,14 @@ def _build_post_list_item(post: BlogPost) -> BlogPostListItem:
 @router.get("/posts", response_model=BlogPostListResponse)
 async def list_posts(
     status: Optional[str] = Query(None, description="Filter by status (draft, published)"),
+    model_id: Optional[str] = Query(
+        None,
+        description="When set, only posts linked to this OpenRouter model_id (e.g. openai/gpt-4o)",
+    ),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     auth: Tuple[UserAPIKey, User] = Depends(require_blog_api_key),
     db: Session = Depends(get_db),
-    _rate_limit: bool = Depends(blog_rate_limit)
 ):
     """
     List all blog posts (including drafts).
@@ -177,6 +176,20 @@ async def list_posts(
         joinedload(BlogPost.categories),
         joinedload(BlogPost.models),
     )
+
+    post_ids_for_model: Optional[list] = None
+    if model_id:
+        post_ids_for_model = [
+            row[0]
+            for row in db.query(blog_post_models.c.post_id)
+            .join(Model, Model.id == blog_post_models.c.model_id)
+            .filter(Model.model_id == model_id)
+            .distinct()
+            .all()
+        ]
+        if not post_ids_for_model:
+            return BlogPostListResponse(items=[], total=0)
+        query = query.filter(BlogPost.id.in_(post_ids_for_model))
     
     if status:
         query = query.filter(BlogPost.status == status)
@@ -186,6 +199,8 @@ async def list_posts(
     count_query = db.query(BlogPost)
     if status:
         count_query = count_query.filter(BlogPost.status == status)
+    if post_ids_for_model is not None:
+        count_query = count_query.filter(BlogPost.id.in_(post_ids_for_model))
     total = count_query.count()
     
     posts = query.offset(offset).limit(limit).all()
@@ -202,7 +217,6 @@ async def create_post(
     publish: bool = Query(False, description="Publish immediately instead of creating as draft"),
     auth: Tuple[UserAPIKey, User] = Depends(require_blog_api_key),
     db: Session = Depends(get_db),
-    _rate_limit: bool = Depends(blog_rate_limit)
 ):
     """
     Create a new blog post.
@@ -270,7 +284,6 @@ async def get_post(
     post_id: UUID,
     auth: Tuple[UserAPIKey, User] = Depends(require_blog_api_key),
     db: Session = Depends(get_db),
-    _rate_limit: bool = Depends(blog_rate_limit)
 ):
     """
     Get a post by ID.
@@ -297,7 +310,6 @@ async def update_post(
     request: BlogPostUpdate,
     auth: Tuple[UserAPIKey, User] = Depends(require_blog_api_key),
     db: Session = Depends(get_db),
-    _rate_limit: bool = Depends(blog_rate_limit)
 ):
     """
     Update a blog post.
@@ -361,7 +373,6 @@ async def delete_post(
     post_id: UUID,
     auth: Tuple[UserAPIKey, User] = Depends(require_blog_api_key),
     db: Session = Depends(get_db),
-    _rate_limit: bool = Depends(blog_rate_limit)
 ):
     """
     Delete a blog post.
@@ -393,7 +404,6 @@ async def publish_post(
     post_id: UUID,
     auth: Tuple[UserAPIKey, User] = Depends(require_blog_api_key),
     db: Session = Depends(get_db),
-    _rate_limit: bool = Depends(blog_rate_limit)
 ):
     """
     Publish a draft post.
@@ -435,7 +445,6 @@ async def unpublish_post(
     post_id: UUID,
     auth: Tuple[UserAPIKey, User] = Depends(require_blog_api_key),
     db: Session = Depends(get_db),
-    _rate_limit: bool = Depends(blog_rate_limit)
 ):
     """
     Unpublish a post (revert to draft).
@@ -479,7 +488,6 @@ async def unpublish_post(
 async def list_categories(
     auth: Tuple[UserAPIKey, User] = Depends(require_blog_api_key),
     db: Session = Depends(get_db),
-    _rate_limit: bool = Depends(blog_rate_limit)
 ):
     """
     List all blog categories.
@@ -506,7 +514,6 @@ async def create_category(
     request: BlogCategoryCreate,
     auth: Tuple[UserAPIKey, User] = Depends(require_blog_api_key),
     db: Session = Depends(get_db),
-    _rate_limit: bool = Depends(blog_rate_limit)
 ):
     """
     Create a new blog category.
@@ -557,7 +564,6 @@ async def generate_slug_endpoint(
     title: str = Query(..., description="Title to generate slug from"),
     auth: Tuple[UserAPIKey, User] = Depends(require_blog_api_key),
     db: Session = Depends(get_db),
-    _rate_limit: bool = Depends(blog_rate_limit)
 ):
     """
     Generate a URL-friendly slug from a title.
@@ -579,7 +585,6 @@ async def generate_slug_endpoint(
 async def upload_blog_image(
     file: UploadFile = File(...),
     auth: Tuple[UserAPIKey, User] = Depends(require_blog_api_key),
-    _rate_limit: bool = Depends(blog_rate_limit)
 ):
     """
     Upload an image for blog posts.

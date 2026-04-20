@@ -79,7 +79,6 @@ rate_limiter = RateLimiter()
 RATE_LIMITS = {
     "public": {"limit": 100, "window": 60},      # 100 req/min
     "authenticated": {"limit": 300, "window": 60}, # 300 req/min
-    "runner": {"limit": 50, "window": 3600},      # 50 req/hour
     "submissions": {"limit": 10, "window": 3600}, # 10 req/hour
 }
 
@@ -162,10 +161,6 @@ def rate_limit_public():
 def rate_limit_authenticated():
     """Rate limit for authenticated endpoints: 300 req/min"""
     return RateLimitDependency("authenticated")
-
-def rate_limit_runner():
-    """Rate limit for runner/CLI endpoints: 50 req/hour"""
-    return RateLimitDependency("runner")
 
 def rate_limit_submissions():
     """Rate limit for submission endpoints: 10 req/hour"""

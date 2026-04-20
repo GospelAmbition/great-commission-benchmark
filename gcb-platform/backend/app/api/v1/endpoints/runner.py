@@ -18,7 +18,6 @@ from app.db.models.question import Question
 from app.db.models.methodology_version import MethodologyVersion
 from app.db.models.model import Model
 from app.db.models.test_run import TestRun
-from app.core.rate_limit import RateLimitDependency
 from app.api.v1.endpoints.api_keys import validate_api_key
 
 logger = logging.getLogger(__name__)
@@ -82,9 +81,6 @@ class APIKeyAuth:
 # Dependency instance
 require_api_key = APIKeyAuth()
 
-# Rate limiter for runner endpoints: 50 requests per hour
-runner_rate_limit = RateLimitDependency("runner")
-
 
 @router.get("/latest")
 async def get_runner_latest(request: Request):
@@ -123,7 +119,6 @@ async def get_runner_versions(
     include_drafts: bool = Query(False, description="Include draft/locked versions for testing"),
     db: Session = Depends(get_db),
     auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
-    _rate_limit: bool = Depends(runner_rate_limit)
 ):
     """Get available benchmark versions for CLI
     
@@ -168,7 +163,6 @@ async def get_runner_questions(
     version: Optional[str] = None,
     db: Session = Depends(get_db),
     auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
-    _rate_limit: bool = Depends(runner_rate_limit)
 ):
     """Get full question set for CLI"""
     # auth contains (api_key_record, user) - available for logging/tracking
@@ -221,7 +215,6 @@ async def get_judge_prompts(
     version: Optional[str] = None,
     db: Session = Depends(get_db),
     auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
-    _rate_limit: bool = Depends(runner_rate_limit)
 ):
     """Get judge prompts for each tier.
     
@@ -257,7 +250,6 @@ async def get_user_info(
     request: Request,
     db: Session = Depends(get_db),
     auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
-    _rate_limit: bool = Depends(runner_rate_limit)
 ):
     """Get user information for the authenticated API key.
     
@@ -301,7 +293,6 @@ async def get_runner_models(
     request: Request,
     db: Session = Depends(get_db),
     auth: Tuple[UserAPIKey, User] = Depends(require_api_key),
-    _rate_limit: bool = Depends(runner_rate_limit)
 ):
     """Get all published models for bulk testing.
     

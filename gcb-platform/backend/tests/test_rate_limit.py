@@ -104,10 +104,10 @@ class TestRateLimitConfigurations:
         assert config["limit"] == 300
         assert config["window"] == 60
     
-    def test_runner_rate_limit(self):
-        """Test runner rate limit configuration"""
-        config = RATE_LIMITS["runner"]
-        assert config["limit"] == 50
+    def test_submissions_rate_limit(self):
+        """Test submissions rate limit configuration (reserved for future use)"""
+        config = RATE_LIMITS["submissions"]
+        assert config["limit"] == 10
         assert config["window"] == 3600
 
 
@@ -151,7 +151,7 @@ class TestRateLimitDependency:
         request.headers = {"X-API-Key": "test-api-key-12345678901234567890"}
         request.state = MagicMock()
         
-        dependency = RateLimitDependency("runner")
+        dependency = RateLimitDependency("public")
         result = await dependency(request)
         
         assert result is True
