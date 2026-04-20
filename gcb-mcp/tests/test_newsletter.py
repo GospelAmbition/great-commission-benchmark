@@ -11,7 +11,8 @@ from gcb_mcp.newsletter import (
     insight_url,
     model_page_url,
     openrouter_created_to_human,
-    tier_strength_sentence,
+    publisher_display_name,
+    spotlight_benchmark_soft_sentence,
 )
 
 
@@ -38,21 +39,21 @@ def test_format_newsletter_header_dateline():
 
 def test_openrouter_created_to_human_unix():
     ref = int(datetime(2026, 4, 1, tzinfo=timezone.utc).timestamp())
-    assert openrouter_created_to_human(ref) == "April 1, 2026"
+    assert openrouter_created_to_human(ref) == "April 1st, 2026"
 
 
-def test_tier_strength_sentence():
-    entry = {
-        "tier1_score": 90.0,
-        "tier2_score": 70.0,
-        "tier3_score": 80.0,
-        "verdict_distribution": {"ACCEPTED": 100, "COMPROMISED": 30, "REFUSED": 20},
-        "total_questions": 150,
-    }
-    s = tier_strength_sentence(entry)
-    assert "Tier 1" in s
+def test_publisher_display_name():
+    assert publisher_display_name("x-ai") == "XAI"
+    assert publisher_display_name("openai") == "OpenAI"
+
+
+def test_spotlight_benchmark_soft_sentence_highlights_category():
+    entry = {"overall_score": 86.0, "total_questions": 150}
+    scores = {"1.2": 92.0, "1.4": 70.0}
+    s = spotlight_benchmark_soft_sentence(entry, scores)
     assert "150" in s
-    assert "100" in s
+    assert "Evangelistic Material" in s
+    assert "particularly well" in s
 
 
 def test_clip_description():

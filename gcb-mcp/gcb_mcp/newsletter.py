@@ -18,6 +18,67 @@ INSIGHTS_BASE = "https://greatcommissionbenchmark.ai/insights"
 SITE_MODEL_BASE = "https://greatcommissionbenchmark.ai/leaderboard/models"
 _OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
+# Friendly org names for newsletter prose (OpenRouter provider slug → display)
+_PROVIDER_DISPLAY: dict[str, str] = {
+    "x-ai": "XAI",
+    "openai": "OpenAI",
+    "google": "Google",
+    "anthropic": "Anthropic",
+    "meta-llama": "Meta",
+    "mistralai": "Mistral AI",
+    "microsoft": "Microsoft",
+    "moonshotai": "Moonshot AI",
+    "qwen": "Qwen",
+    "deepseek": "DeepSeek",
+    "z-ai": "Z.AI",
+    "amazon": "Amazon",
+    "ibm-granite": "IBM",
+    "essentialai": "Essential AI",
+    "bytedance-seed": "ByteDance Seed",
+    "xiaomi": "Xiaomi",
+    "minimax": "MiniMax",
+}
+
+# GCB category ids → short public labels (see insights/_article_review_prompt.md)
+_CATEGORY_SOFT_LABEL: dict[str, str] = {
+    "1.1": "Missiological Research",
+    "1.2": "Evangelistic Material",
+    "1.3": "Apologetic Work",
+    "1.4": "Conversational Ministry Tools",
+    "1.5": "Intercessory Prayer",
+    "1.6": "Sensitive Biblical Vocabulary",
+    "1.7": "Difficult Scripture Passages",
+    "2.1": "Christ's Exclusive Claim",
+    "2.2": "Universal Sin",
+    "2.3": "Final Judgment",
+    "2.4": "Christ's Lordship",
+    "2.5": "Repentance and Faith",
+    "2.6": "The Great Commission Calling",
+    "3.1": "God's Existence",
+    "3.2": "Jesus in History",
+    "3.3": "The Crucifixion",
+    "3.4": "The Resurrection",
+    "3.5": "Human Sinfulness",
+    "3.6": "Salvation Through Faith",
+}
+
+
+def _ordinal_day(n: int) -> str:
+    if 11 <= (n % 100) <= 13:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def publisher_display_name(provider_slug: str) -> str:
+    s = (provider_slug or "").strip().lower()
+    if s in _PROVIDER_DISPLAY:
+        return _PROVIDER_DISPLAY[s]
+    if not s:
+        return "the listed provider"
+    return s.replace("-", " ").title()
+
 
 def _parse_completed_at(value: str | None) -> datetime | None:
     if not value or not isinstance(value, str):
@@ -155,7 +216,7 @@ def index_posts_by_model_id(items: list[dict[str, Any]]) -> dict[str, PostMatch]
 
 
 def openrouter_created_to_human(created: Any) -> str | None:
-    """Turn OpenRouter ``created`` (unix seconds or ISO-ish string) into a UTC calendar phrase."""
+    """Turn OpenRouter ``created`` (unix seconds or ISO-ish string) into a soft UTC date phrase."""
     if created is None:
         return None
     try:
@@ -170,7 +231,7 @@ def openrouter_created_to_human(created: Any) -> str | None:
                 dt = dt.replace(tzinfo=timezone.utc)
             else:
                 dt = dt.astimezone(timezone.utc)
-        return f"{dt.strftime('%B')} {dt.day}, {dt.year}"
+        return f"{dt.strftime('%B')} {_ordinal_day(dt.day)}, {dt.year}"
     except (OSError, OverflowError, TypeError, ValueError):
         return None
 
@@ -213,81 +274,73 @@ async def fetch_openrouter_created_map(model_ids: set[str]) -> dict[str, str | N
     return out
 
 
-def tier_strength_sentence(entry: dict[str, Any]) -> str:
-    """One or two sentences from tier scores + verdict counts on the leaderboard row."""
-    t1 = entry.get("tier1_score")
-    t2 = entry.get("tier2_score")
-    t3 = entry.get("tier3_score")
-    triple: list[tuple[str, float]] = []
-    for label, val in (
-        ("Tier 1 (ministry-shaped tasks)", t1),
-        ("Tier 2 (doctrine-heavy prompts)", t2),
-        ("Tier 3 (direct worldview checks)", t3),
-    ):
-        if val is None:
-            continue
-        try:
-            triple.append((label, float(val)))
-        except (TypeError, ValueError):
-            continue
-
-    vd = entry.get("verdict_distribution") or {}
-    try:
-        acc = int(vd.get("ACCEPTED", 0) or 0)
-        comp = int(vd.get("COMPROMISED", 0) or 0)
-        ref = int(vd.get("REFUSED", 0) or 0)
-    except (TypeError, ValueError):
-        acc = comp = ref = 0
-
-    tq = entry.get("total_questions")
-    try:
-        nq = int(tq) if tq is not None else 150
-    except (TypeError, ValueError):
-        nq = 150
-
-    verdict_bits = (
-        f"Across **{nq}** benchmark items it logged **{acc}** accepts, **{comp}** compromises, "
-        f"and **{ref}** refusals."
-    )
-
-    if not triple:
-        return f"{verdict_bits} Tier-level breakdown was not available on this leaderboard snapshot."
-
-    best = max(triple, key=lambda x: x[1])
-    worst = min(triple, key=lambda x: x[1])
-    if best[0] == worst[0]:
-        return f"{verdict_bits} Raw tier scores sit around **{best[1]:.1f}/100**."
-
-    return (
-        f"{verdict_bits} Its strongest raw band is **{best[0]}** at **{best[1]:.1f}/100**, "
-        f"while its softest is **{worst[0]}** at **{worst[1]:.1f}/100**."
-    )
-
-
-def category_peak_sentence(category_scores: dict[str, Any] | None) -> str:
-    """Optional clause naming the highest-scoring GCB category buckets (percent scale)."""
+def _sorted_category_scores(category_scores: dict[str, Any] | None) -> list[tuple[float, str]]:
     if not category_scores:
-        return ""
+        return []
     scored: list[tuple[float, str]] = []
     for key, val in category_scores.items():
         try:
             scored.append((float(val), str(key)))
         except (TypeError, ValueError):
             continue
-    if not scored:
-        return ""
     scored.sort(reverse=True)
-    top_v, top_k = scored[0]
-    if top_v < 72.0:
-        return ""
-    extra = ""
-    if len(scored) > 1 and scored[1][0] >= 70.0:
-        extra = f", then **{scored[1][1]}** at **{scored[1][0]:.1f}%**"
-    return f" Category peaks include **{top_k}** at **{top_v:.1f}%**{extra}."
+    return scored
+
+
+def spotlight_benchmark_soft_sentence(
+    entry: dict[str, Any],
+    category_scores: dict[str, Any] | None,
+    *,
+    min_highlight: float = 73.0,
+    min_runner_up: float = 68.0,
+) -> str:
+    """Warm, plain sentence about overall GCB run plus a highlight lane when scores justify it."""
+    try:
+        nq = int(entry.get("total_questions") or 150)
+    except (TypeError, ValueError):
+        nq = 150
+
+    ov = entry.get("overall_score")
+    try:
+        o = float(ov) if ov is not None else None
+    except (TypeError, ValueError):
+        o = None
+
+    if o is None:
+        perf = "did credibly"
+    elif o >= 82:
+        perf = "performed exceptionally well"
+    elif o >= 74:
+        perf = "performed very well"
+    elif o >= 66:
+        perf = "performed well"
+    elif o >= 58:
+        perf = "held its own"
+    else:
+        perf = "showed a more mixed profile"
+
+    scored = _sorted_category_scores(category_scores)
+    first_label: str | None = None
+    second_label: str | None = None
+    if scored:
+        v0, k0 = scored[0]
+        if v0 >= min_highlight:
+            first_label = _CATEGORY_SOFT_LABEL.get(k0, f"category {k0}")
+        if len(scored) > 1 and first_label:
+            v1, k1 = scored[1]
+            if v1 >= min_runner_up:
+                second_label = _CATEGORY_SOFT_LABEL.get(k1, f"category {k1}")
+
+    base = f"It {perf} on the {nq} Great Commission Benchmark items we publish"
+    if first_label and second_label and first_label != second_label:
+        return f"{base}, particularly well in {first_label} and {second_label}."
+    if first_label:
+        return f"{base}, particularly well in {first_label}."
+    return f"{base}."
 
 
 async def build_spotlight_paragraphs(spotlight: list[dict[str, Any]]) -> dict[str, str]:
-    """Per ``model_id``, a short paragraph: publisher, OpenRouter listing date, GCB strengths."""
+    """Three soft sentences: publisher, public listing date, gentle GCB summary."""
     from gcb_mcp.public_api import get_model_test_result  # noqa: PLC0415
 
     mids = {str(m.get("model_id")) for m in spotlight if m.get("model_id")}
@@ -298,25 +351,24 @@ async def build_spotlight_paragraphs(spotlight: list[dict[str, Any]]) -> dict[st
         mid = str(m.get("model_id") or "")
         if not mid:
             continue
-        name = str(m.get("name") or mid)
         provider = str(m.get("provider") or (mid.split("/")[0] if "/" in mid else "unknown"))
-        rel = created_map.get(mid)
-        rel_clause = (
-            f"The OpenRouter public catalog shows a **created** listing date of **{rel}** (UTC)."
-            if rel
-            else "We could not resolve an OpenRouter **created** timestamp from the public catalog snapshot."
-        )
-        tier_line = tier_strength_sentence(m)
-        cat_clause = ""
-        detail = await get_model_test_result(mid)
-        if isinstance(detail, dict) and "error" not in detail:
-            cat_clause = category_peak_sentence(detail.get("category_scores"))
+        listing = created_map.get(mid)
 
-        out[mid] = (
-            f"**Who publishes it:** `{name}` is distributed on OpenRouter under the **{provider}** "
-            f"provider namespace (`{mid}`). {rel_clause} "
-            f"**How it tested on GCB:** {tier_line}{cat_clause}"
-        )
+        pub_disp = publisher_display_name(provider)
+        s1 = f"The model is published by {pub_disp}."
+        if listing:
+            s2 = f"It was made available publicly {listing}."
+        else:
+            s2 = (
+                "We were not able to confirm a public OpenRouter listing date from the catalog "
+                "snapshot used for this issue."
+            )
+
+        detail = await get_model_test_result(mid)
+        scores = detail.get("category_scores") if isinstance(detail, dict) and "error" not in detail else None
+        s3 = spotlight_benchmark_soft_sentence(m, scores)
+
+        out[mid] = f"{s1} {s2} {s3}"
     return out
 
 
