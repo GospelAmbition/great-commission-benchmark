@@ -232,20 +232,18 @@ def build_newsletter_markdown(
         "Every model below finished a public test run in this window (newest first). "
         "Use **View result** for the full scorecard; use **Insight** when we have already published a written review.\n"
     )
-    lines.append("| Model | About (short) | Published (UTC) | View result | Insight |\n")
-    lines.append("| --- | --- | --- | --- | --- |\n")
+    lines.append("| Model | Published (UTC) | View result | Insight |\n")
+    lines.append("| --- | --- | --- | --- |\n")
     for m in all_in_window:
         mid = str(m.get("model_id") or "")
         name = (m.get("name") or mid).replace("|", "\\|")
-        about_raw = clip_description(m.get("description"), max_len=90)
-        about = (about_raw or "—").replace("|", "\\|")
         completed = format_completed_human(
             str(m.get("completed_at")) if m.get("completed_at") else None
         ).replace("|", "\\|")
         ml = model_page_url(mid)
         pm = post_by_model.get(mid)
         ins = f"[Read]({insight_url(pm.slug)})" if pm and pm.slug else "—"
-        lines.append(f"| {name} | {about} | {completed} | [View result]({ml}) | {ins} |\n")
+        lines.append(f"| {name} | {completed} | [View result]({ml}) | {ins} |\n")
 
     lines.append("---\n")
     lines.append("## Explore, test, and serve\n")
