@@ -37,6 +37,25 @@ def format_completed_human(completed_at: str | None) -> str:
     return f"{month_name} {dt.day}, {dt.year}"
 
 
+def format_newsletter_header_dateline(
+    month_label: str | None = None,
+    *,
+    now: datetime | None = None,
+) -> str:
+    """Dateline for newsletter hero SVG, e.g. ``April, 2026`` (comma after month).
+
+    ``month_label`` is typically ``strftime(\"%B %Y\")`` (``April 2026``); a comma
+    is inserted after the month name. When omitted, uses ``now`` (UTC default: today).
+    """
+    ref = now or datetime.now(timezone.utc)
+    if month_label and str(month_label).strip():
+        parts = str(month_label).strip().split()
+        if len(parts) >= 2:
+            return f"{parts[0]}, {' '.join(parts[1:])}"
+        return str(month_label).strip()
+    return ref.strftime("%B, %Y")
+
+
 def clip_description(text: Any, max_len: int = 280) -> str | None:
     """Single-line catalog description for newsletter copy; None if empty."""
     if text is None:
@@ -183,8 +202,6 @@ def build_newsletter_markdown(
         name = m.get("name") or mid
         provider = m.get("provider") or ""
         overall = m.get("overall_score")
-        completed_raw = m.get("completed_at")
-        completed = format_completed_human(completed_at=str(completed_raw) if completed_raw else None)
         desc = clip_description(m.get("description"), max_len=320)
         match = post_by_model.get(str(mid))
         review_link = insight_url(match.slug) if match and match.slug else None
@@ -197,15 +214,14 @@ def build_newsletter_markdown(
             lines.append(f"> {desc}\n")
         lines.append(
             f"- **Overall score:** **{overall}** / 100  \n"
-            f"- **Published:** {completed} (UTC)  \n"
             f"- **[See full benchmark result]({model_link})**\n"
         )
         if review_link:
             lines.append(f"- **[Read the insight article]({review_link})**\n")
 
     lines.append(
-        "\n*Overall scores summarize automated testing across ministry-shaped scenarios—use them alongside Scripture, "
-        "sound doctrine, and your team's policies—not as a substitute for spiritual discernment.*\n"
+        "\n\nOverall scores summarize automated testing across ministry-shaped scenarios—use them alongside Scripture, "
+        "sound doctrine, and your team's policies—not as a substitute for spiritual discernment.\n"
     )
     lines.append("---\n")
     lines.append(f"## New on the leaderboard (last {window_days} days)\n")

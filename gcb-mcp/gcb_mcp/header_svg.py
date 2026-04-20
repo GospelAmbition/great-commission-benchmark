@@ -420,6 +420,117 @@ def generate_header_svg(
 
 
 # ---------------------------------------------------------------------------
+# Newsletter digest header (homepage hero–inspired, distinct from model reviews)
+# ---------------------------------------------------------------------------
+
+# Matches `frontend/app/globals.css` hero + primary token for visual parity with the site.
+_HERO_BG_START = "#09090b"
+_HERO_BG_MID = "#2a0a0a"
+_HERO_RED_GLOW = "rgba(220, 38, 38, 0.28)"
+_SITE_PRIMARY = "#dc2626"
+_MUTED_FG = "#a1a1aa"
+
+NEWSLETTER_TAGLINE = "Evaluating AI for the Great Commission"
+
+
+def generate_newsletter_header_svg(dateline: str) -> str:
+    """
+    800×250 SVG for monthly newsletter featured images.
+
+    Visual language mirrors the homepage hero (``page.tsx`` + ``.gradient-hero``):
+    diagonal dark wash, central red glow, faint 60px grid. Copy anchors:
+    **Great Commission Benchmark** (headline), ``NEWSLETTER_TAGLINE``, and the caller-supplied
+    dateline (e.g. ``April, 2026``).
+    """
+    safe_id = re.sub(r"[^a-zA-Z0-9]", "_", dateline)[:24] or "newsletter"
+    d_safe = _xml_escape(dateline)
+    tag_safe = _xml_escape(NEWSLETTER_TAGLINE)
+
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 800 250" width="800" height="250">
+  <defs>
+    <linearGradient id="nlBg_{safe_id}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="{_HERO_BG_START}"/>
+      <stop offset="50%" stop-color="{_HERO_BG_MID}"/>
+      <stop offset="100%" stop-color="{_HERO_BG_START}"/>
+    </linearGradient>
+    <radialGradient id="nlGlow_{safe_id}" cx="50%" cy="45%" r="58%">
+      <stop offset="0%" stop-color="{_HERO_RED_GLOW}"/>
+      <stop offset="72%" stop-color="rgba(220, 38, 38, 0)"/>
+    </radialGradient>
+    <pattern id="nlGrid_{safe_id}" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="nlFoot_{safe_id}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="{_SITE_PRIMARY}" stop-opacity="0.85"/>
+      <stop offset="55%" stop-color="{_SITE_PRIMARY}" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="{_SITE_PRIMARY}" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="250" fill="url(#nlBg_{safe_id})"/>
+  <rect width="800" height="250" fill="url(#nlGlow_{safe_id})"/>
+  <rect width="800" height="250" fill="url(#nlGrid_{safe_id})" opacity="0.035"/>
+
+  <text x="788" y="22"
+        font-family="DM Sans,Arial,sans-serif" font-size="8"
+        font-weight="600" letter-spacing="0.22em" text-anchor="end"
+        fill="white" opacity="0.2">NEWSLETTER</text>
+
+  <!-- Headline: "Great Commission" emphasis + " Benchmark" -->
+  <text x="48" y="108"
+        font-family="DM Sans,system-ui,sans-serif" font-size="34"
+        font-weight="300" letter-spacing="-0.02em">
+    <tspan fill="{_SITE_PRIMARY}">Great Commission</tspan><tspan fill="#e4e4e7"> Benchmark</tspan>
+  </text>
+
+  <text x="48" y="148"
+        font-family="DM Sans,system-ui,sans-serif" font-size="17"
+        font-weight="400" letter-spacing="-0.01em"
+        fill="{_MUTED_FG}">{tag_safe}</text>
+
+  <text x="48" y="198"
+        font-family="DM Sans,system-ui,sans-serif" font-size="24"
+        font-weight="500" letter-spacing="0.02em"
+        fill="#f4f4f5">{d_safe}</text>
+
+  <rect x="0" y="246" width="800" height="4" fill="url(#nlFoot_{safe_id})"/>
+</svg>"""
+
+
+async def generate_and_upload_newsletter_header(
+    month_label: str | None = None,
+) -> dict[str, Any]:
+    """Build the newsletter hero SVG, upload it, return ``url`` / paths or an error dict."""
+    from gcb_mcp.blog import upload_image  # noqa: PLC0415
+    from gcb_mcp.newsletter import format_newsletter_header_dateline  # noqa: PLC0415
+
+    dateline = format_newsletter_header_dateline(month_label)
+    svg_content = generate_newsletter_header_svg(dateline)
+    safe_name = re.sub(r"[^a-zA-Z0-9_-]", "-", dateline.lower())[:50] or "newsletter"
+    svg_path = Path(tempfile.gettempdir()) / f"gcb-newsletter-header-{safe_name}.svg"
+    save_svg(svg_content, svg_path)
+
+    upload_result = await upload_image(svg_path, content_type="image/svg+xml")
+    if "error" in upload_result:
+        return {
+            "error": upload_result.get("error"),
+            "message": upload_result.get("message") or upload_result.get("detail"),
+            "svg_path": str(svg_path),
+            "svg_content": svg_content,
+            "dateline": dateline,
+        }
+
+    return {
+        "url": upload_result.get("url"),
+        "svg_path": str(svg_path),
+        "filename": upload_result.get("filename"),
+        "dateline": dateline,
+    }
+
+
+# ---------------------------------------------------------------------------
 # File I/O and upload
 # ---------------------------------------------------------------------------
 

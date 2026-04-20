@@ -6,6 +6,7 @@ from gcb_mcp.newsletter import (
     clip_description,
     filter_and_rank_models,
     format_completed_human,
+    format_newsletter_header_dateline,
     index_posts_by_model_id,
     insight_url,
     model_page_url,
@@ -24,6 +25,13 @@ def test_format_completed_human():
     assert "2026" in format_completed_human("2026-04-15T12:00:00+00:00")
     assert "April" in format_completed_human("2026-04-15T12:00:00+00:00")
     assert format_completed_human(None) in ("", "—")
+
+
+def test_format_newsletter_header_dateline():
+    ref = datetime(2026, 4, 15, 12, 0, 0, tzinfo=timezone.utc)
+    assert format_newsletter_header_dateline(None, now=ref) == "April, 2026"
+    assert format_newsletter_header_dateline("April 2026", now=ref) == "April, 2026"
+    assert format_newsletter_header_dateline("March 2025", now=ref) == "March, 2025"
 
 
 def test_clip_description():

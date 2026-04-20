@@ -43,6 +43,8 @@ mcp = FastMCP(
         "render_newsletter_email_html and send_newsletter_to_subscribers use the admin API (requires can_admin on the API key). "
         "create_model_review_draft generates a style-guide aligned benchmark article draft from published model results. "
         "generate_and_upload_header creates a programmatic SVG article header image. "
+        "generate_and_upload_newsletter_header creates the homepage-hero-style digest header SVG (month dateline) "
+        "and uploads it; create_monthly_newsletter_draft attaches this automatically. "
         "Authentication: GCB_API_KEY in the MCP environment is optional if "
         "platform.api_key is already set in ~/.gcb-runner/config.json (same file "
         "gcb-runner uses). Tool arguments must be valid JSON: string fields such as "
@@ -1360,8 +1362,9 @@ async def create_monthly_newsletter_draft(
     Pulls the public leaderboard, keeps runs whose ``completed_at`` falls within
     the last ``days_back`` days, picks the top ``top_spotlights`` models by
     ``selection`` (``overall_score`` or ``tier1_score``), and lists every model
-    published in that window. Reuses ``featured_image_url`` from linked published
-    model-review posts when available.
+    published in that window. Generates and uploads a dedicated **newsletter hero**
+    SVG (homepage-inspired layout; dateline from ``month_label``) for
+    ``featured_image_url`` on every draft.
 
     Requires the same blog API key permissions as ``create_blog_draft``.
     Assigns the **Newsletters** blog category when it exists on the site.
@@ -1369,6 +1372,7 @@ async def create_monthly_newsletter_draft(
     from datetime import datetime, timezone  # noqa: PLC0415
 
     from gcb_mcp.blog import build_live_url, create_post, generate_slug, list_posts  # noqa: PLC0415
+    from gcb_mcp.header_svg import generate_and_upload_newsletter_header  # noqa: PLC0415
     from gcb_mcp.newsletter import (  # noqa: PLC0415
         build_newsletter_markdown,
         filter_and_rank_models,
@@ -1444,12 +1448,8 @@ async def create_monthly_newsletter_draft(
         post_by_model=post_by_model,
     )
 
-    featured: str | None = None
-    for m in spotlight:
-        pm = post_by_model.get(str(m.get("model_id")))
-        if pm and pm.featured_image_url:
-            featured = pm.featured_image_url
-            break
+    header_result = await generate_and_upload_newsletter_header(month_label=label)
+    featured: str | None = header_result.get("url") if "error" not in header_result else None
 
     category_id = await _newsletters_category_id()
     category_ids = [category_id] if category_id else []
@@ -1477,18 +1477,26 @@ async def create_monthly_newsletter_draft(
         return created
 
     slug = created.get("slug", "")
-    return {
+    out: dict[str, Any] = {
         **created,
         "url": build_live_url(slug) if slug else None,
         "window_models_count": len(by_date),
         "spotlight_model_ids": [m.get("model_id") for m in spotlight],
         "newsletters_category_applied": bool(category_id),
+        "newsletter_header_dateline": header_result.get("dateline"),
         "admin_note": (
             "Draft newsletter created. Human-review with get_blog_post / update_blog_post, "
             "then publish_blog_post. For email: render_newsletter_email_html, then "
             "send_newsletter_to_subscribers (dry_run first; requires admin API key)."
         ),
     }
+    if "error" in header_result:
+        out["newsletter_header_error"] = header_result.get("message") or header_result.get("error")
+        out["admin_note"] += (
+            " Newsletter hero image upload failed; featured_image_url is unset — "
+            "fix API/upload then run generate_and_upload_newsletter_header and update_blog_post."
+        )
+    return out
 
 
 @mcp.tool()
@@ -1748,6 +1756,25 @@ async def generate_and_upload_header(
         tier2_score=tier2_score,
         tier3_score=tier3_score,
     )
+
+
+@mcp.tool()
+async def generate_and_upload_newsletter_header(month_label: str | None = None) -> dict[str, Any]:
+    """Generate the monthly newsletter hero SVG and upload it to GCB storage.
+
+    Visual style follows the public homepage hero (dark diagonal wash, red glow,
+    faint grid). Fixed copy: **Great Commission Benchmark**, **Evaluating AI for
+    the Great Commission**, plus a dateline derived from ``month_label`` (e.g.
+    ``April 2026`` → ``April, 2026``) or the current UTC month when omitted.
+
+    Returns ``{url, svg_path, filename, dateline}`` on success, or ``error`` /
+    ``message`` when upload fails.
+
+    ``create_monthly_newsletter_draft`` calls this automatically for every new digest.
+    """
+    from gcb_mcp.header_svg import generate_and_upload_newsletter_header as _gen  # noqa: PLC0415
+
+    return await _gen(month_label=month_label)
 
 
 @mcp.tool()
