@@ -180,21 +180,24 @@ def build_newsletter_markdown(
     lines: list[str] = []
     lines.append(f"# {title}\n")
     lines.append(
-        "**Great Commission Benchmark** is an independent evaluation of how AI models respond when "
-        "the work sounds like real Great Commission ministry—research, discipleship, evangelism, "
-        "and integrity under pressure. This digest highlights recent public test results.\n"
+        f"For **{month_label}**, **Great Commission Benchmark** rounds up how leading AI models behave when the prompts "
+        "sound like real ministry—research, discipleship, evangelism, and integrity under pressure. "
+        "Below you will find two spotlight models (ranked by your selected scoring lens for this issue) "
+        "and a complete list of everything **newly published** to the public leaderboard in the last "
+        f"{window_days} days.\n"
     )
     lines.append("## At a glance\n")
     lines.append(
-        "- **Why this exists:** We help ministry and technical leaders steward AI for Great Commission faithfulness—not hype.\n"
-        "- **What changed:** New benchmark runs hit the public leaderboard in the window below.\n"
-        "- **What to do next:** Read the spotlight reviews, scan the release list, then explore the leaderboard or contribute a test.\n"
+        "- **Why read this:** GCB exists so ministry and technical leaders can steward AI with discernment—not trend-chasing.\n"
+        f"- **What this issue covers:** Benchmark runs that reached the public leaderboard within the last **{window_days} days**.\n"
+        "- **What to do next:** Read the two spotlights, skim the release table, then open the leaderboard or contribute a test run.\n"
     )
     lines.append("---\n")
     lines.append("## Spotlight: two models to watch\n")
     lines.append(
-        "Among the models **newly published** on our leaderboard in this window, these two ranked highest for this issue. "
-        "Below is each model’s **overall score** (composite 0–100) and where to read more.\n"
+        "These are the two highest-ranked models **among new publications in this window** for the scoring mode "
+        "selected for this newsletter. Each entry shows the **overall score** (0–100 composite) plus direct links "
+        "to the benchmark record and any published insight article.\n"
     )
 
     for i, m in enumerate(spotlight, start=1):
@@ -226,8 +229,8 @@ def build_newsletter_markdown(
     lines.append("---\n")
     lines.append(f"## New on the leaderboard (last {window_days} days)\n")
     lines.append(
-        "Here is everything **newly published** in this window, newest first. "
-        "Open **View result** for scores and charts; open **Insight** when we have published commentary for that model.\n"
+        "Every model below finished a public test run in this window (newest first). "
+        "Use **View result** for the full scorecard; use **Insight** when we have already published a written review.\n"
     )
     lines.append("| Model | About (short) | Published (UTC) | View result | Insight |\n")
     lines.append("| --- | --- | --- | --- | --- |\n")
