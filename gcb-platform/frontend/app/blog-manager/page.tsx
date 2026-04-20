@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PostCard } from "@/components/blog/PostCard";
-import { Plus, FolderPlus, Tag, FileText, Loader2 } from "lucide-react";
+import { Plus, FolderPlus, Tag, FileText, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useUserProfile } from "@/lib/useUserProfile";
 
@@ -68,6 +68,16 @@ export default function BlogManagerPage() {
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Pagination state
+  const PAGE_SIZE = 20;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPosts, setTotalPosts] = useState(0);
+
+  // Global stats (independent of status filter / page)
+  const [totalAllPosts, setTotalAllPosts] = useState(0);
+  const [totalPublished, setTotalPublished] = useState(0);
+  const [totalDrafts, setTotalDrafts] = useState(0);
   
   // Category dialog state
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -85,7 +95,6 @@ export default function BlogManagerPage() {
       router.push("/api/auth/signin");
       return;
     }
-    // Check if user has blog management permission
     if (user && !profileLoading) {
       if (!canManageBlog && !canAdmin && !isAdmin) {
         toast.error("You don't have permission to access this page");
@@ -94,12 +103,13 @@ export default function BlogManagerPage() {
       }
       loadData();
     }
-  }, [user, userLoading, profileLoading, canManageBlog, canAdmin, isAdmin, statusFilter, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, userLoading, profileLoading, canManageBlog, canAdmin, isAdmin, statusFilter, currentPage, router]);
 
   async function loadData() {
     setLoading(true);
     try {
-      await Promise.all([loadPosts(), loadCategories()]);
+      await Promise.all([loadPosts(), loadCategories(), loadStats()]);
     } finally {
       setLoading(false);
     }
@@ -111,16 +121,42 @@ export default function BlogManagerPage() {
       if (statusFilter && statusFilter !== "all") {
         params.append("status", statusFilter);
       }
-      params.append("limit", "50");
-      
+      params.append("limit", String(PAGE_SIZE));
+      params.append("offset", String((currentPage - 1) * PAGE_SIZE));
+
       const response = await fetch(`/api/blog-manager/posts?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setPosts(data.items || []);
+        setTotalPosts(data.total ?? 0);
       }
     } catch (error) {
       console.error("Failed to load posts:", error);
       toast.error("Failed to load posts");
+    }
+  }
+
+  async function loadStats() {
+    try {
+      const [allRes, pubRes, draftRes] = await Promise.all([
+        fetch("/api/blog-manager/posts?limit=1&offset=0"),
+        fetch("/api/blog-manager/posts?status=published&limit=1&offset=0"),
+        fetch("/api/blog-manager/posts?status=draft&limit=1&offset=0"),
+      ]);
+      if (allRes.ok) {
+        const d = await allRes.json();
+        setTotalAllPosts(d.total ?? 0);
+      }
+      if (pubRes.ok) {
+        const d = await pubRes.json();
+        setTotalPublished(d.total ?? 0);
+      }
+      if (draftRes.ok) {
+        const d = await draftRes.json();
+        setTotalDrafts(d.total ?? 0);
+      }
+    } catch {
+      // Stats are non-critical; keep existing values
     }
   }
 
@@ -215,7 +251,7 @@ export default function BlogManagerPage() {
       if (response.ok) {
         toast.success("Post deleted");
         setDeletePost(null);
-        loadPosts();
+        await Promise.all([loadPosts(), loadStats()]);
       } else {
         toast.error("Failed to delete post");
       }
@@ -265,8 +301,7 @@ export default function BlogManagerPage() {
     setCategoryDialogOpen(true);
   }
 
-  const draftCount = posts.filter((p) => p.status === "draft").length;
-  const publishedCount = posts.filter((p) => p.status === "published").length;
+  const totalPages = Math.max(1, Math.ceil(totalPosts / PAGE_SIZE));
 
   return (
     <div className="container py-8">
@@ -294,7 +329,7 @@ export default function BlogManagerPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{posts.length}</div>
+            <div className="text-2xl font-bold">{totalAllPosts}</div>
           </CardContent>
         </Card>
         <Card>
@@ -304,7 +339,7 @@ export default function BlogManagerPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{publishedCount}</div>
+            <div className="text-2xl font-bold text-green-600">{totalPublished}</div>
           </CardContent>
         </Card>
         <Card>
@@ -314,7 +349,7 @@ export default function BlogManagerPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{draftCount}</div>
+            <div className="text-2xl font-bold text-yellow-600">{totalDrafts}</div>
           </CardContent>
         </Card>
         <Card>
@@ -348,23 +383,23 @@ export default function BlogManagerPage() {
             <Button
               variant={statusFilter === "all" ? "default" : "outline"}
               size="sm"
-              onClick={() => setStatusFilter("all")}
+              onClick={() => { setStatusFilter("all"); setCurrentPage(1); }}
             >
-              All
+              All ({totalAllPosts})
             </Button>
             <Button
               variant={statusFilter === "published" ? "default" : "outline"}
               size="sm"
-              onClick={() => setStatusFilter("published")}
+              onClick={() => { setStatusFilter("published"); setCurrentPage(1); }}
             >
-              Published
+              Published ({totalPublished})
             </Button>
             <Button
               variant={statusFilter === "draft" ? "default" : "outline"}
               size="sm"
-              onClick={() => setStatusFilter("draft")}
+              onClick={() => { setStatusFilter("draft"); setCurrentPage(1); }}
             >
-              Drafts
+              Drafts ({totalDrafts})
             </Button>
           </div>
 
@@ -399,6 +434,64 @@ export default function BlogManagerPage() {
                   onDelete={() => setDeletePost(post)}
                 />
               ))}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {(currentPage - 1) * PAGE_SIZE + 1}–
+                    {Math.min(currentPage * PAGE_SIZE, totalPosts)} of {totalPosts} posts
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage((p) => p - 1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((page) => {
+                        if (totalPages <= 7) return true;
+                        if (page === 1 || page === totalPages) return true;
+                        return Math.abs(page - currentPage) <= 1;
+                      })
+                      .reduce<(number | "ellipsis")[]>((acc, page, idx, arr) => {
+                        if (idx > 0 && page - (arr[idx - 1] as number) > 1) {
+                          acc.push("ellipsis");
+                        }
+                        acc.push(page);
+                        return acc;
+                      }, [])
+                      .map((item, idx) =>
+                        item === "ellipsis" ? (
+                          <span key={`e-${idx}`} className="px-2 text-muted-foreground text-sm">
+                            …
+                          </span>
+                        ) : (
+                          <Button
+                            key={item}
+                            variant={item === currentPage ? "default" : "outline"}
+                            size="sm"
+                            className="min-w-[2rem]"
+                            onClick={() => setCurrentPage(item)}
+                          >
+                            {item}
+                          </Button>
+                        )
+                      )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setCurrentPage((p) => p + 1)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
