@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 from urllib.parse import quote
 
+import httpx
+
 SelectionMode = Literal["overall_score", "tier1_score"]
+
+logger = logging.getLogger(__name__)
 
 INSIGHTS_BASE = "https://greatcommissionbenchmark.ai/insights"
 SITE_MODEL_BASE = "https://greatcommissionbenchmark.ai/leaderboard/models"
+_OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
 
 def _parse_completed_at(value: str | None) -> datetime | None:
@@ -148,6 +154,172 @@ def index_posts_by_model_id(items: list[dict[str, Any]]) -> dict[str, PostMatch]
     return out
 
 
+def openrouter_created_to_human(created: Any) -> str | None:
+    """Turn OpenRouter ``created`` (unix seconds or ISO-ish string) into a UTC calendar phrase."""
+    if created is None:
+        return None
+    try:
+        if isinstance(created, (int, float)):
+            dt = datetime.fromtimestamp(float(created), tz=timezone.utc)
+        else:
+            raw = str(created).strip()
+            if raw.endswith("Z"):
+                raw = raw[:-1] + "+00:00"
+            dt = datetime.fromisoformat(raw)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            else:
+                dt = dt.astimezone(timezone.utc)
+        return f"{dt.strftime('%B')} {dt.day}, {dt.year}"
+    except (OSError, OverflowError, TypeError, ValueError):
+        return None
+
+
+async def fetch_openrouter_created_map(model_ids: set[str]) -> dict[str, str | None]:
+    """Map ``model_id`` → human listing date from OpenRouter's public ``/models`` snapshot."""
+    if not model_ids:
+        return {}
+    out: dict[str, str | None] = {mid: None for mid in model_ids}
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.get(_OPENROUTER_MODELS_URL)
+    except httpx.RequestError as exc:
+        logger.warning("OpenRouter models fetch failed: %s", exc)
+        return out
+
+    if not resp.is_success:
+        logger.warning("OpenRouter models HTTP %s", resp.status_code)
+        return out
+
+    try:
+        payload = resp.json()
+    except ValueError:
+        return out
+
+    rows = payload.get("data")
+    if not isinstance(rows, list):
+        return out
+
+    lowered = {mid.lower(): mid for mid in model_ids}
+    for item in rows:
+        iid = item.get("id")
+        if not isinstance(iid, str):
+            continue
+        canon = lowered.get(iid.lower())
+        if not canon:
+            continue
+        out[canon] = openrouter_created_to_human(item.get("created"))
+
+    return out
+
+
+def tier_strength_sentence(entry: dict[str, Any]) -> str:
+    """One or two sentences from tier scores + verdict counts on the leaderboard row."""
+    t1 = entry.get("tier1_score")
+    t2 = entry.get("tier2_score")
+    t3 = entry.get("tier3_score")
+    triple: list[tuple[str, float]] = []
+    for label, val in (
+        ("Tier 1 (ministry-shaped tasks)", t1),
+        ("Tier 2 (doctrine-heavy prompts)", t2),
+        ("Tier 3 (direct worldview checks)", t3),
+    ):
+        if val is None:
+            continue
+        try:
+            triple.append((label, float(val)))
+        except (TypeError, ValueError):
+            continue
+
+    vd = entry.get("verdict_distribution") or {}
+    try:
+        acc = int(vd.get("ACCEPTED", 0) or 0)
+        comp = int(vd.get("COMPROMISED", 0) or 0)
+        ref = int(vd.get("REFUSED", 0) or 0)
+    except (TypeError, ValueError):
+        acc = comp = ref = 0
+
+    tq = entry.get("total_questions")
+    try:
+        nq = int(tq) if tq is not None else 150
+    except (TypeError, ValueError):
+        nq = 150
+
+    verdict_bits = (
+        f"Across **{nq}** benchmark items it logged **{acc}** accepts, **{comp}** compromises, "
+        f"and **{ref}** refusals."
+    )
+
+    if not triple:
+        return f"{verdict_bits} Tier-level breakdown was not available on this leaderboard snapshot."
+
+    best = max(triple, key=lambda x: x[1])
+    worst = min(triple, key=lambda x: x[1])
+    if best[0] == worst[0]:
+        return f"{verdict_bits} Raw tier scores sit around **{best[1]:.1f}/100**."
+
+    return (
+        f"{verdict_bits} Its strongest raw band is **{best[0]}** at **{best[1]:.1f}/100**, "
+        f"while its softest is **{worst[0]}** at **{worst[1]:.1f}/100**."
+    )
+
+
+def category_peak_sentence(category_scores: dict[str, Any] | None) -> str:
+    """Optional clause naming the highest-scoring GCB category buckets (percent scale)."""
+    if not category_scores:
+        return ""
+    scored: list[tuple[float, str]] = []
+    for key, val in category_scores.items():
+        try:
+            scored.append((float(val), str(key)))
+        except (TypeError, ValueError):
+            continue
+    if not scored:
+        return ""
+    scored.sort(reverse=True)
+    top_v, top_k = scored[0]
+    if top_v < 72.0:
+        return ""
+    extra = ""
+    if len(scored) > 1 and scored[1][0] >= 70.0:
+        extra = f", then **{scored[1][1]}** at **{scored[1][0]:.1f}%**"
+    return f" Category peaks include **{top_k}** at **{top_v:.1f}%**{extra}."
+
+
+async def build_spotlight_paragraphs(spotlight: list[dict[str, Any]]) -> dict[str, str]:
+    """Per ``model_id``, a short paragraph: publisher, OpenRouter listing date, GCB strengths."""
+    from gcb_mcp.public_api import get_model_test_result  # noqa: PLC0415
+
+    mids = {str(m.get("model_id")) for m in spotlight if m.get("model_id")}
+    created_map = await fetch_openrouter_created_map(mids)
+
+    out: dict[str, str] = {}
+    for m in spotlight:
+        mid = str(m.get("model_id") or "")
+        if not mid:
+            continue
+        name = str(m.get("name") or mid)
+        provider = str(m.get("provider") or (mid.split("/")[0] if "/" in mid else "unknown"))
+        rel = created_map.get(mid)
+        rel_clause = (
+            f"The OpenRouter public catalog shows a **created** listing date of **{rel}** (UTC)."
+            if rel
+            else "We could not resolve an OpenRouter **created** timestamp from the public catalog snapshot."
+        )
+        tier_line = tier_strength_sentence(m)
+        cat_clause = ""
+        detail = await get_model_test_result(mid)
+        if isinstance(detail, dict) and "error" not in detail:
+            cat_clause = category_peak_sentence(detail.get("category_scores"))
+
+        out[mid] = (
+            f"**Who publishes it:** `{name}` is distributed on OpenRouter under the **{provider}** "
+            f"provider namespace (`{mid}`). {rel_clause} "
+            f"**How it tested on GCB:** {tier_line}{cat_clause}"
+        )
+    return out
+
+
 def build_newsletter_markdown(
     *,
     month_label: str,
@@ -156,6 +328,7 @@ def build_newsletter_markdown(
     spotlight: list[dict[str, Any]],
     all_in_window: list[dict[str, Any]],
     post_by_model: dict[str, PostMatch],
+    spotlight_paragraphs: dict[str, str] | None = None,
 ) -> tuple[str, str, str]:
     """Return (title, excerpt, markdown_content)."""
     title = (
@@ -211,7 +384,10 @@ def build_newsletter_markdown(
         model_link = model_page_url(str(mid))
 
         lines.append(f"### {i}. {name}\n")
-        if provider:
+        para = (spotlight_paragraphs or {}).get(str(mid), "").strip()
+        if para:
+            lines.append(para + "\n\n")
+        elif provider:
             lines.append(f"*{provider}*\n")
         if desc:
             lines.append(f"> {desc}\n")

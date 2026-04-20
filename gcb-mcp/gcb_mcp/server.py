@@ -1375,6 +1375,7 @@ async def create_monthly_newsletter_draft(
     from gcb_mcp.header_svg import generate_and_upload_newsletter_header  # noqa: PLC0415
     from gcb_mcp.newsletter import (  # noqa: PLC0415
         build_newsletter_markdown,
+        build_spotlight_paragraphs,
         filter_and_rank_models,
         index_posts_by_model_id,
     )
@@ -1439,6 +1440,7 @@ async def create_monthly_newsletter_draft(
     post_by_model = index_posts_by_model_id(all_items)
 
     label = month_label or datetime.now(timezone.utc).strftime("%B %Y")
+    spotlight_paragraphs = await build_spotlight_paragraphs(spotlight)
     title, excerpt, content = build_newsletter_markdown(
         month_label=label,
         window_days=days_back,
@@ -1446,6 +1448,7 @@ async def create_monthly_newsletter_draft(
         spotlight=spotlight,
         all_in_window=by_date,
         post_by_model=post_by_model,
+        spotlight_paragraphs=spotlight_paragraphs,
     )
 
     header_result = await generate_and_upload_newsletter_header(month_label=label)

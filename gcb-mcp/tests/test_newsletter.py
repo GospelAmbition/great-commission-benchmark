@@ -10,6 +10,8 @@ from gcb_mcp.newsletter import (
     index_posts_by_model_id,
     insight_url,
     model_page_url,
+    openrouter_created_to_human,
+    tier_strength_sentence,
 )
 
 
@@ -32,6 +34,25 @@ def test_format_newsletter_header_dateline():
     assert format_newsletter_header_dateline(None, now=ref) == "April, 2026"
     assert format_newsletter_header_dateline("April 2026", now=ref) == "April, 2026"
     assert format_newsletter_header_dateline("March 2025", now=ref) == "March, 2025"
+
+
+def test_openrouter_created_to_human_unix():
+    ref = int(datetime(2026, 4, 1, tzinfo=timezone.utc).timestamp())
+    assert openrouter_created_to_human(ref) == "April 1, 2026"
+
+
+def test_tier_strength_sentence():
+    entry = {
+        "tier1_score": 90.0,
+        "tier2_score": 70.0,
+        "tier3_score": 80.0,
+        "verdict_distribution": {"ACCEPTED": 100, "COMPROMISED": 30, "REFUSED": 20},
+        "total_questions": 150,
+    }
+    s = tier_strength_sentence(entry)
+    assert "Tier 1" in s
+    assert "150" in s
+    assert "100" in s
 
 
 def test_clip_description():
