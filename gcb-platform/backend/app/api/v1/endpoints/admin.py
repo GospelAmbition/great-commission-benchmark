@@ -31,7 +31,6 @@ from app.db.models.blog_post import BlogPost
 from app.services.payment import PaymentService, EncryptionService
 from app.services.model_sync import sync_all_model_descriptions
 from app.services.action_log import ActionLogService
-from app.services.markdown_email import markdown_to_email_html_fragment, wrap_email_shell
 from app.schemas.admin import (
     UserListItem,
     UserListResponse,
@@ -2796,6 +2795,8 @@ async def preview_newsletter_html(
     db: Session = Depends(get_db),
 ):
     """Render a post's markdown body to sanitized HTML suitable for email (admin API key or JWT)."""
+    from app.services.markdown_email import markdown_to_email_html_fragment, wrap_email_shell  # noqa: PLC0415
+
     post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -2864,6 +2865,8 @@ async def send_newsletter_campaign(
             status_code=400,
             detail="MAILERLITE_GROUP_ID must be set to choose a recipient group.",
         )
+
+    from app.services.markdown_email import markdown_to_email_html_fragment, wrap_email_shell  # noqa: PLC0415
 
     inner = markdown_to_email_html_fragment(post.content or "")
     web_version_url = (
