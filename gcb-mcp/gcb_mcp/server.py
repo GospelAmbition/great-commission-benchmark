@@ -39,6 +39,8 @@ mcp = FastMCP(
         "list_published_models and get_model_test_result fetch published benchmark data from the platform. "
         "list_blog_posts, get_blog_post, create_blog_draft, update_blog_post, and publish_blog_post "
         "manage the GCB blog for agentic article authoring. "
+        "create_monthly_newsletter_draft assembles a digest post from recent leaderboard publications; "
+        "render_newsletter_email_html and send_newsletter_to_subscribers use the admin API (requires can_admin on the API key). "
         "create_model_review_draft generates a style-guide aligned benchmark article draft from published model results. "
         "generate_and_upload_header creates a programmatic SVG article header image. "
         "Authentication: GCB_API_KEY in the MCP environment is optional if "
@@ -1242,6 +1244,20 @@ async def _model_reviews_category_id() -> str | None:
     return None
 
 
+async def _newsletters_category_id() -> str | None:
+    """Resolve the category UUID for Newsletters if available."""
+    from gcb_mcp.blog import list_categories  # noqa: PLC0415
+
+    categories = await list_categories()
+    items = categories.get("items", []) if isinstance(categories, dict) else []
+    for item in items:
+        name = str(item.get("name", "")).strip().lower()
+        slug = str(item.get("slug", "")).strip().lower()
+        if name == "newsletters" or slug == "newsletters":
+            return str(item.get("id"))
+    return None
+
+
 @mcp.tool()
 async def create_model_review_draft(
     model_id: str,
@@ -1333,15 +1349,162 @@ async def create_model_review_draft(
 
 
 @mcp.tool()
+async def create_monthly_newsletter_draft(
+    days_back: int = 30,
+    selection: str = "overall_score",
+    top_spotlights: int = 2,
+    month_label: str | None = None,
+) -> dict[str, Any]:
+    """Create a draft insights post for the monthly newsletter digest.
+
+    Pulls the public leaderboard, keeps runs whose ``completed_at`` falls within
+    the last ``days_back`` days, picks the top ``top_spotlights`` models by
+    ``selection`` (``overall_score`` or ``tier1_score``), and lists every model
+    published in that window. Reuses ``featured_image_url`` from linked published
+    model-review posts when available.
+
+    Requires the same blog API key permissions as ``create_blog_draft``.
+    Assigns the **Newsletters** blog category when it exists on the site.
+    """
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from gcb_mcp.blog import build_live_url, create_post, generate_slug, list_posts  # noqa: PLC0415
+    from gcb_mcp.newsletter import (  # noqa: PLC0415
+        build_newsletter_markdown,
+        filter_and_rank_models,
+        index_posts_by_model_id,
+    )
+    from gcb_mcp.public_api import list_published_models  # noqa: PLC0415
+
+    if selection not in ("overall_score", "tier1_score"):
+        return {
+            "error": "invalid_argument",
+            "message": "selection must be 'overall_score' or 'tier1_score'",
+        }
+    if days_back < 1 or days_back > 120:
+        return {"error": "invalid_argument", "message": "days_back must be between 1 and 120"}
+    if top_spotlights < 1 or top_spotlights > 10:
+        return {"error": "invalid_argument", "message": "top_spotlights must be between 1 and 10"}
+
+    lb = await list_published_models(limit=100)
+    if "error" in lb:
+        return lb
+
+    models = lb.get("models") or []
+    by_date, by_score = filter_and_rank_models(
+        models,
+        days_back=days_back,
+        selection=selection,  # type: ignore[arg-type]
+    )
+
+    if not by_score:
+        return {
+            "error": "empty_window",
+            "message": (
+                f"No leaderboard publications in the last {days_back} days. "
+                "Widen the window or wait for new tests to publish."
+            ),
+        }
+
+    spotlight: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for entry in by_score:
+        mid = entry.get("model_id")
+        if not mid or mid in seen_ids:
+            continue
+        seen_ids.add(str(mid))
+        spotlight.append(entry)
+        if len(spotlight) >= top_spotlights:
+            break
+
+    all_items: list[dict[str, Any]] = []
+    offset = 0
+    total: int | None = None
+    while True:
+        batch = await list_posts(status="published", limit=100, offset=offset)
+        if "error" in batch:
+            return batch
+        items = batch.get("items") or []
+        all_items.extend(items)
+        if total is None:
+            total = int(batch.get("total") or len(items))
+        if len(items) < 100 or offset + len(items) >= total or len(all_items) >= 800:
+            break
+        offset += 100
+
+    post_by_model = index_posts_by_model_id(all_items)
+
+    label = month_label or datetime.now(timezone.utc).strftime("%B %Y")
+    title, excerpt, content = build_newsletter_markdown(
+        month_label=label,
+        window_days=days_back,
+        selection=selection,  # type: ignore[arg-type]
+        spotlight=spotlight,
+        all_in_window=by_date,
+        post_by_model=post_by_model,
+    )
+
+    featured: str | None = None
+    for m in spotlight:
+        pm = post_by_model.get(str(m.get("model_id")))
+        if pm and pm.featured_image_url:
+            featured = pm.featured_image_url
+            break
+
+    category_id = await _newsletters_category_id()
+    category_ids = [category_id] if category_id else []
+
+    model_ids_union: list[str] = []
+    for m in by_date[:50]:
+        mid = m.get("model_id")
+        if mid and str(mid) not in model_ids_union:
+            model_ids_union.append(str(mid))
+
+    slug_hint = await generate_slug(title)
+    slug_val = slug_hint.get("slug") if isinstance(slug_hint, dict) else None
+
+    created = await create_post(
+        title=title,
+        content=content,
+        excerpt=excerpt,
+        slug=slug_val,
+        featured_image_url=featured,
+        category_ids=category_ids,
+        model_ids=model_ids_union,
+        publish=False,
+    )
+    if "error" in created:
+        return created
+
+    slug = created.get("slug", "")
+    return {
+        **created,
+        "url": build_live_url(slug) if slug else None,
+        "window_models_count": len(by_date),
+        "spotlight_model_ids": [m.get("model_id") for m in spotlight],
+        "newsletters_category_applied": bool(category_id),
+        "admin_note": (
+            "Draft newsletter created. Human-review with get_blog_post / update_blog_post, "
+            "then publish_blog_post. For email: render_newsletter_email_html, then "
+            "send_newsletter_to_subscribers (dry_run first; requires admin API key)."
+        ),
+    }
+
+
+@mcp.tool()
 async def list_blog_posts(
     status: str | None = None,
     limit: int = 20,
+    offset: int = 0,
+    model_id: str | None = None,
 ) -> dict[str, Any]:
     """List GCB blog posts, optionally filtered by status.
 
     Args:
         status: Filter by 'draft' | 'published'. Omit for all posts.
-        limit:  Maximum number of posts to return (default 20).
+        limit:  Maximum number of posts to return (default 20, max 100).
+        offset: Pagination offset (default 0).
+        model_id: When set, only posts linked to this OpenRouter model_id (e.g. openai/gpt-4o).
 
     Returns a list with id, title, slug, status, excerpt, created_at for each post.
     """
@@ -1350,7 +1513,7 @@ async def list_blog_posts(
     valid = {None, "draft", "published"}
     if status not in valid:
         return {"error": "invalid_argument", "message": "status must be 'draft', 'published', or omitted"}
-    return await list_posts(status=status, limit=limit)
+    return await list_posts(status=status, limit=limit, offset=offset, model_id=model_id)
 
 
 @mcp.tool()
@@ -1498,6 +1661,39 @@ async def list_blog_categories() -> dict[str, Any]:
     from gcb_mcp.blog import list_categories  # noqa: PLC0415
 
     return await list_categories()
+
+
+@mcp.tool()
+async def render_newsletter_email_html(post_id: str) -> dict[str, Any]:
+    """Render a blog post as sanitized HTML suitable for email distribution.
+
+    Calls ``GET /api/admin/newsletter/preview-html`` using the configured GCB API key.
+    The key's user must have **can_admin** (same as other admin newsletter tools).
+
+    Args:
+        post_id: UUID of the insights post (draft or published).
+    """
+    from gcb_mcp.admin_api import preview_newsletter_html  # noqa: PLC0415
+
+    return await preview_newsletter_html(post_id=post_id)
+
+
+@mcp.tool()
+async def send_newsletter_to_subscribers(post_id: str, dry_run: bool = True) -> dict[str, Any]:
+    """Send the insights post as a MailerLite campaign to ``MAILERLITE_GROUP_ID``.
+
+    Always run with ``dry_run=true`` first after human approval. A real send
+    (``dry_run=false``) requires the post to be **published**, MailerLite
+    configured on the server, ``MAILERLITE_GROUP_ID`` set, and an API key whose
+    user has **can_admin**.
+
+    Args:
+        post_id: UUID of the published newsletter post.
+        dry_run: When true (default), only validates subscriber counts and configuration.
+    """
+    from gcb_mcp.admin_api import send_newsletter_campaign  # noqa: PLC0415
+
+    return await send_newsletter_campaign(post_id=post_id, dry_run=dry_run)
 
 
 @mcp.tool()

@@ -1,7 +1,11 @@
 """Newsletter service with MailerLite integration"""
+import logging
+import re
 import httpx
 from typing import Optional, Dict, Any, List, Tuple
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class NewsletterService:
@@ -260,3 +264,127 @@ class NewsletterService:
         except Exception as e:
             print(f"MailerLite list subscribers failed: {str(e)}")
             return [], None
+
+    @staticmethod
+    def _strip_html_for_plain(html: str, max_len: int = 12000) -> str:
+        text = re.sub(r"<[^>]+>", " ", html or "")
+        text = re.sub(r"\s+", " ", text).strip()
+        return text[:max_len]
+
+    @staticmethod
+    async def create_and_send_instant_regular_campaign(
+        *,
+        name: str,
+        subject: str,
+        html_content: str,
+        group_id: str,
+        from_email: str,
+        from_name: str,
+    ) -> Dict[str, Any]:
+        """
+        Create a MailerLite ``regular`` campaign with HTML content and send immediately.
+
+        Uses ``POST /api/campaigns`` then ``POST /api/campaigns/{id}/schedule`` with
+        ``{"delivery": "instant"}`` per MailerLite's current API.
+        """
+        if not NewsletterService.is_configured():
+            return {"ok": False, "error": "mailerlite_not_configured"}
+        if not group_id:
+            return {"ok": False, "error": "missing_group_id"}
+
+        plain = NewsletterService._strip_html_for_plain(html_content)
+        payload: Dict[str, Any] = {
+            "name": name[:255],
+            "type": "regular",
+            "emails": [
+                {
+                    "subject": subject[:255],
+                    "from": from_email,
+                    "from_name": from_name[:255],
+                    "content": html_content,
+                    "plain_text": plain,
+                }
+            ],
+            "groups": [group_id],
+        }
+
+        try:
+            async with httpx.AsyncClient() as client:
+                create = await client.post(
+                    f"{NewsletterService.MAILERLITE_API_BASE}/campaigns",
+                    headers=NewsletterService._get_headers(),
+                    json=payload,
+                    timeout=60.0,
+                )
+        except httpx.TimeoutException:
+            return {"ok": False, "error": "timeout", "step": "create"}
+        except Exception as exc:
+            logger.exception("MailerLite campaign create failed")
+            return {"ok": False, "error": "request_failed", "message": str(exc), "step": "create"}
+
+        if create.status_code not in (200, 201):
+            return {
+                "ok": False,
+                "error": "create_failed",
+                "status_code": create.status_code,
+                "detail": NewsletterService._safe_json(create),
+                "step": "create",
+            }
+
+        created = create.json()
+        campaign_id = (created.get("data") or {}).get("id")
+        if not campaign_id:
+            return {"ok": False, "error": "missing_campaign_id", "detail": created, "step": "create"}
+
+        schedule_url = f"{NewsletterService.MAILERLITE_API_BASE}/campaigns/{campaign_id}/schedule"
+        schedule_body = {"delivery": "instant"}
+
+        try:
+            async with httpx.AsyncClient() as client:
+                sched = await client.post(
+                    schedule_url,
+                    headers=NewsletterService._get_headers(),
+                    json=schedule_body,
+                    timeout=60.0,
+                )
+        except httpx.TimeoutException:
+            return {
+                "ok": False,
+                "error": "timeout",
+                "step": "schedule",
+                "campaign_id": str(campaign_id),
+            }
+        except Exception as exc:
+            logger.exception("MailerLite campaign schedule failed")
+            return {
+                "ok": False,
+                "error": "request_failed",
+                "message": str(exc),
+                "step": "schedule",
+                "campaign_id": str(campaign_id),
+            }
+
+        if sched.status_code not in (200, 201, 202, 204):
+            return {
+                "ok": False,
+                "error": "schedule_failed",
+                "status_code": sched.status_code,
+                "detail": NewsletterService._safe_json(sched),
+                "step": "schedule",
+                "campaign_id": str(campaign_id),
+            }
+
+        out: Dict[str, Any] = {"ok": True, "campaign_id": str(campaign_id)}
+        if sched.content:
+            try:
+                out["schedule_response"] = sched.json()
+            except Exception:
+                out["schedule_response"] = sched.text
+        return out
+
+    @staticmethod
+    def _safe_json(resp: httpx.Response) -> Any:
+        try:
+            return resp.json()
+        except Exception:
+            return resp.text

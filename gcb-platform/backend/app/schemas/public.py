@@ -13,6 +13,7 @@ class ModelSummary(GCBBaseModel):
     name: str
     provider: str
     model_id: str
+    description: Optional[str] = None  # Short catalog description (e.g. from OpenRouter)
 
 
 class TestRunSummary(GCBBaseModel):

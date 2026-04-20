@@ -1,4 +1,5 @@
 """Admin API endpoints"""
+from email.utils import parseaddr
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -11,6 +12,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from app.core.config import settings
 from app.core.auth import get_db, get_current_user, has_permission
 from app.core.auth import require_admin
 from app.db.models.user import User
@@ -25,9 +27,11 @@ from app.db.models.community_submission import CommunitySubmission
 from app.db.models.stripe_config import StripeConfig
 from app.db.models.sponsorship_request import SponsorshipRequest
 from app.db.models.action_log import ActionLog
+from app.db.models.blog_post import BlogPost
 from app.services.payment import PaymentService, EncryptionService
 from app.services.model_sync import sync_all_model_descriptions
 from app.services.action_log import ActionLogService
+from app.services.markdown_email import markdown_to_email_html_fragment, wrap_email_shell
 from app.schemas.admin import (
     UserListItem,
     UserListResponse,
@@ -71,6 +75,9 @@ from app.schemas.admin import (
     NewsletterStatsResponse,
     MailerLiteSubscriberItem,
     MailerLiteSubscriberListResponse,
+    NewsletterHtmlPreviewResponse,
+    NewsletterSendRequest,
+    NewsletterSendResponse,
 )
 from app.schemas.sponsorship import (
     AdminSponsorshipItem,
@@ -2780,6 +2787,138 @@ async def delete_newsletter_subscriber(
         "success": True,
         "message": f"Subscriber {email} removed",
     }
+
+
+@router.get("/newsletter/preview-html", response_model=NewsletterHtmlPreviewResponse)
+async def preview_newsletter_html(
+    post_id: UUID = Query(..., description="Blog post UUID (insights article)"),
+    current_user: User = Depends(require_admin_flexible),
+    db: Session = Depends(get_db),
+):
+    """Render a post's markdown body to sanitized HTML suitable for email (admin API key or JWT)."""
+    post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    inner = markdown_to_email_html_fragment(post.content or "")
+    web_version_url = (
+        f"https://greatcommissionbenchmark.ai/insights/{post.slug}" if post.slug else None
+    )
+    full_html = wrap_email_shell(
+        inner,
+        title=post.title,
+        web_version_url=web_version_url,
+    )
+    return NewsletterHtmlPreviewResponse(
+        subject=post.title,
+        html=full_html,
+        web_version_url=web_version_url,
+    )
+
+
+@router.post("/newsletter/send", response_model=NewsletterSendResponse)
+async def send_newsletter_campaign(
+    request: NewsletterSendRequest,
+    current_user: User = Depends(require_admin_flexible),
+    db: Session = Depends(get_db),
+):
+    """Create a MailerLite regular campaign and send immediately to ``MAILERLITE_GROUP_ID``.
+
+    Use ``dry_run=true`` first to validate configuration and subscriber counts.
+    A real send requires the post to be **published**, MailerLite configured,
+    and ``MAILERLITE_GROUP_ID`` set.
+    """
+    post = db.query(BlogPost).filter(BlogPost.id == request.post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    active_subscribers = db.query(NewsletterSubscriber).filter(
+        NewsletterSubscriber.is_active == True
+    ).count()
+
+    if request.dry_run:
+        return NewsletterSendResponse(
+            dry_run=True,
+            active_subscribers=active_subscribers,
+            campaign_id=None,
+            message=(
+                f"Dry run OK: {active_subscribers} active subscribers in the platform database; "
+                f"post status={post.status}. Set dry_run=false to send via MailerLite."
+            ),
+        )
+
+    if post.status != "published":
+        raise HTTPException(
+            status_code=400,
+            detail="Post must be published before sending the newsletter.",
+        )
+
+    if not NewsletterService.is_configured():
+        raise HTTPException(
+            status_code=400,
+            detail="MailerLite is not configured. Set MAILERLITE_API_KEY.",
+        )
+
+    if not settings.MAILERLITE_GROUP_ID:
+        raise HTTPException(
+            status_code=400,
+            detail="MAILERLITE_GROUP_ID must be set to choose a recipient group.",
+        )
+
+    inner = markdown_to_email_html_fragment(post.content or "")
+    web_version_url = (
+        f"https://greatcommissionbenchmark.ai/insights/{post.slug}" if post.slug else None
+    )
+    full_html = wrap_email_shell(
+        inner,
+        title=post.title,
+        web_version_url=web_version_url,
+    )
+
+    from_name, from_email = parseaddr(settings.EMAIL_FROM)
+    if not from_email:
+        raise HTTPException(
+            status_code=500,
+            detail="EMAIL_FROM must be a valid address for campaign sender (e.g. 'Name <addr@domain>').",
+        )
+    if not from_name.strip():
+        from_name = "Great Commission Benchmark"
+
+    result = await NewsletterService.create_and_send_instant_regular_campaign(
+        name=f"Newsletter: {post.title}"[:255],
+        subject=(post.title or "Great Commission Benchmark")[:255],
+        html_content=full_html,
+        group_id=settings.MAILERLITE_GROUP_ID,
+        from_email=from_email,
+        from_name=from_name,
+    )
+
+    if not result.get("ok"):
+        raise HTTPException(
+            status_code=502,
+            detail={"message": "MailerLite campaign failed", "result": result},
+        )
+
+    ActionLogService.log_action(
+        db,
+        "newsletter.campaign_send",
+        "user",
+        actor_user_id=current_user.id,
+        entity_type="blog_post",
+        entity_id=str(post.id),
+        metadata={
+            "campaign_id": result.get("campaign_id"),
+            "slug": post.slug,
+            "active_subscribers": active_subscribers,
+        },
+    )
+
+    return NewsletterSendResponse(
+        dry_run=False,
+        active_subscribers=active_subscribers,
+        campaign_id=result.get("campaign_id"),
+        message=f"Queued MailerLite campaign {result.get('campaign_id')} to group {settings.MAILERLITE_GROUP_ID}.",
+    )
 
 
 # =============================================================================

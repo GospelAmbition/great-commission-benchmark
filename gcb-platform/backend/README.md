@@ -194,6 +194,28 @@ View current revision:
 alembic current
 ```
 
+### Blog posts: legacy HTML → Markdown
+
+Insights posts live in `blog_posts.content` (and sometimes `excerpt`). Older rows may still store **HTML** from a pre-Markdown CMS. Helpers live in `app/services/blog_html_detection.py` and `app/services/blog_html_to_markdown.py` (uses **markdownify**).
+
+**Audit (read-only)** — list posts whose body/excerpt look like HTML, with a confidence label:
+
+```bash
+cd gcb-platform/backend && source venv/bin/activate
+python scripts/audit_blog_legacy_html.py
+python scripts/audit_blog_legacy_html.py --min-confidence high --json > /tmp/blog-html-report.json
+```
+
+**Migrate (dry-run by default)** — print proposed Markdown; add `--apply` to write. Use `--backup-dir` with `--apply` to dump each row’s original `content`/`excerpt` as JSON before overwrite:
+
+```bash
+python scripts/migrate_blog_legacy_html_to_markdown.py
+python scripts/migrate_blog_legacy_html_to_markdown.py --min-confidence high --ids <uuid>
+python scripts/migrate_blog_legacy_html_to_markdown.py --apply --backup-dir ./blog_html_backup
+```
+
+Review dry-run output on staging first; complex HTML layouts may need manual cleanup after conversion.
+
 ## Redis Cache
 
 The leaderboard and other public caches can be backed by Redis so that data
@@ -278,7 +300,7 @@ pytest tests/test_phase_e.py -v
 | `RESEND_API_KEY` | Resend email API key | Optional |
 | `EMAIL_FROM` | Email sender address | Required if using email |
 | `MAILERLITE_API_KEY` | MailerLite newsletter API key | Optional |
-| `MAILERLITE_GROUP_ID` | MailerLite subscriber group ID | Optional |
+| `MAILERLITE_GROUP_ID` | MailerLite subscriber group ID (required for API campaign sends) | Optional |
 | `S3_ACCESS_KEY_ID` | S3-compatible storage access key | Optional |
 | `S3_SECRET_ACCESS_KEY` | S3-compatible storage secret | Optional |
 | `S3_BUCKET` | Storage bucket name | Optional |
@@ -307,6 +329,15 @@ The following security headers are added to all responses:
 - Email validation on user inputs
 - Length limits on text fields
 - Google reCAPTCHA v3 spam protection on newsletter subscriptions
+
+### Monthly newsletter (MailerLite campaigns)
+
+Admin endpoints (JWT or `X-API-Key` with **`can_admin`**, same flexible auth as other admin tooling):
+
+- `GET /api/admin/newsletter/preview-html?post_id=<uuid>` — returns `{ subject, html, web_version_url }` for a draft or published insights post.
+- `POST /api/admin/newsletter/send` with JSON `{ "post_id": "<uuid>", "dry_run": true|false }` — `dry_run=true` returns active subscriber counts without contacting MailerLite; `dry_run=false` creates a MailerLite **regular** campaign with HTML content and schedules **instant** delivery to **`MAILERLITE_GROUP_ID`**. The post must already be **published**.
+
+The campaign sender uses the address parsed from **`EMAIL_FROM`** (`Name <email@domain>`); that address must be a **verified sender** in MailerLite. Custom HTML may require a MailerLite plan that supports the HTML editor; if MailerLite rejects the payload, check the API error in server logs.
 
 ### Authentication
 

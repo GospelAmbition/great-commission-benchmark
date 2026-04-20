@@ -46,7 +46,7 @@ async def list_published_models(limit: int = 50) -> dict[str, Any]:
     url = f"{base}/leaderboard"
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
-            resp = await client.get(url, params={"limit": min(limit, 200)})
+            resp = await client.get(url, params={"limit": min(limit, 100)})
     except httpx.RequestError as exc:
         return {"error": "request_failed", "message": str(exc), "url": url}
 
@@ -77,6 +77,7 @@ async def list_published_models(limit: int = 50) -> dict[str, Any]:
                 "model_id": model.get("model_id") or e.get("model_id"),
                 "name": model.get("name") or e.get("name"),
                 "provider": model.get("provider") or e.get("provider"),
+                "description": model.get("description"),
                 "overall_score": scores.get("overall"),
                 "tier1_score": scores.get("tier1"),
                 "tier2_score": scores.get("tier2"),

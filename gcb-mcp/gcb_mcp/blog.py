@@ -53,11 +53,18 @@ async def list_posts(
     status: str | None = None,
     limit: int = 20,
     offset: int = 0,
+    model_id: str | None = None,
 ) -> dict[str, Any]:
-    """List blog posts. status: 'draft' | 'published' | None (all)."""
+    """List blog posts. status: 'draft' | 'published' | None (all).
+
+    When ``model_id`` is set (OpenRouter id, e.g. ``openai/gpt-4o``), only posts
+    linked to that benchmark model are returned.
+    """
     params: dict[str, Any] = {"limit": min(limit, 100), "offset": offset}
     if status:
         params["status"] = status
+    if model_id:
+        params["model_id"] = model_id
 
     url = _blog_url("/posts")
     try:

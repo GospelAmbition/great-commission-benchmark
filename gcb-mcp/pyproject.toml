@@ -27,3 +27,8 @@ include = [
     "scripts/*.sh",
     "pyproject.toml",
 ]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4",
+]

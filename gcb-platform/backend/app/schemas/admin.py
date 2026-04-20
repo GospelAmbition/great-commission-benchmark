@@ -417,3 +417,24 @@ class MailerLiteSubscriberListResponse(BaseModel):
     items: List[MailerLiteSubscriberItem]
     next_cursor: Optional[str] = None
     has_more: bool = False
+
+
+class NewsletterHtmlPreviewResponse(BaseModel):
+    """Sanitized HTML for a blog post as an email-ready newsletter body."""
+    subject: str
+    html: str
+    web_version_url: Optional[str] = None
+
+
+class NewsletterSendRequest(BaseModel):
+    """Send the given insights post as a MailerLite campaign to the configured group."""
+    post_id: UUID
+    dry_run: bool = True
+
+
+class NewsletterSendResponse(BaseModel):
+    """Result of a newsletter send (or dry run)."""
+    dry_run: bool
+    active_subscribers: int
+    campaign_id: Optional[str] = None
+    message: str

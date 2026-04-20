@@ -285,7 +285,8 @@ async def _generate_leaderboard_data(
                 id=test_run.model.id,
                 name=test_run.model.name,
                 provider=test_run.model.provider,
-                model_id=test_run.model.model_id
+                model_id=test_run.model.model_id,
+                description=test_run.model.description,
             ),
             test_run=TestRunSummary(
                 id=test_run.id,
