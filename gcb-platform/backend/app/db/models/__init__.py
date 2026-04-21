@@ -21,6 +21,8 @@ from app.db.models.volunteer_application import VolunteerApplication
 from app.db.models.contact_submission import ContactSubmission
 from app.db.models.notification_setting import NotificationSetting
 from app.db.models.action_log import ActionLog
+from app.db.models.newsletter_test_recipient import NewsletterTestRecipient
+from app.db.models.newsletter_campaign_send import NewsletterCampaignSend
 
 __all__ = [
     "User",
@@ -44,4 +46,6 @@ __all__ = [
     "ContactSubmission",
     "NotificationSetting",
     "ActionLog",
+    "NewsletterTestRecipient",
+    "NewsletterCampaignSend",
 ]

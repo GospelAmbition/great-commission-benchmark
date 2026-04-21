@@ -6,6 +6,7 @@ from typing import Generator, Callable
 from unittest.mock import patch, MagicMock
 from sqlalchemy import create_engine, event, TypeDecorator, String
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
@@ -96,13 +97,16 @@ from app.db.models.test_run import TestRun
 from app.db.models.result import Result
 from app.db.models.moderation_log import ModerationLog
 from app.db.models.community_submission import CommunitySubmission
+from app.db.models.newsletter_test_recipient import NewsletterTestRecipient
+from app.db.models.newsletter_campaign_send import NewsletterCampaignSend
 
 
 # Test database engine (SQLite in-memory)
 TEST_DATABASE_URL = "sqlite:///:memory:"
 test_engine = create_engine(
     TEST_DATABASE_URL, 
-    connect_args={"check_same_thread": False}
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
 )
 
 @event.listens_for(test_engine, "connect")

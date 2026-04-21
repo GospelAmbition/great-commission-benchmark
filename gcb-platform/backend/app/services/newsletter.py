@@ -2,7 +2,7 @@
 import logging
 import re
 import httpx
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Any, List, Tuple, Literal
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,67 @@ class NewsletterService:
     def is_configured() -> bool:
         """Check if MailerLite is configured"""
         return bool(settings.MAILERLITE_API_KEY)
+
+    @staticmethod
+    def production_group_id() -> str:
+        """Resolve production audience group with backward compatibility."""
+        return settings.MAILERLITE_PROD_GROUP_ID or settings.MAILERLITE_GROUP_ID
+
+    @staticmethod
+    def test_group_id() -> str:
+        """Resolve test audience group."""
+        return settings.MAILERLITE_TEST_GROUP_ID
+
+    @staticmethod
+    def audience_group_id(audience: Literal["test", "production"]) -> str:
+        """Resolve MailerLite group ID for the requested audience."""
+        if audience == "test":
+            return NewsletterService.test_group_id()
+        return NewsletterService.production_group_id()
+
+    @staticmethod
+    async def sync_subscriber_to_group(email: str, group_id: Optional[str]) -> Optional[str]:
+        """Add or update a subscriber and optionally attach them to a specific group."""
+        if not NewsletterService.is_configured():
+            print(f"MailerLite not configured - skipping sync for {email}")
+            return None
+
+        try:
+            async with httpx.AsyncClient() as client:
+                payload: Dict[str, Any] = {
+                    "email": email,
+                    "status": "active",
+                }
+                if group_id:
+                    payload["groups"] = [group_id]
+
+                response = await client.post(
+                    f"{NewsletterService.MAILERLITE_API_BASE}/subscribers",
+                    headers=NewsletterService._get_headers(),
+                    json=payload,
+                    timeout=10.0,
+                )
+
+                if response.status_code in (200, 201):
+                    data = response.json()
+                    subscriber_id = data.get("data", {}).get("id")
+                    print(f"MailerLite: Synced subscriber {email} (ID: {subscriber_id})")
+                    return str(subscriber_id) if subscriber_id else None
+                if response.status_code == 422:
+                    existing = await NewsletterService.get_mailerlite_subscriber(email)
+                    if existing:
+                        return existing.get("id")
+                    return None
+
+                print(f"MailerLite API error: {response.status_code} - {response.text}")
+                return None
+
+        except httpx.TimeoutException:
+            print(f"MailerLite API timeout for {email}")
+            return None
+        except Exception as e:
+            print(f"MailerLite sync failed for {email}: {str(e)}")
+            return None
     
     @staticmethod
     async def sync_subscriber_to_mailerlite(email: str) -> Optional[str]:
@@ -38,50 +99,8 @@ class NewsletterService:
         Returns:
             MailerLite subscriber ID if successful, None otherwise
         """
-        if not NewsletterService.is_configured():
-            print(f"MailerLite not configured - skipping sync for {email}")
-            return None
-        
-        try:
-            async with httpx.AsyncClient() as client:
-                # Create/update subscriber
-                payload: Dict[str, Any] = {
-                    "email": email,
-                    "status": "active"
-                }
-                
-                # Add to specific group if configured
-                if settings.MAILERLITE_GROUP_ID:
-                    payload["groups"] = [settings.MAILERLITE_GROUP_ID]
-                
-                response = await client.post(
-                    f"{NewsletterService.MAILERLITE_API_BASE}/subscribers",
-                    headers=NewsletterService._get_headers(),
-                    json=payload,
-                    timeout=10.0
-                )
-                
-                if response.status_code in (200, 201):
-                    data = response.json()
-                    subscriber_id = data.get("data", {}).get("id")
-                    print(f"MailerLite: Synced subscriber {email} (ID: {subscriber_id})")
-                    return str(subscriber_id) if subscriber_id else None
-                elif response.status_code == 422:
-                    # Subscriber already exists - try to get their ID
-                    existing = await NewsletterService.get_mailerlite_subscriber(email)
-                    if existing:
-                        return existing.get("id")
-                    return None
-                else:
-                    print(f"MailerLite API error: {response.status_code} - {response.text}")
-                    return None
-                    
-        except httpx.TimeoutException:
-            print(f"MailerLite API timeout for {email}")
-            return None
-        except Exception as e:
-            print(f"MailerLite sync failed for {email}: {str(e)}")
-            return None
+        production_group = NewsletterService.production_group_id()
+        return await NewsletterService.sync_subscriber_to_group(email, production_group)
     
     @staticmethod
     async def remove_subscriber_from_mailerlite(email: str) -> bool:
@@ -128,6 +147,39 @@ class NewsletterService:
             return False
         except Exception as e:
             print(f"MailerLite unsubscribe failed for {email}: {str(e)}")
+            return False
+
+    @staticmethod
+    async def remove_subscriber_from_group(email: str, group_id: str) -> bool:
+        """Remove a subscriber from a specific MailerLite group without global unsubscribe."""
+        if not NewsletterService.is_configured() or not group_id:
+            return False
+
+        try:
+            subscriber = await NewsletterService.get_mailerlite_subscriber(email)
+            if not subscriber:
+                return True
+
+            subscriber_id = subscriber.get("id")
+            if not subscriber_id:
+                return False
+
+            async with httpx.AsyncClient() as client:
+                response = await client.delete(
+                    f"{NewsletterService.MAILERLITE_API_BASE}/groups/{group_id}/subscribers/{subscriber_id}",
+                    headers=NewsletterService._get_headers(),
+                    timeout=10.0,
+                )
+                if response.status_code in (200, 202, 204, 404):
+                    return True
+
+                print(f"MailerLite remove-from-group error: {response.status_code} - {response.text}")
+                return False
+        except httpx.TimeoutException:
+            print(f"MailerLite API timeout removing {email} from group {group_id}")
+            return False
+        except Exception as e:
+            print(f"MailerLite remove-from-group failed for {email}: {str(e)}")
             return False
     
     @staticmethod
@@ -235,9 +287,10 @@ class NewsletterService:
             if cursor:
                 params["cursor"] = cursor
             
-            # Use group-specific endpoint if group ID is configured
-            if settings.MAILERLITE_GROUP_ID:
-                url = f"{NewsletterService.MAILERLITE_API_BASE}/groups/{settings.MAILERLITE_GROUP_ID}/subscribers"
+            # Use production group-specific endpoint if configured.
+            production_group = NewsletterService.production_group_id()
+            if production_group:
+                url = f"{NewsletterService.MAILERLITE_API_BASE}/groups/{production_group}/subscribers"
             else:
                 url = f"{NewsletterService.MAILERLITE_API_BASE}/subscribers"
             

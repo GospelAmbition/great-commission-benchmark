@@ -77,6 +77,10 @@ from app.schemas.admin import (
     NewsletterHtmlPreviewResponse,
     NewsletterSendRequest,
     NewsletterSendResponse,
+    NewsletterTestRecipientListItem,
+    NewsletterTestRecipientListResponse,
+    NewsletterTestRecipientCreateRequest,
+    NewsletterTestRecipientUpdateRequest,
 )
 from app.schemas.sponsorship import (
     AdminSponsorshipItem,
@@ -2535,6 +2539,8 @@ async def update_notification_setting(
 # =============================================================================
 
 from app.db.models.newsletter_subscriber import NewsletterSubscriber
+from app.db.models.newsletter_test_recipient import NewsletterTestRecipient
+from app.db.models.newsletter_campaign_send import NewsletterCampaignSend
 from app.services.newsletter import NewsletterService
 
 
@@ -2788,6 +2794,217 @@ async def delete_newsletter_subscriber(
     }
 
 
+@router.get("/newsletter/test-recipients", response_model=NewsletterTestRecipientListResponse)
+async def list_newsletter_test_recipients(
+    status: Optional[str] = Query(None, description="Filter by status: active, inactive"),
+    search: Optional[str] = Query(None, description="Search by email or name"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """List admin-managed newsletter test recipients."""
+    query = db.query(NewsletterTestRecipient)
+
+    if status == "active":
+        query = query.filter(NewsletterTestRecipient.is_active == True)
+    elif status == "inactive":
+        query = query.filter(NewsletterTestRecipient.is_active == False)
+
+    if search:
+        query = query.filter(
+            or_(
+                NewsletterTestRecipient.email.ilike(f"%{search}%"),
+                NewsletterTestRecipient.name.ilike(f"%{search}%"),
+            )
+        )
+
+    total = query.count()
+    recipients = query.order_by(desc(NewsletterTestRecipient.created_at)).offset(offset).limit(limit).all()
+
+    items = [
+        NewsletterTestRecipientListItem(
+            id=recipient.id,
+            email=recipient.email,
+            name=recipient.name,
+            is_active=recipient.is_active,
+            notes=recipient.notes,
+            mailerlite_subscriber_id=recipient.mailerlite_subscriber_id,
+            created_by_user_id=recipient.created_by_user_id,
+            created_at=recipient.created_at,
+            updated_at=recipient.updated_at,
+        )
+        for recipient in recipients
+    ]
+    return NewsletterTestRecipientListResponse(items=items, total=total)
+
+
+@router.post("/newsletter/test-recipients", response_model=NewsletterTestRecipientListItem)
+async def create_newsletter_test_recipient(
+    request: NewsletterTestRecipientCreateRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Create a new managed newsletter test recipient."""
+    current_user_id = current_user.id
+
+    existing = db.query(NewsletterTestRecipient).filter(
+        NewsletterTestRecipient.email == request.email
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Test recipient already exists")
+
+    recipient = NewsletterTestRecipient(
+        email=request.email,
+        name=request.name,
+        notes=request.notes,
+        is_active=request.is_active,
+        created_by_user_id=current_user_id,
+    )
+    db.add(recipient)
+    db.flush()
+
+    if recipient.is_active and NewsletterService.is_configured():
+        ml_id = await NewsletterService.sync_subscriber_to_group(
+            recipient.email,
+            NewsletterService.test_group_id(),
+        )
+        if ml_id:
+            recipient.mailerlite_subscriber_id = str(ml_id)
+
+    db.commit()
+    db.refresh(recipient)
+
+    ActionLogService.log_action(
+        db,
+        "newsletter.test_recipient_create",
+        "user",
+        actor_user_id=current_user_id,
+        entity_type="newsletter_test_recipient",
+        entity_id=str(recipient.id),
+        metadata={"email": recipient.email, "is_active": recipient.is_active},
+    )
+
+    return NewsletterTestRecipientListItem(
+        id=recipient.id,
+        email=recipient.email,
+        name=recipient.name,
+        is_active=recipient.is_active,
+        notes=recipient.notes,
+        mailerlite_subscriber_id=recipient.mailerlite_subscriber_id,
+        created_by_user_id=recipient.created_by_user_id,
+        created_at=recipient.created_at,
+        updated_at=recipient.updated_at,
+    )
+
+
+@router.patch("/newsletter/test-recipients/{recipient_id}", response_model=NewsletterTestRecipientListItem)
+async def update_newsletter_test_recipient(
+    recipient_id: UUID,
+    request: NewsletterTestRecipientUpdateRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Update managed newsletter test recipient fields."""
+    current_user_id = current_user.id
+
+    recipient = db.query(NewsletterTestRecipient).filter(
+        NewsletterTestRecipient.id == recipient_id
+    ).first()
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Test recipient not found")
+
+    if request.email and request.email != recipient.email:
+        existing = db.query(NewsletterTestRecipient).filter(
+            NewsletterTestRecipient.email == request.email,
+            NewsletterTestRecipient.id != recipient_id,
+        ).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Email already used by another test recipient")
+        recipient.email = request.email
+    if request.name is not None:
+        recipient.name = request.name
+    if request.notes is not None:
+        recipient.notes = request.notes
+    if request.is_active is not None:
+        recipient.is_active = request.is_active
+
+    if request.is_active is not None and NewsletterService.is_configured():
+        if request.is_active:
+            ml_id = await NewsletterService.sync_subscriber_to_group(
+                recipient.email,
+                NewsletterService.test_group_id(),
+            )
+            if ml_id:
+                recipient.mailerlite_subscriber_id = str(ml_id)
+        else:
+            await NewsletterService.remove_subscriber_from_group(
+                recipient.email,
+                NewsletterService.test_group_id(),
+            )
+
+    db.commit()
+    db.refresh(recipient)
+
+    ActionLogService.log_action(
+        db,
+        "newsletter.test_recipient_update",
+        "user",
+        actor_user_id=current_user_id,
+        entity_type="newsletter_test_recipient",
+        entity_id=str(recipient.id),
+        metadata={"email": recipient.email, "is_active": recipient.is_active},
+    )
+
+    return NewsletterTestRecipientListItem(
+        id=recipient.id,
+        email=recipient.email,
+        name=recipient.name,
+        is_active=recipient.is_active,
+        notes=recipient.notes,
+        mailerlite_subscriber_id=recipient.mailerlite_subscriber_id,
+        created_by_user_id=recipient.created_by_user_id,
+        created_at=recipient.created_at,
+        updated_at=recipient.updated_at,
+    )
+
+
+@router.delete("/newsletter/test-recipients/{recipient_id}")
+async def delete_newsletter_test_recipient(
+    recipient_id: UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Soft-delete a managed newsletter test recipient (set inactive)."""
+    current_user_id = current_user.id
+
+    recipient = db.query(NewsletterTestRecipient).filter(
+        NewsletterTestRecipient.id == recipient_id
+    ).first()
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Test recipient not found")
+
+    recipient.is_active = False
+    if NewsletterService.is_configured():
+        await NewsletterService.remove_subscriber_from_group(
+            recipient.email,
+            NewsletterService.test_group_id(),
+        )
+    db.commit()
+
+    ActionLogService.log_action(
+        db,
+        "newsletter.test_recipient_delete",
+        "user",
+        actor_user_id=current_user_id,
+        entity_type="newsletter_test_recipient",
+        entity_id=str(recipient.id),
+        metadata={"email": recipient.email},
+    )
+
+    return {"success": True, "message": f"Test recipient {recipient.email} deactivated"}
+
+
 @router.get("/newsletter/preview-html", response_model=NewsletterHtmlPreviewResponse)
 async def preview_newsletter_html(
     post_id: UUID = Query(..., description="Blog post UUID (insights article)"),
@@ -2823,35 +3040,64 @@ async def send_newsletter_campaign(
     current_user: User = Depends(require_admin_flexible),
     db: Session = Depends(get_db),
 ):
-    """Create a MailerLite regular campaign and send immediately to ``MAILERLITE_GROUP_ID``.
+    """Send newsletter post to test or production audience with safety guardrails."""
+    current_user_id = current_user.id
 
-    Use ``dry_run=true`` first to validate configuration and subscriber counts.
-    A real send requires the post to be **published**, MailerLite configured,
-    and ``MAILERLITE_GROUP_ID`` set.
-    """
     post = db.query(BlogPost).filter(BlogPost.id == request.post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    active_subscribers = db.query(NewsletterSubscriber).filter(
-        NewsletterSubscriber.is_active == True
-    ).count()
+    if request.audience == "test":
+        recipient_count = db.query(NewsletterTestRecipient).filter(
+            NewsletterTestRecipient.is_active == True
+        ).count()
+        recipient_count_source = "newsletter_test_recipients"
+    else:
+        recipient_count = db.query(NewsletterSubscriber).filter(
+            NewsletterSubscriber.is_active == True
+        ).count()
+        recipient_count_source = "newsletter_subscribers_active"
+
+    target_group_id = NewsletterService.audience_group_id(request.audience)
+    already_sent = db.query(NewsletterCampaignSend).filter(
+        NewsletterCampaignSend.post_id == post.id,
+        NewsletterCampaignSend.audience == request.audience,
+        NewsletterCampaignSend.status == "sent",
+    ).first()
 
     if request.dry_run:
         return NewsletterSendResponse(
             dry_run=True,
-            active_subscribers=active_subscribers,
+            audience=request.audience,
+            recipient_count=recipient_count,
+            recipient_count_source=recipient_count_source,
+            target_group_id=target_group_id or None,
+            post_status=post.status,
+            already_sent=bool(already_sent),
             campaign_id=None,
             message=(
-                f"Dry run OK: {active_subscribers} active subscribers in the platform database; "
-                f"post status={post.status}. Set dry_run=false to send via MailerLite."
+                f"Dry run OK for {request.audience} audience: {recipient_count} recipients in "
+                f"{recipient_count_source}; post status={post.status}. "
+                f"Set dry_run=false to send via MailerLite."
             ),
         )
 
-    if post.status != "published":
+    if request.audience == "production" and post.status != "published":
         raise HTTPException(
             status_code=400,
-            detail="Post must be published before sending the newsletter.",
+            detail="Post must be published before production send.",
+        )
+
+    if request.audience == "production" and not request.confirm_production_send:
+        raise HTTPException(
+            status_code=400,
+            detail="Production send requires confirm_production_send=true.",
+        )
+
+    if already_sent and request.audience == "production" and not request.force_resend:
+        raise HTTPException(
+            status_code=409,
+            detail="A production send already exists for this post. Set force_resend=true to override.",
         )
 
     if not NewsletterService.is_configured():
@@ -2860,10 +3106,20 @@ async def send_newsletter_campaign(
             detail="MailerLite is not configured. Set MAILERLITE_API_KEY.",
         )
 
-    if not settings.MAILERLITE_GROUP_ID:
+    if not target_group_id:
         raise HTTPException(
             status_code=400,
-            detail="MAILERLITE_GROUP_ID must be set to choose a recipient group.",
+            detail=(
+                "MailerLite group is not configured for this audience. "
+                "Set MAILERLITE_TEST_GROUP_ID for test sends or "
+                "MAILERLITE_PROD_GROUP_ID / MAILERLITE_GROUP_ID for production sends."
+            ),
+        )
+
+    if recipient_count == 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No active recipients found for {request.audience} audience.",
         )
 
     from app.services.markdown_email import markdown_to_email_html_fragment, wrap_email_shell  # noqa: PLC0415
@@ -2891,7 +3147,7 @@ async def send_newsletter_campaign(
         name=f"Newsletter: {post.title}"[:255],
         subject=(post.title or "Great Commission Benchmark")[:255],
         html_content=full_html,
-        group_id=settings.MAILERLITE_GROUP_ID,
+        group_id=target_group_id,
         from_email=from_email,
         from_name=from_name,
     )
@@ -2902,25 +3158,48 @@ async def send_newsletter_campaign(
             detail={"message": "MailerLite campaign failed", "result": result},
         )
 
+    send_log = NewsletterCampaignSend(
+        post_id=post.id,
+        audience=request.audience,
+        campaign_id=result.get("campaign_id"),
+        recipient_count=recipient_count,
+        status="sent",
+        provider="mailerlite",
+        sent_by_user_id=current_user_id,
+    )
+    db.add(send_log)
+    db.commit()
+
     ActionLogService.log_action(
         db,
         "newsletter.campaign_send",
         "user",
-        actor_user_id=current_user.id,
+        actor_user_id=current_user_id,
         entity_type="blog_post",
         entity_id=str(post.id),
         metadata={
             "campaign_id": result.get("campaign_id"),
             "slug": post.slug,
-            "active_subscribers": active_subscribers,
+            "audience": request.audience,
+            "recipient_count": recipient_count,
+            "target_group_id": target_group_id,
+            "force_resend": request.force_resend,
         },
     )
 
     return NewsletterSendResponse(
         dry_run=False,
-        active_subscribers=active_subscribers,
+        audience=request.audience,
+        recipient_count=recipient_count,
+        recipient_count_source=recipient_count_source,
+        target_group_id=target_group_id,
+        post_status=post.status,
+        already_sent=bool(already_sent),
         campaign_id=result.get("campaign_id"),
-        message=f"Queued MailerLite campaign {result.get('campaign_id')} to group {settings.MAILERLITE_GROUP_ID}.",
+        message=(
+            f"Queued MailerLite campaign {result.get('campaign_id')} to "
+            f"{request.audience} group {target_group_id}."
+        ),
     )
 
 

@@ -41,6 +41,8 @@ mcp = FastMCP(
         "manage the GCB blog for agentic article authoring. "
         "create_monthly_newsletter_draft assembles a digest post from recent leaderboard publications; "
         "render_newsletter_email_html and send_newsletter_to_subscribers use the admin API (requires can_admin on the API key). "
+        "list_newsletter_test_recipients, add_newsletter_test_recipient, update_newsletter_test_recipient, "
+        "and remove_newsletter_test_recipient manage QA recipients for test sends. "
         "create_model_review_draft generates a style-guide aligned benchmark article draft from published model results. "
         "generate_and_upload_header creates a programmatic SVG article header image. "
         "generate_and_upload_newsletter_header creates the homepage-hero-style digest header SVG (month dateline) "
@@ -1690,21 +1692,89 @@ async def render_newsletter_email_html(post_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
-async def send_newsletter_to_subscribers(post_id: str, dry_run: bool = True) -> dict[str, Any]:
-    """Send the insights post as a MailerLite campaign to ``MAILERLITE_GROUP_ID``.
+async def send_newsletter_to_subscribers(
+    post_id: str,
+    dry_run: bool = True,
+    audience: str = "test",
+    confirm_production_send: bool = False,
+    force_resend: bool = False,
+) -> dict[str, Any]:
+    """Send newsletter to test or production MailerLite audience.
 
-    Always run with ``dry_run=true`` first after human approval. A real send
-    (``dry_run=false``) requires the post to be **published**, MailerLite
-    configured on the server, ``MAILERLITE_GROUP_ID`` set, and an API key whose
-    user has **can_admin**.
+    Always run with ``dry_run=true`` first after human approval. A real
+    production send (``audience='production'`` and ``dry_run=false``) requires
+    a published post and ``confirm_production_send=true``.
 
     Args:
-        post_id: UUID of the published newsletter post.
+        post_id: UUID of the insights post.
         dry_run: When true (default), only validates subscriber counts and configuration.
+        audience: ``test`` (default) or ``production``.
+        confirm_production_send: Required for production sends.
+        force_resend: Override duplicate-send protection for production.
     """
-    from gcb_mcp.admin_api import send_newsletter_campaign  # noqa: PLC0415
+    from gcb_mcp.admin_api import send_newsletter_campaign_v2  # noqa: PLC0415
 
-    return await send_newsletter_campaign(post_id=post_id, dry_run=dry_run)
+    return await send_newsletter_campaign_v2(
+        post_id=post_id,
+        dry_run=dry_run,
+        audience=audience,
+        confirm_production_send=confirm_production_send,
+        force_resend=force_resend,
+    )
+
+
+@mcp.tool()
+async def list_newsletter_test_recipients(
+    status: str | None = None,
+    search: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """List admin-managed newsletter test recipients."""
+    from gcb_mcp.admin_api import list_newsletter_test_recipients as _list  # noqa: PLC0415
+
+    return await _list(status=status, search=search, limit=limit, offset=offset)
+
+
+@mcp.tool()
+async def add_newsletter_test_recipient(
+    email: str,
+    name: str | None = None,
+    notes: str | None = None,
+    is_active: bool = True,
+) -> dict[str, Any]:
+    """Add a managed newsletter test recipient."""
+    from gcb_mcp.admin_api import create_newsletter_test_recipient as _create  # noqa: PLC0415
+
+    return await _create(email=email, name=name, notes=notes, is_active=is_active)
+
+
+@mcp.tool()
+async def update_newsletter_test_recipient(
+    recipient_id: str,
+    email: str | None = None,
+    name: str | None = None,
+    notes: str | None = None,
+    is_active: bool | None = None,
+) -> dict[str, Any]:
+    """Update a managed newsletter test recipient."""
+    from gcb_mcp.admin_api import update_newsletter_test_recipient as _update  # noqa: PLC0415
+
+    return await _update(
+        recipient_id=recipient_id,
+        email=email,
+        name=name,
+        notes=notes,
+        is_active=is_active,
+    )
+
+
+@mcp.tool()
+async def remove_newsletter_test_recipient(recipient_id: str) -> dict[str, Any]:
+    """Deactivate a managed newsletter test recipient."""
+    from gcb_mcp.admin_api import delete_newsletter_test_recipient as _delete  # noqa: PLC0415
+
+    return await _delete(recipient_id=recipient_id)
 
 
 @mcp.tool()

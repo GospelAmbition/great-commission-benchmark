@@ -1,5 +1,5 @@
 """Admin API schemas"""
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Literal
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
@@ -427,14 +427,57 @@ class NewsletterHtmlPreviewResponse(BaseModel):
 
 
 class NewsletterSendRequest(BaseModel):
-    """Send the given insights post as a MailerLite campaign to the configured group."""
+    """Send the given insights post to test or production newsletter audiences."""
     post_id: UUID
     dry_run: bool = True
+    audience: Literal["test", "production"] = "test"
+    confirm_production_send: bool = False
+    force_resend: bool = False
 
 
 class NewsletterSendResponse(BaseModel):
     """Result of a newsletter send (or dry run)."""
     dry_run: bool
-    active_subscribers: int
+    audience: Literal["test", "production"]
+    recipient_count: int
+    recipient_count_source: Optional[str] = None
+    target_group_id: Optional[str] = None
+    post_status: str
+    already_sent: bool = False
     campaign_id: Optional[str] = None
     message: str
+
+
+class NewsletterTestRecipientListItem(BaseModel):
+    """Admin list item for a newsletter test recipient."""
+    id: UUID
+    email: str
+    name: Optional[str] = None
+    is_active: bool
+    notes: Optional[str] = None
+    mailerlite_subscriber_id: Optional[str] = None
+    created_by_user_id: Optional[UUID] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class NewsletterTestRecipientListResponse(BaseModel):
+    """Paginated response for newsletter test recipients."""
+    items: List[NewsletterTestRecipientListItem]
+    total: int
+
+
+class NewsletterTestRecipientCreateRequest(BaseModel):
+    """Create a managed newsletter test recipient."""
+    email: str
+    name: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: bool = True
+
+
+class NewsletterTestRecipientUpdateRequest(BaseModel):
+    """Patch fields for a managed newsletter test recipient."""
+    email: Optional[str] = None
+    name: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None

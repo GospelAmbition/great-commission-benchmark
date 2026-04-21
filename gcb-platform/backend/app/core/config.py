@@ -62,6 +62,8 @@ class Settings(BaseSettings):
     # Newsletter (MailerLite)
     MAILERLITE_API_KEY: str = ""
     MAILERLITE_GROUP_ID: str = ""  # Optional: specific subscriber group ID
+    MAILERLITE_TEST_GROUP_ID: str = ""  # Optional: QA/test audience group ID
+    MAILERLITE_PROD_GROUP_ID: str = ""  # Optional: production audience group ID
     
     # S3-Compatible Storage (Railway Simple Storage or AWS S3)
     S3_ACCESS_KEY_ID: str = ""

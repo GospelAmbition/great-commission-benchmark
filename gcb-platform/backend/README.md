@@ -301,6 +301,8 @@ pytest tests/test_phase_e.py -v
 | `EMAIL_FROM` | Email sender address | Required if using email |
 | `MAILERLITE_API_KEY` | MailerLite newsletter API key | Optional |
 | `MAILERLITE_GROUP_ID` | MailerLite subscriber group ID (required for API campaign sends) | Optional |
+| `MAILERLITE_PROD_GROUP_ID` | MailerLite production newsletter group ID (preferred over `MAILERLITE_GROUP_ID`) | Optional |
+| `MAILERLITE_TEST_GROUP_ID` | MailerLite test/QA newsletter group ID | Optional |
 | `S3_ACCESS_KEY_ID` | S3-compatible storage access key | Optional |
 | `S3_SECRET_ACCESS_KEY` | S3-compatible storage secret | Optional |
 | `S3_BUCKET` | Storage bucket name | Optional |
@@ -335,9 +337,31 @@ The following security headers are added to all responses:
 Admin endpoints (JWT or `X-API-Key` with **`can_admin`**, same flexible auth as other admin tooling):
 
 - `GET /api/admin/newsletter/preview-html?post_id=<uuid>` — returns `{ subject, html, web_version_url }` for a draft or published insights post.
-- `POST /api/admin/newsletter/send` with JSON `{ "post_id": "<uuid>", "dry_run": true|false }` — `dry_run=true` returns active subscriber counts without contacting MailerLite; `dry_run=false` creates a MailerLite **regular** campaign with HTML content and schedules **instant** delivery to **`MAILERLITE_GROUP_ID`**. The post must already be **published**.
+- `POST /api/admin/newsletter/send` with JSON:
+  - `post_id` (UUID)
+  - `dry_run` (`true|false`)
+  - `audience` (`"test"` or `"production"`)
+  - `confirm_production_send` (`true|false`, required for production send)
+  - `force_resend` (`true|false`, optional duplicate-send override for production)
+- `dry_run=true` validates audience routing and recipient counts without creating a campaign.
+- `audience="test"` may send draft or published posts to `MAILERLITE_TEST_GROUP_ID`.
+- `audience="production"` requires a published post and sends to `MAILERLITE_PROD_GROUP_ID` (fallback: `MAILERLITE_GROUP_ID`).
+
+Admin management endpoints for test recipients:
+- `GET /api/admin/newsletter/test-recipients`
+- `POST /api/admin/newsletter/test-recipients`
+- `PATCH /api/admin/newsletter/test-recipients/{recipient_id}`
+- `DELETE /api/admin/newsletter/test-recipients/{recipient_id}` (soft-deactivate)
 
 The campaign sender uses the address parsed from **`EMAIL_FROM`** (`Name <email@domain>`); that address must be a **verified sender** in MailerLite. Custom HTML may require a MailerLite plan that supports the HTML editor; if MailerLite rejects the payload, check the API error in server logs.
+
+Recommended operator workflow:
+1. Preview HTML (`/newsletter/preview-html`)
+2. Dry run test audience
+3. Send test audience
+4. Publish post
+5. Dry run production audience
+6. Send production audience with `confirm_production_send=true`
 
 ### Authentication
 
