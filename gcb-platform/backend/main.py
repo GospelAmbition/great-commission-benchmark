@@ -28,6 +28,15 @@ logger.info("Security headers middleware loaded")
 from app.api.v1.router import api_router
 logger.info("API router loaded successfully")
 
+# MCP + OAuth wiring (imported lazily after the existing API loads so a
+# misconfiguration in OAuth env doesn't break the dashboard).
+from app.core.mcp_oauth.endpoints import router as oauth_router  # noqa: E402
+from app.core.mcp_oauth.well_known import router as oauth_well_known_router  # noqa: E402
+from app.core.mcp_oauth.middleware import bearer_auth_asgi  # noqa: E402
+from app.core.mcp_oauth.config import get_oauth_settings  # noqa: E402
+from app.mcp.app import build_mcp_app  # noqa: E402
+logger.info("MCP + OAuth modules loaded")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -51,7 +60,23 @@ async def lifespan(app: FastAPI):
     
     # Start cache warming task (non-blocking)
     asyncio.create_task(delayed_cache_warm())
-    
+
+    # Hydrate the in-process MCP OAuth signing key cache. We do this in
+    # the foreground (it is a single SELECT + maybe one INSERT on first
+    # boot) so /mcp + /.well-known/jwks.json never serve an empty JWKS.
+    try:
+        from app.core.mcp_oauth.keys import ensure_signing_key, reload_keys
+        from app.db.base import SessionLocal as _SL
+
+        with _SL() as _key_db:
+            ensure_signing_key(_key_db)
+            reload_keys(_key_db)
+        logger.info("MCP OAuth signing key cache loaded")
+    except Exception as exc:
+        # Don't fail boot of the dashboard if OAuth env is incomplete in
+        # this environment — /mcp will simply 401 with a clear message.
+        logger.warning("MCP OAuth signing key load skipped: %s", exc)
+
     logger.info("Application startup complete - ready to serve requests")
     yield
     
@@ -73,17 +98,39 @@ logger.info("FastAPI app instance created")
 # Security headers middleware (must be first)
 app.add_middleware(SecurityHeadersMiddleware)
 
-# CORS middleware
+# CORS middleware. The Claude.ai connector frontend and the iPhone app
+# both call /mcp from claude.ai / claude.com origins; allow them in
+# addition to the existing dashboard origins, and expose the headers
+# the MCP transport relies on.
+_MCP_CORS_EXTRA_ORIGINS = [
+    "https://claude.ai",
+    "https://www.claude.ai",
+    "https://claude.com",
+    "https://www.claude.com",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.CORS_ORIGINS + _MCP_CORS_EXTRA_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=[
+        "WWW-Authenticate",
+        "Mcp-Session-Id",
+        "MCP-Protocol-Version",
+    ],
 )
 
 # Include API router
 app.include_router(api_router, prefix="/api")
+
+# OAuth discovery + endpoints + MCP transport.
+# RFC 9728 / 8414 metadata MUST live at the origin root (not /api/...)
+# so RFC-compliant MCP clients can discover them via well-known paths.
+app.include_router(oauth_well_known_router)
+app.include_router(oauth_router)
+app.mount("/mcp", bearer_auth_asgi(build_mcp_app()))
+logger.info("Mounted /mcp + /oauth + /.well-known endpoints")
 
 
 # Exception handler to log errors

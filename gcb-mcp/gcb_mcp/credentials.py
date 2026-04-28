@@ -20,7 +20,26 @@ from pathlib import Path
 
 
 def resolve_gcb_api_key() -> str:
-    """Return the X-API-Key value for GCB runner HTTP calls, or empty string."""
+    """Return the X-API-Key value for GCB runner HTTP calls, or empty string.
+
+    Resolution order:
+      1. Active :class:`gcb_mcp.context.RequestContext` (set by the
+         OAuth-fronted HTTP server per request).
+      2. ``GCB_API_KEY`` environment variable.
+      3. ``platform.api_key`` from ``~/.gcb-runner/config.json``.
+    """
+    # Local import keeps the credentials module importable even if the
+    # context module is unavailable during package bootstrap.
+    try:
+        from gcb_mcp.context import current as _current_ctx
+    except Exception:  # pragma: no cover - defensive
+        _current_ctx = None  # type: ignore[assignment]
+
+    if _current_ctx is not None:
+        ctx_key = _current_ctx().api_key.strip()
+        if ctx_key:
+            return ctx_key
+
     env_key = os.environ.get("GCB_API_KEY", "").strip()
     if env_key:
         return env_key

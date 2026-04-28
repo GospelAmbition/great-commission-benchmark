@@ -266,7 +266,16 @@ async def check_gcb_api(api_key: str | None = None) -> dict[str, Any]:
         result["error"] = missing_gcb_api_key_message()
         return result
 
-    base_url = os.environ.get("GCB_API_BASE_URL", GCB_API_BASE_URL).rstrip("/")
+    try:
+        from gcb_mcp.context import current as _current_ctx
+
+        ctx_url = _current_ctx().api_base_url.strip().rstrip("/")
+    except Exception:  # pragma: no cover - defensive
+        ctx_url = ""
+    base_url = (
+        ctx_url
+        or os.environ.get("GCB_API_BASE_URL", GCB_API_BASE_URL).rstrip("/")
+    )
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(

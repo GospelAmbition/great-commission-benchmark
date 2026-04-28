@@ -16,14 +16,22 @@ _PUBLIC_BASE = "https://api.greatcommissionbenchmark.ai/api/public"
 
 def _public_base() -> str:
     """Return the base URL for GCB public API endpoints.
-    
+
     Supports three forms of GCB_API_BASE_URL:
       - https://api.greatcommissionbenchmark.ai/api  → .../public
       - https://api.greatcommissionbenchmark.ai      → .../api/public
       - https://greatcommissionbenchmark.ai          → rewrites to api subdomain
+
+    Per-request overrides from :mod:`gcb_mcp.context` win over env vars.
     Default: https://api.greatcommissionbenchmark.ai/api/public
     """
-    env = os.environ.get("GCB_API_BASE_URL", "").strip().rstrip("/")
+    try:
+        from gcb_mcp.context import current as _current_ctx
+
+        ctx_url = _current_ctx().api_base_url.strip().rstrip("/")
+    except Exception:  # pragma: no cover - defensive
+        ctx_url = ""
+    env = ctx_url or os.environ.get("GCB_API_BASE_URL", "").strip().rstrip("/")
     if not env:
         return "https://api.greatcommissionbenchmark.ai/api/public"
     # If the env var points at the non-api domain, redirect to the API subdomain

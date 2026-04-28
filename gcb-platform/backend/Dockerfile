@@ -1,4 +1,10 @@
 # Great Commission Benchmark - Backend Dockerfile
+#
+# Build context: monorepo root (so the gcb-mcp/ directory is available
+# for installation alongside the backend). Configure the Railway
+# service with `dockerfilePath: gcb-platform/backend/Dockerfile` and
+# `rootDirectory: ` (i.e. monorepo root). The COPY commands below are
+# expressed relative to that root.
 FROM python:3.11-slim
 
 # Set environment variables
@@ -15,15 +21,19 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
+# Install Python dependencies. We install the gcb-mcp package first so
+# it's available as a sibling module to the backend (provides the
+# FastMCP instance with all 33 tools that we mount under /mcp).
+COPY gcb-mcp /tmp/gcb-mcp
+RUN pip install --no-cache-dir /tmp/gcb-mcp
+
+COPY gcb-platform/backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY . .
+COPY gcb-platform/backend/ /app/
 
 # Copy startup script
-COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 
 # Create non-root user for security

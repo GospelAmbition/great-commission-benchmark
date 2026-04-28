@@ -15,8 +15,20 @@ _DEFAULT_API_BASE = "https://api.greatcommissionbenchmark.ai/api"
 
 
 def _api_base() -> str:
-    """Return the base URL for GCB runner API endpoints (ends in /api)."""
-    env = os.environ.get("GCB_API_BASE_URL", "").strip().rstrip("/")
+    """Return the base URL for GCB runner API endpoints (ends in /api).
+
+    Per-request overrides from :mod:`gcb_mcp.context` win over the
+    ``GCB_API_BASE_URL`` env var so the in-process HTTP MCP can target a
+    co-located backend without leaking config into other tasks.
+    """
+    try:
+        from gcb_mcp.context import current as _current_ctx
+
+        ctx_url = _current_ctx().api_base_url.strip().rstrip("/")
+    except Exception:  # pragma: no cover - defensive
+        ctx_url = ""
+
+    env = ctx_url or os.environ.get("GCB_API_BASE_URL", "").strip().rstrip("/")
     if not env:
         return _DEFAULT_API_BASE
     # Redirect non-api domain to API subdomain
@@ -34,10 +46,18 @@ def _api_key() -> str:
 
 
 def _headers() -> dict[str, str]:
-    return {
+    headers = {
         "X-API-Key": _api_key(),
         "Content-Type": "application/json",
     }
+    # Forward on-behalf-of metadata when the OAuth-fronted server set it.
+    try:
+        from gcb_mcp.context import behalf_headers
+
+        headers.update(behalf_headers())
+    except Exception:  # pragma: no cover - defensive
+        pass
+    return headers
 
 
 def _blog_url(path: str) -> str:

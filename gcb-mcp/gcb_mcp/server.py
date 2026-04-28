@@ -57,6 +57,15 @@ mcp = FastMCP(
 
 
 def _base_url() -> str:
+    # Per-request override (HTTP server / OAuth requests) wins.
+    try:
+        from gcb_mcp.context import current as _current_ctx
+
+        ctx_url = _current_ctx().api_base_url.strip()
+        if ctx_url:
+            return ctx_url.rstrip("/")
+    except Exception:  # pragma: no cover - defensive
+        pass
     return os.environ.get(
         "GCB_API_BASE_URL", "https://greatcommissionbenchmark.ai"
     ).rstrip("/")
