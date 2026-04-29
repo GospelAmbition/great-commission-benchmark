@@ -44,7 +44,8 @@ load_env()
 
 # Configuration
 API_KEY = os.environ.get("GCB_API_KEY")
-API_URL = os.environ.get("GCB_API_URL", "https://greatcommissionbenchmark.ai/api/v1")
+# Runner blog endpoints live on the API host at /api/runner/blog (same base as gcb-mcp).
+API_URL = os.environ.get("GCB_API_URL", "https://api.greatcommissionbenchmark.ai/api")
 BLOG_URL = os.environ.get("GCB_BLOG_URL", "https://greatcommissionbenchmark.ai/insights")
 
 

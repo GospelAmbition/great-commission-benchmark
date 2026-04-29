@@ -39,7 +39,7 @@ GCB_API_KEY=gcb_your_key_here
 GCB_API_URL=https://api.greatcommissionbenchmark.ai/api
 ```
 
-The `GCB_API_URL` defaults to `https://greatcommissionbenchmark.ai/api/v1` if not set. The current production API base is `https://api.greatcommissionbenchmark.ai/api`.
+If `GCB_API_URL` is omitted, the CLI defaults to the production runner API base: `https://api.greatcommissionbenchmark.ai/api`.
 
 ### 3. Python
 

@@ -22,7 +22,7 @@ if env_file.exists():
                 os.environ.setdefault(key.strip(), value.strip())
 
 API_KEY = os.environ.get("GCB_API_KEY")
-API_URL = os.environ.get("GCB_API_URL", "https://greatcommissionbenchmark.ai/api/v1")
+API_URL = os.environ.get("GCB_API_URL", "https://api.greatcommissionbenchmark.ai/api")
 BLOG_URL = os.environ.get("GCB_BLOG_URL", "https://greatcommissionbenchmark.ai/insights")
 CATEGORY_ID = "8ba408ed-d51a-4a78-afd5-1293be77afac"  # Model Reviews
 
