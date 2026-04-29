@@ -1,8 +1,5 @@
-# Bumped from 0.109.0 to satisfy mcp[cli] >= 1.2's transitive starlette
-# requirement (sse-starlette 3.x needs starlette>=0.46). FastAPI 0.118+
-# pins compatible starlette versions.
-fastapi>=0.118.0,<0.121
-uvicorn[standard]>=0.30.0
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
 sqlalchemy==2.0.25
 alembic==1.13.1
 psycopg2-binary==2.9.9
@@ -23,10 +20,3 @@ resend==0.7.0
 boto3==1.34.0
 tiktoken==0.7.0
 redis>=5.0
-
-# MCP + OAuth (public OAuth-fronted MCP server at /mcp)
-# - mcp[cli]>=1.2 ships FastMCP + the streamable-http ASGI app.
-# - The gcb-mcp package contributes 33 tool registrations and is
-#   installed as a path dependency from the monorepo (../../gcb-mcp).
-mcp[cli]>=1.2
-cryptography>=42.0

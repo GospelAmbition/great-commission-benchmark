@@ -34,12 +34,9 @@ class UUIDType(TypeDecorator):
 
 # Patch the PostgreSQL UUID and JSONB to use our custom types for SQLite
 import sqlalchemy.dialects.postgresql as pg
-from sqlalchemy import JSON, LargeBinary, Text
+from sqlalchemy import JSON, Text
 _original_uuid = pg.UUID
 _original_jsonb = pg.JSONB
-_original_array = pg.ARRAY
-_original_inet = pg.INET
-_original_bytea = pg.BYTEA
 
 class SQLiteCompatibleUUID(UUIDType):
     """UUID type that can be used with SQLite."""
@@ -84,69 +81,9 @@ class SQLiteCompatibleJSONB(TypeDecorator):
         return value
 
 
-class SQLiteCompatibleARRAY(TypeDecorator):
-    """ARRAY type that falls back to JSON on SQLite (used by oauth_clients)."""
-
-    impl = Text
-    cache_ok = True
-
-    def __init__(self, item_type=None, *args, **kwargs):
-        # ``item_type`` is required by Postgres ARRAY; on SQLite we just
-        # serialise to JSON so we ignore it.
-        self.item_type = item_type
-        super().__init__()
-
-    def load_dialect_impl(self, dialect):
-        if dialect.name == "postgresql":
-            return dialect.type_descriptor(_original_array(self.item_type))
-        return dialect.type_descriptor(JSON())
-
-    def process_bind_param(self, value, dialect):
-        if dialect.name != "postgresql" and value is not None:
-            import json
-
-            return json.dumps(list(value))
-        return value
-
-    def process_result_value(self, value, dialect):
-        if dialect.name != "postgresql" and value is not None:
-            if isinstance(value, str):
-                import json
-
-                return json.loads(value)
-        return value
-
-
-class SQLiteCompatibleINET(TypeDecorator):
-    """INET stored as VARCHAR(45) on SQLite (long enough for IPv6)."""
-
-    impl = String(45)
-    cache_ok = True
-
-    def load_dialect_impl(self, dialect):
-        if dialect.name == "postgresql":
-            return dialect.type_descriptor(_original_inet())
-        return dialect.type_descriptor(String(45))
-
-
-class SQLiteCompatibleBYTEA(TypeDecorator):
-    """BYTEA stored as LargeBinary on SQLite (used by oauth_signing_keys)."""
-
-    impl = LargeBinary
-    cache_ok = True
-
-    def load_dialect_impl(self, dialect):
-        if dialect.name == "postgresql":
-            return dialect.type_descriptor(_original_bytea())
-        return dialect.type_descriptor(LargeBinary())
-
-
 # Apply the patches before importing models
 pg.UUID = SQLiteCompatibleUUID
 pg.JSONB = SQLiteCompatibleJSONB
-pg.ARRAY = SQLiteCompatibleARRAY
-pg.INET = SQLiteCompatibleINET
-pg.BYTEA = SQLiteCompatibleBYTEA
 
 
 # Now import the app modules

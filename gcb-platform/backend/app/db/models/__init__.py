@@ -24,17 +24,6 @@ from app.db.models.action_log import ActionLog
 from app.db.models.newsletter_test_recipient import NewsletterTestRecipient
 from app.db.models.newsletter_campaign_send import NewsletterCampaignSend
 
-# MCP OAuth tables (separate package so the OAuth feature is isolable)
-from app.core.mcp_oauth.models import (  # noqa: F401  (Alembic auto-discovery)
-    OAuthClient,
-    OAuthAuthorizationCode,
-    OAuthRefreshToken,
-    OAuthPendingSession,
-    OAuthASSession,
-    OAuthSigningKey,
-    OAuthTokenAudit,
-)
-
 __all__ = [
     "User",
     "UserAPIKey",
@@ -59,11 +48,4 @@ __all__ = [
     "ActionLog",
     "NewsletterTestRecipient",
     "NewsletterCampaignSend",
-    "OAuthClient",
-    "OAuthAuthorizationCode",
-    "OAuthRefreshToken",
-    "OAuthPendingSession",
-    "OAuthASSession",
-    "OAuthSigningKey",
-    "OAuthTokenAudit",
 ]
