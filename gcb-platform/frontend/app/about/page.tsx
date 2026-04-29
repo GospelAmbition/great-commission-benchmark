@@ -1180,6 +1180,32 @@ export default function AboutPage() {
                   </Link>
                 </CardContent>
               </Card>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                      <Heart className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">The Shepherd Network</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        The Shepherd Network is a family of companies made to serve churches and ministry groups with media and technology.
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Link
+                    href="https://shepnetwork.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+                  >
+                    Visit website
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
