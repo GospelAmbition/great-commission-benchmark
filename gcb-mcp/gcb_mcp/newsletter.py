@@ -378,7 +378,6 @@ def build_newsletter_markdown(
     window_days: int,
     selection: SelectionMode,
     spotlight: list[dict[str, Any]],
-    all_in_window: list[dict[str, Any]],
     post_by_model: dict[str, PostMatch],
     spotlight_paragraphs: dict[str, str] | None = None,
 ) -> tuple[str, str, str]:
@@ -391,15 +390,13 @@ def build_newsletter_markdown(
     if selection == "overall_score":
         excerpt = (
             f"In the last {window_days} days on the Great Commission Benchmark, we spotlight two models "
-            "with the strongest **overall scores** among new publications, plus every new leaderboard "
-            "entry in this window."
+            "with the strongest **overall scores** among new publications."
         )
     else:
         excerpt = (
             f"In the last {window_days} days on the Great Commission Benchmark, we spotlight two models "
             "picked with extra weight on **Tier 1 (ministry-task) performance** among new publications—but "
-            "we only quote the simple **overall score** here. See each model’s page for full tier detail, "
-            "plus every new leaderboard entry in this window."
+            "we only quote the simple **overall score** here. See each model’s page for full tier detail."
         )
 
     lines: list[str] = []
@@ -407,15 +404,14 @@ def build_newsletter_markdown(
     lines.append(
         f"For **{month_label}**, **Great Commission Benchmark** rounds up how leading AI models behave when the prompts "
         "sound like real ministry—research, discipleship, evangelism, and integrity under pressure. "
-        "Below you will find two spotlight models (ranked by your selected scoring lens for this issue) "
-        "and a complete list of everything **newly published** to the public leaderboard in the last "
-        f"{window_days} days.\n"
+        "Below you will find two spotlight models, ranked by your selected scoring lens for this issue, "
+        f"drawn from runs newly published to the public leaderboard in the last {window_days} days.\n"
     )
     lines.append("## At a glance\n")
     lines.append(
         "- **Why read this:** GCB exists so ministry and technical leaders can steward AI with discernment—not trend-chasing.\n"
         f"- **What this issue covers:** Benchmark runs that reached the public leaderboard within the last **{window_days} days**.\n"
-        "- **What to do next:** Read the two spotlights, skim the release table, then open the leaderboard or contribute a test run.\n"
+        "- **What to do next:** Read the two spotlights, then open the leaderboard or contribute a test run.\n"
     )
     lines.append("---\n")
     lines.append("## Spotlight: two models to watch\n")
@@ -454,25 +450,6 @@ def build_newsletter_markdown(
         "\n\nOverall scores summarize automated testing across ministry-shaped scenarios—use them alongside Scripture, "
         "sound doctrine, and your team's policies—not as a substitute for spiritual discernment.\n"
     )
-    lines.append("---\n")
-    lines.append(f"## New on the leaderboard (last {window_days} days)\n")
-    lines.append(
-        "Every model below finished a public test run in this window (newest first). "
-        "Use **View result** for the full scorecard; use **Insight** when we have already published a written review.\n"
-    )
-    lines.append("| Model | Published (UTC) | View result | Insight |\n")
-    lines.append("| --- | --- | --- | --- |\n")
-    for m in all_in_window:
-        mid = str(m.get("model_id") or "")
-        name = (m.get("name") or mid).replace("|", "\\|")
-        completed = format_completed_human(
-            str(m.get("completed_at")) if m.get("completed_at") else None
-        ).replace("|", "\\|")
-        ml = model_page_url(mid)
-        pm = post_by_model.get(mid)
-        ins = f"[Read]({insight_url(pm.slug)})" if pm and pm.slug else "—"
-        lines.append(f"| {name} | {completed} | [View result]({ml}) | {ins} |\n")
-
     lines.append("---\n")
     lines.append("## Explore, test, and serve\n")
     lines.append(

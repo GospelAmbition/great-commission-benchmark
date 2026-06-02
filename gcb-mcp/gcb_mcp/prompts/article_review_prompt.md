@@ -25,6 +25,10 @@ Professional, strategic, and warm. Write like a peer advisor who understands the
 *   Use bullet points liberally-especially for test analysis, verdict patterns, and strategic implications. Readers should be able to grab insights quickly.
 *   Define each "benchmark" in one or two precise sentences, then explore its strategic importance for Great Commission work.
 *   Connect technical data or frameworks back to the mission of making disciples and reaching the unreached.
+*   Before drafting, identify the model's distinctive strategic thesis in one sentence. The thesis must be specific to the score shape, refusal pattern, strongest categories, weakest categories, and provider/model role. Use that thesis to shape the main title and section headings.
+*   Create original section headings for each model review. Avoid repeated generic headings such as "The defining pattern," "Where the model was strongest," "Where leaders should slow down," and "Verdict patterns" unless they are genuinely the best wording for that exact model.
+*   Assume this article will appear near other model reviews in the same series. Preserve the same audience, theological seriousness, and strategic tone, but vary the communication pattern. Do not repeat more than two major section headings from recent reviews.
+*   Keep recurring benchmark explanations brief and reframed around the model being reviewed. Any repeated benchmark-definition material should be shorter than 120 words before turning to model-specific analysis.
 
 **What to Avoid:**
 *   Avoid a "middle school" or "high school" reading level; target a professional, college-educated audience.
@@ -57,6 +61,7 @@ Do a deep analysis of the provided benchmark test (json). Look for unique insigh
 *   Keep body prose **light:** short paragraphs (2-4 sentences), more bullets, fewer long blocks. Full readers get the full argument; scanners get structure and bullets they can skim.
 *   Introduce the main technical/strategic concept clearly.
 *   Explore implications for Great Commission work, balancing technical reality with theological conviction-again, favor bullets where listing implications or options.
+*   Let headings carry editorial insight, not merely structure. Prefer specific phrases like "High capability, high refusal cost" or "Task strength is outrunning theological reliability" over generic labels.
 *   Add the blog category "Model Reviews" (model-reviews)
 
 ---

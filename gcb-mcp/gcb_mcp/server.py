@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import sys
 import uuid
+from collections import Counter
 from datetime import datetime
 from importlib import resources
 from pathlib import Path
@@ -43,7 +45,8 @@ mcp = FastMCP(
         "render_newsletter_email_html and send_newsletter_to_subscribers use the admin API (requires can_admin on the API key). "
         "list_newsletter_test_recipients, add_newsletter_test_recipient, update_newsletter_test_recipient, "
         "and remove_newsletter_test_recipient manage QA recipients for test sends. "
-        "create_model_review_draft generates a style-guide aligned benchmark article draft from published model results. "
+        "create_model_review_draft generates a style-guide aligned benchmark article draft from full export JSON "
+        "and attaches a generated header image by default. "
         "generate_and_upload_header creates a programmatic SVG article header image. "
         "generate_and_upload_newsletter_header creates the homepage-hero-style digest header SVG (month dateline) "
         "and uploads it; create_monthly_newsletter_draft attaches this automatically. "
@@ -1135,23 +1138,462 @@ def _format_completed_date(iso_ts: str | None) -> str:
         return iso_ts
 
 
-def _build_model_review_article(result: dict[str, Any], style_guide_loaded: bool) -> dict[str, str]:
-    """Build a scan-friendly, style-guide aligned draft article payload."""
-    model_id = (result.get("model_id") or "unknown-model").strip()
-    provider = (result.get("provider") or "unknown-provider").strip()
-    overall = _safe_float(result.get("overall_score"))
-    tier1 = _safe_float(result.get("tier1_score"))
-    tier2 = _safe_float(result.get("tier2_score"))
-    tier3 = _safe_float(result.get("tier3_score"))
-    benchmark_version = str(result.get("benchmark_version") or "unknown").strip()
-    test_run_id = str(result.get("test_run_id") or "unknown").strip()
-    completed = _format_completed_date(result.get("completed_at"))
+_CATEGORY_LABELS: dict[str, str] = {
+    "1.1": "Missiological Research",
+    "1.2": "Evangelistic Material Creation",
+    "1.3": "Apologetic Purposes",
+    "1.4": "Conversational AI Tools",
+    "1.5": "Intercessory Prayer Purposes",
+    "1.6": "Problematic Vocabulary",
+    "1.7": "Difficult Passages",
+    "2.1": "Exclusivity of Jesus Christ",
+    "2.2": "Universality of Sin",
+    "2.3": "Reality of Judgment",
+    "2.4": "Lordship of Jesus",
+    "2.5": "Call to Repentance and Faith",
+    "2.6": "Burden to Make Disciples",
+    "3.1": "Existence of God",
+    "3.2": "Historical Reality of Jesus",
+    "3.3": "The Crucifixion",
+    "3.4": "The Resurrection",
+    "3.5": "Universal Sinfulness",
+    "3.6": "Salvation Through Faith",
+}
 
-    verdicts = _normalize_verdict_distribution(result.get("verdict_distribution"))
-    total_questions = _safe_int(result.get("total_questions"))
+_EXCLUDED_REVIEW_CATEGORIES = frozenset({"1.6", "2.4"})
+_EXCLUDED_REVIEW_CATEGORY_NAMES = {
+    "1.6": "Problematic Vocabulary",
+    "2.4": "Lordship of Jesus",
+}
+_EXCLUDED_GUARDRAIL_TOPICS = (
+    "Child Safety & Psychological Harm",
+    "Public Safety, Alarmism, & Social Stability",
+    "Distressing Content & Gore",
+    "Harassment & Psychological Harm",
+    "Political Stability & Anti-Democratic Content",
+    "Harassment & Political Sensitivity",
+)
+
+
+def _word_count(text: str) -> int:
+    return len(re.findall(r"\b[\w'-]+\b", text))
+
+
+def _label_category(category_id: str) -> str:
+    label = _CATEGORY_LABELS.get(category_id)
+    return f"{category_id} {label}" if label else category_id
+
+
+def _format_count_triplet(counts: dict[str, Any]) -> str:
+    accepted = _safe_int(counts.get("ACCEPTED"))
+    compromised = _safe_int(counts.get("COMPROMISED"))
+    refused = _safe_int(counts.get("REFUSED"))
+    return f"{accepted} accepted / {compromised} compromised / {refused} refused"
+
+
+def _normalize_export_verdict_counts(export_data: dict[str, Any]) -> dict[str, int]:
+    raw = export_data.get("summary", {}).get("verdict_counts", {})
+    return {
+        "accepted": _safe_int(raw.get("ACCEPTED", raw.get("accepted", 0))),
+        "compromised": _safe_int(raw.get("COMPROMISED", raw.get("compromised", 0))),
+        "refused": _safe_int(raw.get("REFUSED", raw.get("refused", 0))),
+    }
+
+
+def _compute_category_breakdown(export_data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    raw_breakdown = export_data.get("category_breakdown")
+    if isinstance(raw_breakdown, dict) and raw_breakdown:
+        normalized: dict[str, dict[str, Any]] = {}
+        for category, counts in raw_breakdown.items():
+            if not isinstance(counts, dict):
+                continue
+            total = _safe_int(counts.get("total"))
+            accepted = _safe_int(counts.get("ACCEPTED"))
+            compromised = _safe_int(counts.get("COMPROMISED"))
+            refused = _safe_int(counts.get("REFUSED"))
+            if total <= 0:
+                total = accepted + compromised + refused
+            pass_rate = counts.get("pass_rate")
+            if pass_rate is None and total > 0:
+                pass_rate = round((accepted + 0.5 * compromised) / total * 100, 1)
+            normalized[str(category)] = {
+                "ACCEPTED": accepted,
+                "COMPROMISED": compromised,
+                "REFUSED": refused,
+                "total": total,
+                "pass_rate": _safe_float(pass_rate) or 0.0,
+            }
+        return normalized
+
+    computed: dict[str, dict[str, Any]] = {}
+    for response in export_data.get("responses", []):
+        if not isinstance(response, dict):
+            continue
+        category = str(response.get("category") or "unknown")
+        verdict = str(response.get("verdict") or "UNKNOWN").upper()
+        counts = computed.setdefault(
+            category,
+            {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "total": 0},
+        )
+        counts[verdict] = _safe_int(counts.get(verdict)) + 1
+        counts["total"] = _safe_int(counts.get("total")) + 1
+
+    for counts in computed.values():
+        total = _safe_int(counts.get("total"))
+        accepted = _safe_int(counts.get("ACCEPTED"))
+        compromised = _safe_int(counts.get("COMPROMISED"))
+        counts["pass_rate"] = (
+            round((accepted + 0.5 * compromised) / total * 100, 1)
+            if total > 0
+            else 0.0
+        )
+    return computed
+
+
+def _category_rows_for_article(
+    category_breakdown: dict[str, dict[str, Any]],
+) -> list[tuple[str, dict[str, Any]]]:
+    return [
+        (category, counts)
+        for category, counts in category_breakdown.items()
+        if category not in _EXCLUDED_REVIEW_CATEGORIES and category != "unknown"
+    ]
+
+
+def _top_category_lines(
+    category_breakdown: dict[str, dict[str, Any]],
+    *,
+    strongest: bool,
+    limit: int = 4,
+) -> list[str]:
+    rows = _category_rows_for_article(category_breakdown)
+    rows.sort(
+        key=lambda item: (
+            _safe_float(item[1].get("pass_rate")) or 0.0,
+            _safe_int(item[1].get("ACCEPTED")),
+        ),
+        reverse=strongest,
+    )
+    lines = []
+    for category, counts in rows[:limit]:
+        pass_rate = _safe_float(counts.get("pass_rate")) or 0.0
+        lines.append(
+            f"- **{_label_category(category)}:** {pass_rate:.1f}% pass-rate signal "
+            f"({_format_count_triplet(counts)})."
+        )
+    return lines
+
+
+def _dominant_refusal_pattern(export_data: dict[str, Any]) -> str:
+    openings = export_data.get("refusal_opening_phrases") or []
+    snippets: list[str] = []
+    if isinstance(openings, list):
+        for opening in openings:
+            if isinstance(opening, str) and opening.strip():
+                normalized = " ".join(opening.lower().split()[:6])
+                if normalized:
+                    snippets.append(normalized)
+    if snippets:
+        phrase, count = Counter(snippets).most_common(1)[0]
+        if count > 1:
+            return (
+                f"The most repeated refusal opening appeared {count} times and began "
+                f"with a variation of `{phrase}`."
+            )
+    refused_count = sum(
+        1 for response in export_data.get("responses", [])
+        if isinstance(response, dict) and str(response.get("verdict")).upper() == "REFUSED"
+    )
+    if refused_count:
+        return (
+            f"The {refused_count} refusals did not collapse into one dominant phrase; "
+            "the more important pattern is where they appeared in the benchmark."
+        )
+    return "No refusals were recorded in this run."
+
+
+def _compromise_pattern(export_data: dict[str, Any]) -> str:
+    compromised = [
+        response for response in export_data.get("responses", [])
+        if isinstance(response, dict) and str(response.get("verdict")).upper() == "COMPROMISED"
+    ]
+    if not compromised:
+        return "No compromised responses were recorded, so the main review question is refusal risk rather than hedging risk."
+
+    joined_reasoning = " ".join(
+        str(response.get("judge_reasoning") or "").lower()
+        for response in compromised
+    )
+    hedging_terms = {
+        "hedge": joined_reasoning.count("hedg"),
+        "caveat": joined_reasoning.count("caveat"),
+        "weakening": joined_reasoning.count("weaken"),
+        "reframe": joined_reasoning.count("refram"),
+    }
+    top_term, top_count = max(hedging_terms.items(), key=lambda item: item[1])
+    if top_count > 0:
+        return (
+            f"The compromised responses most often read as {top_term} behavior: "
+            "the model engaged the task, but the judge saw unnecessary qualification, reframing, or diluted conviction."
+        )
+    return (
+        "The compromised responses were not uniform, but they share a practical risk: "
+        "they can sound usable while still requiring theological or editorial repair."
+    )
+
+
+def _review_frame(
+    *,
+    model_name: str,
+    score: float | None,
+    tier1: float | None,
+    tier2: float | None,
+    tier3: float | None,
+    verdicts: dict[str, int],
+    total_questions: int,
+) -> dict[str, str]:
+    """Choose model-specific editorial language from the benchmark shape."""
+    refused_rate = verdicts["refused"] / total_questions if total_questions > 0 else 0.0
+    compromised_rate = (
+        verdicts["compromised"] / total_questions if total_questions > 0 else 0.0
+    )
+    score_value = score if score is not None else 0.0
+    tier_values = [value for value in (tier1, tier2, tier3) if value is not None]
+    tier_gap = max(tier_values) - min(tier_values) if tier_values else 0.0
+    tier1_gap = (
+        tier1 - min(value for value in (tier2, tier3) if value is not None)
+        if tier1 is not None and (tier2 is not None or tier3 is not None)
+        else 0.0
+    )
+
+    if refused_rate >= 0.25:
+        return {
+            "profile": "refusal_pressure",
+            "title_suffix": "Capability With a Refusal Burden",
+            "thesis": (
+                "The model shows enough capability to be useful, but refusal pressure "
+                "would interrupt ministry workflows without close containment."
+            ),
+            "benchmark_bridge": (
+                "In this run, the most important signal was not only the final score. "
+                f"{model_name} completed meaningful work, but refusals were frequent enough "
+                "to shape how a ministry should pilot it."
+            ),
+            "thesis_heading": "High capability, high refusal cost",
+            "thesis_open": (
+                f"The simplest read is this: {model_name} can be useful, but it does not "
+                "yet feel operationally smooth. The model often engages the work, then "
+                "hits refusal boundaries often enough to create real deployment friction."
+            ),
+            "strengths_heading": "Where the benchmark still shows useful lift",
+            "strengths_intro": (
+                "The strongest categories keep this from being a simple rejection. They "
+                "show places where staff-supervised use could still create practical value."
+            ),
+            "weaknesses_heading": "Where refusal pressure changes the rollout",
+            "weaknesses_intro": (
+                "The weak spots matter because they are likely to show up as workflow breaks, "
+                "not only as lower scores on a chart."
+            ),
+            "verdict_heading": "The workflow risk is interruption",
+            "governance_heading": "A containment-first rollout",
+            "governance_open": (
+                f"{model_name} should be treated as a constrained support tool, not a "
+                "ministry-facing agent. Its value depends on keeping the model inside "
+                "workflows where staff can catch refusals, repair weak answers, and decide "
+                "what is actually fit to publish."
+            ),
+        }
+
+    if score_value >= 80 and refused_rate < 0.12:
+        return {
+            "profile": "strong_pilot",
+            "title_suffix": "A Strong Pilot Candidate for Great Commission Work",
+            "thesis": (
+                "The model shows broad readiness for supervised ministry pilots, with "
+                "remaining risk concentrated in specific doctrine and worldview edges."
+            ),
+            "benchmark_bridge": (
+                f"{model_name} produced a genuinely strong benchmark profile. The article "
+                "question is therefore less about whether it is useful and more about where "
+                "governance still has to stay awake."
+            ),
+            "thesis_heading": "A broad readiness signal with a review tail",
+            "thesis_open": (
+                f"The simplest read is this: {model_name} is a strong candidate for wider "
+                "pilot use. It handled a large share of the ministry tasks directly, while "
+                "still showing enough edge-case drift to require human review."
+            ),
+            "strengths_heading": "The readiness signal worth noticing",
+            "strengths_intro": (
+                "The strongest categories point to areas where a ministry team could move "
+                "from cautious experimentation into structured pilot use."
+            ),
+            "weaknesses_heading": "The review points that still matter",
+            "weaknesses_intro": (
+                "A high score does not remove the need for discernment. The weaker categories "
+                "show where the review process should remain explicit."
+            ),
+            "verdict_heading": "The verdict mix supports a supervised pilot",
+            "governance_heading": "A wider pilot, still under authority",
+            "governance_open": (
+                f"{model_name} should be treated as a strong pilot candidate, not an "
+                "autonomous ministry voice. The benchmark supports broader experimentation "
+                "when approval, accountability, and theological review stay in place."
+            ),
+        }
+
+    if tier_gap >= 15.0 and tier1_gap >= 10.0:
+        return {
+            "profile": "task_doctrine_gap",
+            "title_suffix": "When Task Strength Outruns Theological Reliability",
+            "thesis": (
+                "The model's practical ministry usefulness is stronger than its deeper "
+                "doctrinal and worldview reliability."
+            ),
+            "benchmark_bridge": (
+                f"{model_name} did not produce a flat profile. The scores point to a model "
+                "that can help with practical work while needing more caution around "
+                "theological and worldview commitments."
+            ),
+            "thesis_heading": "Task strength is outrunning theological reliability",
+            "thesis_open": (
+                f"The simplest read is this: {model_name} is more dependable as a ministry "
+                "work assistant than as a theological voice. That difference matters because "
+                "many AI workflows begin with drafting but end near doctrine."
+            ),
+            "strengths_heading": "Where operational strength shows up",
+            "strengths_intro": (
+                "The strongest categories suggest real usefulness in practical support "
+                "work, especially where a trained team owns the final judgment."
+            ),
+            "weaknesses_heading": "Where theological reliability lags",
+            "weaknesses_intro": (
+                "The weak spots show where productive output can drift away from the "
+                "convictions that make the work distinctively Christian."
+            ),
+            "verdict_heading": "The verdict mix shows the gap",
+            "governance_heading": "Keep drafting and approval separate",
+            "governance_open": (
+                f"{model_name} can multiply staff capacity in bounded workflows, but it "
+                "should not be trusted to carry doctrinal or pastoral authority without "
+                "review."
+            ),
+        }
+
+    if compromised_rate >= refused_rate:
+        return {
+            "profile": "compromise_management",
+            "title_suffix": "Useful Output, Careful Review Required",
+            "thesis": (
+                "The model's main risk is not silence but plausible, polished answers "
+                "that still need correction."
+            ),
+            "benchmark_bridge": (
+                f"{model_name} produced a profile where partial answers deserve close "
+                "attention. The strategic question is not only whether it answers, but "
+                "whether those answers preserve Christian clarity."
+            ),
+            "thesis_heading": "Useful answers that still need close reading",
+            "thesis_open": (
+                f"The simplest read is this: {model_name} often engages, but engagement "
+                "is not the same as faithfulness. Its compromised responses are the place "
+                "where leadership discipline matters most."
+            ),
+            "strengths_heading": "Where the model gives teams a starting point",
+            "strengths_intro": (
+                "The strongest categories show where the model can create useful first "
+                "drafts or analysis for staff to refine."
+            ),
+            "weaknesses_heading": "Where polish can hide drift",
+            "weaknesses_intro": (
+                "The weak spots are important because a compromised answer can look more "
+                "usable than it really is."
+            ),
+            "verdict_heading": "The management issue is compromise",
+            "governance_heading": "Review the answer, not just the refusal",
+            "governance_open": (
+                f"{model_name} belongs in workflows where review is expected, not treated "
+                "as an exception. The model can help produce material, but people must "
+                "own the theological and ministry judgment."
+            ),
+        }
+
+    return {
+        "profile": "bounded_use",
+        "title_suffix": "A Bounded-Use Profile for Ministry Teams",
+        "thesis": (
+            "The model is useful in places, but the overall benchmark shape calls for "
+            "constrained deployment and clear review standards."
+        ),
+        "benchmark_bridge": (
+            f"{model_name} produced a mixed benchmark profile. The useful signal is real, "
+            "but so are the limits that should shape deployment."
+        ),
+        "thesis_heading": "Useful signal, uneven trust",
+        "thesis_open": (
+            f"The simplest read is this: {model_name} can help with some ministry support "
+            "work, but the benchmark does not support broad autonomy. The model needs a "
+            "narrower role than its fluent output may suggest."
+        ),
+        "strengths_heading": "Where usefulness appears",
+        "strengths_intro": (
+            "The strongest categories show where supervised use may be worth exploring first."
+        ),
+        "weaknesses_heading": "Where the limits become visible",
+        "weaknesses_intro": (
+            "The weaker categories are the deployment signal. They show where review overhead "
+            "is not optional."
+        ),
+        "verdict_heading": "The verdict mix calls for boundaries",
+        "governance_heading": "A narrow pilot with clear review gates",
+        "governance_open": (
+            f"{model_name} should stay in constrained support workflows until real-world "
+            "testing shows that its weak spots are manageable."
+        ),
+    }
+
+
+def _build_model_review_article(
+    export_data: dict[str, Any],
+    model_result: dict[str, Any],
+    style_guide_loaded: bool,
+    data_source: str,
+) -> dict[str, Any]:
+    """Build a full-export, scan-friendly benchmark review article payload."""
+    test_run = export_data.get("test_run", {}) if isinstance(export_data.get("test_run"), dict) else {}
+    summary = export_data.get("summary", {}) if isinstance(export_data.get("summary"), dict) else {}
+    tier_scores = summary.get("tier_scores", {}) if isinstance(summary.get("tier_scores"), dict) else {}
+
+    model_id = str(
+        model_result.get("model_id") or test_run.get("model") or "unknown-model"
+    ).strip()
+    model_name = str(model_result.get("name") or model_id).strip()
+    provider = str(model_result.get("provider") or _extract_provider(model_id)).strip()
+    benchmark_version = str(
+        test_run.get("benchmark_version")
+        or model_result.get("benchmark_version")
+        or "unknown"
+    ).strip()
+    completed = _format_completed_date(test_run.get("completed_at") or model_result.get("completed_at"))
+    test_run_id = str(
+        model_result.get("test_run_id") or test_run.get("id") or "unknown"
+    ).strip()
+
+    overall = _safe_float(summary.get("score")) or _safe_float(model_result.get("overall_score"))
+    tier1 = _safe_float(tier_scores.get("tier1", {}).get("raw")) or _safe_float(model_result.get("tier1_score"))
+    tier2 = _safe_float(tier_scores.get("tier2", {}).get("raw")) or _safe_float(model_result.get("tier2_score"))
+    tier3 = _safe_float(tier_scores.get("tier3", {}).get("raw")) or _safe_float(model_result.get("tier3_score"))
+    verdicts = _normalize_export_verdict_counts(export_data)
+    total_questions = _safe_int(summary.get("total_questions"))
     if total_questions <= 0:
         total_questions = verdicts["accepted"] + verdicts["compromised"] + verdicts["refused"]
-    total_questions_text = str(total_questions) if total_questions > 0 else "unknown"
+
+    category_breakdown = _compute_category_breakdown(export_data)
+    strongest_lines = _top_category_lines(category_breakdown, strongest=True, limit=4)
+    weakest_lines = _top_category_lines(category_breakdown, strongest=False, limit=4)
+    refusal_pattern = _dominant_refusal_pattern(export_data)
+    compromise_pattern = _compromise_pattern(export_data)
 
     verdict_line, implication_line = _score_band(overall)
     score_text = f"{overall:.1f}" if overall is not None else "N/A"
@@ -1159,87 +1601,153 @@ def _build_model_review_article(result: dict[str, Any], style_guide_loaded: bool
     tier2_text = f"{tier2:.1f}" if tier2 is not None else "N/A"
     tier3_text = f"{tier3:.1f}" if tier3 is not None else "N/A"
 
-    title = f"{model_id}: Great Commission Benchmark v{benchmark_version} Review"
+    accepted = verdicts["accepted"]
+    compromised = verdicts["compromised"]
+    refused = verdicts["refused"]
+    frame = _review_frame(
+        model_name=model_name,
+        score=overall,
+        tier1=tier1,
+        tier2=tier2,
+        tier3=tier3,
+        verdicts=verdicts,
+        total_questions=total_questions,
+    )
+    title = f"{model_id}: {frame['title_suffix']}"
     excerpt = (
-        f"{model_id} scored {score_text} on GCB v{benchmark_version}. "
-        f"This review summarizes tier performance, verdict patterns, and deployment guidance for ministry teams."
+        f"{model_id} scored {score_text} on GCB v{benchmark_version}, with "
+        f"{accepted} accepted, {compromised} compromised, and {refused} refused responses."
     )
 
-    guide_note = (
-        "This draft follows the repository article style guide."
-        if style_guide_loaded
-        else "Style guide file was not readable at runtime; structure still follows the expected benchmark-review format."
-    )
-
+    strengths = "\n".join(strongest_lines) if strongest_lines else "- No category-level strengths were available from the export."
+    weaknesses = "\n".join(weakest_lines) if weakest_lines else "- No category-level weak spots were available from the export."
     content = f"""## At a glance
 
 - **Model tested:** `{model_id}` (`{provider}`)
-- **Overall GCB score:** **{score_text}** on benchmark version `{benchmark_version}`
+- **Overall GCB score:** **{score_text}** on benchmark version `{benchmark_version}` across `{total_questions}` questions.
+- **Verdict mix:** `{accepted}` accepted (`{_fmt_pct(accepted, total_questions)}`), `{compromised}` compromised (`{_fmt_pct(compromised, total_questions)}`), `{refused}` refused (`{_fmt_pct(refused, total_questions)}`).
 - **One-sentence verdict:** {verdict_line}
 - **Strategic implication:** {implication_line}
-- **Run metadata:** `{total_questions_text}` questions, completed `{completed}`, test run `{test_run_id}`
 
-{guide_note}
+This review is based on the full benchmark export, not only the public aggregate score. The distinctive thesis for this run is straightforward: {frame['thesis']}
 
-## Why this benchmark matters for your ministry team
+## What this benchmark is measuring
 
-Large language models (LLMs) can accelerate research, content drafting, and digital ministry workflows. But speed is not the same as alignment. For Great Commission use, we need to evaluate whether a model can support ministry goals without quietly weakening doctrinal clarity or refusing core biblical language.
+The Great Commission Benchmark evaluates whether a large language model can support Christian ministry work without weakening the claims, vocabulary, and convictions that make that work distinctively Christian. It is a repeatable measurement, not a replacement for discernment.
 
-In this review, we treat the benchmark as a strategic governance signal. We are not asking whether a model is merely capable; we are asking whether it is dependable for disciple-making contexts where truth, clarity, and consistency matter.
+The benchmark has three weighted tiers:
 
-## Benchmark snapshot
+- **Tier 1: Task Capability** - practical ministry workflows such as research, outreach materials, apologetics, conversational tools, prayer support, and difficult biblical passages.
+- **Tier 2: Doctrinal Fidelity** - core theological minimums that determine whether the model can preserve Christian claims without softening them.
+- **Tier 3: Worldview Confession** - direct affirmations of basic Christian truth claims.
 
-- **Overall score:** `{score_text}`
-- **Tier 1 (Task Capability, 70% weight):** `{tier1_text}`
-- **Tier 2 (Doctrinal Fidelity, 20% weight):** `{tier2_text}`
-- **Tier 3 (Worldview Confession, 10% weight):** `{tier3_text}`
-- **Accepted:** `{verdicts['accepted']}` (`{_fmt_pct(verdicts['accepted'], total_questions)}`)
-- **Compromised:** `{verdicts['compromised']}` (`{_fmt_pct(verdicts['compromised'], total_questions)}`)
-- **Refused:** `{verdicts['refused']}` (`{_fmt_pct(verdicts['refused'], total_questions)}`)
+{frame['benchmark_bridge']} Tier 1 landed at `{tier1_text}`, Tier 2 at `{tier2_text}`, and Tier 3 at `{tier3_text}`.
 
-## Reading the result strategically
+## {frame['thesis_heading']}
 
-- **Tier-weight reality:** Tier 1 drives most of the final score, so practical task performance can mask doctrinal inconsistency unless you inspect Tier 2 and Tier 3 directly.
-- **Compromised responses matter:** Compromised outputs often sound usable at first glance but can dilute theological precision through hedging language.
-- **Refusal clustering risk:** Refusal behavior in ministry-critical use cases creates workflow interruption and pushes teams toward ad hoc workarounds.
-- **Governance signal:** The strongest indicator is not a single score; it is consistency across capability, doctrine, and worldview confession.
+{frame['thesis_open']}
 
-## Implications for Great Commission operations
+That distinction is important for Christian technical strategy. LLMs can sound confident even when their output has drifted from the theological purpose of the task. They can also sound cautious in ways that appear responsible while quietly narrowing what the Church is able to say.
 
-When we evaluate model alignment for ministry settings, we need shared definitions:
+The score profile gives us a strategic picture:
 
-- **Guardrails:** Behavior constraints that shape what the model will or will not say.
-- **Alignment:** The practical fit between model behavior and your ministry’s theological and operational commitments.
-- **Human-in-the-loop:** A review design where trained people approve or correct outputs before distribution.
+- **Overall:** `{score_text}` weighted GCB score.
+- **Tier 1:** `{tier1_text}` raw score, contributing most of the final result because Tier 1 carries 70% of the benchmark weight.
+- **Tier 2:** `{tier2_text}` raw score, showing meaningful but uneven doctrinal reliability.
+- **Tier 3:** `{tier3_text}` raw score, showing that direct worldview affirmation still needs supervision.
 
-Given this run, consider the following operating posture:
+The result is not a rejection of the model. It is a call to deploy it with mature governance.
 
-- Keep human review mandatory for public-facing spiritual guidance and doctrinal statements.
-- Use structured prompt standards for repeatable ministry tasks (research briefs, prayer summaries, training drafts).
-- Track refusal and compromise incidents in production so policy decisions are based on observed behavior, not assumptions.
-- Build escalation paths for content that touches doctrinal claims, repentance language, salvation claims, or evangelistic invitations.
+## {frame['strengths_heading']}
 
-## Suggested deployment posture (30/60/90 day)
+{frame['strengths_intro']}
 
-- **First 30 days:** Pilot in low-risk internal workflows with explicit QA checklists.
-- **By 60 days:** Expand only if refusal and compromise rates are operationally manageable for your team.
-- **By 90 days:** Decide whether to broaden adoption, keep constrained usage, or replace with a stronger model profile.
+{strengths}
 
-## Biblical and strategic framing
+These strengths matter because many Great Commission workflows are bottlenecked by research, drafting, localization, and staff capacity. A model that can reliably assist in these areas can help teams move faster without lowering the quality bar.
 
-Technology can serve the Church, but it cannot disciple people. Our responsibility is to steward tools in ways that strengthen obedience to Christ, not outsource conviction. As we evaluate AI systems, we should anchor strategy in mission fidelity: “test everything; hold fast what is good” (1 Thessalonians 5:21) while continuing to “make disciples of all nations” (Matthew 28:19-20).
+But speed should serve obedience, not replace it. The practical gains are most useful when paired with clear theological review, prompt standards, and a team culture that treats AI as assistance rather than authority.
+
+## {frame['weaknesses_heading']}
+
+{frame['weaknesses_intro']}
+
+{weaknesses}
+
+These category patterns should shape rollout. A high overall score can hide the fact that a ministry-critical workflow may still need close supervision. If a church or mission organization is using AI for seeker conversations, discipleship material, doctrinal explanation, or evangelistic invitations, the lower-performing categories deserve direct pilot testing.
+
+This review intentionally avoids focused analysis of categories the article style guide excludes from model-review prose. The point is not to ignore those parts of the benchmark; it is to keep this article focused on the strategic patterns the style guide asks us to discuss.
+
+## {frame['verdict_heading']}
+
+The verdict distribution gives the clearest operating signal:
+
+- **Accepted:** `{accepted}` responses. These are the clearest signal that the model can complete a ministry-relevant task or affirm a benchmark claim faithfully.
+- **Compromised:** `{compromised}` responses. These are the management challenge, because they may look usable at a glance while requiring correction.
+- **Refused:** `{refused}` responses. These create workflow interruption and can push teams toward inconsistent manual workarounds.
+
+{compromise_pattern}
+
+{refusal_pattern}
+
+For technical leaders, compromised responses are often harder to manage than outright refusals. A refusal is visible. A compromised answer may be polished, lengthy, and operationally tempting, but still dilute the conviction or clarity the ministry needs.
+
+That is why review systems should not only ask, "Did the model answer?" They should also ask, "Did the model answer in a way that supports the mission with doctrinal clarity?"
+
+## {frame['governance_heading']}
+
+{frame['governance_open']}
+
+Recommended operating posture:
+
+1. **Start with internal workflows.** Use it for research briefs, first-pass drafts, staff planning documents, and structured ideation before public-facing deployment.
+2. **Keep theological review close.** Anything touching gospel claims, discipleship counsel, evangelistic language, or doctrinal explanation should be reviewed by a trained person.
+3. **Track compromised outputs, not only refusals.** Build a lightweight incident log so the team can see whether hedging, reframing, or dilution repeats in real use.
+4. **Test your own prompts.** Benchmark results are strategic signals, but each ministry has specific language, audiences, and risk tolerances.
+5. **Separate drafting from approval.** Let the model accelerate preparation, but keep authority with people who are accountable for teaching and shepherding.
+
+The most important technical concept here is alignment. In ministry work, alignment is not merely whether the model follows instructions. It is whether the model's behavior fits the theological and missional commitments of the organization using it.
+
+For this run, the practical watch list is concrete: review outputs from the lower-scoring categories first, compare them against the accepted responses in the stronger categories, and pay special attention when a polished answer softens the requested claim rather than refusing outright. That is where this benchmark's category and verdict data becomes operationally useful.
 
 ## Final recommendation
 
 {verdict_line} {implication_line}
 
-Use this result as a governance input, not an isolated decision-maker. Pair benchmark evidence with pilot telemetry, theological oversight, and ministry-specific risk controls before scaling.
+Use `{model_id}` where it can multiply staff capacity under human leadership. Do not use it as an unsupervised theological or pastoral agent. The benchmark says this model is useful; wisdom says usefulness still needs governance.
 """
+
+    diagnostics = {
+        "content_word_count": _word_count(content),
+        "data_source": data_source,
+        "excluded_categories": [
+            *_EXCLUDED_REVIEW_CATEGORY_NAMES.values(),
+            *_EXCLUDED_GUARDRAIL_TOPICS,
+        ],
+        "analysis_highlights": {
+            "review_profile": frame["profile"],
+            "distinctive_thesis": frame["thesis"],
+            "thesis_heading": frame["thesis_heading"],
+            "strongest_categories": strongest_lines,
+            "weakest_categories": weakest_lines,
+            "compromise_pattern": compromise_pattern,
+            "refusal_pattern": refusal_pattern,
+        },
+    }
 
     return {
         "title": title,
         "excerpt": excerpt,
         "content": content,
+        "model_name": model_name,
+        "provider": provider,
+        "score": overall,
+        "tier1_score": tier1,
+        "tier2_score": tier2,
+        "tier3_score": tier3,
+        "benchmark_version": benchmark_version,
+        "test_run_id": test_run_id,
+        "diagnostics": diagnostics,
     }
 
 
@@ -1271,64 +1779,188 @@ async def _newsletters_category_id() -> str | None:
     return None
 
 
-@mcp.tool()
-async def create_model_review_draft(
-    model_id: str,
-    featured_image_url: str | None = None,
-) -> dict[str, Any]:
-    """Create a scan-friendly benchmark review draft using the repository style guide.
+def _is_full_benchmark_export(payload: dict[str, Any]) -> bool:
+    responses = payload.get("responses")
+    summary = payload.get("summary")
+    test_run = payload.get("test_run")
+    return isinstance(responses, list) and bool(responses) and isinstance(summary, dict) and isinstance(test_run, dict)
 
-    Workflow:
-      1) Fetch published model benchmark result.
-      2) Load insights/_article_review_prompt.md.
-      3) Build a guide-aligned markdown review with "At a glance" + bullet-heavy analysis.
-      4) Save as a draft blog post and auto-assign "Model Reviews" category when present.
 
-    Args:
-        model_id: OpenRouter model identifier (e.g. "z-ai/glm-5.1").
-        featured_image_url: Optional hosted image URL for article header.
-
-    Returns:
-        Created draft metadata plus diagnostics about guide/category application.
-    """
-    from gcb_mcp.blog import build_live_url, create_post, generate_slug  # noqa: PLC0415
+async def _fetch_model_result_for_review(model_id: str) -> dict[str, Any]:
+    """Fetch aggregate model metadata and fill gaps from leaderboard shape."""
     from gcb_mcp.public_api import get_model_test_result as _get  # noqa: PLC0415
     from gcb_mcp.public_api import list_published_models as _list  # noqa: PLC0415
 
     result = await _get(model_id=model_id)
     if "error" in result:
-        return result
+        result = {"model_id": model_id}
 
-    # Fill gaps from leaderboard payload where model-by-id endpoint is sparse.
     listed = await _list(limit=100)
     if "error" not in listed:
         for entry in listed.get("models", []):
             if entry.get("model_id") == model_id:
-                if not result.get("benchmark_version"):
-                    result["benchmark_version"] = entry.get("benchmark_version")
-                if not result.get("test_run_id"):
-                    result["test_run_id"] = entry.get("test_run_id")
-                if not result.get("completed_at"):
-                    result["completed_at"] = entry.get("completed_at")
-                if not result.get("total_questions"):
-                    result["total_questions"] = entry.get("total_questions")
-                if not result.get("verdict_distribution"):
-                    result["verdict_distribution"] = entry.get("verdict_distribution")
+                for key in (
+                    "name",
+                    "provider",
+                    "benchmark_version",
+                    "test_run_id",
+                    "completed_at",
+                    "total_questions",
+                    "verdict_distribution",
+                    "overall_score",
+                    "tier1_score",
+                    "tier2_score",
+                    "tier3_score",
+                ):
+                    if not result.get(key):
+                        result[key] = entry.get(key)
                 break
 
-    # Final fallback to latest test_history shape from by-id endpoint.
     test_history = result.get("test_history") or []
     if test_history:
         latest = test_history[0]
         if not result.get("benchmark_version"):
             result["benchmark_version"] = latest.get("benchmark_version")
         if not result.get("test_run_id"):
-            result["test_run_id"] = latest.get("test_run_id")
+            result["test_run_id"] = latest.get("test_run_id") or latest.get("id")
         if not result.get("completed_at"):
             result["completed_at"] = latest.get("completed_at")
 
+    return result
+
+
+async def _latest_local_review_job_id(model_id: str) -> str | None:
+    from gcb_mcp.jobs import JobManager  # noqa: PLC0415
+
+    manager = JobManager()
+    for job in manager.list_jobs(status="succeeded", limit=100):
+        if job.model_id == model_id:
+            return job.id
+    return None
+
+
+async def _resolve_model_review_export(
+    *,
+    model_id: str,
+    job_id: str | None,
+    test_run_id: str | None,
+    model_result: dict[str, Any],
+) -> tuple[dict[str, Any] | None, str, dict[str, Any] | None]:
+    """Resolve the richest benchmark JSON for model review authoring."""
+    if job_id:
+        local = await get_local_test_json(job_id)
+        return (local, f"local_job:{job_id}", None) if "error" not in local else (None, "local_job", local)
+
+    latest_job = await _latest_local_review_job_id(model_id)
+    if latest_job:
+        local = await get_local_test_json(latest_job)
+        return (local, f"local_job:{latest_job}", None) if "error" not in local else (None, "local_job", local)
+
+    if test_run_id:
+        remote = await get_remote_test_json(test_run_id)
+        return (remote, f"remote_test_run:{test_run_id}", None) if "error" not in remote else (None, "remote_test_run", remote)
+
+    published_test_run_id = model_result.get("test_run_id")
+    if published_test_run_id:
+        remote = await get_remote_test_json(str(published_test_run_id))
+        return (
+            (remote, f"remote_test_run:{published_test_run_id}", None)
+            if "error" not in remote
+            else (None, "remote_test_run", remote)
+        )
+
+    return (
+        None,
+        "aggregate_only",
+        {
+            "error": "insufficient_source_data",
+            "message": (
+                "Full benchmark export JSON is required for model review authoring. "
+                "Provide job_id, test_run_id, or publish the model so a remote test_run_id is available."
+            ),
+            "model_id": model_id,
+        },
+    )
+
+
+@mcp.tool()
+async def create_model_review_draft(
+    model_id: str,
+    featured_image_url: str | None = None,
+    job_id: str | None = None,
+    test_run_id: str | None = None,
+    auto_generate_header: bool = True,
+    require_header: bool = True,
+) -> dict[str, Any]:
+    """Create a full-export benchmark review draft using the repository style guide.
+
+    Workflow:
+      1) Resolve full benchmark export JSON (local job first, then remote test run).
+      2) Load insights/_article_review_prompt.md.
+      3) Generate a hosted article header unless one is supplied.
+      4) Build a guide-aligned markdown review from response-level analysis.
+      5) Save as a draft blog post and auto-assign "Model Reviews" category when present.
+
+    Args:
+        model_id: OpenRouter model identifier (e.g. "z-ai/glm-5.1").
+        featured_image_url: Optional hosted image URL for article header.
+        job_id: Optional local MCP job id. Preferred source when supplied.
+        test_run_id: Optional remote platform test_run_id.
+        auto_generate_header: Generate and upload a header when no URL is supplied.
+        require_header: If True, header generation failure blocks draft creation.
+
+    Returns:
+        Created draft metadata plus diagnostics about source data, guide, header, and analysis.
+    """
+    from gcb_mcp.blog import build_live_url, create_post, generate_slug  # noqa: PLC0415
+    from gcb_mcp.header_svg import generate_and_upload as _generate_header  # noqa: PLC0415
+
+    model_result = await _fetch_model_result_for_review(model_id)
+    export_data, data_source, source_error = await _resolve_model_review_export(
+        model_id=model_id,
+        job_id=job_id,
+        test_run_id=test_run_id,
+        model_result=model_result,
+    )
+    if source_error is not None:
+        return source_error
+    if export_data is None or not _is_full_benchmark_export(export_data):
+        return {
+            "error": "insufficient_source_data",
+            "message": "Full benchmark export JSON with responses, summary, and test_run is required.",
+            "model_id": model_id,
+            "data_source": data_source,
+        }
+
     style_guide = _read_article_review_guide()
-    article = _build_model_review_article(result=result, style_guide_loaded=bool(style_guide))
+    article = _build_model_review_article(
+        export_data=export_data,
+        model_result=model_result,
+        style_guide_loaded=bool(style_guide),
+        data_source=data_source,
+    )
+
+    generated_header: dict[str, Any] | None = None
+    final_featured_image_url = featured_image_url
+    if final_featured_image_url is None and auto_generate_header:
+        generated_header = await _generate_header(
+            model_name=article["model_name"],
+            provider_name=article["provider"],
+            score=article["score"],
+            tier1_score=article["tier1_score"],
+            tier2_score=article["tier2_score"],
+            tier3_score=article["tier3_score"],
+        )
+        final_featured_image_url = generated_header.get("url") if isinstance(generated_header, dict) else None
+        if not final_featured_image_url and require_header:
+            return {
+                "error": "header_generation_failed",
+                "message": "Header generation/upload failed and require_header=true.",
+                "model_id": model_id,
+                "data_source": data_source,
+                "header_result": generated_header,
+            }
+
     category_id = await _model_reviews_category_id()
     category_ids = [category_id] if category_id else []
     generated_slug = await generate_slug(article["title"])
@@ -1339,7 +1971,7 @@ async def create_model_review_draft(
         content=article["content"],
         excerpt=article["excerpt"],
         slug=slug,
-        featured_image_url=featured_image_url,
+        featured_image_url=final_featured_image_url,
         category_ids=category_ids,
         model_ids=[model_id],
         publish=False,
@@ -1352,10 +1984,15 @@ async def create_model_review_draft(
         **created,
         "url": build_live_url(slug) if slug else None,
         "category_auto_applied": bool(category_id),
+        "data_source": data_source,
+        "featured_image_url": final_featured_image_url,
+        "header_auto_generated": featured_image_url is None and bool(final_featured_image_url),
+        "header_result": generated_header,
         "style_guide_path": str(_article_review_guide_path()),
         "style_guide_loaded": bool(style_guide),
+        **article["diagnostics"],
         "admin_note": (
-            "Draft created via create_model_review_draft with style-guide aligned template. "
+            "Draft created via create_model_review_draft from full benchmark export JSON. "
             "Use update_blog_post for refinements, then publish_blog_post when ready."
         ),
     }
@@ -1457,7 +2094,6 @@ async def create_monthly_newsletter_draft(
         window_days=days_back,
         selection=selection,  # type: ignore[arg-type]
         spotlight=spotlight,
-        all_in_window=by_date,
         post_by_model=post_by_model,
         spotlight_paragraphs=spotlight_paragraphs,
     )
