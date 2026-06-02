@@ -29,7 +29,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { FilterOptionsResponse } from "@/lib/api";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,18 +36,6 @@ import { ArrowUpDown, BarChart3, Filter, ChevronUp, ChevronDown, ChevronRight, S
 import { ProviderIcon } from "@/components/ui/provider-icon";
 import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 import { useLeaderboardData } from "@/components/leaderboard/LeaderboardDataProvider";
-
-interface LeaderboardItem {
-  id: string;
-  model_id: string;
-  model_name: string;
-  provider: string;
-  overall_score: number;
-  tier1_score?: number;
-  tier2_score?: number;
-  tier3_score?: number;
-  trust_tier?: string;
-}
 
 // Helper to determine verdict based on score
 function getVerdict(score: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode; className: string } {
@@ -146,6 +133,12 @@ function LeaderboardContent() {
     limit: urlLimit,
     offset: 0,
   });
+  const advancedFilterCount = [
+    filters.version,
+    filters.category,
+    filters.tier,
+    filters.trust_tier,
+  ].filter(Boolean).length;
 
   // All leaderboard data comes from the context (seeded by layout or fetched
   // on-demand by the provider when no initialData was available).
@@ -209,6 +202,19 @@ function LeaderboardContent() {
     }));
   }
 
+  function handleFilterChange(
+    field: "version" | "category" | "tier" | "provider" | "trust_tier",
+    value: string
+  ) {
+    setFilters((prev) => ({
+      ...prev,
+      [field]: value === "all" ? "" : value,
+    }));
+    setPagination((prev) =>
+      prev.offset === 0 ? prev : { ...prev, offset: 0 }
+    );
+  }
+
   return (
     <div className="flex flex-col">
       {/* Page Header */}
@@ -251,7 +257,7 @@ function LeaderboardContent() {
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Select 2-5 models using the checkboxes in the table below to compare their performance across all benchmark categories. 
-                    You'll see detailed side-by-side comparisons of scores, verdicts, and category breakdowns.
+                    You&apos;ll see detailed side-by-side comparisons of scores, verdicts, and category breakdowns.
                   </p>
                   <div className="flex items-center gap-4 pt-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5">
@@ -306,142 +312,131 @@ function LeaderboardContent() {
         {/* Leaderboard Table */}
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <CardTitle className="text-lg">Model Rankings</CardTitle>
-              <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Filter className="h-4 w-4" />
-                    Filters
-                    {(filters.version || filters.category || filters.tier || filters.provider || filters.trust_tier) && (
-                      <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
-                        {[
-                          filters.version && 1,
-                          filters.category && 1,
-                          filters.tier && 1,
-                          filters.provider && 1,
-                          filters.trust_tier && 1,
-                        ].filter(Boolean).length}
-                      </Badge>
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-full sm:max-w-md">
-                  <SheetHeader>
-                    <SheetTitle>Filters</SheetTitle>
-                    <SheetDescription>
-                      Adjust filters to refine the leaderboard results
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="mt-6 space-y-6 px-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Version</label>
-                      <Select
-                        value={filters.version || "all"}
-                        onValueChange={(value) =>
-                          setFilters((prev) => ({ ...prev, version: value === "all" ? "" : value }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Latest version" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Latest version</SelectItem>
-                          {filterOptions?.versions?.map((version) => (
-                            <SelectItem key={version} value={version}>
-                              v{version}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-end">
+                <div className="w-full sm:w-[220px]">
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    Provider
+                  </label>
+                  <Select
+                    value={filters.provider || "all"}
+                    onValueChange={(value) => handleFilterChange("provider", value)}
+                  >
+                    <SelectTrigger size="sm" className="w-full">
+                      <SelectValue placeholder="All providers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All providers</SelectItem>
+                      {filterOptions?.providers.map((provider) => (
+                        <SelectItem key={provider} value={provider}>
+                          <ProviderIcon provider={provider} size={16} />
+                          <span>{formatProvider(provider)}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full gap-2 sm:w-auto">
+                      <Filter className="h-4 w-4" />
+                      Advanced Filters
+                      {advancedFilterCount > 0 && (
+                        <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
+                          {advancedFilterCount}
+                        </Badge>
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-full sm:max-w-md">
+                    <SheetHeader>
+                      <SheetTitle>Advanced Filters</SheetTitle>
+                      <SheetDescription>
+                        Adjust additional filters to refine the leaderboard results
+                      </SheetDescription>
+                    </SheetHeader>
+                    <div className="mt-6 space-y-6 px-4">
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Version</label>
+                        <Select
+                          value={filters.version || "all"}
+                          onValueChange={(value) => handleFilterChange("version", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Latest version" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Latest version</SelectItem>
+                            {filterOptions?.versions?.map((version) => (
+                              <SelectItem key={version} value={version}>
+                                v{version}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Trust Tier</label>
+                        <Select
+                          value={filters.trust_tier || "all"}
+                          onValueChange={(value) => handleFilterChange("trust_tier", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="All tiers" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All tiers</SelectItem>
+                            {filterOptions?.trust_tiers.map((tier) => (
+                              <SelectItem key={tier} value={tier}>
+                                {tier.charAt(0).toUpperCase() + tier.slice(1)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Category</label>
+                        <Select
+                          value={filters.category || "all"}
+                          onValueChange={(value) => handleFilterChange("category", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="All categories" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All categories</SelectItem>
+                            {filterOptions?.categories.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category.charAt(0).toUpperCase() + category.slice(1)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Tier Focus</label>
+                        <Select
+                          value={filters.tier || "all"}
+                          onValueChange={(value) => handleFilterChange("tier", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="All tiers" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All tiers</SelectItem>
+                            {filterOptions?.tiers.map((tier) => (
+                              <SelectItem key={tier.value} value={tier.value}>
+                                {tier.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Provider</label>
-                      <Select
-                        value={filters.provider || "all"}
-                        onValueChange={(value) =>
-                          setFilters((prev) => ({ ...prev, provider: value === "all" ? "" : value }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="All providers" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All providers</SelectItem>
-                          {filterOptions?.providers.map((provider) => (
-                            <SelectItem key={provider} value={provider}>
-                              {provider.charAt(0).toUpperCase() + provider.slice(1)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Trust Tier</label>
-                      <Select
-                        value={filters.trust_tier || "all"}
-                        onValueChange={(value) =>
-                          setFilters((prev) => ({ ...prev, trust_tier: value === "all" ? "" : value }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="All tiers" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All tiers</SelectItem>
-                          {filterOptions?.trust_tiers.map((tier) => (
-                            <SelectItem key={tier} value={tier}>
-                              {tier.charAt(0).toUpperCase() + tier.slice(1)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Category</label>
-                      <Select
-                        value={filters.category || "all"}
-                        onValueChange={(value) =>
-                          setFilters((prev) => ({ ...prev, category: value === "all" ? "" : value }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="All categories" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All categories</SelectItem>
-                          {filterOptions?.categories.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category.charAt(0).toUpperCase() + category.slice(1)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Tier Focus</label>
-                      <Select
-                        value={filters.tier || "all"}
-                        onValueChange={(value) =>
-                          setFilters((prev) => ({ ...prev, tier: value === "all" ? "" : value }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="All tiers" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All tiers</SelectItem>
-                          {filterOptions?.tiers.map((tier) => (
-                            <SelectItem key={tier.value} value={tier.value}>
-                              {tier.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </SheetContent>
-              </Sheet>
+                  </SheetContent>
+                </Sheet>
+              </div>
             </div>
             <CardDescription>
               {total > 0
