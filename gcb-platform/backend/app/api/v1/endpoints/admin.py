@@ -3042,10 +3042,58 @@ async def send_newsletter_campaign(
 ):
     """Send newsletter post to test or production audience with safety guardrails."""
     current_user_id = current_user.id
+    send_log: NewsletterCampaignSend | None = None
+
+    def mark_send_step(
+        status: str,
+        *,
+        recipient_count: int | None = None,
+        campaign_id: str | None = None,
+    ) -> None:
+        """Persist the latest newsletter send step before long-running work."""
+        if send_log is None:
+            return
+        send_log.status = status
+        if recipient_count is not None:
+            send_log.recipient_count = recipient_count
+        if campaign_id is not None:
+            send_log.campaign_id = campaign_id
+        db.add(send_log)
+        db.commit()
+        db.refresh(send_log)
 
     post = db.query(BlogPost).filter(BlogPost.id == request.post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+
+    target_group_id = NewsletterService.audience_group_id(request.audience)
+    already_sent = db.query(NewsletterCampaignSend).filter(
+        NewsletterCampaignSend.post_id == post.id,
+        NewsletterCampaignSend.audience == request.audience,
+        NewsletterCampaignSend.status == "sent",
+    ).first()
+
+    logger.info(
+        "newsletter_send_start post_id=%s audience=%s dry_run=%s force_resend=%s already_sent=%s",
+        post.id,
+        request.audience,
+        request.dry_run,
+        request.force_resend,
+        bool(already_sent),
+    )
+
+    if not request.dry_run:
+        send_log = NewsletterCampaignSend(
+            post_id=post.id,
+            audience=request.audience,
+            status="started",
+            provider="mailerlite",
+            sent_by_user_id=current_user_id,
+        )
+        db.add(send_log)
+        db.commit()
+        db.refresh(send_log)
+        logger.info("newsletter_send_log_created send_log_id=%s post_id=%s", send_log.id, post.id)
 
     if request.audience == "test":
         recipient_count = db.query(NewsletterTestRecipient).filter(
@@ -3058,12 +3106,15 @@ async def send_newsletter_campaign(
         ).count()
         recipient_count_source = "newsletter_subscribers_active"
 
-    target_group_id = NewsletterService.audience_group_id(request.audience)
-    already_sent = db.query(NewsletterCampaignSend).filter(
-        NewsletterCampaignSend.post_id == post.id,
-        NewsletterCampaignSend.audience == request.audience,
-        NewsletterCampaignSend.status == "sent",
-    ).first()
+    mark_send_step("counted", recipient_count=recipient_count)
+    logger.info(
+        "newsletter_send_recipient_count post_id=%s send_log_id=%s audience=%s count=%s source=%s",
+        post.id,
+        getattr(send_log, "id", None),
+        request.audience,
+        recipient_count,
+        recipient_count_source,
+    )
 
     if request.dry_run:
         return NewsletterSendResponse(
@@ -3075,6 +3126,7 @@ async def send_newsletter_campaign(
             post_status=post.status,
             already_sent=bool(already_sent),
             campaign_id=None,
+            send_log_id=None,
             message=(
                 f"Dry run OK for {request.audience} audience: {recipient_count} recipients in "
                 f"{recipient_count_source}; post status={post.status}. "
@@ -3083,30 +3135,35 @@ async def send_newsletter_campaign(
         )
 
     if request.audience == "production" and post.status != "published":
+        mark_send_step("failed")
         raise HTTPException(
             status_code=400,
             detail="Post must be published before production send.",
         )
 
     if request.audience == "production" and not request.confirm_production_send:
+        mark_send_step("failed")
         raise HTTPException(
             status_code=400,
             detail="Production send requires confirm_production_send=true.",
         )
 
     if already_sent and request.audience == "production" and not request.force_resend:
+        mark_send_step("failed")
         raise HTTPException(
             status_code=409,
             detail="A production send already exists for this post. Set force_resend=true to override.",
         )
 
     if not NewsletterService.is_configured():
+        mark_send_step("failed")
         raise HTTPException(
             status_code=400,
             detail="MailerLite is not configured. Set MAILERLITE_API_KEY.",
         )
 
     if not target_group_id:
+        mark_send_step("failed")
         raise HTTPException(
             status_code=400,
             detail=(
@@ -3117,6 +3174,7 @@ async def send_newsletter_campaign(
         )
 
     if recipient_count == 0:
+        mark_send_step("failed")
         raise HTTPException(
             status_code=400,
             detail=f"No active recipients found for {request.audience} audience.",
@@ -3124,6 +3182,8 @@ async def send_newsletter_campaign(
 
     from app.services.markdown_email import markdown_to_email_html_fragment, wrap_email_shell  # noqa: PLC0415
 
+    mark_send_step("rendering")
+    logger.info("newsletter_send_rendering post_id=%s send_log_id=%s", post.id, getattr(send_log, "id", None))
     inner = markdown_to_email_html_fragment(post.content or "")
     web_version_url = (
         f"https://greatcommissionbenchmark.ai/insights/{post.slug}" if post.slug else None
@@ -3133,9 +3193,17 @@ async def send_newsletter_campaign(
         title=post.title,
         web_version_url=web_version_url,
     )
+    mark_send_step("rendered")
+    logger.info(
+        "newsletter_send_rendered post_id=%s send_log_id=%s html_chars=%s",
+        post.id,
+        getattr(send_log, "id", None),
+        len(full_html),
+    )
 
     from_name, from_email = parseaddr(settings.EMAIL_FROM)
     if not from_email:
+        mark_send_step("failed")
         raise HTTPException(
             status_code=500,
             detail="EMAIL_FROM must be a valid address for campaign sender (e.g. 'Name <addr@domain>').",
@@ -3143,6 +3211,14 @@ async def send_newsletter_campaign(
     if not from_name.strip():
         from_name = "Great Commission Benchmark"
 
+    mark_send_step("sending")
+    logger.info(
+        "newsletter_send_mailerlite_start post_id=%s send_log_id=%s audience=%s group_id=%s",
+        post.id,
+        getattr(send_log, "id", None),
+        request.audience,
+        target_group_id,
+    )
     result = await NewsletterService.create_and_send_instant_regular_campaign(
         name=f"Newsletter: {post.title}"[:255],
         subject=(post.title or "Great Commission Benchmark")[:255],
@@ -3153,22 +3229,26 @@ async def send_newsletter_campaign(
     )
 
     if not result.get("ok"):
+        mark_send_step("failed", campaign_id=result.get("campaign_id"))
+        logger.error(
+            "newsletter_send_mailerlite_failed post_id=%s send_log_id=%s result=%s",
+            post.id,
+            getattr(send_log, "id", None),
+            result,
+        )
         raise HTTPException(
             status_code=502,
             detail={"message": "MailerLite campaign failed", "result": result},
         )
 
-    send_log = NewsletterCampaignSend(
-        post_id=post.id,
-        audience=request.audience,
-        campaign_id=result.get("campaign_id"),
-        recipient_count=recipient_count,
-        status="sent",
-        provider="mailerlite",
-        sent_by_user_id=current_user_id,
+    mark_send_step("sent", campaign_id=result.get("campaign_id"))
+    logger.info(
+        "newsletter_send_mailerlite_sent post_id=%s send_log_id=%s campaign_id=%s recipient_count=%s",
+        post.id,
+        getattr(send_log, "id", None),
+        result.get("campaign_id"),
+        recipient_count,
     )
-    db.add(send_log)
-    db.commit()
 
     ActionLogService.log_action(
         db,
@@ -3196,11 +3276,56 @@ async def send_newsletter_campaign(
         post_status=post.status,
         already_sent=bool(already_sent),
         campaign_id=result.get("campaign_id"),
+        send_log_id=send_log.id if send_log else None,
         message=(
             f"Queued MailerLite campaign {result.get('campaign_id')} to "
             f"{request.audience} group {target_group_id}."
         ),
     )
+
+
+@router.get("/newsletter/sends")
+async def list_newsletter_campaign_sends(
+    post_id: Optional[UUID] = Query(None, description="Filter by insights post UUID"),
+    audience: Optional[str] = Query(None, description="Filter by audience: test or production"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_admin_flexible),
+    db: Session = Depends(get_db),
+):
+    """List newsletter send attempts so timed-out requests can be diagnosed."""
+    query = db.query(NewsletterCampaignSend)
+    if post_id is not None:
+        query = query.filter(NewsletterCampaignSend.post_id == post_id)
+    if audience:
+        query = query.filter(NewsletterCampaignSend.audience == audience)
+
+    total = query.count()
+    rows = (
+        query.order_by(desc(NewsletterCampaignSend.created_at))
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return {
+        "items": [
+            {
+                "id": str(row.id),
+                "post_id": str(row.post_id),
+                "audience": row.audience,
+                "campaign_id": row.campaign_id,
+                "recipient_count": row.recipient_count,
+                "status": row.status,
+                "provider": row.provider,
+                "sent_by_user_id": str(row.sent_by_user_id) if row.sent_by_user_id else None,
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+            }
+            for row in rows
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 # =============================================================================

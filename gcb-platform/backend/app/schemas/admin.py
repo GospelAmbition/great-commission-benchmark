@@ -445,6 +445,7 @@ class NewsletterSendResponse(BaseModel):
     post_status: str
     already_sent: bool = False
     campaign_id: Optional[str] = None
+    send_log_id: Optional[UUID] = None
     message: str
 
 
