@@ -3066,7 +3066,6 @@ async def send_newsletter_campaign(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    target_group_id = NewsletterService.audience_group_id(request.audience)
     already_sent = db.query(NewsletterCampaignSend).filter(
         NewsletterCampaignSend.post_id == post.id,
         NewsletterCampaignSend.audience == request.audience,
@@ -3087,7 +3086,7 @@ async def send_newsletter_campaign(
             post_id=post.id,
             audience=request.audience,
             status="started",
-            provider="mailerlite",
+            provider="resend",
             sent_by_user_id=current_user_id,
         )
         db.add(send_log)
@@ -3096,15 +3095,17 @@ async def send_newsletter_campaign(
         logger.info("newsletter_send_log_created send_log_id=%s post_id=%s", send_log.id, post.id)
 
     if request.audience == "test":
-        recipient_count = db.query(NewsletterTestRecipient).filter(
+        recipients = db.query(NewsletterTestRecipient).filter(
             NewsletterTestRecipient.is_active == True
-        ).count()
+        ).all()
         recipient_count_source = "newsletter_test_recipients"
     else:
-        recipient_count = db.query(NewsletterSubscriber).filter(
+        recipients = db.query(NewsletterSubscriber).filter(
             NewsletterSubscriber.is_active == True
-        ).count()
+        ).all()
         recipient_count_source = "newsletter_subscribers_active"
+    recipient_emails = [recipient.email for recipient in recipients]
+    recipient_count = len(recipient_emails)
 
     mark_send_step("counted", recipient_count=recipient_count)
     logger.info(
@@ -3122,7 +3123,7 @@ async def send_newsletter_campaign(
             audience=request.audience,
             recipient_count=recipient_count,
             recipient_count_source=recipient_count_source,
-            target_group_id=target_group_id or None,
+            target_group_id=None,
             post_status=post.status,
             already_sent=bool(already_sent),
             campaign_id=None,
@@ -3130,7 +3131,7 @@ async def send_newsletter_campaign(
             message=(
                 f"Dry run OK for {request.audience} audience: {recipient_count} recipients in "
                 f"{recipient_count_source}; post status={post.status}. "
-                f"Set dry_run=false to send via MailerLite."
+                f"Set dry_run=false to send individual emails via Resend."
             ),
         )
 
@@ -3155,22 +3156,11 @@ async def send_newsletter_campaign(
             detail="A production send already exists for this post. Set force_resend=true to override.",
         )
 
-    if not NewsletterService.is_configured():
+    if not settings.RESEND_API_KEY:
         mark_send_step("failed")
         raise HTTPException(
             status_code=400,
-            detail="MailerLite is not configured. Set MAILERLITE_API_KEY.",
-        )
-
-    if not target_group_id:
-        mark_send_step("failed")
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "MailerLite group is not configured for this audience. "
-                "Set MAILERLITE_TEST_GROUP_ID for test sends or "
-                "MAILERLITE_PROD_GROUP_ID / MAILERLITE_GROUP_ID for production sends."
-            ),
+            detail="Resend is not configured. Set RESEND_API_KEY.",
         )
 
     if recipient_count == 0:
@@ -3193,6 +3183,18 @@ async def send_newsletter_campaign(
         title=post.title,
         web_version_url=web_version_url,
     )
+    full_html = full_html.replace(
+        "</td></tr></table></td></tr></table></body></html>",
+        (
+            '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />'
+            '<p style="font-size:12px;line-height:1.5;color:#666;">'
+            "You are receiving this because you subscribed to the Great Commission Benchmark newsletter. "
+            "To unsubscribe, reply to this email with &quot;Unsubscribe&quot; or contact "
+            '<a href="mailto:contact@greatcommissionbenchmark.ai" rel="noopener noreferrer">'
+            "contact@greatcommissionbenchmark.ai</a>."
+            "</p></td></tr></table></td></tr></table></body></html>"
+        ),
+    )
     mark_send_step("rendered")
     logger.info(
         "newsletter_send_rendered post_id=%s send_log_id=%s html_chars=%s",
@@ -3213,41 +3215,63 @@ async def send_newsletter_campaign(
 
     mark_send_step("sending")
     logger.info(
-        "newsletter_send_mailerlite_start post_id=%s send_log_id=%s audience=%s group_id=%s",
+        "newsletter_send_resend_start post_id=%s send_log_id=%s audience=%s recipient_count=%s",
         post.id,
         getattr(send_log, "id", None),
         request.audience,
-        target_group_id,
-    )
-    result = await NewsletterService.create_and_send_instant_regular_campaign(
-        name=f"Newsletter: {post.title}"[:255],
-        subject=(post.title or "Great Commission Benchmark")[:255],
-        html_content=full_html,
-        group_id=target_group_id,
-        from_email=from_email,
-        from_name=from_name,
+        recipient_count,
     )
 
-    if not result.get("ok"):
-        mark_send_step("failed", campaign_id=result.get("campaign_id"))
-        logger.error(
-            "newsletter_send_mailerlite_failed post_id=%s send_log_id=%s result=%s",
+    from app.services.email import EmailService  # noqa: PLC0415
+
+    sent_count = 0
+    failed_recipients: list[str] = []
+    for email in recipient_emails:
+        ok = await EmailService.send_email(
+            to=email,
+            subject=(post.title or "Great Commission Benchmark")[:255],
+            html_content=full_html,
+            from_email=settings.EMAIL_FROM,
+        )
+        if ok:
+            sent_count += 1
+        else:
+            failed_recipients.append(email)
+        logger.info(
+            "newsletter_send_resend_recipient post_id=%s send_log_id=%s recipient=%s ok=%s",
             post.id,
             getattr(send_log, "id", None),
-            result,
+            email,
+            ok,
+        )
+
+    local_campaign_id = f"resend:{send_log.id}" if send_log else None
+    if failed_recipients:
+        mark_send_step("failed", campaign_id=local_campaign_id)
+        logger.error(
+            "newsletter_send_resend_failed post_id=%s send_log_id=%s sent_count=%s failed_count=%s",
+            post.id,
+            getattr(send_log, "id", None),
+            sent_count,
+            len(failed_recipients),
         )
         raise HTTPException(
             status_code=502,
-            detail={"message": "MailerLite campaign failed", "result": result},
+            detail={
+                "message": "Resend newsletter send failed for one or more recipients",
+                "sent_count": sent_count,
+                "failed_count": len(failed_recipients),
+                "failed_recipients": failed_recipients,
+                "send_log_id": str(send_log.id) if send_log else None,
+            },
         )
 
-    mark_send_step("sent", campaign_id=result.get("campaign_id"))
+    mark_send_step("sent", campaign_id=local_campaign_id)
     logger.info(
-        "newsletter_send_mailerlite_sent post_id=%s send_log_id=%s campaign_id=%s recipient_count=%s",
+        "newsletter_send_resend_sent post_id=%s send_log_id=%s sent_count=%s",
         post.id,
         getattr(send_log, "id", None),
-        result.get("campaign_id"),
-        recipient_count,
+        sent_count,
     )
 
     ActionLogService.log_action(
@@ -3258,12 +3282,13 @@ async def send_newsletter_campaign(
         entity_type="blog_post",
         entity_id=str(post.id),
         metadata={
-            "campaign_id": result.get("campaign_id"),
+            "campaign_id": local_campaign_id,
             "slug": post.slug,
             "audience": request.audience,
             "recipient_count": recipient_count,
-            "target_group_id": target_group_id,
+            "sent_count": sent_count,
             "force_resend": request.force_resend,
+            "provider": "resend",
         },
     )
 
@@ -3272,14 +3297,13 @@ async def send_newsletter_campaign(
         audience=request.audience,
         recipient_count=recipient_count,
         recipient_count_source=recipient_count_source,
-        target_group_id=target_group_id,
+        target_group_id=None,
         post_status=post.status,
         already_sent=bool(already_sent),
-        campaign_id=result.get("campaign_id"),
+        campaign_id=local_campaign_id,
         send_log_id=send_log.id if send_log else None,
         message=(
-            f"Queued MailerLite campaign {result.get('campaign_id')} to "
-            f"{request.audience} group {target_group_id}."
+            f"Sent newsletter via Resend to {sent_count} {request.audience} recipient(s)."
         ),
     )
 

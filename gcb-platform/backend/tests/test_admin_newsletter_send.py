@@ -5,6 +5,8 @@ from app.db.models.blog_post import BlogPost
 from app.db.models.newsletter_campaign_send import NewsletterCampaignSend
 from app.db.models.newsletter_subscriber import NewsletterSubscriber
 from app.db.models.newsletter_test_recipient import NewsletterTestRecipient
+from app.core.config import settings
+from app.services.email import EmailService
 from app.services.newsletter import NewsletterService
 
 
@@ -143,16 +145,14 @@ class TestAdminNewsletterSend:
         db_session.add(NewsletterSubscriber(email="member@example.com", is_active=True))
         db_session.commit()
 
-        async def fake_send_campaign(**kwargs):
-            return {"ok": True, "campaign_id": f"cmp_{uuid4()}"}
+        sent_to: list[str] = []
 
-        monkeypatch.setattr(NewsletterService, "is_configured", staticmethod(lambda: True))
-        monkeypatch.setattr(NewsletterService, "audience_group_id", staticmethod(lambda audience: "prod-group"))
-        monkeypatch.setattr(
-            NewsletterService,
-            "create_and_send_instant_regular_campaign",
-            staticmethod(fake_send_campaign),
-        )
+        async def fake_send_email(to: str, subject: str, html_content: str, from_email: str | None = None):
+            sent_to.append(to)
+            return True
+
+        monkeypatch.setattr(settings, "RESEND_API_KEY", "re_test")
+        monkeypatch.setattr(EmailService, "send_email", staticmethod(fake_send_email))
 
         payload = {
             "post_id": str(post.id),
@@ -162,6 +162,10 @@ class TestAdminNewsletterSend:
         }
         first = client.post("/api/admin/newsletter/send", json=payload)
         assert first.status_code == 200
+        first_data = first.json()
+        assert first_data["campaign_id"].startswith("resend:")
+        assert first_data["send_log_id"]
+        assert sent_to == ["member@example.com"]
 
         second = client.post("/api/admin/newsletter/send", json=payload)
         assert second.status_code == 409
@@ -171,11 +175,19 @@ class TestAdminNewsletterSend:
             json={**payload, "force_resend": True},
         )
         assert forced.status_code == 200
+        assert sent_to == ["member@example.com", "member@example.com"]
 
         send_count = db_session.query(NewsletterCampaignSend).filter(
             NewsletterCampaignSend.post_id == post.id,
             NewsletterCampaignSend.audience == "production",
+            NewsletterCampaignSend.status == "sent",
         ).count()
         assert send_count == 2
+
+        attempt_count = db_session.query(NewsletterCampaignSend).filter(
+            NewsletterCampaignSend.post_id == post.id,
+            NewsletterCampaignSend.audience == "production",
+        ).count()
+        assert attempt_count == 3
 
         app.dependency_overrides.clear()
