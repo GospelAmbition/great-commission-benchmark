@@ -4,7 +4,6 @@ import {
   createContext,
   useContext,
   useState,
-  useCallback,
   useEffect,
   type ReactNode,
 } from "react";
@@ -15,25 +14,11 @@ import {
 } from "@/lib/api";
 import { getPrefetchedLeaderboardPage } from "../../lib/leaderboard-prefetch";
 
-export interface LeaderboardFilters {
-  version: string;
-  category: string;
-  tier: string;
-  provider: string;
-  trust_tier: string;
-  sort: string;
-  order: "asc" | "desc";
-}
-
 export interface LeaderboardState {
   items: LeaderboardItem[];
   total: number;
   filterOptions: FilterOptionsResponse | null;
   loading: boolean;
-  loadLeaderboard: (
-    filters: LeaderboardFilters,
-    pagination: { limit: number; offset: number }
-  ) => Promise<void>;
 }
 
 const LeaderboardContext = createContext<LeaderboardState | null>(null);
@@ -93,34 +78,9 @@ export function LeaderboardDataProvider({ initialData, children }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadLeaderboard = useCallback(
-    async (
-      filters: LeaderboardFilters,
-      pagination: { limit: number; offset: number }
-    ) => {
-      setLoading(true);
-      try {
-        const result = await apiClient.getLeaderboard({
-          ...filters,
-          limit: pagination.limit,
-          offset: pagination.offset,
-        });
-        if (result.items) {
-          setItems(result.items);
-          setTotal(result.total ?? 0);
-        }
-      } catch (error) {
-        console.error("Failed to load leaderboard:", error);
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
-
   return (
     <LeaderboardContext.Provider
-      value={{ items, total, filterOptions, loading, loadLeaderboard }}
+      value={{ items, total, filterOptions, loading }}
     >
       {children}
     </LeaderboardContext.Provider>

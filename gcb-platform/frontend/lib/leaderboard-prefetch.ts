@@ -30,9 +30,10 @@ function isFresh(): boolean {
 function transformResponse(raw: {
   leaderboard: {
     entries?: Array<{
-      model?: { id?: string; model_id?: string; name?: string; provider?: string };
+      rank?: number;
+      model?: { id?: string; model_id?: string; name?: string; provider?: string; description?: string };
       scores?: { overall?: number; tier1?: number; tier2?: number; tier3?: number };
-      test_run?: { trust_tier?: string };
+      test_run?: { trust_tier?: string; question_set_version?: string; completed_at?: string };
       category_scores?: Record<string, number>;
     }>;
     total_models?: number;
@@ -40,15 +41,19 @@ function transformResponse(raw: {
   filter_options: FilterOptionsResponse;
 }): PrefetchedLeaderboardPage {
   const items: LeaderboardItem[] = (raw.leaderboard?.entries || []).map((entry) => ({
+    rank: entry.rank,
     id: entry.model?.id || "",
     model_id: entry.model?.model_id || entry.model?.id || "",
     model_name: entry.model?.name || "",
     provider: entry.model?.provider || "",
+    description: entry.model?.description,
     overall_score: entry.scores?.overall || 0,
     tier1_score: entry.scores?.tier1,
     tier2_score: entry.scores?.tier2,
     tier3_score: entry.scores?.tier3,
     trust_tier: entry.test_run?.trust_tier,
+    question_set_version: entry.test_run?.question_set_version,
+    completed_at: entry.test_run?.completed_at,
     category_scores: entry.category_scores || {},
   }));
   return {

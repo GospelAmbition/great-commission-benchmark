@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useMemo, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Table,
@@ -29,6 +29,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import type { LeaderboardItem } from "@/lib/api";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -108,20 +109,23 @@ function TotalScore({ score }: { score: number }) {
   );
 }
 
+function getTierScore(
+  item: LeaderboardItem,
+  field: string
+): number {
+  if (field === "tier1") return item.tier1_score ?? 0;
+  if (field === "tier2") return item.tier2_score ?? 0;
+  if (field === "tier3") return item.tier3_score ?? 0;
+  return item.overall_score;
+}
+
 function LeaderboardContent() {
   const searchParams = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const processedUrlParams = useRef<string | null>(null);
-  // Whether initial context data has been consumed (prevents re-fetching on mount)
-  const initialConsumed = useRef(false);
-
-  // Parse limit from URL (e.g. ?limit=100) — backend max is 100
-  const urlLimitParam = searchParams.get("limit");
-  const urlLimit = urlLimitParam ? Math.min(100, Math.max(50, parseInt(urlLimitParam, 10) || 50)) : 50;
 
   const [filters, setFilters] = useState({
-    version: "",
     category: "",
     tier: "",
     provider: "",
@@ -129,12 +133,7 @@ function LeaderboardContent() {
     sort: "score",
     order: "desc" as "asc" | "desc",
   });
-  const [pagination, setPagination] = useState({
-    limit: urlLimit,
-    offset: 0,
-  });
   const advancedFilterCount = [
-    filters.version,
     filters.category,
     filters.tier,
     filters.trust_tier,
@@ -142,7 +141,50 @@ function LeaderboardContent() {
 
   // All leaderboard data comes from the context (seeded by layout or fetched
   // on-demand by the provider when no initialData was available).
-  const { items: leaderboard, total, filterOptions, loading, loadLeaderboard } = useLeaderboardData();
+  const { items: leaderboard, total, filterOptions, loading } = useLeaderboardData();
+
+  const providerOptions = useMemo(
+    () =>
+      Array.from(new Set(leaderboard.map((item) => item.provider).filter(Boolean))).sort(
+        (a, b) => formatProvider(a).localeCompare(formatProvider(b))
+      ),
+    [leaderboard]
+  );
+
+  const filteredLeaderboard = useMemo(() => {
+    const filtered = leaderboard.filter((item) => {
+      if (filters.provider && item.provider !== filters.provider) return false;
+      if (filters.trust_tier && item.trust_tier !== filters.trust_tier) return false;
+      if (filters.category && !item.category_scores?.[filters.category]) return false;
+      if (filters.tier) {
+        const tierNumber = filters.tier.replace("tier", "");
+        const hasTierCategory = Object.keys(item.category_scores || {}).some((category) =>
+          category.startsWith(`${tierNumber}.`)
+        );
+        if (!hasTierCategory && getTierScore(item, filters.tier) <= 0) return false;
+      }
+      return true;
+    });
+
+    const sorted = [...filtered];
+    const direction = filters.order === "asc" ? 1 : -1;
+    sorted.sort((a, b) => {
+      if (filters.sort === "model_name") {
+        const aName = getDisplayModelName(a.model_name, a.model_id);
+        const bName = getDisplayModelName(b.model_name, b.model_id);
+        return aName.localeCompare(bName) * direction;
+      }
+      if (filters.sort === "date") {
+        const aTime = a.completed_at ? Date.parse(a.completed_at) : 0;
+        const bTime = b.completed_at ? Date.parse(b.completed_at) : 0;
+        return (aTime - bTime) * direction;
+      }
+      const aScore = getTierScore(a, filters.sort);
+      const bScore = getTierScore(b, filters.sort);
+      return (aScore - bScore) * direction;
+    });
+    return sorted;
+  }, [leaderboard, filters]);
 
   // Pre-select models from URL query params (only on initial load or URL change)
   useEffect(() => {
@@ -160,29 +202,10 @@ function LeaderboardContent() {
       });
       // Update selection if we found matches
       if (matchingIds.size > 0) {
-        setSelectedModels(matchingIds);
+        queueMicrotask(() => setSelectedModels(matchingIds));
       }
     }
   }, [searchParams, leaderboard]);
-
-  // Sync pagination.limit from URL when ?limit= changes
-  useEffect(() => {
-    setPagination((prev) =>
-      prev.limit !== urlLimit ? { ...prev, limit: urlLimit, offset: 0 } : prev
-    );
-  }, [urlLimit]);
-
-  // When filters or pagination change, delegate to context's loadLeaderboard
-  useEffect(() => {
-    // Skip first run only when using default limit (layout data matches)
-    if (!initialConsumed.current && pagination.limit === 50) {
-      initialConsumed.current = true;
-      return;
-    }
-    if (!initialConsumed.current) initialConsumed.current = true;
-    loadLeaderboard(filters, pagination);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, pagination.offset, pagination.limit]);
 
   function toggleModelSelection(id: string) {
     const newSelected = new Set(selectedModels);
@@ -203,16 +226,13 @@ function LeaderboardContent() {
   }
 
   function handleFilterChange(
-    field: "version" | "category" | "tier" | "provider" | "trust_tier",
+    field: "category" | "tier" | "provider" | "trust_tier",
     value: string
   ) {
     setFilters((prev) => ({
       ...prev,
       [field]: value === "all" ? "" : value,
     }));
-    setPagination((prev) =>
-      prev.offset === 0 ? prev : { ...prev, offset: 0 }
-    );
   }
 
   return (
@@ -328,7 +348,7 @@ function LeaderboardContent() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All providers</SelectItem>
-                      {filterOptions?.providers.map((provider) => (
+                      {providerOptions.map((provider) => (
                         <SelectItem key={provider} value={provider}>
                           <ProviderIcon provider={provider} size={16} />
                           <span>{formatProvider(provider)}</span>
@@ -341,7 +361,7 @@ function LeaderboardContent() {
                   <SheetTrigger asChild>
                     <Button variant="outline" size="sm" className="w-full gap-2 sm:w-auto">
                       <Filter className="h-4 w-4" />
-                      Advanced Filters
+                      Filters
                       {advancedFilterCount > 0 && (
                         <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
                           {advancedFilterCount}
@@ -351,31 +371,12 @@ function LeaderboardContent() {
                   </SheetTrigger>
                   <SheetContent side="right" className="w-full sm:max-w-md">
                     <SheetHeader>
-                      <SheetTitle>Advanced Filters</SheetTitle>
+                      <SheetTitle>Filters</SheetTitle>
                       <SheetDescription>
-                        Adjust additional filters to refine the leaderboard results
+                        Refine the leaderboard results already loaded on this page
                       </SheetDescription>
                     </SheetHeader>
                     <div className="mt-6 space-y-6 px-4">
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Version</label>
-                        <Select
-                          value={filters.version || "all"}
-                          onValueChange={(value) => handleFilterChange("version", value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Latest version" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Latest version</SelectItem>
-                            {filterOptions?.versions?.map((version) => (
-                              <SelectItem key={version} value={version}>
-                                v{version}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">Trust Tier</label>
                         <Select
@@ -440,7 +441,7 @@ function LeaderboardContent() {
             </div>
             <CardDescription>
               {total > 0
-                ? `Showing ${pagination.offset + 1}-${Math.min(pagination.offset + pagination.limit, total)} of ${total} models • Select 2-5 models to compare`
+                ? `Showing ${filteredLeaderboard.length} of ${total} models • Select 2-5 models to compare`
                 : "No models to display"}
             </CardDescription>
           </CardHeader>
@@ -451,14 +452,18 @@ function LeaderboardContent() {
                   <Skeleton key={i} className="h-12 w-full" />
                 ))}
               </div>
-            ) : leaderboard.length === 0 ? (
+            ) : filteredLeaderboard.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-12 h-12 rounded-full bg-white/[0.06] mx-auto mb-3 flex items-center justify-center">
                   <BarChart3 className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <p className="text-base font-medium text-foreground mb-1">No benchmark results available yet</p>
+                <p className="text-base font-medium text-foreground mb-1">
+                  {leaderboard.length === 0 ? "No benchmark results available yet" : "No models match these filters"}
+                </p>
                 <p className="text-sm text-muted-foreground">
-                  Check back soon as we continue to evaluate AI models on the Great Commission Benchmark.
+                  {leaderboard.length === 0
+                    ? "Check back soon as we continue to evaluate AI models on the Great Commission Benchmark."
+                    : "Try clearing a filter to see more leaderboard results."}
                 </p>
               </div>
             ) : (
@@ -518,7 +523,7 @@ function LeaderboardContent() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {leaderboard.map((item, index) => {
+                      {filteredLeaderboard.map((item, index) => {
                         const verdict = getVerdict(item.overall_score);
                         return (
                           <TableRow key={`${item.model_id}-${index}`} className="group">
@@ -531,7 +536,7 @@ function LeaderboardContent() {
                               />
                             </TableCell>
                             <TableCell className="py-3 text-center font-bold text-muted-foreground">
-                              {pagination.offset + index + 1}
+                              {item.rank ?? index + 1}
                             </TableCell>
                             <TableCell className="py-3 text-muted-foreground">
                               <Link
@@ -583,40 +588,6 @@ function LeaderboardContent() {
                       })}
                     </TableBody>
                   </Table>
-                </div>
-
-                {/* Pagination */}
-                <div className="mt-4 flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.offset === 0}
-                    onClick={() =>
-                      setPagination((prev) => ({
-                        ...prev,
-                        offset: Math.max(0, prev.offset - prev.limit),
-                      }))
-                    }
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    Page {Math.floor(pagination.offset / pagination.limit) + 1} of{" "}
-                    {Math.ceil(total / pagination.limit) || 1}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.offset + pagination.limit >= total}
-                    onClick={() =>
-                      setPagination((prev) => ({
-                        ...prev,
-                        offset: prev.offset + prev.limit,
-                      }))
-                    }
-                  >
-                    Next
-                  </Button>
                 </div>
               </>
             )}

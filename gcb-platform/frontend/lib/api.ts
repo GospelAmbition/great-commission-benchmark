@@ -14,6 +14,7 @@ export interface ApiError {
 
 // Response types
 export interface LeaderboardItem {
+  rank?: number; // Global leaderboard rank from the backend
   id: string; // UUID for API operations (e.g., compare)
   model_id: string; // OpenRouter-style ID (e.g., "openai/gpt-4")
   model_name: string;
@@ -24,6 +25,8 @@ export interface LeaderboardItem {
   tier2_score?: number;
   tier3_score?: number;
   trust_tier?: string;
+  question_set_version?: string;
+  completed_at?: string;
   category_scores?: Record<string, number>;
 }
 
@@ -40,9 +43,10 @@ export interface LeaderboardPageResponse {
 
 // Backend response types (different structure from frontend)
 interface BackendLeaderboardEntry {
-  model?: { id?: string; model_id?: string; name?: string; provider?: string };
+  rank?: number;
+  model?: { id?: string; model_id?: string; name?: string; provider?: string; description?: string };
   scores?: { overall?: number; tier1?: number; tier2?: number; tier3?: number };
-  test_run?: { trust_tier?: string };
+  test_run?: { trust_tier?: string; question_set_version?: string; completed_at?: string };
   category_scores?: Record<string, number>;
 }
 
@@ -327,7 +331,7 @@ export class ApiClient {
         
         return token;
       }
-    } catch (error) {
+    } catch {
       // Silently fail - user may not be authenticated
       return null;
     }
@@ -388,15 +392,19 @@ export class ApiClient {
     // Transform backend response to frontend format
     const items = (response.entries || [])
       .map((entry) => ({
+        rank: entry.rank,
         id: entry.model?.id || '', // UUID for API operations
         model_id: entry.model?.model_id || entry.model?.id || '', // OpenRouter-style ID for display/routing
         model_name: entry.model?.name || '',
         provider: entry.model?.provider || '',
+        description: entry.model?.description,
         overall_score: entry.scores?.overall || 0,
         tier1_score: entry.scores?.tier1,
         tier2_score: entry.scores?.tier2,
         tier3_score: entry.scores?.tier3,
         trust_tier: entry.test_run?.trust_tier,
+        question_set_version: entry.test_run?.question_set_version,
+        completed_at: entry.test_run?.completed_at,
         category_scores: entry.category_scores || {},
       }))
       .filter((item) => item.overall_score > 0);
@@ -410,15 +418,19 @@ export class ApiClient {
     const raw = await this.requestPublic<BackendLeaderboardPageResponse>('/api/public/leaderboard-page');
     const pageItems = (raw.leaderboard?.entries || [])
       .map((entry) => ({
+        rank: entry.rank,
         id: entry.model?.id || '',
         model_id: entry.model?.model_id || entry.model?.id || '',
         model_name: entry.model?.name || '',
         provider: entry.model?.provider || '',
+        description: entry.model?.description,
         overall_score: entry.scores?.overall || 0,
         tier1_score: entry.scores?.tier1,
         tier2_score: entry.scores?.tier2,
         tier3_score: entry.scores?.tier3,
         trust_tier: entry.test_run?.trust_tier,
+        question_set_version: entry.test_run?.question_set_version,
+        completed_at: entry.test_run?.completed_at,
         category_scores: entry.category_scores || {},
       }))
       .filter((item) => item.overall_score > 0);
@@ -776,7 +788,7 @@ export class ApiClient {
     total_questions: number;
     status: string;
     submitted_at: string;
-    results_package: any;
+    results_package: unknown;
     sample_responses: Array<{
       question_id: string | number;
       tier: number;

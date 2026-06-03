@@ -45,14 +45,15 @@ async def warm_leaderboard_cache(db: Session) -> None:
     logger.info("Warming leaderboard cache...")
     
     try:
-        # Default parameters that match the frontend's initial load
+        # Default parameters that match the frontend's full pre-rendered
+        # leaderboard page payload.
         default_params = {
             "version": "current",
             "category": None,
             "tier": None,
             "provider": None,
             "trust_tier": None,
-            "limit": 50,
+            "limit": None,
             "offset": 0,
             "sort": "score",
             "order": "desc"
@@ -178,7 +179,7 @@ async def _generate_leaderboard_data(
     tier: Optional[int] = None,
     provider: Optional[str] = None,
     trust_tier: Optional[str] = None,
-    limit: int = 50,
+    limit: Optional[int] = 50,
     offset: int = 0,
     sort: str = "score",
     order: str = "desc"
@@ -328,8 +329,13 @@ async def _generate_leaderboard_data(
     # Store total before pagination
     total_models = len(entries)
     
-    # Apply pagination after sorting
-    paginated_entries = entries[offset:offset+limit]
+    if limit is None:
+        pagination_limit = total_models
+        paginated_entries = entries
+        offset = 0
+    else:
+        pagination_limit = limit
+        paginated_entries = entries[offset:offset+limit]
     
     # Update ranks after sorting and pagination
     for idx, entry in enumerate(paginated_entries):
@@ -347,10 +353,10 @@ async def _generate_leaderboard_data(
         total_models=total_models,
         entries=paginated_entries,
         pagination={
-            "limit": limit,
+            "limit": pagination_limit,
             "offset": offset,
             "total": total_models,
-            "has_more": (offset + limit) < total_models
+            "has_more": False if limit is None else (offset + limit) < total_models
         }
     )
 

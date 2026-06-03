@@ -1039,8 +1039,9 @@ async def get_leaderboard_page(
     in a single request. Used by the frontend to load the leaderboard page with
     one round-trip instead of two.
 
-    Returns the default view: limit=50, offset=0, sort=score, order=desc, version=current.
-    Filter options are returned in the same response so the page can render immediately.
+    Returns the complete current leaderboard sorted by score, plus filter options.
+    Filter options are returned in the same response so the page can render
+    immediately and filter locally without additional leaderboard requests.
     """
     import asyncio
 
@@ -1051,7 +1052,7 @@ async def get_leaderboard_page(
         "tier": None,
         "provider": None,
         "trust_tier": None,
-        "limit": 50,
+        "limit": None,
         "offset": 0,
         "sort": "score",
         "order": "desc",
