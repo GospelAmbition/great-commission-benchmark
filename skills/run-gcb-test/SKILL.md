@@ -14,7 +14,7 @@ Users may disambiguate this whole stack with a spoken-style prefix:
 | User says | You do |
 |-----------|--------|
 | **`gcb`** (leading word) | Treat the message as **Great Commission Benchmark** context—GCB platform, `gcb-mcp`, `gcb-runner`, benchmark runs, leaderboard, insights/blog—unless they clearly mean a different “GCB”. |
-| **`gcb check`** | Immediately call MCP **`check_ready_for_testing`**. Default **`auto_launch=true`**. If they ask not to start LM Studio / read-only, use **`auto_launch=false`**. Report `ready` and each of `lmstudio`, `openrouter`, `gcb_api`. Do not ask for permission first. |
+| **`gcb check`** | Immediately call MCP **`check_ready_for_testing`**. Report `ready` and each of `openrouter`, `gcb_api`, plus the `judge_backend` and `judge_model`. Do not ask for permission first. |
 | **`gcb readiness`**, **`gcb ready`**, **`gcb status`** (benchmark context) | Same as **`gcb check`** when clearly about benchmark readiness. |
 
 This is the same readiness step as “Step 1” below; the shorthand exists so users can type **`gcb check`** in chat instead of naming the MCP tool.
@@ -28,7 +28,7 @@ The tools below are registered on the MCP server exposed as `user-gcb-mcp`; the 
 ## Standard Workflow
 
 ```
-1. check_ready_for_testing()     → verify/start LMStudio + OpenRouter
+1. check_ready_for_testing()     → verify OpenRouter + GCB API
 2. start_gcb_test(model_id)      → spawn job, get job_id (< 1 second)
 3. get_job_status(job_id)        → poll until status ≠ "running"
 4. upload_result(job_id)         → publish to GCB platform
@@ -40,21 +40,19 @@ The tools below are registered on the MCP server exposed as `user-gcb-mcp`; the 
 check_ready_for_testing(auto_launch=True)
 ```
 
-- `auto_launch=True` (default): starts LMStudio server and loads judge model automatically if needed
-- `auto_launch=False`: read-only status check only
+- `auto_launch` is retained by the MCP tool for compatibility, but no local judge is launched.
 
-**Expect `ready: true` for all three services before starting a test:**
+**Expect `ready: true` for OpenRouter and the GCB API before starting a test:**
 
 ```json
 {
   "ready": true,
-  "lmstudio":  { "ready": true, "model_loaded": "openai/gpt-oss-20b", "auto_launched": false },
   "openrouter": { "ready": true },
-  "gcb_api":   { "ready": true }
+  "gcb_api":   { "ready": true },
+  "judge_backend": "openrouter",
+  "judge_model": "openai/gpt-oss-20b"
 }
 ```
-
-**If `lmstudio.ready` is false after auto_launch:** LMStudio is not installed or the judge model is not downloaded. Ask the user to open LMStudio and download `openai/gpt-oss-20b`.
 
 **If `gcb_api.ready` is false:** Upload will fail, but the test can still run. Warn the user and proceed.
 
@@ -126,14 +124,13 @@ Only valid when `status == "succeeded"`. Returns:
 |---|---|
 | `status: "failed"` | Call `get_job_logs` to see error, report to user |
 | `error: "job_not_succeeded"` on upload | Wait for job to finish or check logs |
-| `lmstudio.error` mentions model not downloaded | User must download `openai/gpt-oss-20b` in LMStudio first |
 | `openrouter.error` | Check `OPENROUTER_API_KEY` or gcb-runner config (`gcb-runner config`) |
 | Job stuck `running` > 3 hours | It will auto-fail on next status check |
 
 ## Default Test Configuration
 
 - **Backend (model under test):** OpenRouter
-- **Judge model:** `openai/gpt-oss-20b` via LMStudio local
+- **Judge model:** `openai/gpt-oss-20b` via OpenRouter
 - **Benchmark version:** current (latest published)
 - **Upload endpoint:** `greatcommissionbenchmark.ai` (admin bulk-submit, unmoderated)
 

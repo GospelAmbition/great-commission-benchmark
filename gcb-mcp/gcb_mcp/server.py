@@ -35,7 +35,10 @@ mcp = FastMCP(
         "archiving models no longer available on OpenRouter. "
         "upload_json and upload_runner_json upload an exported gcb-runner JSON "
         "for direct publish. "
-        "check_ready_for_testing verifies LMStudio judge, OpenRouter, and GCB API are ready. "
+        "check_ready_for_testing verifies OpenRouter and GCB API are ready. "
+        "run_gcb_test is the single-call alias for user requests like "
+        "'run a gcb test on <model_id>': it checks readiness and starts the "
+        "background benchmark when OpenRouter is ready. "
         "start_gcb_test spawns a background benchmark test and returns a job_id immediately. "
         "get_job_status, list_jobs, get_job_logs, and upload_result monitor and act on jobs. "
         "list_published_models and get_model_test_result fetch published benchmark data from the platform. "
@@ -738,20 +741,80 @@ async def check_ready_for_testing(auto_launch: bool = True) -> dict[str, Any]:
     """Check that all prerequisites for running a GCB benchmark test are ready.
 
     Verifies:
-      - LMStudio is running with the judge model (openai/gpt-oss-20b) loaded.
-      - OpenRouter API key is configured and reachable.
+      - OpenRouter API key is configured and reachable for both testing and judging.
       - GCB platform API key is configured for result upload.
 
     Args:
-        auto_launch: If True (default), attempts to start the LMStudio server
-            and load the judge model automatically if they are not running.
-            Set to False for a read-only status check.
+        auto_launch: Retained for compatibility; no local judge is launched.
 
     Returns a dict with a top-level 'ready' bool and per-service details.
     """
     from gcb_mcp.readiness import check_all_ready  # noqa: PLC0415
 
     return await check_all_ready(auto_launch=auto_launch)
+
+
+@mcp.tool()
+async def run_gcb_test(model_id: str) -> dict[str, Any]:
+    """Check readiness and start a background GCB benchmark test.
+
+    This is the direct MCP alias for natural-language requests like
+    "run a gcb test on microsoft/wizardlm-2-8x22b". It preserves the model id
+    exactly, verifies OpenRouter first, then delegates to start_gcb_test.
+
+    If the GCB API key is missing or invalid, the benchmark can still run, but
+    upload_result will fail later. In that case this tool starts the job and
+    includes a warning in the response.
+
+    Args:
+        model_id: OpenRouter model identifier, e.g. "microsoft/wizardlm-2-8x22b"
+
+    Returns:
+        Readiness details plus the job payload from start_gcb_test, or an error
+        when OpenRouter is not ready.
+    """
+    normalized_model_id = model_id.strip() if model_id else ""
+    if not normalized_model_id:
+        return {"error": "invalid_argument", "message": "model_id must not be empty"}
+
+    readiness = await check_ready_for_testing(auto_launch=True)
+    openrouter = readiness.get("openrouter")
+    openrouter_ready = (
+        isinstance(openrouter, dict)
+        and openrouter.get("ready") is True
+    )
+
+    if not openrouter_ready:
+        return {
+            "error": "not_ready",
+            "message": "OpenRouter is not ready, so the benchmark test was not started.",
+            "model_id": normalized_model_id,
+            "readiness": readiness,
+        }
+
+    job = await start_gcb_test(model_id=normalized_model_id)
+    result: dict[str, Any] = {
+        "model_id": normalized_model_id,
+        "readiness": readiness,
+        "job": job,
+    }
+
+    gcb_api = readiness.get("gcb_api")
+    if isinstance(gcb_api, dict) and gcb_api.get("ready") is not True:
+        result["warning"] = (
+            "GCB API is not ready. The benchmark job was started, but uploading "
+            "the result may fail until the GCB API key/configuration is fixed."
+        )
+
+    if "error" in job:
+        result["error"] = job["error"]
+        result["message"] = job.get("message", "Failed to start benchmark job.")
+    else:
+        result["status"] = job.get("status")
+        result["job_id"] = job.get("job_id")
+        result["log_path"] = job.get("log_path")
+
+    return result
 
 
 @mcp.tool()
@@ -764,7 +827,7 @@ async def start_gcb_test(model_id: str) -> dict[str, Any]:
 
     Default configuration:
       - Testing backend: OpenRouter (uses configured API key)
-      - Judge: LMStudio local, model openai/gpt-oss-20b
+      - Judge: OpenRouter, model openai/gpt-oss-20b
       - Benchmark version: current (latest published)
 
     Args:

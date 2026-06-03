@@ -157,7 +157,7 @@ def run_job(job_id: str, model_id: str) -> None:
         "test",
         "--model", model_id,
         "--backend", "openrouter",
-        "--judge-backend", "lmstudio",
+        "--judge-backend", "openrouter",
         "--judge-model", "openai/gpt-oss-20b",
         "--output", str(export_path),
     ]

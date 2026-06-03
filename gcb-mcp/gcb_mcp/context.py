@@ -166,6 +166,7 @@ TOOL_SCOPES: dict[str, tuple[str, ...]] = {
     "get_remote_test_json": ("mcp:read",),
     # Mutations on benchmark data
     "archive_missing_on_openrouter": ("mcp:write",),
+    "run_gcb_test": ("mcp:write",),
     "start_gcb_test": ("mcp:write",),
     "upload_json": ("mcp:write",),
     "upload_runner_json": ("mcp:write",),

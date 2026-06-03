@@ -1,4 +1,4 @@
-"""Readiness checks for GCB test prerequisites, with LMStudio auto-launch."""
+"""Readiness checks for GCB test prerequisites."""
 
 from __future__ import annotations
 
@@ -304,24 +304,29 @@ async def check_all_ready(
     lmstudio_base_url: str = LMSTUDIO_BASE_URL,
     judge_model: str = JUDGE_MODEL,
 ) -> dict[str, Any]:
-    """Run all readiness checks concurrently. Returns combined status."""
-    lmstudio_result, openrouter_result, gcb_result = await asyncio.gather(
-        check_lmstudio(auto_launch=auto_launch, base_url=lmstudio_base_url, judge_model=judge_model),
+    """Run readiness checks concurrently. Returns combined status.
+
+    The benchmark and judge both use OpenRouter. The LMStudio parameters are
+    retained for API compatibility with older callers and are intentionally
+    ignored.
+    """
+    _ = (auto_launch, lmstudio_base_url, judge_model)
+    openrouter_result, gcb_result = await asyncio.gather(
         check_openrouter(),
         check_gcb_api(),
     )
 
     overall_ready = (
-        lmstudio_result["ready"]
-        and openrouter_result["ready"]
+        openrouter_result["ready"]
         and gcb_result["ready"]
     )
 
     return {
         "ready": overall_ready,
-        "lmstudio": lmstudio_result,
         "openrouter": openrouter_result,
         "gcb_api": gcb_result,
+        "judge_backend": "openrouter",
+        "judge_model": JUDGE_MODEL,
     }
 
 
