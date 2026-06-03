@@ -441,7 +441,7 @@ function LeaderboardContent() {
             </div>
             <CardDescription>
               {total > 0
-                ? `Showing ${filteredLeaderboard.length} of ${total} models • Select 2-5 models to compare`
+                ? "Select 2-5 models to compare"
                 : "No models to display"}
             </CardDescription>
           </CardHeader>

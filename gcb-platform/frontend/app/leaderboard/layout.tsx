@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { generatePageMetadata, getCanonicalUrl } from "@/lib/seo";
 import { buildItemListSchema, buildDatasetSchema, buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
-import { API_URL } from "@/lib/api";
+import { API_URL, LEADERBOARD_PAGE_ENDPOINT } from "@/lib/api";
 import { LeaderboardDataProvider, type LeaderboardInitialData } from "@/components/leaderboard/LeaderboardDataProvider";
 
 export const metadata: Metadata = generatePageMetadata({
@@ -25,7 +25,7 @@ async function getLeaderboardPageData(): Promise<{
   }> | null;
 }> {
   try {
-    const response = await fetch(`${API_URL}/api/public/leaderboard-page`, {
+    const response = await fetch(`${API_URL}${LEADERBOARD_PAGE_ENDPOINT}`, {
       next: { revalidate: 60 * 60 * 24 * 30 }, // Monthly-ish ISR; backend cache handles freshness after admin updates.
     });
     if (!response.ok) return { initialData: null, rawEntries: null };

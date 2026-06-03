@@ -9,7 +9,7 @@
  */
 
 import type { LeaderboardItem, FilterOptionsResponse } from "./api";
-import { API_URL } from "./api";
+import { API_URL, LEADERBOARD_PAGE_ENDPOINT } from "./api";
 
 export interface PrefetchedLeaderboardPage {
   leaderboard: { items: LeaderboardItem[]; total: number };
@@ -73,7 +73,7 @@ export function prefetchLeaderboardPage(): void {
 
   loadingPromise = (async () => {
     try {
-      const url = `${API_URL}/api/public/leaderboard-page`;
+      const url = `${API_URL}${LEADERBOARD_PAGE_ENDPOINT}`;
       const res = await fetch(url, { headers: { "Content-Type": "application/json" } });
       if (!res.ok) return;
       const raw = await res.json();

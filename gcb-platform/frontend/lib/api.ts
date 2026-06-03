@@ -7,6 +7,7 @@
  * Centralized definition to avoid duplication across the codebase
  */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+export const LEADERBOARD_PAGE_ENDPOINT = '/api/public/leaderboard-page?payload=full-current-v1';
 
 export interface ApiError {
   detail: string;
@@ -415,7 +416,7 @@ export class ApiClient {
   }
 
   async getLeaderboardPage(): Promise<LeaderboardPageResponse> {
-    const raw = await this.requestPublic<BackendLeaderboardPageResponse>('/api/public/leaderboard-page');
+    const raw = await this.requestPublic<BackendLeaderboardPageResponse>(LEADERBOARD_PAGE_ENDPOINT);
     const pageItems = (raw.leaderboard?.entries || [])
       .map((entry) => ({
         rank: entry.rank,
