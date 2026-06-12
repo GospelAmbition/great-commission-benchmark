@@ -53,6 +53,8 @@ mcp = FastMCP(
         "generate_and_upload_header creates a programmatic SVG article header image. "
         "generate_and_upload_newsletter_header creates the homepage-hero-style digest header SVG (month dateline) "
         "and uploads it; create_monthly_newsletter_draft attaches this automatically. "
+        "create_model_highlight_draft creates a brief email-first model Highlight post with a generated "
+        "header and tier chart; send_highlight_to_subscribers sends it to the same newsletter audiences. "
         "Authentication: GCB_API_KEY in the MCP environment is optional if "
         "platform.api_key is already set in ~/.gcb-runner/config.json (same file "
         "gcb-runner uses). Tool arguments must be valid JSON: string fields such as "
@@ -1842,6 +1844,20 @@ async def _newsletters_category_id() -> str | None:
     return None
 
 
+async def _highlights_category_id() -> str | None:
+    """Resolve the category UUID for Highlights if available."""
+    from gcb_mcp.blog import list_categories  # noqa: PLC0415
+
+    categories = await list_categories()
+    items = categories.get("items", []) if isinstance(categories, dict) else []
+    for item in items:
+        name = str(item.get("name", "")).strip().lower()
+        slug = str(item.get("slug", "")).strip().lower()
+        if name == "highlights" or slug == "highlights":
+            return str(item.get("id"))
+    return None
+
+
 def _is_full_benchmark_export(payload: dict[str, Any]) -> bool:
     responses = payload.get("responses")
     summary = payload.get("summary")
@@ -2212,6 +2228,120 @@ async def create_monthly_newsletter_draft(
     return out
 
 
+def _maybe_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+@mcp.tool()
+async def create_model_highlight_draft(
+    model_id: str,
+    featured_image_url: str | None = None,
+    auto_generate_header: bool = True,
+    auto_generate_chart: bool = True,
+) -> dict[str, Any]:
+    """Create a brief email-first model Highlight draft.
+
+    Pulls the public model result, generates a hosted Highlight header and tier
+    score chart when requested, saves a draft insights post, and links it to the
+    benchmark model. The draft is intentionally short so it can be sent as email
+    after human review, publication, and a dry run.
+    """
+    import gcb_mcp.blog as blog  # noqa: PLC0415
+    import gcb_mcp.header_svg as header_svg  # noqa: PLC0415
+    from gcb_mcp.highlight import build_highlight_markdown  # noqa: PLC0415
+
+    result = await _fetch_model_result_for_review(model_id)
+    if "error" in result:
+        return result
+
+    name = str(result.get("name") or model_id)
+    provider = str(result.get("provider") or (model_id.split("/")[0] if "/" in model_id else "unknown"))
+
+    chart_result: dict[str, Any] = {}
+    chart_url: str | None = None
+    if auto_generate_chart:
+        chart_result = await header_svg.generate_and_upload_highlight_chart(
+            model_name=name,
+            overall_score=_maybe_float(result.get("overall_score")),
+            tier1_score=_maybe_float(result.get("tier1_score")),
+            tier2_score=_maybe_float(result.get("tier2_score")),
+            tier3_score=_maybe_float(result.get("tier3_score")),
+        )
+        if "error" not in chart_result:
+            chart_url = chart_result.get("url")
+
+    title, excerpt, content = build_highlight_markdown(
+        model_result=result,
+        chart_url=chart_url,
+    )
+
+    header_result: dict[str, Any] = {}
+    featured = featured_image_url
+    header_auto_generated = False
+    if not featured and auto_generate_header:
+        header_result = await header_svg.generate_and_upload_highlight_header(
+            model_name=name,
+            provider_name=provider,
+            score=_maybe_float(result.get("overall_score")),
+            model_id=model_id,
+        )
+        if "error" not in header_result:
+            featured = header_result.get("url")
+            header_auto_generated = bool(featured)
+
+    category_id = await _highlights_category_id()
+    category_ids = [category_id] if category_id else []
+
+    slug_hint = await blog.generate_slug(title)
+    slug_val = slug_hint.get("slug") if isinstance(slug_hint, dict) else None
+
+    created = await blog.create_post(
+        title=title,
+        content=content,
+        excerpt=excerpt,
+        slug=slug_val,
+        featured_image_url=featured,
+        category_ids=category_ids,
+        model_ids=[model_id],
+        publish=False,
+    )
+    if "error" in created:
+        return created
+
+    slug = created.get("slug", "")
+    out: dict[str, Any] = {
+        **created,
+        "url": blog.build_live_url(slug) if slug else None,
+        "model_id": model_id,
+        "highlight_header_auto_generated": header_auto_generated,
+        "highlight_chart_auto_generated": bool(chart_url),
+        "highlight_chart_url": chart_url,
+        "highlights_category_applied": bool(category_id),
+        "admin_note": (
+            "Draft Highlight created. Human-review with get_blog_post / update_blog_post, "
+            "then publish_blog_post. For email: render_highlight_email_html, then "
+            "send_highlight_to_subscribers (dry_run first; requires admin API key)."
+        ),
+    }
+    if "error" in header_result:
+        out["highlight_header_error"] = header_result.get("message") or header_result.get("error")
+        out["admin_note"] += (
+            " Highlight header upload failed; featured_image_url is unset unless you supplied one."
+        )
+    if "error" in chart_result:
+        out["highlight_chart_error"] = chart_result.get("message") or chart_result.get("error")
+        out["admin_note"] += (
+            " Highlight chart upload failed; regenerate it with generate_and_upload_highlight_chart "
+            "and add the returned URL to the draft content."
+        )
+    if not category_id:
+        out["admin_note"] += " Highlights category was not found, so no category was assigned."
+    return out
+
+
 @mcp.tool()
 async def list_blog_posts(
     status: str | None = None,
@@ -2400,6 +2530,14 @@ async def render_newsletter_email_html(post_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+async def render_highlight_email_html(post_id: str) -> dict[str, Any]:
+    """Render a Highlight blog post as sanitized HTML suitable for email distribution."""
+    from gcb_mcp.admin_api import preview_newsletter_html  # noqa: PLC0415
+
+    return await preview_newsletter_html(post_id=post_id)
+
+
+@mcp.tool()
 async def send_newsletter_to_subscribers(
     post_id: str,
     dry_run: bool = True,
@@ -2428,6 +2566,32 @@ async def send_newsletter_to_subscribers(
         audience=audience,
         confirm_production_send=confirm_production_send,
         force_resend=force_resend,
+    )
+
+
+@mcp.tool()
+async def send_highlight_to_subscribers(
+    post_id: str,
+    dry_run: bool = True,
+    audience: str = "test",
+    confirm_production_send: bool = False,
+    force_resend: bool = False,
+) -> dict[str, Any]:
+    """Send a Highlight post to test or production newsletter audiences.
+
+    Uses the same recipient lists and safety gates as newsletter sends, but logs
+    the send as ``campaign_type='highlight'`` for duplicate protection and audit
+    clarity.
+    """
+    from gcb_mcp.admin_api import send_newsletter_campaign_v2  # noqa: PLC0415
+
+    return await send_newsletter_campaign_v2(
+        post_id=post_id,
+        dry_run=dry_run,
+        audience=audience,
+        confirm_production_send=confirm_production_send,
+        force_resend=force_resend,
+        campaign_type="highlight",
     )
 
 
@@ -2556,6 +2720,39 @@ async def generate_and_upload_newsletter_header(month_label: str | None = None) 
     from gcb_mcp.header_svg import generate_and_upload_newsletter_header as _gen  # noqa: PLC0415
 
     return await _gen(month_label=month_label)
+
+
+@mcp.tool()
+async def generate_and_upload_highlight_header(model_id: str) -> dict[str, Any]:
+    """Generate and upload the model Highlight header SVG for a published GCB model."""
+    import gcb_mcp.header_svg as header_svg  # noqa: PLC0415
+
+    result = await _fetch_model_result_for_review(model_id)
+    if "error" in result:
+        return result
+    return await header_svg.generate_and_upload_highlight_header(
+        model_name=str(result.get("name") or model_id),
+        provider_name=str(result.get("provider") or (model_id.split("/")[0] if "/" in model_id else "unknown")),
+        score=_maybe_float(result.get("overall_score")),
+        model_id=model_id,
+    )
+
+
+@mcp.tool()
+async def generate_and_upload_highlight_chart(model_id: str) -> dict[str, Any]:
+    """Generate and upload the model Highlight tier-score chart SVG."""
+    import gcb_mcp.header_svg as header_svg  # noqa: PLC0415
+
+    result = await _fetch_model_result_for_review(model_id)
+    if "error" in result:
+        return result
+    return await header_svg.generate_and_upload_highlight_chart(
+        model_name=str(result.get("name") or model_id),
+        overall_score=_maybe_float(result.get("overall_score")),
+        tier1_score=_maybe_float(result.get("tier1_score")),
+        tier2_score=_maybe_float(result.get("tier2_score")),
+        tier3_score=_maybe_float(result.get("tier3_score")),
+    )
 
 
 @mcp.tool()

@@ -3069,13 +3069,15 @@ async def send_newsletter_campaign(
     already_sent = db.query(NewsletterCampaignSend).filter(
         NewsletterCampaignSend.post_id == post.id,
         NewsletterCampaignSend.audience == request.audience,
+        NewsletterCampaignSend.campaign_type == request.campaign_type,
         NewsletterCampaignSend.status == "sent",
     ).first()
 
     logger.info(
-        "newsletter_send_start post_id=%s audience=%s dry_run=%s force_resend=%s already_sent=%s",
+        "newsletter_send_start post_id=%s audience=%s campaign_type=%s dry_run=%s force_resend=%s already_sent=%s",
         post.id,
         request.audience,
+        request.campaign_type,
         request.dry_run,
         request.force_resend,
         bool(already_sent),
@@ -3085,6 +3087,7 @@ async def send_newsletter_campaign(
         send_log = NewsletterCampaignSend(
             post_id=post.id,
             audience=request.audience,
+            campaign_type=request.campaign_type,
             status="started",
             provider="resend",
             sent_by_user_id=current_user_id,
@@ -3121,6 +3124,7 @@ async def send_newsletter_campaign(
         return NewsletterSendResponse(
             dry_run=True,
             audience=request.audience,
+            campaign_type=request.campaign_type,
             recipient_count=recipient_count,
             recipient_count_source=recipient_count_source,
             target_group_id=None,
@@ -3285,6 +3289,7 @@ async def send_newsletter_campaign(
             "campaign_id": local_campaign_id,
             "slug": post.slug,
             "audience": request.audience,
+            "campaign_type": request.campaign_type,
             "recipient_count": recipient_count,
             "sent_count": sent_count,
             "force_resend": request.force_resend,
@@ -3295,6 +3300,7 @@ async def send_newsletter_campaign(
     return NewsletterSendResponse(
         dry_run=False,
         audience=request.audience,
+        campaign_type=request.campaign_type,
         recipient_count=recipient_count,
         recipient_count_source=recipient_count_source,
         target_group_id=None,
@@ -3303,7 +3309,7 @@ async def send_newsletter_campaign(
         campaign_id=local_campaign_id,
         send_log_id=send_log.id if send_log else None,
         message=(
-            f"Sent newsletter via Resend to {sent_count} {request.audience} recipient(s)."
+            f"Sent {request.campaign_type} via Resend to {sent_count} {request.audience} recipient(s)."
         ),
     )
 
@@ -3312,6 +3318,7 @@ async def send_newsletter_campaign(
 async def list_newsletter_campaign_sends(
     post_id: Optional[UUID] = Query(None, description="Filter by insights post UUID"),
     audience: Optional[str] = Query(None, description="Filter by audience: test or production"),
+    campaign_type: Optional[str] = Query(None, description="Filter by campaign type: newsletter or highlight"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     current_user: User = Depends(require_admin_flexible),
@@ -3323,6 +3330,8 @@ async def list_newsletter_campaign_sends(
         query = query.filter(NewsletterCampaignSend.post_id == post_id)
     if audience:
         query = query.filter(NewsletterCampaignSend.audience == audience)
+    if campaign_type:
+        query = query.filter(NewsletterCampaignSend.campaign_type == campaign_type)
 
     total = query.count()
     rows = (
@@ -3337,6 +3346,7 @@ async def list_newsletter_campaign_sends(
                 "id": str(row.id),
                 "post_id": str(row.post_id),
                 "audience": row.audience,
+                "campaign_type": row.campaign_type,
                 "campaign_id": row.campaign_id,
                 "recipient_count": row.recipient_count,
                 "status": row.status,

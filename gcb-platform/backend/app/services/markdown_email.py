@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import re
 from html import escape
+from urllib.parse import urlparse
 
 import bleach
 import markdown
+
+from app.core.config import settings
 
 
 _ALLOWED_TAGS = frozenset(
@@ -30,6 +33,7 @@ _ALLOWED_TAGS = frozenset(
         "code",
         "pre",
         "hr",
+        "img",
         "table",
         "thead",
         "tbody",
@@ -41,9 +45,40 @@ _ALLOWED_TAGS = frozenset(
 
 _ALLOWED_ATTRIBUTES: dict[str, list[str]] = {
     "a": ["href", "title", "rel"],
+    "img": ["src", "alt", "width", "height"],
     "th": ["align"],
     "td": ["align"],
 }
+
+
+def _allowed_image_hosts() -> set[str]:
+    hosts = {
+        "greatcommissionbenchmark.ai",
+        "www.greatcommissionbenchmark.ai",
+        "api.greatcommissionbenchmark.ai",
+    }
+    configured = (settings.BACKEND_PUBLIC_URL or "").strip()
+    if configured:
+        parsed = urlparse(configured)
+        if parsed.hostname:
+            hosts.add(parsed.hostname.lower())
+    return hosts
+
+
+def _clean_attributes(tag: str, name: str, value: str) -> bool:
+    if tag != "img":
+        return name in _ALLOWED_ATTRIBUTES.get(tag, [])
+
+    if name not in _ALLOWED_ATTRIBUTES["img"]:
+        return False
+    if name != "src":
+        return True
+
+    parsed = urlparse(value or "")
+    if parsed.scheme != "https":
+        return False
+    host = (parsed.hostname or "").lower()
+    return host in _allowed_image_hosts() or host.endswith(".greatcommissionbenchmark.ai")
 
 
 def markdown_to_email_html_fragment(markdown_source: str) -> str:
@@ -56,11 +91,17 @@ def markdown_to_email_html_fragment(markdown_source: str) -> str:
     cleaned = bleach.clean(
         raw,
         tags=_ALLOWED_TAGS,
-        attributes=_ALLOWED_ATTRIBUTES,
+        attributes=_clean_attributes,
         strip=True,
     )
     # Harden external links
     cleaned = re.sub(r"<a ", '<a rel="noopener noreferrer" ', cleaned)
+    cleaned = re.sub(r"<img(?![^>]*\ssrc=)[^>]*>", "", cleaned)
+    cleaned = re.sub(
+        r"<img ",
+        '<img style="display:block;max-width:100%;height:auto;border:0;margin:16px 0;" ',
+        cleaned,
+    )
     return f'<div class="gcb-newsletter-body" style="font-family:Georgia,serif;line-height:1.5;color:#111;">{cleaned}</div>'
 
 

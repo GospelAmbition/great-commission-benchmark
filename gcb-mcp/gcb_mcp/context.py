@@ -172,14 +172,18 @@ TOOL_SCOPES: dict[str, tuple[str, ...]] = {
     "upload_runner_json": ("mcp:write",),
     "upload_result": ("mcp:write",),
     "generate_and_upload_header": ("mcp:write",),
+    "generate_and_upload_highlight_header": ("mcp:write",),
+    "generate_and_upload_highlight_chart": ("mcp:write",),
     # Blog
     "create_blog_draft": ("mcp:blog",),
     "update_blog_post": ("mcp:blog",),
     "publish_blog_post": ("mcp:blog",),
     "create_model_review_draft": ("mcp:blog",),
+    "create_model_highlight_draft": ("mcp:blog",),
     # Newsletter
     "create_monthly_newsletter_draft": ("mcp:newsletter",),
     "render_newsletter_email_html": ("mcp:newsletter",),
+    "render_highlight_email_html": ("mcp:newsletter",),
     "list_newsletter_test_recipients": ("mcp:newsletter",),
     "add_newsletter_test_recipient": ("mcp:newsletter",),
     "update_newsletter_test_recipient": ("mcp:newsletter",),
@@ -187,6 +191,7 @@ TOOL_SCOPES: dict[str, tuple[str, ...]] = {
     "generate_and_upload_newsletter_header": ("mcp:newsletter",),
     # Admin-only
     "send_newsletter_to_subscribers": ("mcp:admin",),
+    "send_highlight_to_subscribers": ("mcp:admin",),
 }
 
 #: Tools every authenticated user can call without explicit grants beyond

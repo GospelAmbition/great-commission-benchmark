@@ -530,6 +530,135 @@ async def generate_and_upload_newsletter_header(
     }
 
 
+def generate_highlight_header_svg(
+    *,
+    model_name: str,
+    provider_name: str,
+    score: float | None,
+    model_id: str | None = None,
+    accent_color: str | None = None,
+) -> str:
+    """Generate the model-highlight hero SVG."""
+    provider_slug = infer_provider(model_id or provider_name)
+    color = provider_color(provider_slug, accent_color)
+    safe_id = re.sub(r"[^a-zA-Z0-9]", "_", model_name)[:24] or "highlight"
+    name_safe = _xml_escape(model_name)
+    provider_safe = _xml_escape(provider_name.replace("-", " ").title())
+    mid_safe = _xml_escape(model_id or "")
+    score_safe = _xml_escape(f"{score:.1f}" if score is not None else "—")
+
+    logo = _provider_logo_svg(provider_slug, color, 612, 72, size=86)
+
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 800 250" width="800" height="250">
+  <defs>
+    <linearGradient id="hiBg_{safe_id}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="{_HERO_BG_START}"/>
+      <stop offset="52%" stop-color="{_HERO_BG_MID}"/>
+      <stop offset="100%" stop-color="{_HERO_BG_START}"/>
+    </linearGradient>
+    <radialGradient id="hiGlow_{safe_id}" cx="75%" cy="38%" r="52%">
+      <stop offset="0%" stop-color="{color}" stop-opacity="0.32"/>
+      <stop offset="72%" stop-color="{color}" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="hiGrid_{safe_id}" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="hiFoot_{safe_id}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="{_SITE_PRIMARY}" stop-opacity="0.85"/>
+      <stop offset="52%" stop-color="{color}" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="{color}" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="250" fill="url(#hiBg_{safe_id})"/>
+  <rect width="800" height="250" fill="url(#hiGlow_{safe_id})"/>
+  <rect width="800" height="250" fill="url(#hiGrid_{safe_id})" opacity="0.04"/>
+
+  <text x="788" y="22"
+        font-family="DM Sans,Arial,sans-serif" font-size="8"
+        font-weight="600" letter-spacing="0.22em" text-anchor="end"
+        fill="white" opacity="0.26">MODEL HIGHLIGHT</text>
+
+  <text x="48" y="68"
+        font-family="DM Sans,system-ui,sans-serif" font-size="13"
+        font-weight="600" letter-spacing="0.12em"
+        fill="{color}">{provider_safe}</text>
+
+  <text x="48" y="116"
+        font-family="DM Sans,system-ui,sans-serif" font-size="33"
+        font-weight="500" letter-spacing="0"
+        fill="#f4f4f5">{name_safe}</text>
+
+  <text x="48" y="152"
+        font-family="DM Sans,system-ui,sans-serif" font-size="15"
+        font-weight="400" letter-spacing="0"
+        fill="{_MUTED_FG}">{mid_safe}</text>
+
+  <text x="48" y="202"
+        font-family="DM Sans,system-ui,sans-serif" font-size="18"
+        font-weight="500" fill="#e4e4e7">GCB Overall Score</text>
+  <text x="238" y="204"
+        font-family="DM Sans,system-ui,sans-serif" font-size="34"
+        font-weight="700" fill="{_score_color(score)}">{score_safe}</text>
+
+  <circle cx="655" cy="115" r="58" fill="none" stroke="{color}" stroke-opacity="0.35" stroke-width="2"/>
+  {logo}
+
+  <rect x="0" y="246" width="800" height="4" fill="url(#hiFoot_{safe_id})"/>
+</svg>"""
+
+
+def generate_highlight_tier_chart_svg(
+    *,
+    model_name: str,
+    overall_score: float | None,
+    tier1_score: float | None,
+    tier2_score: float | None,
+    tier3_score: float | None,
+) -> str:
+    """Generate an email-safe SVG bar chart for Overall + Tier 1/2/3 scores."""
+    safe_id = re.sub(r"[^a-zA-Z0-9]", "_", model_name)[:24] or "chart"
+    name_safe = _xml_escape(model_name)
+    rows = [
+        ("Overall", overall_score),
+        ("Tier 1", tier1_score),
+        ("Tier 2", tier2_score),
+        ("Tier 3", tier3_score),
+    ]
+    row_svg: list[str] = []
+    for idx, (label, value) in enumerate(rows):
+        y = 82 + idx * 42
+        width = 0 if value is None else max(0, min(100, float(value))) * 4.4
+        val_text = "—" if value is None else f"{float(value):.1f}"
+        color = _score_color(value)
+        row_svg.append(
+            f"""
+  <text x="48" y="{y + 15}" font-family="DM Sans,Arial,sans-serif" font-size="15" font-weight="600" fill="#e4e4e7">{_xml_escape(label)}</text>
+  <rect x="130" y="{y}" width="440" height="20" rx="5" fill="#27272a"/>
+  <rect x="130" y="{y}" width="{width:.1f}" height="20" rx="5" fill="{color}"/>
+  <text x="592" y="{y + 15}" font-family="DM Sans,Arial,sans-serif" font-size="15" font-weight="700" fill="{color}">{val_text}</text>"""
+        )
+
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 720 280" width="720" height="280">
+  <defs>
+    <linearGradient id="chartBg_{safe_id}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#09090b"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="280" rx="12" fill="url(#chartBg_{safe_id})"/>
+  <rect x="1" y="1" width="718" height="278" rx="12" fill="none" stroke="#3f3f46"/>
+  <text x="48" y="42" font-family="DM Sans,Arial,sans-serif" font-size="21" font-weight="700" fill="#f4f4f5">{name_safe}</text>
+  <text x="48" y="64" font-family="DM Sans,Arial,sans-serif" font-size="12" font-weight="600" letter-spacing="0.14em" fill="{_MUTED_FG}">GCB TIER SCORECARD</text>
+  {''.join(row_svg)}
+  <text x="48" y="250" font-family="DM Sans,Arial,sans-serif" font-size="12" fill="{_MUTED_FG}">Scores are 0-100 composite signals from the Great Commission Benchmark.</text>
+</svg>"""
+
+
 # ---------------------------------------------------------------------------
 # File I/O and upload
 # ---------------------------------------------------------------------------
@@ -587,4 +716,81 @@ async def generate_and_upload(
         "svg_path": str(svg_path),
         "filename": upload_result.get("filename"),
         "provider_color": provider_color(infer_provider(provider_name), accent_color),
+    }
+
+
+async def generate_and_upload_highlight_header(
+    *,
+    model_name: str,
+    provider_name: str,
+    score: float | None,
+    model_id: str | None = None,
+    accent_color: str | None = None,
+) -> dict[str, Any]:
+    """Generate and upload the model Highlight hero SVG."""
+    from gcb_mcp.blog import upload_image  # noqa: PLC0415
+
+    svg_content = generate_highlight_header_svg(
+        model_name=model_name,
+        provider_name=provider_name,
+        score=score,
+        model_id=model_id,
+        accent_color=accent_color,
+    )
+    safe_name = re.sub(r"[^a-zA-Z0-9_-]", "-", model_name.lower())[:60] or "highlight"
+    svg_path = Path(tempfile.gettempdir()) / f"gcb-highlight-header-{safe_name}.svg"
+    save_svg(svg_content, svg_path)
+
+    upload_result = await upload_image(svg_path, content_type="image/svg+xml")
+    if "error" in upload_result:
+        return {
+            "error": upload_result.get("error"),
+            "message": upload_result.get("message") or upload_result.get("detail"),
+            "svg_path": str(svg_path),
+            "svg_content": svg_content,
+        }
+
+    return {
+        "url": upload_result.get("url"),
+        "svg_path": str(svg_path),
+        "filename": upload_result.get("filename"),
+        "provider_color": provider_color(infer_provider(model_id or provider_name), accent_color),
+    }
+
+
+async def generate_and_upload_highlight_chart(
+    *,
+    model_name: str,
+    overall_score: float | None,
+    tier1_score: float | None,
+    tier2_score: float | None,
+    tier3_score: float | None,
+) -> dict[str, Any]:
+    """Generate and upload the Highlight tier score chart SVG."""
+    from gcb_mcp.blog import upload_image  # noqa: PLC0415
+
+    svg_content = generate_highlight_tier_chart_svg(
+        model_name=model_name,
+        overall_score=overall_score,
+        tier1_score=tier1_score,
+        tier2_score=tier2_score,
+        tier3_score=tier3_score,
+    )
+    safe_name = re.sub(r"[^a-zA-Z0-9_-]", "-", model_name.lower())[:60] or "highlight"
+    svg_path = Path(tempfile.gettempdir()) / f"gcb-highlight-chart-{safe_name}.svg"
+    save_svg(svg_content, svg_path)
+
+    upload_result = await upload_image(svg_path, content_type="image/svg+xml")
+    if "error" in upload_result:
+        return {
+            "error": upload_result.get("error"),
+            "message": upload_result.get("message") or upload_result.get("detail"),
+            "svg_path": str(svg_path),
+            "svg_content": svg_content,
+        }
+
+    return {
+        "url": upload_result.get("url"),
+        "svg_path": str(svg_path),
+        "filename": upload_result.get("filename"),
     }

@@ -16,6 +16,7 @@ class NewsletterCampaignSend(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     post_id = Column(UUID(as_uuid=True), ForeignKey("blog_posts.id", ondelete="CASCADE"), nullable=False, index=True)
     audience = Column(String(20), nullable=False, index=True)  # test | production
+    campaign_type = Column(String(20), nullable=False, default="newsletter", index=True)  # newsletter | highlight
     campaign_id = Column(String(255), nullable=True)
     recipient_count = Column(Integer, nullable=True)
     status = Column(String(20), nullable=False, default="sent", index=True)

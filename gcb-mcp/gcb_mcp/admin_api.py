@@ -79,6 +79,7 @@ async def send_newsletter_campaign_v2(
     audience: str = "test",
     confirm_production_send: bool = False,
     force_resend: bool = False,
+    campaign_type: str = "newsletter",
 ) -> dict[str, Any]:
     url = _admin_url("/newsletter/send")
     try:
@@ -92,6 +93,7 @@ async def send_newsletter_campaign_v2(
                     "audience": audience,
                     "confirm_production_send": confirm_production_send,
                     "force_resend": force_resend,
+                    "campaign_type": campaign_type,
                 },
             )
     except httpx.RequestError as exc:

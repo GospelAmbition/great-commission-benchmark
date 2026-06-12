@@ -191,3 +191,50 @@ class TestAdminNewsletterSend:
         assert attempt_count == 3
 
         app.dependency_overrides.clear()
+
+    def test_send_duplicate_guard_is_separate_by_campaign_type(self, client, db_session, admin_user, monkeypatch):
+        from main import app
+        from app.core.auth import get_current_user, require_admin
+        from app.api.v1.endpoints.admin import require_admin_flexible
+
+        _set_admin_overrides(app, admin_user, get_current_user, require_admin, require_admin_flexible)
+
+        post = _create_post(db_session, admin_user, status="published")
+        db_session.add(NewsletterSubscriber(email="member@example.com", is_active=True))
+        db_session.commit()
+
+        sent_subjects: list[str] = []
+
+        async def fake_send_email(to: str, subject: str, html_content: str, from_email: str | None = None):
+            sent_subjects.append(subject)
+            return True
+
+        monkeypatch.setattr(settings, "RESEND_API_KEY", "re_test")
+        monkeypatch.setattr(EmailService, "send_email", staticmethod(fake_send_email))
+
+        base_payload = {
+            "post_id": str(post.id),
+            "dry_run": False,
+            "audience": "production",
+            "confirm_production_send": True,
+        }
+        newsletter = client.post("/api/admin/newsletter/send", json=base_payload)
+        assert newsletter.status_code == 200
+        assert newsletter.json()["campaign_type"] == "newsletter"
+
+        highlight_payload = {**base_payload, "campaign_type": "highlight"}
+        highlight = client.post("/api/admin/newsletter/send", json=highlight_payload)
+        assert highlight.status_code == 200
+        assert highlight.json()["campaign_type"] == "highlight"
+
+        duplicate_highlight = client.post("/api/admin/newsletter/send", json=highlight_payload)
+        assert duplicate_highlight.status_code == 409
+
+        sent_logs = db_session.query(NewsletterCampaignSend).filter(
+            NewsletterCampaignSend.post_id == post.id,
+            NewsletterCampaignSend.audience == "production",
+            NewsletterCampaignSend.status == "sent",
+        ).all()
+        assert sorted(log.campaign_type for log in sent_logs) == ["highlight", "newsletter"]
+
+        app.dependency_overrides.clear()

@@ -431,6 +431,7 @@ class NewsletterSendRequest(BaseModel):
     post_id: UUID
     dry_run: bool = True
     audience: Literal["test", "production"] = "test"
+    campaign_type: Literal["newsletter", "highlight"] = "newsletter"
     confirm_production_send: bool = False
     force_resend: bool = False
 
@@ -439,6 +440,7 @@ class NewsletterSendResponse(BaseModel):
     """Result of a newsletter send (or dry run)."""
     dry_run: bool
     audience: Literal["test", "production"]
+    campaign_type: Literal["newsletter", "highlight"] = "newsletter"
     recipient_count: int
     recipient_count_source: Optional[str] = None
     target_group_id: Optional[str] = None

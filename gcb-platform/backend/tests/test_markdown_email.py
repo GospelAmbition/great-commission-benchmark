@@ -31,3 +31,18 @@ def test_wrap_email_shell_contains_web_link():
     )
     assert "View in browser" in full
     assert "insights/foo" in full
+
+
+def test_markdown_to_email_preserves_safe_gcb_image():
+    html = markdown_to_email_html_fragment(
+        "![Chart](https://greatcommissionbenchmark.ai/api/files/highlight.svg)"
+    )
+    assert "<img" in html
+    assert "highlight.svg" in html
+    assert "max-width:100%" in html
+
+
+def test_markdown_to_email_strips_unsafe_image_hosts():
+    html = markdown_to_email_html_fragment("![Bad](https://evil.example/highlight.svg)")
+    assert "<img" not in html
+    assert "evil.example" not in html
