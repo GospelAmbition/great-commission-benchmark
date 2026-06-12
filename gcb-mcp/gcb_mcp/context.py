@@ -159,6 +159,7 @@ TOOL_SCOPES: dict[str, tuple[str, ...]] = {
     "get_job_logs": ("mcp:read",),
     "list_published_models": ("mcp:read",),
     "get_model_test_result": ("mcp:read",),
+    "resolve_model_highlight_context": ("mcp:read",),
     "list_blog_posts": ("mcp:read",),
     "get_blog_post": ("mcp:read",),
     "list_blog_categories": ("mcp:read",),

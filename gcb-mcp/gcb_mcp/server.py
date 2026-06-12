@@ -53,8 +53,10 @@ mcp = FastMCP(
         "generate_and_upload_header creates a programmatic SVG article header image. "
         "generate_and_upload_newsletter_header creates the homepage-hero-style digest header SVG (month dateline) "
         "and uploads it; create_monthly_newsletter_draft attaches this automatically. "
-        "create_model_highlight_draft creates a brief email-first model Highlight post with a generated "
-        "header and tier chart; send_highlight_to_subscribers sends it to the same newsletter audiences. "
+        "resolve_model_highlight_context discovers Highlight source context from model IDs, titles, "
+        "slugs, URLs, and linked insights. create_model_highlight_draft creates a brief email-first "
+        "model Highlight post with a generated header and tier chart; send_highlight_to_subscribers "
+        "sends it to the same newsletter audiences. "
         "Authentication: GCB_API_KEY in the MCP environment is optional if "
         "platform.api_key is already set in ~/.gcb-runner/config.json (same file "
         "gcb-runner uses). Tool arguments must be valid JSON: string fields such as "
@@ -2235,6 +2237,236 @@ def _maybe_float(value: Any) -> float | None:
         return None
 
 
+def _model_result_has_public_data(result: dict[str, Any]) -> bool:
+    """Return True when a model payload has enough published context to draft from."""
+    return any(
+        result.get(key) is not None
+        for key in (
+            "name",
+            "provider",
+            "overall_score",
+            "tier1_score",
+            "tier2_score",
+            "tier3_score",
+            "test_run_id",
+            "completed_at",
+            "description",
+        )
+    )
+
+
+def _extract_model_id_from_text(text: str) -> str | None:
+    match = re.search(r"\b[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._:-]*\b", text.lower())
+    return match.group(0) if match else None
+
+
+async def _list_highlight_candidate_posts(query: str, model_id: str | None) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Fetch blog posts likely to identify source reviews or existing Highlights."""
+    import gcb_mcp.blog as blog  # noqa: PLC0415
+
+    posts_by_id: dict[str, dict[str, Any]] = {}
+    first_error: dict[str, Any] | None = None
+
+    batches: list[dict[str, Any]] = []
+    if model_id:
+        batches.append(await blog.list_posts(limit=100, model_id=model_id))
+    batches.append(await blog.list_posts(limit=100))
+
+    for batch in batches:
+        if "error" in batch:
+            if first_error is None:
+                first_error = batch
+            continue
+        for post in batch.get("items") or []:
+            if isinstance(post, dict):
+                post_id = str(post.get("id") or "")
+                if post_id:
+                    posts_by_id[post_id] = post
+
+    lookup = query.strip()
+    extracted = None
+    try:
+        from gcb_mcp.highlight import extract_slug_or_query  # noqa: PLC0415
+
+        extracted = extract_slug_or_query(lookup)
+    except Exception:
+        extracted = lookup
+    if extracted and extracted != lookup:
+        for batch in (await blog.list_posts(status="published", limit=100), await blog.list_posts(status="draft", limit=100)):
+            if "error" in batch:
+                if first_error is None:
+                    first_error = batch
+                continue
+            for post in batch.get("items") or []:
+                if isinstance(post, dict):
+                    post_id = str(post.get("id") or "")
+                    if post_id:
+                        posts_by_id[post_id] = post
+
+    return list(posts_by_id.values()), first_error
+
+
+async def _resolve_model_highlight_context_impl(query: str) -> dict[str, Any]:
+    """Discover model, source review, and duplicate Highlight context."""
+    from gcb_mcp.highlight import (  # noqa: PLC0415
+        compact_post,
+        extract_slug_or_query,
+        is_highlight_post,
+        match_score,
+        related_model_ids,
+    )
+    from gcb_mcp.public_api import list_published_models as _list_published  # noqa: PLC0415
+
+    raw_query = str(query or "").strip()
+    if not raw_query:
+        return {"error": "invalid_argument", "message": "query must not be empty"}
+
+    lookup = extract_slug_or_query(raw_query)
+    is_url_query = raw_query.startswith("http://") or raw_query.startswith("https://")
+    query_model_id = _extract_model_id_from_text(lookup)
+    if not query_model_id and not is_url_query:
+        query_model_id = _extract_model_id_from_text(raw_query)
+    model_id = query_model_id
+    discovery_errors: list[dict[str, Any]] = []
+
+    model_result: dict[str, Any] | None = None
+    if model_id:
+        result = await _fetch_model_result_for_review(model_id)
+        if "error" in result:
+            discovery_errors.append(result)
+        elif _model_result_has_public_data(result):
+            model_result = result
+
+    posts, blog_error = await _list_highlight_candidate_posts(raw_query, model_id)
+    if blog_error:
+        discovery_errors.append(blog_error)
+
+    scored_posts = sorted(
+        posts,
+        key=lambda p: max(
+            match_score(lookup, p.get("title"), p.get("slug")),
+            1.0 if model_id and model_id in related_model_ids(p) else 0.0,
+        ),
+        reverse=True,
+    )
+    matched_posts = [
+        p for p in scored_posts
+        if max(
+            match_score(lookup, p.get("title"), p.get("slug")),
+            1.0 if model_id and model_id in related_model_ids(p) else 0.0,
+        ) >= 0.55
+    ]
+
+    if not model_id:
+        for post in matched_posts:
+            linked = related_model_ids(post)
+            if linked:
+                model_id = linked[0]
+                break
+            extracted = _extract_model_id_from_text(str(post.get("title") or ""))
+            if extracted:
+                model_id = extracted
+                break
+
+    leaderboard_match: dict[str, Any] | None = None
+    lb = await _list_published(limit=100)
+    if "error" in lb:
+        discovery_errors.append(lb)
+    else:
+        for entry in lb.get("models") or []:
+            if not isinstance(entry, dict):
+                continue
+            entry_id = str(entry.get("model_id") or "")
+            if model_id and entry_id == model_id:
+                leaderboard_match = entry
+                break
+        if not model_id:
+            ranked = sorted(
+                [
+                    entry for entry in (lb.get("models") or [])
+                    if isinstance(entry, dict)
+                ],
+                key=lambda entry: match_score(
+                    lookup,
+                    entry.get("model_id"),
+                    entry.get("name"),
+                    entry.get("provider"),
+                ),
+                reverse=True,
+            )
+            if ranked and match_score(lookup, ranked[0].get("model_id"), ranked[0].get("name"), ranked[0].get("provider")) >= 0.62:
+                leaderboard_match = ranked[0]
+                model_id = str(ranked[0].get("model_id") or "")
+
+    if model_id and (model_result is None or not _model_result_has_public_data(model_result)):
+        result = await _fetch_model_result_for_review(model_id)
+        if "error" in result:
+            discovery_errors.append(result)
+        else:
+            model_result = result
+
+    if leaderboard_match and model_result is not None:
+        for key, value in leaderboard_match.items():
+            if model_result.get(key) is None:
+                model_result[key] = value
+    elif leaderboard_match:
+        model_result = dict(leaderboard_match)
+
+    if model_id and model_result is None:
+        model_result = {"model_id": model_id}
+    if model_result is not None and model_id and not model_result.get("model_id"):
+        model_result["model_id"] = model_id
+
+    existing_highlight = next((p for p in matched_posts if is_highlight_post(p)), None)
+    review_post = next((p for p in matched_posts if not is_highlight_post(p)), None)
+
+    if model_id and not review_post:
+        for post in posts:
+            if not is_highlight_post(post) and model_id in related_model_ids(post):
+                review_post = post
+                break
+
+    if model_id and not existing_highlight:
+        for post in posts:
+            if is_highlight_post(post) and model_id in related_model_ids(post):
+                existing_highlight = post
+                break
+
+    if existing_highlight:
+        recommended_action = "update_existing_highlight"
+    elif model_result and _model_result_has_public_data(model_result):
+        recommended_action = "create_highlight_draft"
+    elif review_post and model_id:
+        recommended_action = "create_highlight_draft_from_review"
+    elif model_id:
+        recommended_action = "run_benchmark_or_fix_api"
+    else:
+        recommended_action = "need_more_context"
+
+    return {
+        "query": raw_query,
+        "resolved_model_id": model_id,
+        "model": model_result,
+        "published_review_post": compact_post(review_post) if review_post else None,
+        "existing_highlight_post": compact_post(existing_highlight) if existing_highlight else None,
+        "matched_posts": [compact_post(p) for p in matched_posts[:5]],
+        "recommended_action": recommended_action,
+        "discovery_errors": discovery_errors,
+    }
+
+
+@mcp.tool()
+async def resolve_model_highlight_context(query: str) -> dict[str, Any]:
+    """Resolve Highlight drafting context from a model ID, title, slug, URL, or fuzzy query.
+
+    Use this before creating Highlight emails. It discovers the normalized model_id,
+    linked published review post, existing Highlight draft/published post, and the
+    recommended next action so agents do not mistake transient API failures for
+    absent resources.
+    """
+    return await _resolve_model_highlight_context_impl(query)
+
+
 @mcp.tool()
 async def create_model_highlight_draft(
     model_id: str,
@@ -2253,9 +2485,38 @@ async def create_model_highlight_draft(
     import gcb_mcp.header_svg as header_svg  # noqa: PLC0415
     from gcb_mcp.highlight import build_highlight_markdown  # noqa: PLC0415
 
-    result = await _fetch_model_result_for_review(model_id)
-    if "error" in result:
-        return result
+    context = await _resolve_model_highlight_context_impl(model_id)
+    if "error" in context:
+        return context
+    if context.get("existing_highlight_post"):
+        return {
+            "error": "highlight_already_exists",
+            "message": (
+                "A Highlight post already appears to exist for this query. "
+                "Use get_blog_post/update_blog_post or send_highlight_to_subscribers with the existing post."
+            ),
+            "context": context,
+        }
+
+    resolved_model_id = context.get("resolved_model_id") or model_id
+    result = context.get("model") if isinstance(context.get("model"), dict) else {}
+    if not resolved_model_id:
+        return {
+            "error": "model_not_resolved",
+            "message": "Could not resolve a model_id from the query.",
+            "context": context,
+        }
+    if not _model_result_has_public_data(result):
+        return {
+            "error": "insufficient_highlight_context",
+            "message": (
+                "Could not fetch published model data or a linked review post with enough context "
+                "to create a Highlight draft."
+            ),
+            "context": context,
+        }
+    model_id = str(resolved_model_id)
+    result["model_id"] = model_id
 
     name = str(result.get("name") or model_id)
     provider = str(result.get("provider") or (model_id.split("/")[0] if "/" in model_id else "unknown"))
@@ -2276,6 +2537,7 @@ async def create_model_highlight_draft(
     title, excerpt, content = build_highlight_markdown(
         model_result=result,
         chart_url=chart_url,
+        source_post=context.get("published_review_post"),
     )
 
     header_result: dict[str, Any] = {}
@@ -2316,6 +2578,7 @@ async def create_model_highlight_draft(
         **created,
         "url": blog.build_live_url(slug) if slug else None,
         "model_id": model_id,
+        "highlight_context": context,
         "highlight_header_auto_generated": header_auto_generated,
         "highlight_chart_auto_generated": bool(chart_url),
         "highlight_chart_url": chart_url,
