@@ -1,7 +1,7 @@
 """Newsletter campaign send audit model."""
 from sqlalchemy import Column, String, DateTime, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql import func
 import uuid
 
@@ -24,5 +24,8 @@ class NewsletterCampaignSend(Base):
     sent_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 
-    post = relationship("BlogPost", backref="newsletter_campaign_sends")
+    post = relationship(
+        "BlogPost",
+        backref=backref("newsletter_campaign_sends", passive_deletes=True),
+    )
     sent_by_user = relationship("User", backref="newsletter_campaign_sends")

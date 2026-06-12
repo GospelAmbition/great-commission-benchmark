@@ -23,6 +23,6 @@ class BlogCategory(Base):
     posts = relationship(
         "BlogPost",
         secondary="blog_post_categories",
-        back_populates="categories"
+        back_populates="categories",
+        passive_deletes=True,
     )
-

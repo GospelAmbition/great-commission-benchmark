@@ -234,6 +234,13 @@ def _score_color(score: float | None) -> str:
     return "#f87171"
 
 
+def _coerce_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Main generator
 # ---------------------------------------------------------------------------
@@ -610,52 +617,56 @@ def generate_highlight_header_svg(
 </svg>"""
 
 
-def generate_highlight_tier_chart_svg(
+def generate_highlight_comparison_chart_svg(
     *,
     model_name: str,
-    overall_score: float | None,
-    tier1_score: float | None,
-    tier2_score: float | None,
-    tier3_score: float | None,
+    comparison_models: list[dict[str, Any]],
+    subtitle: str = "GCB OVERALL SCORE COMPARISON",
 ) -> str:
-    """Generate an email-safe SVG bar chart for Overall + Tier 1/2/3 scores."""
-    safe_id = re.sub(r"[^a-zA-Z0-9]", "_", model_name)[:24] or "chart"
+    """Generate an email-safe SVG bar chart comparing overall scores."""
+    safe_id = re.sub(r"[^a-zA-Z0-9]", "_", model_name)[:24] or "comparison"
     name_safe = _xml_escape(model_name)
-    rows = [
-        ("Overall", overall_score),
-        ("Tier 1", tier1_score),
-        ("Tier 2", tier2_score),
-        ("Tier 3", tier3_score),
-    ]
+    rows: list[tuple[str, float | None, bool]] = []
+    for item in comparison_models[:6]:
+        label = str(item.get("name") or item.get("model_id") or "Model")
+        score = _coerce_float(item.get("overall_score") if item.get("overall_score") is not None else item.get("score"))
+        rows.append((label, score, bool(item.get("is_target"))))
+    if not rows:
+        rows.append((model_name, None, True))
+
     row_svg: list[str] = []
-    for idx, (label, value) in enumerate(rows):
-        y = 82 + idx * 42
-        width = 0 if value is None else max(0, min(100, float(value))) * 4.4
+    for idx, (label, value, is_target) in enumerate(rows):
+        y = 82 + idx * 30
+        width = 0 if value is None else max(0, min(100, float(value))) * 4.2
         val_text = "—" if value is None else f"{float(value):.1f}"
         color = _score_color(value)
+        label_safe = _xml_escape(label if len(label) <= 42 else f"{label[:39]}...")
+        label_color = "#ffffff" if is_target else "#e4e4e7"
+        weight = "800" if is_target else "600"
+        row_bg = "#3f3f46" if is_target else "#27272a"
         row_svg.append(
             f"""
-  <text x="48" y="{y + 15}" font-family="DM Sans,Arial,sans-serif" font-size="15" font-weight="600" fill="#e4e4e7">{_xml_escape(label)}</text>
-  <rect x="130" y="{y}" width="440" height="20" rx="5" fill="#27272a"/>
-  <rect x="130" y="{y}" width="{width:.1f}" height="20" rx="5" fill="{color}"/>
-  <text x="592" y="{y + 15}" font-family="DM Sans,Arial,sans-serif" font-size="15" font-weight="700" fill="{color}">{val_text}</text>"""
+  <text x="48" y="{y + 14}" font-family="DM Sans,Arial,sans-serif" font-size="13" font-weight="{weight}" fill="{label_color}">{label_safe}</text>
+  <rect x="270" y="{y}" width="420" height="18" rx="5" fill="{row_bg}"/>
+  <rect x="270" y="{y}" width="{width:.1f}" height="18" rx="5" fill="{color}"/>
+  <text x="704" y="{y + 14}" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="14" font-weight="800" fill="{color}">{val_text}</text>"""
         )
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 720 280" width="720" height="280">
+     viewBox="0 0 760 300" width="760" height="300">
   <defs>
-    <linearGradient id="chartBg_{safe_id}" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="compareBg_{safe_id}" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#18181b"/>
       <stop offset="100%" stop-color="#09090b"/>
     </linearGradient>
   </defs>
-  <rect width="720" height="280" rx="12" fill="url(#chartBg_{safe_id})"/>
-  <rect x="1" y="1" width="718" height="278" rx="12" fill="none" stroke="#3f3f46"/>
+  <rect width="760" height="300" rx="12" fill="url(#compareBg_{safe_id})"/>
+  <rect x="1" y="1" width="758" height="298" rx="12" fill="none" stroke="#3f3f46"/>
   <text x="48" y="42" font-family="DM Sans,Arial,sans-serif" font-size="21" font-weight="700" fill="#f4f4f5">{name_safe}</text>
-  <text x="48" y="64" font-family="DM Sans,Arial,sans-serif" font-size="12" font-weight="600" letter-spacing="0.14em" fill="{_MUTED_FG}">GCB TIER SCORECARD</text>
+  <text x="48" y="64" font-family="DM Sans,Arial,sans-serif" font-size="12" font-weight="600" letter-spacing="0.14em" fill="{_MUTED_FG}">{_xml_escape(subtitle)}</text>
   {''.join(row_svg)}
-  <text x="48" y="250" font-family="DM Sans,Arial,sans-serif" font-size="12" fill="{_MUTED_FG}">Scores are 0-100 composite signals from the Great Commission Benchmark.</text>
+  <text x="48" y="274" font-family="DM Sans,Arial,sans-serif" font-size="12" fill="{_MUTED_FG}">Scores are 0-100 composite signals from the Great Commission Benchmark.</text>
 </svg>"""
 
 
@@ -758,26 +769,22 @@ async def generate_and_upload_highlight_header(
     }
 
 
-async def generate_and_upload_highlight_chart(
+async def generate_and_upload_highlight_comparison_chart(
     *,
     model_name: str,
-    overall_score: float | None,
-    tier1_score: float | None,
-    tier2_score: float | None,
-    tier3_score: float | None,
+    comparison_models: list[dict[str, Any]],
+    subtitle: str = "GCB OVERALL SCORE COMPARISON",
 ) -> dict[str, Any]:
-    """Generate and upload the Highlight tier score chart SVG."""
+    """Generate and upload the Highlight overall-score comparison SVG."""
     from gcb_mcp.blog import upload_image  # noqa: PLC0415
 
-    svg_content = generate_highlight_tier_chart_svg(
+    svg_content = generate_highlight_comparison_chart_svg(
         model_name=model_name,
-        overall_score=overall_score,
-        tier1_score=tier1_score,
-        tier2_score=tier2_score,
-        tier3_score=tier3_score,
+        comparison_models=comparison_models,
+        subtitle=subtitle,
     )
     safe_name = re.sub(r"[^a-zA-Z0-9_-]", "-", model_name.lower())[:60] or "highlight"
-    svg_path = Path(tempfile.gettempdir()) / f"gcb-highlight-chart-{safe_name}.svg"
+    svg_path = Path(tempfile.gettempdir()) / f"gcb-highlight-comparison-{safe_name}.svg"
     save_svg(svg_content, svg_path)
 
     upload_result = await upload_image(svg_path, content_type="image/svg+xml")

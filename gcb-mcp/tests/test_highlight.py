@@ -6,6 +6,7 @@ import asyncio
 
 import gcb_mcp.blog as blog
 import gcb_mcp.header_svg as header_svg
+import gcb_mcp.public_api as public_api
 import gcb_mcp.server as server
 from gcb_mcp.highlight import build_highlight_markdown
 
@@ -56,7 +57,11 @@ def test_build_highlight_markdown_includes_chart_and_cross_links() -> None:
     assert title.startswith("Model Highlight:")
     assert "82.4" in excerpt
     assert "## At a glance" in content
-    assert "![GPT Highlight 1 GCB tier score chart]" in content
+    assert "Tier scores" not in content
+    assert "Strongest scores" in content
+    assert "Weakest scores" in content
+    assert "## Top surprising insight" in content
+    assert "![GPT Highlight 1 GCB comparison chart]" in content
     assert "leaderboard/models/openai%2Fgpt-highlight-1" in content
     assert "greatcommissionbenchmark.ai/leaderboard" in content
     assert "greatcommissionbenchmark.ai/insights" in content
@@ -98,20 +103,51 @@ def test_highlight_header_svg_contains_required_tokens() -> None:
     assert "82.4" in svg
 
 
-def test_highlight_tier_chart_svg_handles_missing_scores() -> None:
-    svg = header_svg.generate_highlight_tier_chart_svg(
+def test_highlight_comparison_chart_svg_compares_overall_scores() -> None:
+    svg = header_svg.generate_highlight_comparison_chart_svg(
         model_name="GPT Highlight 1",
-        overall_score=82.4,
-        tier1_score=88.0,
-        tier2_score=None,
-        tier3_score=70.0,
+        comparison_models=[
+            {"model_id": "openai/gpt-highlight-1", "name": "GPT Highlight 1", "overall_score": 82.4, "is_target": True},
+            {"model_id": "openai/gpt-highlight-0", "name": "GPT Highlight 0", "overall_score": 78.0},
+        ],
+        subtitle="GCB OVERALL SCORE - MODEL FAMILY",
     )
-    assert "GCB TIER SCORECARD" in svg
-    assert "Overall" in svg
-    assert "Tier 1" in svg
-    assert "Tier 2" in svg
-    assert "Tier 3" in svg
-    assert "—" in svg
+    assert "GCB OVERALL SCORE - MODEL FAMILY" in svg
+    assert "GPT Highlight 1" in svg
+    assert "GPT Highlight 0" in svg
+    assert "82.4" in svg
+    assert "Tier" not in svg
+
+
+def test_highlight_comparison_models_prefers_family(monkeypatch) -> None:
+    async def fake_list_published(limit: int = 100) -> dict:
+        return {
+            "models": [
+                {"model_id": "anthropic/claude-opus-4.8-fast", "name": "Claude Opus 4.8 Fast", "provider": "anthropic", "overall_score": 43.0},
+                {"model_id": "anthropic/claude-opus-4.7-fast", "name": "Claude Opus 4.7 Fast", "provider": "anthropic", "overall_score": 57.3},
+                {"model_id": "openai/gpt-highlight-1", "name": "GPT Highlight 1", "provider": "openai", "overall_score": 43.2},
+            ]
+        }
+
+    monkeypatch.setattr(public_api, "list_published_models", fake_list_published)
+
+    rows, subtitle = asyncio.run(
+        server._highlight_comparison_models(
+            {
+                "model_id": "anthropic/claude-opus-4.8-fast",
+                "name": "Claude Opus 4.8 Fast",
+                "provider": "anthropic",
+                "overall_score": 43.0,
+            }
+        )
+    )
+
+    assert subtitle == "GCB OVERALL SCORE - MODEL FAMILY"
+    assert {row["model_id"] for row in rows} == {
+        "anthropic/claude-opus-4.8-fast",
+        "anthropic/claude-opus-4.7-fast",
+    }
+    assert any(row["model_id"] == "anthropic/claude-opus-4.8-fast" and row["is_target"] for row in rows)
 
 
 def test_create_model_highlight_draft_generates_assets_and_draft(monkeypatch) -> None:
@@ -135,6 +171,15 @@ def test_create_model_highlight_draft_generates_assets_and_draft(monkeypatch) ->
         captured["chart"] = kwargs
         return {"url": "https://greatcommissionbenchmark.ai/api/files/chart.svg"}
 
+    async def fake_comparison(_result: dict) -> tuple[list[dict], str]:
+        return (
+            [
+                {"model_id": "openai/gpt-highlight-1", "name": "GPT Highlight 1", "overall_score": 82.4, "is_target": True},
+                {"model_id": "openai/gpt-highlight-0", "name": "GPT Highlight 0", "overall_score": 78.0},
+            ],
+            "GCB OVERALL SCORE - MODEL FAMILY",
+        )
+
     async def fake_create_post(**kwargs) -> dict:
         captured["post"] = kwargs
         return {
@@ -149,7 +194,8 @@ def test_create_model_highlight_draft_generates_assets_and_draft(monkeypatch) ->
     monkeypatch.setattr(server, "_highlights_category_id", fake_category)
     monkeypatch.setattr(blog, "generate_slug", fake_slug)
     monkeypatch.setattr(header_svg, "generate_and_upload_highlight_header", fake_header)
-    monkeypatch.setattr(header_svg, "generate_and_upload_highlight_chart", fake_chart)
+    monkeypatch.setattr(header_svg, "generate_and_upload_highlight_comparison_chart", fake_chart)
+    monkeypatch.setattr(server, "_highlight_comparison_models", fake_comparison)
     monkeypatch.setattr(blog, "create_post", fake_create_post)
 
     result = asyncio.run(server.create_model_highlight_draft("openai/gpt-highlight-1"))
@@ -161,6 +207,7 @@ def test_create_model_highlight_draft_generates_assets_and_draft(monkeypatch) ->
     assert captured["post"]["model_ids"] == ["openai/gpt-highlight-1"]
     assert captured["post"]["category_ids"] == ["highlight-category"]
     assert "chart.svg" in captured["post"]["content"]
+    assert captured["chart"]["subtitle"] == "GCB OVERALL SCORE - MODEL FAMILY"
 
 
 def test_resolve_model_highlight_context_finds_review_post_by_url(monkeypatch) -> None:

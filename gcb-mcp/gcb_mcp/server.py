@@ -55,7 +55,7 @@ mcp = FastMCP(
         "and uploads it; create_monthly_newsletter_draft attaches this automatically. "
         "resolve_model_highlight_context discovers Highlight source context from model IDs, titles, "
         "slugs, URLs, and linked insights. create_model_highlight_draft creates a brief email-first "
-        "model Highlight post with a generated header and tier chart; send_highlight_to_subscribers "
+        "model Highlight post with a generated header and comparison chart; send_highlight_to_subscribers "
         "sends it to the same newsletter audiences. "
         "Authentication: GCB_API_KEY in the MCP environment is optional if "
         "platform.api_key is already set in ~/.gcb-runner/config.json (same file "
@@ -2255,6 +2255,80 @@ def _model_result_has_public_data(result: dict[str, Any]) -> bool:
     )
 
 
+def _highlight_family_tokens(model: dict[str, Any]) -> set[str]:
+    """Return stable tokens for grouping nearby model-family comparisons."""
+    model_id = str(model.get("model_id") or "")
+    name = str(model.get("name") or "")
+    tail = model_id.split("/", 1)[-1]
+    text = f"{tail} {name}".lower()
+    tokens = set(re.findall(r"[a-z]+", text))
+    return {
+        token
+        for token in tokens
+        if len(token) >= 3 and token not in {"model", "fast", "latest", "preview", "instruct", "chat"}
+    }
+
+
+async def _highlight_comparison_models(target: dict[str, Any], *, limit: int = 6) -> tuple[list[dict[str, Any]], str]:
+    """Choose same-family comparison rows, falling back to nearest overall scores."""
+    from gcb_mcp.public_api import list_published_models as _list_published  # noqa: PLC0415
+
+    target_id = str(target.get("model_id") or "")
+    target_provider = str(target.get("provider") or (target_id.split("/")[0] if "/" in target_id else "")).lower()
+    target_score = _maybe_float(target.get("overall_score") if target.get("overall_score") is not None else target.get("score"))
+    target_tokens = _highlight_family_tokens(target)
+
+    listed = await _list_published(limit=100)
+    if "error" in listed:
+        row = dict(target)
+        row["is_target"] = True
+        return [row], "GCB OVERALL SCORE"
+
+    entries = [entry for entry in (listed.get("models") or []) if isinstance(entry, dict)]
+    by_id: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        entry_id = str(entry.get("model_id") or "")
+        if entry_id:
+            by_id[entry_id] = dict(entry)
+    if target_id:
+        by_id[target_id] = {**by_id.get(target_id, {}), **target}
+    entries = list(by_id.values())
+
+    def row_score(row: dict[str, Any]) -> float | None:
+        return _maybe_float(row.get("overall_score") if row.get("overall_score") is not None else row.get("score"))
+
+    def with_target_flag(rows: list[dict[str, Any]], subtitle: str) -> tuple[list[dict[str, Any]], str]:
+        for row in rows:
+            row["is_target"] = str(row.get("model_id") or "") == target_id
+        if not any(row.get("is_target") for row in rows):
+            target_row = dict(target)
+            target_row["is_target"] = True
+            rows.append(target_row)
+        rows.sort(key=lambda row: (row_score(row) is None, -(row_score(row) or 0)))
+        return rows[:limit], subtitle
+
+    family: list[dict[str, Any]] = []
+    for entry in entries:
+        entry_id = str(entry.get("model_id") or "")
+        entry_provider = str(entry.get("provider") or (entry_id.split("/", 1)[0] if "/" in entry_id else "")).lower()
+        if target_provider and entry_provider != target_provider:
+            continue
+        overlap = len(target_tokens & _highlight_family_tokens(entry))
+        if entry_id == target_id or overlap >= 2:
+            family.append(dict(entry))
+    if len(family) >= 2:
+        return with_target_flag(family, "GCB OVERALL SCORE - MODEL FAMILY")
+
+    if target_score is None:
+        nearest = [dict(entry) for entry in entries if str(entry.get("model_id") or "") == target_id]
+    else:
+        nearest = sorted(
+            [dict(entry) for entry in entries if row_score(entry) is not None],
+            key=lambda entry: abs((row_score(entry) or 0) - target_score),
+        )[:limit]
+    return with_target_flag(nearest, "GCB OVERALL SCORE - NEAREST MODELS")
+
+
 def _extract_model_id_from_text(text: str) -> str | None:
     match = re.search(r"\b[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._:-]*\b", text.lower())
     return match.group(0) if match else None
@@ -2476,8 +2550,8 @@ async def create_model_highlight_draft(
 ) -> dict[str, Any]:
     """Create a brief email-first model Highlight draft.
 
-    Pulls the public model result, generates a hosted Highlight header and tier
-    score chart when requested, saves a draft insights post, and links it to the
+    Pulls the public model result, generates a hosted Highlight header and
+    comparison chart when requested, saves a draft insights post, and links it to the
     benchmark model. The draft is intentionally short so it can be sent as email
     after human review, publication, and a dry run.
     """
@@ -2524,12 +2598,11 @@ async def create_model_highlight_draft(
     chart_result: dict[str, Any] = {}
     chart_url: str | None = None
     if auto_generate_chart:
-        chart_result = await header_svg.generate_and_upload_highlight_chart(
+        comparison_models, comparison_subtitle = await _highlight_comparison_models(result)
+        chart_result = await header_svg.generate_and_upload_highlight_comparison_chart(
             model_name=name,
-            overall_score=_maybe_float(result.get("overall_score")),
-            tier1_score=_maybe_float(result.get("tier1_score")),
-            tier2_score=_maybe_float(result.get("tier2_score")),
-            tier3_score=_maybe_float(result.get("tier3_score")),
+            comparison_models=comparison_models,
+            subtitle=comparison_subtitle,
         )
         if "error" not in chart_result:
             chart_url = chart_result.get("url")
@@ -3003,18 +3076,17 @@ async def generate_and_upload_highlight_header(model_id: str) -> dict[str, Any]:
 
 @mcp.tool()
 async def generate_and_upload_highlight_chart(model_id: str) -> dict[str, Any]:
-    """Generate and upload the model Highlight tier-score chart SVG."""
+    """Generate and upload the model Highlight overall-score comparison chart SVG."""
     import gcb_mcp.header_svg as header_svg  # noqa: PLC0415
 
     result = await _fetch_model_result_for_review(model_id)
     if "error" in result:
         return result
-    return await header_svg.generate_and_upload_highlight_chart(
+    comparison_models, comparison_subtitle = await _highlight_comparison_models(result)
+    return await header_svg.generate_and_upload_highlight_comparison_chart(
         model_name=str(result.get("name") or model_id),
-        overall_score=_maybe_float(result.get("overall_score")),
-        tier1_score=_maybe_float(result.get("tier1_score")),
-        tier2_score=_maybe_float(result.get("tier2_score")),
-        tier3_score=_maybe_float(result.get("tier3_score")),
+        comparison_models=comparison_models,
+        subtitle=comparison_subtitle,
     )
 
 

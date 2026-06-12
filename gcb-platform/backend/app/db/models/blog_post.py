@@ -2,7 +2,7 @@
 from sqlalchemy import Column, String, DateTime, Text, ForeignKey, Table
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 import uuid
 
 from app.db.base import Base
@@ -46,11 +46,12 @@ class BlogPost(Base):
     categories = relationship(
         "BlogCategory",
         secondary=blog_post_categories,
-        back_populates="posts"
+        back_populates="posts",
+        passive_deletes=True,
     )
     models = relationship(
         "Model",
         secondary=blog_post_models,
-        backref="blog_posts"
+        backref=backref("blog_posts", passive_deletes=True),
+        passive_deletes=True,
     )
-

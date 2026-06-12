@@ -163,6 +163,58 @@ def strongest_and_weakest(category_scores: dict[str, Any] | None) -> tuple[tuple
     return scored[0], scored[-1]
 
 
+def top_category_scores(category_scores: dict[str, Any] | None, *, limit: int = 3, reverse: bool = True) -> list[tuple[str, float]]:
+    """Return the strongest or weakest category scores for short public bullets."""
+    scored: list[tuple[str, float]] = []
+    for key, raw in (category_scores or {}).items():
+        val = _score_float(raw)
+        if val is not None:
+            scored.append((str(key), val))
+    scored.sort(key=lambda item: item[1], reverse=reverse)
+    return scored[:limit]
+
+
+def _score_list(items: list[tuple[str, float]]) -> str:
+    return ", ".join(f"{_category_label(key)} **{score:.1f}**" for key, score in items)
+
+
+def surprising_insight(model_result: dict[str, Any], source_post: dict[str, Any] | None = None) -> str:
+    """Choose the most useful one-line insight available from public result metadata."""
+    source_title = str((source_post or {}).get("title") or "").strip()
+    verdicts = model_result.get("verdict_distribution") or {}
+    accepted = int(_score_float(verdicts.get("ACCEPTED")) or 0)
+    compromised = int(_score_float(verdicts.get("COMPROMISED")) or 0)
+    refused = int(_score_float(verdicts.get("REFUSED")) or 0)
+    total = accepted + compromised + refused + int(_score_float(verdicts.get("ERROR")) or 0)
+    best, weakest = strongest_and_weakest(model_result.get("category_scores"))
+    name = str(model_result.get("name") or model_result.get("model_id") or "This model")
+
+    if "refusal burden" in source_title.lower() and total:
+        return (
+            f"The standout pattern is the refusal burden: **{refused} of {total}** items were refused, "
+            f"even though {name} still showed usable strength in its best lanes."
+        )
+    if best and weakest and best[1] - weakest[1] >= 35:
+        return (
+            f"The surprise is the spread: {_category_label(best[0])} reached **{best[1]:.1f}**, "
+            f"while {_category_label(weakest[0])} landed at **{weakest[1]:.1f}**."
+        )
+    if total and refused > accepted:
+        return (
+            f"The most important signal is cautionary: refusals (**{refused}**) outnumbered clean accepted "
+            f"answers (**{accepted}**), which can affect ministry reliability."
+        )
+    if total and accepted >= compromised + refused:
+        return (
+            f"The positive surprise is consistency: accepted answers (**{accepted}**) matched or exceeded "
+            "all other outcomes combined."
+        )
+    return (
+        "The most useful signal is the shape of the score, not the number alone: compare the full result "
+        "against your own ministry tasks before relying on it."
+    )
+
+
 def build_highlight_markdown(
     *,
     model_result: dict[str, Any],
@@ -176,9 +228,6 @@ def build_highlight_markdown(
     provider_display = publisher_display_name(provider)
 
     overall = score_text(model_result.get("overall_score"))
-    tier1 = score_text(model_result.get("tier1_score"))
-    tier2 = score_text(model_result.get("tier2_score"))
-    tier3 = score_text(model_result.get("tier3_score"))
     total_questions = model_result.get("total_questions") or 150
     completed = format_completed_human(model_result.get("completed_at"))
     benchmark_version = model_result.get("benchmark_version") or "current public benchmark"
@@ -187,7 +236,8 @@ def build_highlight_markdown(
     source_title = str(source_post.get("title") or "").strip()
     source_url = str(source_post.get("url") or "").strip()
 
-    best, weakest = strongest_and_weakest(model_result.get("category_scores"))
+    strongest = top_category_scores(model_result.get("category_scores"), limit=3, reverse=True)
+    weakest = top_category_scores(model_result.get("category_scores"), limit=3, reverse=False)
 
     title = f"Model Highlight: {name} on the Great Commission Benchmark"
     excerpt = (
@@ -199,13 +249,12 @@ def build_highlight_markdown(
 
     bullets = [
         f"- **Overall score:** **{overall} / 100** across **{total_questions}** benchmark items.",
-        f"- **Tier scores:** Tier 1 **{tier1}**, Tier 2 **{tier2}**, Tier 3 **{tier3}**.",
         f"- **Publisher:** {provider_display}; latest public GCB result completed **{completed}**.",
     ]
-    if best:
-        bullets.append(f"- **Strongest signal:** {_category_label(best[0])} at **{best[1]:.1f}**.")
-    if weakest and (not best or weakest[0] != best[0]):
-        bullets.append(f"- **Watch area:** {_category_label(weakest[0])} at **{weakest[1]:.1f}**.")
+    if strongest:
+        bullets.append(f"- **Strongest scores:** {_score_list(strongest)}.")
+    if weakest:
+        bullets.append(f"- **Weakest scores:** {_score_list(weakest)}.")
 
     lines: list[str] = []
     lines.append(f"# {title}\n\n")
@@ -215,7 +264,9 @@ def build_highlight_markdown(
     lines.append("\n".join(bullets[:5]))
     lines.append("\n\n")
     if chart_url:
-        lines.append(f"![{name} GCB tier score chart]({chart_url})\n\n")
+        lines.append(f"![{name} GCB comparison chart]({chart_url})\n\n")
+    lines.append("## Top surprising insight\n\n")
+    lines.append(surprising_insight(model_result, source_post) + "\n\n")
     lines.append("## Why it matters\n\n")
     if source_title and "refusal burden" in source_title.lower():
         lines.append(
