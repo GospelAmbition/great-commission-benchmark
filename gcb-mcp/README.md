@@ -1,8 +1,43 @@
 # GCB MCP server
 
-## Stable Cursor entrypoint (recommended)
+## Stable Codex entrypoint (recommended)
 
-Hard‑coding `…/gcb-mcp/.venv/bin/gcb-mcp` in `mcp.json` breaks whenever the repo moves or the venv is recreated. Use a **fixed launcher on `PATH`** and put volatility in **`GCB_MCP_HOME`**.
+Codex is the preferred agent for running GCB tools. Register the MCP server in
+`~/.codex/config.toml` so tools such as `run_gcb_test`,
+`check_ready_for_testing`, `start_gcb_test`, `get_job_status`, and
+`upload_result` are exposed directly in Codex sessions.
+
+Use the repo launcher directly:
+
+```toml
+[mcp_servers.gcb-mcp]
+command = "/ABS/PATH/TO/great-commission-benchmark/gcb-mcp/scripts/gcb_mcp_launch.sh"
+args = []
+startup_timeout_sec = 120
+
+[mcp_servers.gcb-mcp.env]
+GCB_MCP_HOME = "/ABS/PATH/TO/great-commission-benchmark/gcb-mcp"
+GCB_API_BASE_URL = "https://api.greatcommissionbenchmark.ai"
+```
+
+Secrets do not need to be duplicated in `~/.codex/config.toml` if
+`~/.gcb-runner/config.json` already contains `platform.api_key` and the
+OpenRouter backend key. The MCP server reads that same config automatically.
+
+After updating Codex config, start a fresh Codex session and run:
+
+```bash
+codex mcp list
+```
+
+You should see `gcb-mcp` enabled. Existing sessions usually do not gain newly
+configured MCP tools until restarted.
+
+## Stable Cursor entrypoint (optional)
+
+Hard‑coding `…/gcb-mcp/.venv/bin/gcb-mcp` in `mcp.json` breaks whenever the repo
+moves or the venv is recreated. Cursor can use a fixed launcher on `PATH` and
+put volatility in `GCB_MCP_HOME`.
 
 ### One‑time install
 
@@ -12,9 +47,11 @@ From this directory:
 ./scripts/install_cursor_launcher.sh
 ```
 
-This installs `~/.local/bin/gcb-mcp-cursor` (override with `INSTALL_DEST=/other/bin`).
+This installs `~/.local/bin/gcb-mcp-cursor` (override with
+`INSTALL_DEST=/other/bin`).
 
-Ensure `~/.local/bin` is on your `PATH` for GUI apps if needed (macOS: some Cursor builds inherit a minimal PATH).
+Ensure `~/.local/bin` is on your `PATH` for GUI apps if needed (macOS: some
+Cursor builds inherit a minimal PATH).
 
 ### `~/.cursor/mcp.json`
 

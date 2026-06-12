@@ -19,7 +19,7 @@ Examples:
 
 Use this workflow:
 
-1. Call `run_gcb_test(model_id="<model_id>")` when available.
+1. In Codex, call the MCP tool `run_gcb_test(model_id="<model_id>")` when it is exposed.
 2. If `run_gcb_test` is unavailable, call `check_ready_for_testing(auto_launch=true)`.
 3. If OpenRouter is ready, call `start_gcb_test(model_id="<model_id>")`.
 4. Report the returned `job_id`, `status`, `model_id`, and `log_path`.
@@ -27,6 +27,11 @@ Use this workflow:
    `get_job_status(job_id)`.
 
 Preserve exact model ids, including slashes, punctuation, and provider prefixes.
+
+If the dedicated GCB MCP tools are not exposed in a Codex session, the usual
+cause is that `gcb-mcp` is not registered in `~/.codex/config.toml` or the
+session was started before the config was added. Prefer fixing Codex MCP
+registration over searching the repo for alternate entrypoints.
 
 ## Readiness Shorthand
 
