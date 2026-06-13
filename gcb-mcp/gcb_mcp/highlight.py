@@ -239,7 +239,7 @@ def build_highlight_markdown(
     strongest = top_category_scores(model_result.get("category_scores"), limit=3, reverse=True)
     weakest = top_category_scores(model_result.get("category_scores"), limit=3, reverse=False)
 
-    title = f"Model Highlight: {name} on the Great Commission Benchmark"
+    title = f"{name} on the Great Commission Benchmark"
     excerpt = (
         f"{name} scored {overall} overall on the Great Commission Benchmark, "
         "with quick links into the full result and leaderboard context."

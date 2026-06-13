@@ -54,7 +54,9 @@ def test_build_highlight_markdown_includes_chart_and_cross_links() -> None:
         chart_url="https://greatcommissionbenchmark.ai/api/files/highlight.svg",
     )
 
-    assert title.startswith("Model Highlight:")
+    assert title == "GPT Highlight 1 on the Great Commission Benchmark"
+    assert "Model Highlight:" not in title
+    assert "# Model Highlight:" not in content
     assert "82.4" in excerpt
     assert "## At a glance" in content
     assert "Tier scores" not in content

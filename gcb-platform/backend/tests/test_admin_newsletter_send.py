@@ -90,6 +90,36 @@ class TestAdminNewsletterSend:
 
         app.dependency_overrides.clear()
 
+    def test_send_dry_run_production_audience(self, client, db_session, admin_user):
+        from main import app
+        from app.core.auth import get_current_user, require_admin
+        from app.api.v1.endpoints.admin import require_admin_flexible
+
+        _set_admin_overrides(app, admin_user, get_current_user, require_admin, require_admin_flexible)
+
+        post = _create_post(db_session, admin_user, status="published")
+        db_session.add(NewsletterSubscriber(email="member@example.com", is_active=True))
+        db_session.commit()
+
+        response = client.post(
+            "/api/admin/newsletter/send",
+            json={
+                "post_id": str(post.id),
+                "dry_run": True,
+                "audience": "production",
+                "campaign_type": "highlight",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["audience"] == "production"
+        assert data["campaign_type"] == "highlight"
+        assert data["recipient_count"] == 1
+        assert data["recipient_count_source"] == "newsletter_subscribers_active"
+        assert data["post_status"] == "published"
+
+        app.dependency_overrides.clear()
+
     def test_send_production_requires_published(self, client, db_session, admin_user):
         from main import app
         from app.core.auth import get_current_user, require_admin
