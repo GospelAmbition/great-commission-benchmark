@@ -58,6 +58,8 @@ def test_build_highlight_markdown_includes_chart_and_cross_links() -> None:
     assert "Model Highlight:" not in title
     assert "# Model Highlight:" not in content
     assert "82.4" in excerpt
+    assert "# GPT Highlight 1 on the Great Commission Benchmark\n\nA useful model for testing highlight copy.\n\n## At a glance" in content
+    assert "> A useful model for testing highlight copy." not in content
     assert "## At a glance" in content
     assert "Tier scores" not in content
     assert "Strongest scores" in content

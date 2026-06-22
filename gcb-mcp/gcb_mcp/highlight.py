@@ -259,7 +259,7 @@ def build_highlight_markdown(
     lines: list[str] = []
     lines.append(f"# {title}\n\n")
     if desc:
-        lines.append(f"> {desc}\n\n")
+        lines.append(f"{desc}\n\n")
     lines.append("## At a glance\n\n")
     lines.append("\n".join(bullets[:5]))
     lines.append("\n\n")
