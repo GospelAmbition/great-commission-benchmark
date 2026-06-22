@@ -8,13 +8,15 @@ from app.db.models.model import Model
 from app.services.openrouter import OpenRouterClient
 
 
-async def sync_model_description(db: Session, model: Model) -> bool:
+async def sync_model_description(db: Session, model: Model, commit: bool = True) -> bool:
     """
     Sync model description from OpenRouter API.
     
     Args:
         db: Database session
         model: Model instance to update
+        commit: Whether to commit immediately. Set to False when called inside
+            a larger transaction.
         
     Returns:
         True if description was updated, False otherwise
@@ -24,7 +26,8 @@ async def sync_model_description(db: Session, model: Model) -> bool:
         model_info = await openrouter.get_model_info(model.model_id)
         if model_info and model_info.get("description"):
             model.description = model_info.get("description")
-            db.commit()
+            if commit:
+                db.commit()
             return True
     except Exception:
         # Silently fail - description sync is optional
