@@ -159,14 +159,15 @@ Do not start writing until you have completed the Analysis phase (Steps 2–3) i
 2a. get_local_test_json(job_id)         → if run locally and local file exists
 2b. get_remote_test_json(test_run_id)   → for any historical run on the platform (admin key)
 2c. get_model_test_result(model_id)    → aggregate-only fallback
-3. ANALYSIS PHASE (mandatory before writing)
+3. prepare_model_review_brief(...)     → behavior brief + recent-review fingerprints
 4. Read _article_review_prompt.md      → load voice/style guidelines
-5. Agent writes article (1200-1800 words) using analysis notes
-6. generate_and_upload_header(...)     → get hosted SVG header URL
-7. create_blog_draft(title, content, excerpt, featured_image_url=url)
-8. Review/edit loop (optional):
+5. Writer pass                         → original article from the brief
+6. Editor pass                         → compare against recent reviews and vary the draft
+7. generate_and_upload_header(...)     → get hosted SVG header URL
+8. create_blog_draft(title, content, excerpt, featured_image_url=url)
+9. Review/edit loop (optional):
      get_blog_post(id) → revise → update_blog_post(id, content=...)
-9. publish_blog_post(id)               → go live
+10. publish_blog_post(id)              → go live
 ```
 
 ---
@@ -231,7 +232,32 @@ Sufficient for a solid article; insufficient for response-level insights.
 
 ---
 
-## Step 3 — ANALYSIS PHASE (mandatory — do this before writing a single word)
+## Step 3 — Build the editorial brief (mandatory before writing)
+
+Prefer the MCP brief tool over hand-rolling the article from aggregate scores:
+
+```python
+brief = prepare_model_review_brief(
+    model_id="provider/model",
+    job_id="local-job-id",        # optional, preferred when available
+    test_run_id="platform-run-id", # optional fallback
+    recent_limit=5,
+)
+```
+
+The brief should include:
+- score facts and category breakdowns
+- cooperation patterns from accepted responses
+- protest/refusal patterns from refused responses
+- hedging/softening patterns from compromised responses
+- representative response excerpts, never question text
+- nearest peer context from the leaderboard
+- recent post fingerprints for title, heading, opening, and phrase variation
+- style constraints, including phrases to avoid
+
+`create_model_review_draft(...)` is now a fallback draft generator. Do not use it as the default publication path when the user asks to write a polished review.
+
+## Step 3b — Analysis phase for manual or fallback writing
 
 This is the step that separates high-quality articles from generic summaries.
 Work through each of these investigations before opening a text editor.
@@ -289,8 +315,8 @@ Before writing, have these ready:
 2. Top 2–3 strengths with exact counts
 3. Top 2–3 failures with exact counts
 4. One or two specific response excerpts to quote (from Option A only — never invent quotes)
-5. The strategic recommendation for ministry leaders
-6. A closing Scripture reference that resonates with the model's profile
+5. The strongest contrast between where the model cooperated and where it protested
+6. One closing observation that is informational and warm, not a generic product rollout recommendation
 
 ---
 
@@ -313,23 +339,35 @@ Key constraints from the prompt (do not skip):
 
 ## Step 5 — Write the Article
 
-Use your analysis notes + the writing prompt. Do not return to the raw data during writing —
-you already extracted what matters. Write fluidly from your notes.
+Use the editorial brief + the writing prompt. Write fluidly from the brief rather than copying the fallback draft shape.
 
 Target: 1,200–1,800 words. Structure:
-1. Opening hook (1 paragraph — lead with the most surprising finding)
-2. "At a Glance" bullet section
-3. What the benchmark measures (brief, 1 paragraph)
-4. The model's defining behavioral pattern (your Step 3b finding)
-5. Where it excels (exact counts from category_breakdown)
-6. Where it fails (exact counts, explain the guardrail logic if discernible)
-7. Any anomaly section (Step 3c findings — these elevate the article)
-8. Strategic recommendations for ministry leaders (numbered list)
-9. Closing paragraph + Scripture reference
+1. Opening hook (lead with the most surprising behavioral finding)
+2. Scan-friendly layer with score, verdict mix, and behavioral thesis
+3. One-sentence benchmark context, not a repeated explanatory section
+4. Where the model cooperated, using exact category counts and response excerpts
+5. Where the model protested, using refusal clusters and refusal language
+6. How compromised answers sounded, using judge reasoning and examples
+7. What makes this run different from recent reviews or nearby models
+8. Closing paragraph that summarizes the model's posture without generic rollout advice
 
 ---
 
-## Step 6 — Generate Header Image
+## Step 6 — Editor variation pass (mandatory before publish)
+
+Run a separate editor pass before creating or publishing the post. If multi-agent tools are available and the user has asked for a different writer/editor, use a separate editor agent; otherwise do this as a distinct second pass yourself.
+
+The editor must compare the draft against `brief.recent_post_fingerprints` and revise:
+- repeated title formulas
+- repeated section headings
+- repeated opening rhythm
+- repeated phrases such as "Capability With a Refusal Burden"
+- generic containment, governance, or rollout advice
+- closings that sound like prior posts
+
+The editor pass should preserve the data, category exclusions, and no-question-disclosure rule.
+
+## Step 7 — Generate Header Image
 
 ```python
 generate_and_upload_header(
@@ -342,7 +380,7 @@ generate_and_upload_header(
 )
 ```
 
-Returns `{url, svg_path, provider_color}`. Pass `url` as `featured_image_url` in Step 7.
+Returns `{url, svg_path, provider_color}`. Pass `url` as `featured_image_url` in Step 8.
 
 Known provider slugs with custom logos: `openai`, `anthropic`, `google`, `meta-llama`,
 `mistralai`, `microsoft`, `moonshot`, `moonshotai`, `x-ai`, `deepseek`, `qwen`.
@@ -350,7 +388,7 @@ Unknown providers get a styled monogram letter — no error.
 
 ---
 
-## Step 7 — Create Draft
+## Step 8 — Create Draft
 
 ```python
 create_blog_draft(
@@ -366,7 +404,7 @@ Returns `{id, slug, status, url}`. Save the `id` for editing.
 
 ---
 
-## Step 8 — Edit Loop (optional)
+## Step 9 — Edit Loop (optional)
 
 ```python
 post = get_blog_post(post_id)
@@ -376,7 +414,7 @@ update_blog_post(post_id, content="<revised markdown>")
 
 ---
 
-## Step 9 — Publish
+## Step 10 — Publish
 
 ```python
 publish_blog_post(post_id)
@@ -403,14 +441,15 @@ Before publishing, verify:
 - [ ] "At a Glance" section with 3–5 bullets immediately after title/hook
 - [ ] Uses **exact counts** ("9 of 15 accepted") not just percentages where available
 - [ ] Names the model's defining behavioral pattern in one clear phrase
-- [ ] Includes at least one direct quote from a model response (Option A only)
+- [ ] Includes representative response excerpts where available, without revealing test questions
 - [ ] At least one anomaly or unexpected finding called out
-- [ ] Tier 2 doctrinal analysis present (not just Tier 1)
-- [ ] Strategic recommendations are specific and actionable for ministry leaders
+- [ ] Explains where the model cooperated, protested, and softened claims
+- [ ] Compares title, headings, opening, and closing against recent reviews
+- [ ] Avoids generic rollout, governance, or containment advice
 - [ ] No disclosure of actual test questions
 - [ ] Restricted categories not mentioned (Lordship, Child Safety, Public Safety, Distressing Content, Harassment, Political Stability)
 - [ ] Connects technical results to Great Commission mission
-- [ ] Scripture reference included in closing
+- [ ] Closing summarizes the model's observed posture without becoming boilerplate
 - [ ] 1,200–1,800 words total
 - [ ] Featured image URL set
 - [ ] Category "model-reviews" assigned

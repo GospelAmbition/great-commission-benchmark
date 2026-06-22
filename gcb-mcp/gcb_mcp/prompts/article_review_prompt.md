@@ -22,19 +22,23 @@ Professional, strategic, and warm. Write like a peer advisor who understands the
 *   Use "we" and "you" to maintain a conversational, peer-to-peer relationship.
 *   Use clear headings and structured sections to organize complex ideas.
 *   **Keep paragraphs short:** 2-4 sentences max. Prefer bullets and short blocks over long prose. Lighter word count per paragraph so the piece feels scannable and readable.
-*   Use bullet points liberally-especially for test analysis, verdict patterns, and strategic implications. Readers should be able to grab insights quickly.
-*   Define each "benchmark" in one or two precise sentences, then explore its strategic importance for Great Commission work.
+*   Use bullet points where they help readers scan response behavior, verdict patterns, and category contrasts. Do not turn every post into the same statistical outline.
+*   Define the benchmark in one precise sentence when needed, then move quickly to what this model actually did.
 *   Connect technical data or frameworks back to the mission of making disciples and reaching the unreached.
-*   Before drafting, identify the model's distinctive strategic thesis in one sentence. The thesis must be specific to the score shape, refusal pattern, strongest categories, weakest categories, and provider/model role. Use that thesis to shape the main title and section headings.
-*   Create original section headings for each model review. Avoid repeated generic headings such as "The defining pattern," "Where the model was strongest," "Where leaders should slow down," and "Verdict patterns" unless they are genuinely the best wording for that exact model.
-*   Assume this article will appear near other model reviews in the same series. Preserve the same audience, theological seriousness, and strategic tone, but vary the communication pattern. Do not repeat more than two major section headings from recent reviews.
-*   Keep recurring benchmark explanations brief and reframed around the model being reviewed. Any repeated benchmark-definition material should be shorter than 120 words before turning to model-specific analysis.
+*   Before drafting, identify the model's distinctive behavioral thesis in one sentence. The thesis must be specific to the response text, judge reasoning, refusal/protest pattern, strongest categories, weakest categories, and provider/model role.
+*   Build the article around what the model sounded like: where it cooperated, where it protested, how it hedged, and what was unusual compared with nearby models or recent reviews.
+*   Create original section headings for each model review. Avoid repeated generic headings such as "What this benchmark is measuring," "High capability, high refusal cost," "A containment-first rollout," "Where leaders should slow down," and "Verdict patterns."
+*   Assume this article will appear near other model reviews in the same series. Preserve the same audience, theological seriousness, and warmth, but vary the communication pattern. Do not repeat more than two major section headings from recent reviews.
+*   Keep recurring benchmark explanations to one sentence unless the result itself requires more context.
 
 **What to Avoid:**
 *   Avoid a "middle school" or "high school" reading level; target a professional, college-educated audience.
 *   Avoid excessive use of simple metaphors or "fluff" that distracts from the core message.
 *   No jargon-heavy "hard tech" tone that excludes non-developers.
 *   No cynical or combative language.
+*   Avoid generic product rollout advice, containment checklists, governance boilerplate, or broad deployment recommendations unless the specific model behavior makes that discussion necessary.
+*   Avoid clinical score-report prose that could be reused for any model. The review should feel like it could only have been written after reading this model's responses.
+*   Avoid repeated title formulas, especially "Capability With a Refusal Burden."
 *   Avoid writing on the results of Lordship of Jesus and Problematic Vocabulary
 *   Avoid reviewing the guardrail results of "Child Safety & Psychological Harm", "Public Safety, Alarmism, & Social Stability", "Distressing Content & Gore", "Harassment & Psychological Harm", "Political Stability & Anti-Democratic Content", "Harassment & Political Sensitivity"
 
@@ -49,19 +53,19 @@ This article is part of a series that helps the Church think about Great Commiss
 **Dual audience:** The article should serve (1) **scanners**-readers who skim for a few nuggets and insights-and (2) **full readers**-those who read the whole piece. Use a scan-friendly layer (see below) plus a complete narrative so both get value.
 
 **Task:**
-Do a deep analysis of the provided benchmark test (json). Look for unique insights. Pros and cons. Then, write a clear, strategic blog article on this topic in 1,200-1,800 words.
+Do a deep analysis of the provided benchmark test (json). Look for unique response behavior, not just pros and cons. Then, write a warm, specific blog article on this topic in 1,200-1,800 words.
 
-*   **Start with a scan-friendly layer.** Right after the title/subtitle, include a short **"At a glance"** or **"Key takeaways"** section: 3-5 bullet points that capture the main result, the one-sentence verdict, and 1-2 strategic implications. Someone who only reads this should get the gist. Then a brief professional context or ministry challenge can set the stage for full readers.
+*   **Start with a scan-friendly layer.** Right after the title/subtitle, include a short **"At a glance"**, **"Key takeaways"**, or similarly natural section: 3-5 bullets that capture the main score, verdict mix, and behavioral thesis. Someone who only reads this should understand how the model behaved.
 *   When covering a **benchmark test**, do not reveal test questions-refer only to concepts and guardrails while discussing responses and judgments.
-*   **Analyze the test with bullets.** Where you present the run (scores, tiers, verdicts), use bullet-pointed insights, e.g.:
+*   **Analyze the test with bullets where useful.** Where you present the run (scores, tiers, verdicts), use concise insight bullets, e.g.:
     *   Overall score and verdict counts (Accepted / Compromised / Refused).
-    *   Tier-by-tier performance (Tier 1, 2, 3) and what that implies.
-    *   Bullet summaries of where the model succeeded, refused, or compromised-with short, insight-style bullets, not long paragraphs.
-    *   Any guardrail or category patterns that stand out (e.g. "refusals cluster around X").
+    *   Tier-by-tier performance (Tier 1, 2, 3) only when it helps explain behavior.
+    *   Where the model cooperated, protested, or softened the requested claim.
+    *   Any category patterns, refusal openings, hedging patterns, identity breaks, or surprising accepted responses.
 *   Keep body prose **light:** short paragraphs (2-4 sentences), more bullets, fewer long blocks. Full readers get the full argument; scanners get structure and bullets they can skim.
-*   Introduce the main technical/strategic concept clearly.
-*   Explore implications for Great Commission work, balancing technical reality with theological conviction-again, favor bullets where listing implications or options.
-*   Let headings carry editorial insight, not merely structure. Prefer specific phrases like "High capability, high refusal cost" or "Task strength is outrunning theological reliability" over generic labels.
+*   Introduce the main behavioral concept clearly. Examples: selective cooperation, protest posture, theological softening, direct confession gap, or unusually warm task engagement.
+*   Let headings carry editorial insight, not merely structure. Prefer phrases that name this model's actual behavior over reusable series labels.
+*   Include a variation/editing pass before publication. Compare against recent reviews and revise repeated titles, headings, openings, stock claims, and closing posture.
 *   Add the blog category "Model Reviews" (model-reviews)
 
 ---

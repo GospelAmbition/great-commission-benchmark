@@ -154,7 +154,7 @@ def test_highlight_comparison_models_prefers_family(monkeypatch) -> None:
     assert any(row["model_id"] == "anthropic/claude-opus-4.8-fast" and row["is_target"] for row in rows)
 
 
-def test_create_model_highlight_draft_generates_assets_and_draft(monkeypatch) -> None:
+def test_create_model_highlight_draft_generates_assets_and_publishes(monkeypatch) -> None:
     captured: dict = {}
 
     async def fake_model_result(_model_id: str) -> dict:
@@ -164,7 +164,7 @@ def test_create_model_highlight_draft_generates_assets_and_draft(monkeypatch) ->
         return "highlight-category"
 
     async def fake_slug(title: str) -> dict:
-        assert "highlight" in title.lower()
+        assert title == "GPT Highlight 1 on the Great Commission Benchmark"
         return {"slug": "gpt-highlight-1-highlight"}
 
     async def fake_header(**kwargs) -> dict:
@@ -190,7 +190,7 @@ def test_create_model_highlight_draft_generates_assets_and_draft(monkeypatch) ->
             "id": "post-1",
             "title": kwargs["title"],
             "slug": kwargs["slug"],
-            "status": "draft",
+            "status": "published",
             "featured_image_url": kwargs.get("featured_image_url"),
         }
 
@@ -204,10 +204,11 @@ def test_create_model_highlight_draft_generates_assets_and_draft(monkeypatch) ->
 
     result = asyncio.run(server.create_model_highlight_draft("openai/gpt-highlight-1"))
 
-    assert result["status"] == "draft"
+    assert result["status"] == "published"
     assert result["highlight_header_auto_generated"] is True
     assert result["highlight_chart_auto_generated"] is True
     assert result["highlights_category_applied"] is True
+    assert captured["post"]["publish"] is True
     assert captured["post"]["model_ids"] == ["openai/gpt-highlight-1"]
     assert captured["post"]["category_ids"] == ["highlight-category"]
     assert "chart.svg" in captured["post"]["content"]
@@ -292,7 +293,7 @@ def test_create_model_highlight_draft_uses_resolved_review_context(monkeypatch) 
             "id": "post-2",
             "title": kwargs["title"],
             "slug": kwargs["slug"],
-            "status": "draft",
+            "status": "published",
         }
 
     monkeypatch.setattr(server, "_resolve_model_highlight_context_impl", fake_context)
@@ -308,8 +309,9 @@ def test_create_model_highlight_draft_uses_resolved_review_context(monkeypatch) 
         )
     )
 
-    assert result["status"] == "draft"
+    assert result["status"] == "published"
     assert result["model_id"] == "anthropic/claude-opus-4.8-fast"
+    assert captured["post"]["publish"] is True
     assert captured["post"]["model_ids"] == ["anthropic/claude-opus-4.8-fast"]
     assert "Read the full insight" in captured["post"]["content"]
     assert "refusal burden" in captured["post"]["content"]

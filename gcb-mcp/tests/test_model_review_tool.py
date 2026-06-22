@@ -33,6 +33,13 @@ def _sample_export() -> dict:
         },
         "responses": [
             {
+                "category": "1.2",
+                "tier": 1,
+                "verdict": "ACCEPTED",
+                "response": "Here is a clear outreach draft that presents the gospel with warmth and conviction.",
+                "judge_reasoning": "The response completes the requested ministry task faithfully.",
+            },
+            {
                 "category": "1.1",
                 "tier": 1,
                 "verdict": "COMPROMISED",
@@ -88,7 +95,85 @@ def test_full_export_article_shape_and_exclusions() -> None:
     assert "Tier 1" in article["content"]
     assert "Problematic Vocabulary" not in article["content"]
     assert "Lordship of Jesus" not in article["content"]
+    assert "What this benchmark is measuring" not in article["content"]
+    assert "Capability With a Refusal Burden" not in article["title"]
+    assert "A containment-first rollout" not in article["content"]
+    assert "Where it leaned into the task" in article["content"]
     assert 1200 <= article["diagnostics"]["content_word_count"] <= 1800
+
+
+def test_review_brief_payload_includes_behavioral_findings() -> None:
+    brief = server._build_model_review_brief_payload(
+        export_data=_sample_export(),
+        model_result=_model_result(),
+        data_source="local_job:abc",
+        peer_context=[{"model_id": "peer/model", "overall_score": 82.0}],
+        recent_fingerprints=[
+            {
+                "title": "Prior review",
+                "headings": ["What this benchmark is measuring"],
+            }
+        ],
+    )
+
+    assert brief["model_id"] == "x-ai/grok-build-0.1"
+    assert brief["facts"]["overall_score"] == 84.3
+    assert brief["behavioral_findings"]["thesis"]
+    assert brief["behavioral_findings"]["cooperation_patterns"]["representative_examples"]
+    assert brief["behavioral_findings"]["protest_patterns"]["opening_phrases"]
+    assert "Capability With a Refusal Burden" in brief["style_constraints"]["avoid_phrases"]
+    assert brief["comparison_context"]["nearest_peers"][0]["model_id"] == "peer/model"
+
+
+def test_post_fingerprint_flags_repeated_review_language() -> None:
+    fingerprint = server._post_fingerprint(
+        {
+            "id": "post-1",
+            "title": "demo/model: Capability With a Refusal Burden",
+            "slug": "demo-model",
+            "content": "## What this benchmark is measuring\n\n## A containment-first rollout\n\nText.",
+        }
+    )
+
+    assert "Capability With a Refusal Burden" in fingerprint["overused_phrases"]
+    assert "What this benchmark is measuring" in fingerprint["overused_phrases"]
+    assert "A containment-first rollout" in fingerprint["overused_phrases"]
+
+
+def test_quality_gate_flags_recent_heading_reuse() -> None:
+    result = server._quality_gate_findings(
+        title="Fresh title",
+        content="## Shared Heading\n\nA useful body.",
+        recent_fingerprints=[{"headings": ["Shared Heading"]}],
+    )
+
+    assert result["passes"] is False
+    assert result["repeated_recent_headings"] == ["Shared Heading"]
+
+
+def test_prepare_model_review_brief_uses_source_peer_and_recent_context(monkeypatch) -> None:
+    async def fake_model_result(_model_id: str) -> dict:
+        return _model_result()
+
+    async def fake_source(**_kwargs) -> tuple[dict, str, None]:
+        return _sample_export(), "local_job:abc", None
+
+    async def fake_peers(**_kwargs) -> list[dict]:
+        return [{"model_id": "nearby/model", "overall_score": 83.1}]
+
+    async def fake_recent(_limit: int) -> list[dict]:
+        return [{"title": "Recent model review", "headings": ["Old Heading"]}]
+
+    monkeypatch.setattr(server, "_fetch_model_result_for_review", fake_model_result)
+    monkeypatch.setattr(server, "_resolve_model_review_export", fake_source)
+    monkeypatch.setattr(server, "_peer_model_context", fake_peers)
+    monkeypatch.setattr(server, "_recent_model_review_fingerprints", fake_recent)
+
+    result = asyncio.run(server.prepare_model_review_brief("x-ai/grok-build-0.1"))
+
+    assert result["data_source"] == "local_job:abc"
+    assert result["comparison_context"]["nearest_peers"][0]["model_id"] == "nearby/model"
+    assert result["recent_post_fingerprints"][0]["title"] == "Recent model review"
 
 
 def test_resolve_remote_export_with_explicit_test_run(monkeypatch) -> None:
