@@ -66,6 +66,9 @@ dmypy.json
 # Mac OS
 .DS_Store
 
+# uv lockfiles for local runner/plugin workspaces
+uv.lock
+
 # Jupyter Notebook
 .ipynb_checkpoints
 
