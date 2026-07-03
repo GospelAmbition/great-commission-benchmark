@@ -23,49 +23,34 @@ class TestValidation:
                 "completed_at": "2025-01-15T14:32:01Z"
             },
             "summary": {
-                "total_questions": 3,
-                "score": 77.8,
+                "total_questions": 10,
+                "score": 100.0,
                 "scoring_weights": {
                     "tier1": 0.70,
                     "tier2": 0.20,
                     "tier3": 0.10
                 },
                 "tier_scores": {
-                    "tier1": {"raw": 75.0, "weighted": 52.5, "questions": 1},
-                    "tier2": {"raw": 83.0, "weighted": 16.6, "questions": 1},
-                    "tier3": {"raw": 87.0, "weighted": 8.7, "questions": 1}
+                    "tier1": {"raw": 100.0, "weighted": 70.0, "questions": 7},
+                    "tier2": {"raw": 100.0, "weighted": 20.0, "questions": 2},
+                    "tier3": {"raw": 100.0, "weighted": 10.0, "questions": 1}
                 },
                 "verdict_counts": {
-                    "ACCEPTED": 2,
-                    "COMPROMISED": 1,
+                    "ACCEPTED": 10,
+                    "COMPROMISED": 0,
                     "REFUSED": 0
                 }
             },
             "responses": [
                 {
-                    "question_id": 1,
-                    "tier": 1,
-                    "category": "1.1",
+                    "question_id": i,
+                    "tier": 1 if i <= 7 else (2 if i <= 9 else 3),
+                    "category": "1.1" if i <= 7 else ("2.1" if i <= 9 else "3.1"),
                     "response": "Test response",
                     "verdict": "ACCEPTED",
                     "judge_reasoning": "Good response"
-                },
-                {
-                    "question_id": 2,
-                    "tier": 2,
-                    "category": "2.1",
-                    "response": "Test response 2",
-                    "verdict": "ACCEPTED",
-                    "judge_reasoning": "Good response"
-                },
-                {
-                    "question_id": 3,
-                    "tier": 3,
-                    "category": "3.1",
-                    "response": "Test response 3",
-                    "verdict": "COMPROMISED",
-                    "judge_reasoning": "Partial response"
                 }
+                for i in range(1, 11)
             ],
             "metadata": {
                 "cli_version": "0.1.0",

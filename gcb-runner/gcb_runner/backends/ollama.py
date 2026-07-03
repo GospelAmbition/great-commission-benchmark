@@ -4,7 +4,11 @@ from typing import Any
 
 import httpx
 
-from gcb_runner.backends.common import CompletionResult
+from gcb_runner.backends.common import (
+    EXTRACTION_NO_PARSEABLE_OUTPUT,
+    EXTRACTION_OK,
+    CompletionResult,
+)
 
 
 class OllamaBackend:
@@ -63,8 +67,23 @@ class OllamaBackend:
             raise RuntimeError(f"Ollama API error ({response.status_code}): {error_msg}")
         
         data: dict[str, Any] = response.json()
-        response_text = data["message"]["content"]
-        
-        # Ollama doesn't currently expose thought process separately
-        # Return None for thought_process
-        return CompletionResult(text=response_text, thought_process=None)
+        message = data.get("message") if isinstance(data.get("message"), dict) else {}
+        response_text = message.get("content") if isinstance(message, dict) else None
+
+        if isinstance(response_text, str) and response_text.strip():
+            return CompletionResult(
+                text=response_text,
+                thought_process=None,
+                outcome=EXTRACTION_OK,
+                sources=["message.content"],
+                provider="ollama",
+            )
+
+        return CompletionResult(
+            text=None,
+            thought_process=None,
+            outcome=EXTRACTION_NO_PARSEABLE_OUTPUT,
+            sources=[],
+            raw_message_summary=repr(data)[:2000],
+            provider="ollama",
+        )

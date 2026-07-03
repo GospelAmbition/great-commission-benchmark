@@ -1,6 +1,10 @@
 """CLI interface for GCB Runner."""
 
 import asyncio
+import json
+import subprocess
+import sys
+import uuid
 import webbrowser
 from datetime import datetime
 from pathlib import Path
@@ -29,6 +33,8 @@ app = typer.Typer(
     no_args_is_help=False,  # We handle no-args case in callback to launch menu
 )
 console = Console()
+jobs_app = typer.Typer(help="Manage detached benchmark jobs.")
+app.add_typer(jobs_app, name="jobs")
 
 
 def check_for_updates_notification() -> None:
@@ -307,20 +313,22 @@ def test(
         raise typer.Exit(1)
     
     backend_config = cfg.get_backend_config(backend)
-    if backend in ["openrouter", "openai", "anthropic"]:
-        if not backend_config.api_key or not backend_config.api_key.strip():
-            console.print(f"[red]Error: {backend} API key not configured.[/red]")
-            console.print("Run 'gcb-runner config' to set up your API key.")
-            raise typer.Exit(1)
+    if backend in ["openrouter", "openai", "anthropic"] and (
+        not backend_config.api_key or not backend_config.api_key.strip()
+    ):
+        console.print(f"[red]Error: {backend} API key not configured.[/red]")
+        console.print("Run 'gcb-runner config' to set up your API key.")
+        raise typer.Exit(1)
     
     # Validate judge backend if explicitly set
     if judge_backend:
         judge_backend_config = cfg.get_backend_config(judge_backend)
-        if judge_backend in ["openrouter", "openai", "anthropic"]:
-            if not judge_backend_config.api_key or not judge_backend_config.api_key.strip():
-                console.print(f"[red]Error: {judge_backend} API key not configured for judge backend.[/red]")
-                console.print("Run 'gcb-runner config' to set up your API key.")
-                raise typer.Exit(1)
+        if judge_backend in ["openrouter", "openai", "anthropic"] and (
+            not judge_backend_config.api_key or not judge_backend_config.api_key.strip()
+        ):
+            console.print(f"[red]Error: {judge_backend} API key not configured for judge backend.[/red]")
+            console.print("Run 'gcb-runner config' to set up your API key.")
+            raise typer.Exit(1)
     
     if dry_run:
         console.print("[green]✓ Configuration valid[/green]")
@@ -331,8 +339,7 @@ def test(
         console.print(f"  Benchmark version: {benchmark_version or 'latest'}")
         return
     
-    # Run the benchmark
-    asyncio.run(run_benchmark(
+    result = asyncio.run(run_benchmark(
         model=model,
         backend=backend,
         benchmark_version=benchmark_version,
@@ -342,6 +349,19 @@ def test(
         output_path=output,
         resume=resume,
     ))
+
+    # Exit non-zero if the run finished but is not publishable. The runner
+    # already wrote a full, truthful export — the non-zero code is how
+    # automation (CI, MCP job manager, bulk tester) learns that the run
+    # must not be uploaded without investigation.
+    from gcb_runner.results import VALIDITY_COMPLETE_INVALID as _INVALID
+
+    if result is not None and result.validity == _INVALID:
+        console.print(
+            f"[red]Run #{result.run_id} completed but is COMPLETE_INVALID "
+            f"({result.extraction_error_count} extraction failure(s)).[/red]"
+        )
+        raise typer.Exit(2)
 
 
 @app.command()
@@ -510,36 +530,495 @@ def export_results(
 
 
 @app.command()
+def repair(
+    run_id: int = typer.Option(..., "--run", "-r", help="Completed test run ID to repair"),
+    question_id: list[str] | None = typer.Option(  # noqa: B008
+        None,
+        "--question-id",
+        "-q",
+        help="Specific repairable question ID; repeat for multiple IDs",
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="List repairable rows without retesting"),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Write a fresh export after repair"),  # noqa: B008
+    max_questions: int = typer.Option(
+        5,
+        "--max-questions",
+        min=1,
+        help="Maximum repairable rows to retest",
+    ),
+) -> None:
+    """Retest infrastructure-failed questions and patch a local run."""
+    print_header()
+    console.print()
+
+    from gcb_runner.repair import repair_run
+
+    cfg = Config.load()
+    try:
+        result = asyncio.run(
+            repair_run(
+                run_id,
+                cfg,
+                question_ids=question_id,
+                dry_run=dry_run,
+                output_path=output,
+                max_questions=max_questions,
+            )
+        )
+    except Exception as e:
+        console.print(f"[red]Repair failed: {e}[/red]")
+        raise typer.Exit(1) from None
+
+    table = Table(title=f"Repair Candidates for Run #{run_id}")
+    table.add_column("Question", style="cyan")
+    table.add_column("Tier", justify="right")
+    table.add_column("Outcome")
+    table.add_column("Reason")
+    for candidate in result.candidates:
+        table.add_row(
+            candidate.question_id,
+            str(candidate.tier),
+            candidate.extraction_outcome or "-",
+            candidate.reason,
+        )
+    console.print(table)
+    console.print()
+
+    if dry_run:
+        console.print("[green]✓ Dry run only; no model calls were made.[/green]")
+        return
+
+    if not result.candidates:
+        console.print("[yellow]No repairable failed rows found.[/yellow]")
+        return
+
+    console.print(
+        f"[green]✓ Repaired {len(result.repaired_question_ids)} question(s): "
+        f"{', '.join(result.repaired_question_ids)}[/green]"
+    )
+    if result.remaining_error_question_ids:
+        console.print(
+            f"[yellow]Remaining TEST_ERROR question(s): "
+            f"{', '.join(result.remaining_error_question_ids)}[/yellow]"
+        )
+    console.print(f"Validity: {result.validity}")
+    console.print(f"Score: {result.score:.1f}" if result.score is not None else "Score: -")
+    if result.export_path:
+        console.print(f"[green]Export written to {result.export_path}[/green]")
+
+
+@app.command()
 def upload(
     run_id: int | None = typer.Option(None, "--run", "-r", help="Test run ID to upload"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Validate and preview without uploading"),
+    allow_invalid: bool = typer.Option(False, "--allow-invalid", help="Override COMPLETE_INVALID upload gate"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ) -> None:
-    """Upload results to the platform for verification and publication."""
+    """Publish results directly to the platform leaderboard."""
     print_header()
     console.print()
     
-    _ = run_id  # Mark as intentionally unused for now
+    from gcb_runner.publish import publish_run
+    from gcb_runner.results import ResultsDB
     
+    cfg = Config.load()
+    db = ResultsDB()
+
+    actual_run_id: int
+    if run_id is None:
+        runs = [run for run in db.list_runs(limit=20) if run.completed_at]
+        if not runs:
+            console.print("[red]No completed test runs found.[/red]")
+            raise typer.Exit(1)
+        actual_run_id = runs[0].id
+    else:
+        actual_run_id = run_id
+
+    run = db.get_run(actual_run_id)
+    if not run:
+        console.print(f"[red]Test run #{actual_run_id} not found.[/red]")
+        raise typer.Exit(1)
+    if not run.completed_at:
+        console.print(f"[red]Test run #{actual_run_id} is not complete.[/red]")
+        raise typer.Exit(1)
+
     console.print(Panel(
-        "[bold]CLI Submission Information[/bold]\n\n"
-        "CLI submissions require moderator verification before publication.\n\n"
-        "[bold]What happens next:[/bold]\n"
-        "  1. Pay $20 platform fee (covers verification work)\n"
-        "  2. Provide model access info (API endpoint, or reproducibility details)\n"
-        "  3. Moderator verifies results (typically 24-48 hours)\n"
-        "  4. If verified, results published to leaderboard",
+        "[bold]Direct Leaderboard Publication[/bold]\n\n"
+        "This uses the same admin bulk-submit path as the MCP upload tool.\n"
+        "It bypasses the public payment and moderation submission flow.\n\n"
+        f"Run: #{actual_run_id}\n"
+        f"Model: {run.model}\n"
+        f"Score: {run.score:.1f}" if run.score is not None else f"Run: #{actual_run_id}\nModel: {run.model}",
         border_style="yellow"
     ))
+
+    if not cfg.platform.api_key:
+        console.print("[red]Error: Platform API key not configured.[/red]")
+        console.print("Run 'gcb-runner config' to set up your API key.")
+        raise typer.Exit(1)
     
-    if not Confirm.ask("Continue with submission?"):
+    if (
+        not dry_run
+        and not yes
+        and not Confirm.ask(
+            "[yellow]Publish this run directly to the leaderboard?[/yellow]",
+            default=False,
+        )
+    ):
         console.print("Upload cancelled.")
         return
     
-    # Upload functionality is not yet implemented in the CLI
-    # Users should export results and upload via the web interface
-    # This command serves as a placeholder for future implementation
-    console.print("[yellow]Upload functionality coming soon.[/yellow]")
-    console.print("For now, use 'gcb-runner export' and upload manually at:")
-    console.print("https://greatcommissionbenchmark.ai/submit")
+    try:
+        result = asyncio.run(publish_run(
+            actual_run_id,
+            cfg,
+            dry_run=dry_run,
+            allow_invalid=allow_invalid,
+            db=db,
+        ))
+    except Exception as e:
+        console.print(f"[red]Upload failed: {e}[/red]")
+        raise typer.Exit(1) from None
+
+    _print_upload_result(result)
+    if result.get("error"):
+        raise typer.Exit(1)
+
+
+def _print_upload_result(result: dict) -> None:
+    """Render a direct-publish result."""
+    preview = result.get("preview", {})
+    if preview:
+        table = Table(title="Upload Preview")
+        table.add_column("Field", style="cyan")
+        table.add_column("Value")
+        for key in [
+            "model",
+            "benchmark_version",
+            "score",
+            "response_count",
+            "validity",
+            "extraction_error_count",
+            "path",
+        ]:
+            if key in preview and preview.get(key) is not None:
+                table.add_row(key, str(preview.get(key)))
+        console.print(table)
+        console.print()
+
+    if result.get("dry_run"):
+        console.print("[green]✓ Export validated. Dry run only; no upload performed.[/green]")
+        return
+
+    if result.get("error"):
+        console.print(f"[red]Upload rejected: {result.get('error')}[/red]")
+        for error in result.get("validation_errors", []):
+            console.print(f"  [red]• {error}[/red]")
+        message = result.get("message")
+        if message:
+            console.print(f"[red]{message}[/red]")
+        return
+
+    api_result = result.get("result", {})
+    status = api_result.get("status", "unknown")
+    if result.get("uploaded"):
+        console.print("[green]✓ Results published directly to the leaderboard[/green]")
+    else:
+        console.print(f"[yellow]Upload completed with status: {status}[/yellow]")
+    if api_result:
+        console.print(f"Status: {status}")
+        if api_result.get("test_run_id"):
+            console.print(f"Platform test run: {api_result['test_run_id']}")
+        if api_result.get("message"):
+            console.print(api_result["message"])
+
+
+def _worker_module_command(*args: str) -> list[str]:
+    return [sys.executable, "-m", "gcb_runner.job_worker", *args]
+
+
+def _spawn_worker(args: list[str]) -> int:
+    process = subprocess.Popen(
+        args,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+        close_fds=True,
+    )
+    return process.pid
+
+
+def _parse_models_arg(models: str) -> list[str]:
+    parsed = [model.strip() for model in models.split(",") if model.strip()]
+    return list(dict.fromkeys(parsed))
+
+
+def _print_jobs_table(jobs: list) -> None:
+    table = Table(title=f"Jobs ({len(jobs)})")
+    table.add_column("Job ID", style="cyan")
+    table.add_column("Model")
+    table.add_column("Status")
+    table.add_column("Score", justify="right")
+    table.add_column("Upload")
+    table.add_column("Platform Run")
+    table.add_column("Started", style="dim")
+
+    for job in jobs:
+        table.add_row(
+            job.id[:8],
+            job.model_id,
+            job.status,
+            f"{job.score:.1f}" if job.score is not None else "-",
+            job.upload_status,
+            job.platform_test_run_id or "-",
+            job.started_at[:19] if job.started_at else "-",
+        )
+    console.print(table)
+
+
+@jobs_app.command(name="start")
+def jobs_start(
+    model: str = typer.Option(..., "--model", "-m", help="OpenRouter model id to test"),
+) -> None:
+    """Start one detached benchmark job."""
+    from gcb_runner.jobs import JobManager
+
+    job_id = str(uuid.uuid4())
+    manager = JobManager()
+    job = manager.create_job(job_id=job_id, model_id=model.strip(), status="running")
+    pid = _spawn_worker(_worker_module_command("run", job_id, model.strip()))
+    manager.update_pid(job_id, pid)
+
+    console.print("[green]✓ Job started[/green]")
+    console.print(f"Job ID: {job.id}")
+    console.print(f"Model: {job.model_id}")
+    console.print(f"Log: {job.log_path}")
+    console.print(f"Export: {job.export_path}")
+
+
+@jobs_app.command(name="start-batch")
+def jobs_start_batch(
+    models: str = typer.Option(..., "--models", "-m", help="Comma-separated OpenRouter model ids"),
+    concurrency: int = typer.Option(2, "--concurrency", "-c", min=1, help="Maximum simultaneous tests"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show batch plan without starting jobs"),
+) -> None:
+    """Start multiple detached benchmark jobs with bounded concurrency."""
+    from gcb_runner.jobs import JobManager
+
+    model_ids = _parse_models_arg(models)
+    if not model_ids:
+        console.print("[red]No models provided.[/red]")
+        raise typer.Exit(1)
+
+    concurrency = min(max(1, concurrency), len(model_ids))
+    console.print(Panel(
+        f"[bold]Batch Plan[/bold]\n\n"
+        f"Models: {len(model_ids)}\n"
+        f"Concurrency: {concurrency}\n"
+        f"Backend: openrouter\n"
+        f"Judge: openai/gpt-oss-20b via lmstudio",
+        border_style="blue",
+    ))
+    for model_id in model_ids:
+        console.print(f"  • {model_id}")
+
+    if dry_run:
+        console.print("[green]✓ Dry run only; no jobs started.[/green]")
+        return
+
+    manager = JobManager()
+    jobs = [
+        manager.create_job(job_id=str(uuid.uuid4()), model_id=model_id, status="queued")
+        for model_id in model_ids
+    ]
+    args = _worker_module_command(
+        "batch",
+        "--concurrency",
+        str(concurrency),
+    )
+    for job in jobs:
+        args.extend(["--job", f"{job.id}={job.model_id}"])
+
+    pid = _spawn_worker(args)
+    console.print("[green]✓ Batch started[/green]")
+    console.print(f"Supervisor PID: {pid}")
+    _print_jobs_table(jobs)
+
+
+@jobs_app.command(name="status")
+def jobs_status(
+    job_id: str | None = typer.Option(None, "--job", "-j", help="Specific job id"),
+    status: str | None = typer.Option(
+        None,
+        "--status",
+        "-s",
+        help="Filter: queued, running, succeeded, failed, cancelled",
+    ),
+    limit: int = typer.Option(50, "--limit", "-n", help="Maximum jobs to show"),
+) -> None:
+    """Show job status."""
+    from gcb_runner.jobs import JobManager
+
+    valid_statuses = {None, "queued", "running", "succeeded", "failed", "cancelled"}
+    if status not in valid_statuses:
+        console.print("[red]Invalid status filter.[/red]")
+        raise typer.Exit(1)
+
+    manager = JobManager()
+    if job_id:
+        job = manager.get_job(job_id)
+        if job is None:
+            console.print(f"[red]No job found with id {job_id}[/red]")
+            raise typer.Exit(1)
+        console.print(json.dumps(job.to_dict(), indent=2))
+        return
+
+    jobs = manager.list_jobs(status=status, limit=limit)
+    if not jobs:
+        console.print("[dim]No jobs found.[/dim]")
+        return
+    _print_jobs_table(jobs)
+
+
+@jobs_app.command(name="logs")
+def jobs_logs(
+    job_id: str = typer.Option(..., "--job", "-j", help="Job id"),
+    tail: int = typer.Option(100, "--tail", "-n", help="Number of lines to show"),
+) -> None:
+    """Show recent job log output."""
+    from gcb_runner.jobs import JobManager
+
+    job = JobManager().get_job(job_id)
+    if job is None:
+        console.print(f"[red]No job found with id {job_id}[/red]")
+        raise typer.Exit(1)
+    if not job.log_path or not Path(job.log_path).exists():
+        console.print("[yellow]No log file found yet.[/yellow]")
+        return
+
+    lines = Path(job.log_path).read_text(errors="replace").splitlines()
+    for line in lines[-max(1, tail):]:
+        console.print(line)
+
+
+async def _upload_job(job_id: str, dry_run: bool, allow_invalid: bool) -> dict:
+    from gcb_runner.jobs import JobManager
+    from gcb_runner.publish import publish_export_file
+
+    manager = JobManager()
+    job = manager.get_job(job_id)
+    if job is None:
+        return {"uploaded": False, "error": "not_found", "message": f"No job found: {job_id}"}
+    if job.status != "succeeded":
+        return {
+            "uploaded": False,
+            "error": "job_not_succeeded",
+            "message": f"Job has status {job.status}; only succeeded jobs can be uploaded.",
+        }
+    if not job.export_path or not Path(job.export_path).exists():
+        return {"uploaded": False, "error": "export_missing", "message": "Export file not found."}
+
+    result = await publish_export_file(
+        Path(job.export_path),
+        Config.load(),
+        dry_run=dry_run,
+        allow_invalid=allow_invalid,
+    )
+    if not dry_run:
+        api_result = result.get("result", {})
+        if result.get("uploaded"):
+            manager.mark_upload(
+                job_id,
+                "published",
+                platform_test_run_id=api_result.get("test_run_id"),
+                upload_response=result,
+            )
+        else:
+            manager.mark_upload(
+                job_id,
+                "failed",
+                upload_error=result.get("error") or result.get("message"),
+                upload_response=result,
+            )
+    return result
+
+
+@jobs_app.command(name="upload")
+def jobs_upload(
+    job_id: str = typer.Option(..., "--job", "-j", help="Job id to upload"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Validate and preview without uploading"),
+    allow_invalid: bool = typer.Option(False, "--allow-invalid", help="Override COMPLETE_INVALID upload gate"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
+) -> None:
+    """Upload a succeeded job's export."""
+    if (
+        not dry_run
+        and not yes
+        and not Confirm.ask(
+            "[yellow]Publish this job directly to the leaderboard?[/yellow]",
+            default=False,
+        )
+    ):
+        console.print("Upload cancelled.")
+        return
+
+    result = asyncio.run(_upload_job(job_id, dry_run=dry_run, allow_invalid=allow_invalid))
+    _print_upload_result(result)
+    if result.get("error"):
+        raise typer.Exit(1)
+
+
+@jobs_app.command(name="upload-ready")
+def jobs_upload_ready(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Validate and preview without uploading"),
+    allow_invalid: bool = typer.Option(False, "--allow-invalid", help="Override COMPLETE_INVALID upload gate"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
+) -> None:
+    """Upload all succeeded jobs that have not already published."""
+    from gcb_runner.jobs import JobManager
+
+    manager = JobManager()
+    jobs = manager.upload_ready_jobs()
+    if not jobs:
+        console.print("[dim]No succeeded unpublished jobs found.[/dim]")
+        return
+
+    _print_jobs_table(jobs)
+    if (
+        not dry_run
+        and not yes
+        and not Confirm.ask(
+            "[yellow]Publish all ready jobs directly to the leaderboard?[/yellow]",
+            default=False,
+        )
+    ):
+        console.print("Upload cancelled.")
+        return
+
+    failed = 0
+    for job in jobs:
+        console.print()
+        console.print(f"[bold]Uploading {job.model_id} ({job.id})[/bold]")
+        result = asyncio.run(_upload_job(job.id, dry_run=dry_run, allow_invalid=allow_invalid))
+        _print_upload_result(result)
+        if result.get("error"):
+            failed += 1
+    if failed:
+        raise typer.Exit(1)
+
+
+@jobs_app.command(name="manifest")
+def jobs_manifest(
+    output: Path | None = typer.Option(None, "--output", "-o", help="Manifest path"),  # noqa: B008
+    limit: int = typer.Option(500, "--limit", "-n", help="Maximum jobs to include"),
+) -> None:
+    """Write a Codex/MCP handoff manifest for benchmark jobs."""
+    from gcb_runner.jobs import JobManager, default_manifest_path
+
+    manager = JobManager()
+    path = output or default_manifest_path()
+    manager.write_manifest(path, limit=limit)
+    console.print(f"[green]✓ Manifest written to {path}[/green]")
 
 
 @app.command()
@@ -799,7 +1278,8 @@ def show_help(ctx: typer.Context) -> None:
         ("gcb-runner view", "Launch web dashboard"),
         ("gcb-runner report", "Generate HTML report"),
         ("gcb-runner export", "Export results to JSON"),
-        ("gcb-runner upload", "Upload results to platform"),
+        ("gcb-runner upload", "Publish results through admin bulk-submit"),
+        ("gcb-runner jobs", "Manage detached and batch benchmark jobs"),
         ("gcb-runner versions", "List benchmark versions"),
         ("gcb-runner update", "Check for and install updates"),
         ("gcb-runner reset-db", "Delete and reinitialize results database"),

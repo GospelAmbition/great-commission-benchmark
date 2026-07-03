@@ -40,7 +40,8 @@ mcp = FastMCP(
         "'run a gcb test on <model_id>': it checks readiness and starts the "
         "background benchmark when OpenRouter is ready. "
         "start_gcb_test spawns a background benchmark test and returns a job_id immediately. "
-        "get_job_status, list_jobs, get_job_logs, and upload_result monitor and act on jobs. "
+        "get_job_status, list_jobs, get_job_logs, repair_gcb_test, and upload_result monitor and act on jobs. "
+        "repair_gcb_test retests failed infrastructure rows in a completed background run before upload_result. "
         "list_published_models and get_model_test_result fetch published benchmark data from the platform. "
         "list_blog_posts, get_blog_post, create_blog_draft, update_blog_post, and publish_blog_post "
         "manage the GCB blog for agentic article authoring. "
@@ -736,6 +737,22 @@ async def upload_runner_json(
     )
 
 
+def _extract_local_run_id_from_export(export_path: str | None) -> int | None:
+    if not export_path:
+        return None
+    try:
+        data = json.loads(Path(export_path).read_text(encoding="utf-8"))
+        raw_id = data.get("test_run", {}).get("id")
+    except Exception:
+        return None
+    if isinstance(raw_id, str) and raw_id.startswith("local-"):
+        try:
+            return int(raw_id.removeprefix("local-"))
+        except ValueError:
+            return None
+    return raw_id if isinstance(raw_id, int) else None
+
+
 # ---------------------------------------------------------------------------
 # Fire-and-forget benchmark test tools
 # ---------------------------------------------------------------------------
@@ -1009,6 +1026,125 @@ async def upload_result(
     result["model_id"] = job.model_id
     result["score"] = job.score
     return result
+
+
+@mcp.tool()
+async def repair_gcb_test(
+    job_id: str,
+    dry_run: bool = False,
+    max_questions: int = 5,
+) -> dict[str, Any]:
+    """Repair a completed background benchmark by retesting failed questions.
+
+    Resolves the local run ID from the job export, runs ``gcb-runner repair``,
+    refreshes the job export file, and returns the repaired validity/score.
+    Use this before upload_result(job_id) when a run is COMPLETE_INVALID due
+    to one or more TEST_ERROR rows.
+    """
+    import subprocess  # noqa: PLC0415
+
+    from gcb_mcp.jobs import JobManager  # noqa: PLC0415
+
+    if max_questions < 1:
+        return {"error": "invalid_argument", "message": "max_questions must be >= 1"}
+
+    jm = JobManager()
+    job = jm.get_job(job_id)
+    if job is None:
+        return {"error": "not_found", "message": f"No job found with id '{job_id}'"}
+    if not job.export_path:
+        return {"error": "no_export", "message": "Job has no export_path recorded.", "job_id": job_id}
+
+    export_path = Path(job.export_path)
+    if not export_path.exists():
+        return {
+            "error": "export_missing",
+            "message": f"Export file not found: {job.export_path}",
+            "job_id": job_id,
+        }
+
+    local_run_id = _extract_local_run_id_from_export(job.export_path)
+    if local_run_id is None:
+        return {
+            "error": "run_id_unresolved",
+            "message": "Could not resolve local run ID from job export.",
+            "job_id": job_id,
+            "export_path": job.export_path,
+        }
+
+    try:
+        from gcb_mcp.wrapper import _find_gcb_runner  # noqa: PLC0415
+
+        gcb_runner = _find_gcb_runner()
+    except Exception as exc:
+        return {"error": "runner_not_found", "message": str(exc), "job_id": job_id}
+
+    cmd = [
+        gcb_runner,
+        "repair",
+        "--run",
+        str(local_run_id),
+        "--max-questions",
+        str(max_questions),
+    ]
+    if dry_run:
+        cmd.append("--dry-run")
+    else:
+        cmd.extend(["--output", str(export_path)])
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=3600,
+            check=False,
+        )
+    except Exception as exc:
+        return {"error": "repair_failed", "message": str(exc), "job_id": job_id}
+
+    if proc.returncode != 0:
+        return {
+            "error": "repair_failed",
+            "message": proc.stderr.strip() or proc.stdout.strip() or "gcb-runner repair failed",
+            "job_id": job_id,
+            "run_id": local_run_id,
+            "stdout": proc.stdout[-4000:],
+            "stderr": proc.stderr[-4000:],
+        }
+
+    summary: dict[str, Any] = {}
+    if export_path.exists() and not dry_run:
+        try:
+            data = json.loads(export_path.read_text(encoding="utf-8"))
+            summary = {
+                "score": data.get("summary", {}).get("score"),
+                "validity": data.get("summary", {}).get("validity"),
+                "extraction_error_count": data.get("test_run", {}).get("extraction_error_count"),
+                "publishable": data.get("summary", {}).get("publishable"),
+                "repaired_question_ids": [
+                    str(row.get("question_id"))
+                    for row in data.get("responses", [])
+                    if isinstance(row, dict) and row.get("repair")
+                ],
+            }
+            if summary.get("score") is not None and hasattr(jm, "complete_job"):
+                try:
+                    jm.complete_job(job_id, float(summary["score"]), export_path=str(export_path))
+                except Exception:
+                    pass
+        except Exception as exc:
+            summary = {"summary_error": str(exc)}
+
+    return {
+        "job_id": job_id,
+        "model_id": job.model_id,
+        "run_id": local_run_id,
+        "export_path": str(export_path),
+        "dry_run": dry_run,
+        "stdout": proc.stdout[-4000:],
+        **summary,
+    }
 
 
 @mcp.tool()

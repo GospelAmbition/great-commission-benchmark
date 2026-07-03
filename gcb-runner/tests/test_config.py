@@ -18,7 +18,7 @@ class TestConfig:
         
         assert config.backends == {}
         assert config.defaults.backend == "openrouter"
-        assert config.defaults.judge_model == "openai/gpt-4o"
+        assert config.defaults.judge_model == "openai/gpt-oss-20b"
         assert config.platform.url == "https://api.greatcommissionbenchmark.ai"
         assert config.platform.api_key is None
     

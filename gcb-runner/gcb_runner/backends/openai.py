@@ -4,7 +4,12 @@ from typing import Any
 
 import httpx
 
-from gcb_runner.backends.common import CompletionResult
+from gcb_runner.backends.common import (
+    EXTRACTION_NO_PARSEABLE_OUTPUT,
+    EXTRACTION_OK,
+    EXTRACTION_UNSUPPORTED_SHAPE,
+    CompletionResult,
+)
 
 
 class OpenAIBackend:
@@ -61,11 +66,38 @@ class OpenAIBackend:
             raise RuntimeError(f"OpenAI API error ({response.status_code}): {error_msg}")
         
         data: dict[str, Any] = response.json()
-        response_text = data["choices"][0]["message"]["content"]
-        
-        # Check for reasoning traces (o1 models may include this in the response structure)
-        # Currently OpenAI doesn't expose reasoning separately, so we return None
-        # Future: if OpenAI adds reasoning traces to the API, extract them here
-        thought_process = None
-        
-        return CompletionResult(text=response_text, thought_process=thought_process)
+
+        choices = data.get("choices")
+        if not isinstance(choices, list) or not choices:
+            return CompletionResult(
+                text=None,
+                outcome=EXTRACTION_UNSUPPORTED_SHAPE,
+                sources=[],
+                raw_message_summary=repr(data)[:2000],
+                provider="openai",
+            )
+
+        choice = choices[0] if isinstance(choices[0], dict) else {}
+        message = choice.get("message") if isinstance(choice.get("message"), dict) else {}
+        finish_reason = choice.get("finish_reason") if isinstance(choice.get("finish_reason"), str) else None
+        response_text = message.get("content") if isinstance(message, dict) else None
+
+        if isinstance(response_text, str) and response_text.strip():
+            return CompletionResult(
+                text=response_text,
+                thought_process=None,
+                outcome=EXTRACTION_OK,
+                sources=["message.content"],
+                finish_reason=finish_reason,
+                provider="openai",
+            )
+
+        return CompletionResult(
+            text=None,
+            thought_process=None,
+            outcome=EXTRACTION_NO_PARSEABLE_OUTPUT,
+            sources=[],
+            finish_reason=finish_reason,
+            raw_message_summary=repr(message)[:2000],
+            provider="openai",
+        )

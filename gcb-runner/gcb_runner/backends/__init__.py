@@ -3,7 +3,16 @@
 from typing import Protocol, runtime_checkable
 
 from gcb_runner.backends.anthropic import AnthropicBackend
-from gcb_runner.backends.common import CompletionResult
+from gcb_runner.backends.common import (
+    EXTRACTION_CLASS_A,
+    EXTRACTION_CLASS_B,
+    EXTRACTION_EMPTY_BUT_EXPLAINABLE,
+    EXTRACTION_NO_PARSEABLE_OUTPUT,
+    EXTRACTION_OK,
+    EXTRACTION_PROVIDER_ERROR,
+    EXTRACTION_UNSUPPORTED_SHAPE,
+    CompletionResult,
+)
 from gcb_runner.backends.lmstudio import LMStudioBackend
 from gcb_runner.backends.ollama import OllamaBackend
 from gcb_runner.backends.openai import OpenAIBackend
@@ -68,4 +77,11 @@ __all__ = [
     "AnthropicBackend",
     "LMStudioBackend",
     "OllamaBackend",
+    "EXTRACTION_OK",
+    "EXTRACTION_EMPTY_BUT_EXPLAINABLE",
+    "EXTRACTION_NO_PARSEABLE_OUTPUT",
+    "EXTRACTION_UNSUPPORTED_SHAPE",
+    "EXTRACTION_PROVIDER_ERROR",
+    "EXTRACTION_CLASS_A",
+    "EXTRACTION_CLASS_B",
 ]

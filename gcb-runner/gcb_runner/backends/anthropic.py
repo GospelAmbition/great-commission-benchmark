@@ -4,7 +4,11 @@ from typing import Any
 
 import httpx
 
-from gcb_runner.backends.common import CompletionResult
+from gcb_runner.backends.common import (
+    EXTRACTION_NO_PARSEABLE_OUTPUT,
+    EXTRACTION_OK,
+    CompletionResult,
+)
 
 
 class AnthropicBackend:
@@ -72,20 +76,45 @@ class AnthropicBackend:
         
         data: dict[str, Any] = response.json()
         
-        # Anthropic returns content as a list of blocks
         content_blocks = data.get("content", [])
-        text_parts = []
-        thinking_parts = []
-        
-        for block in content_blocks:
+        text_parts: list[str] = []
+        thinking_parts: list[str] = []
+        sources: list[str] = []
+
+        for idx, block in enumerate(content_blocks if isinstance(content_blocks, list) else []):
+            if not isinstance(block, dict):
+                continue
             block_type = block.get("type")
             if block_type == "text":
-                text_parts.append(block.get("text", ""))
+                block_text = block.get("text", "")
+                if isinstance(block_text, str) and block_text:
+                    text_parts.append(block_text)
+                    sources.append(f"content[{idx}].text")
             elif block_type == "thinking":
-                # Extract thinking/reasoning blocks (Claude thinking models)
-                thinking_parts.append(block.get("text", ""))
-        
+                thinking_text = block.get("text", "")
+                if isinstance(thinking_text, str) and thinking_text:
+                    thinking_parts.append(thinking_text)
+
         response_text = "".join(text_parts)
         thought_process = "".join(thinking_parts) if thinking_parts else None
-        
-        return CompletionResult(text=response_text, thought_process=thought_process)
+        finish_reason = data.get("stop_reason") if isinstance(data.get("stop_reason"), str) else None
+
+        if response_text.strip():
+            return CompletionResult(
+                text=response_text,
+                thought_process=thought_process,
+                outcome=EXTRACTION_OK,
+                sources=sources,
+                finish_reason=finish_reason,
+                provider="anthropic",
+            )
+
+        return CompletionResult(
+            text=None,
+            thought_process=thought_process,
+            outcome=EXTRACTION_NO_PARSEABLE_OUTPUT,
+            sources=sources,
+            finish_reason=finish_reason,
+            raw_message_summary=repr(data)[:2000],
+            provider="anthropic",
+        )
