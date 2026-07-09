@@ -13,6 +13,7 @@ _spec.loader.exec_module(_mod)
 
 markdown_to_email_html_fragment = _mod.markdown_to_email_html_fragment
 wrap_email_shell = _mod.wrap_email_shell
+SPONSOR_ATTRIBUTION = _mod.SPONSOR_ATTRIBUTION
 
 
 def test_markdown_to_email_basic():
@@ -31,6 +32,18 @@ def test_wrap_email_shell_contains_web_link():
     )
     assert "View in browser" in full
     assert "insights/foo" in full
+    assert SPONSOR_ATTRIBUTION in full
+
+
+def test_wrap_email_shell_places_optional_footer_above_sponsor_attribution():
+    full = wrap_email_shell(
+        "<p>Hello</p>",
+        title="Test News",
+        web_version_url=None,
+        footer_html="<p>Unsubscribe instructions</p>",
+    )
+    assert "Unsubscribe instructions" in full
+    assert full.index("Unsubscribe instructions") < full.index(SPONSOR_ATTRIBUTION)
 
 
 def test_markdown_to_email_preserves_safe_gcb_image():

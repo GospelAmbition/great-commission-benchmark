@@ -176,9 +176,11 @@ class TestAdminNewsletterSend:
         db_session.commit()
 
         sent_to: list[str] = []
+        sent_html: list[str] = []
 
         async def fake_send_email(to: str, subject: str, html_content: str, from_email: str | None = None):
             sent_to.append(to)
+            sent_html.append(html_content)
             return True
 
         monkeypatch.setattr(settings, "RESEND_API_KEY", "re_test")
@@ -196,6 +198,8 @@ class TestAdminNewsletterSend:
         assert first_data["campaign_id"].startswith("resend:")
         assert first_data["send_log_id"]
         assert sent_to == ["member@example.com"]
+        assert "To unsubscribe" in sent_html[0]
+        assert "Designed and created by Gospel Ambition" in sent_html[0]
 
         second = client.post("/api/admin/newsletter/send", json=payload)
         assert second.status_code == 409

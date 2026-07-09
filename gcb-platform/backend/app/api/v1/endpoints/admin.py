@@ -3186,17 +3186,13 @@ async def send_newsletter_campaign(
         inner,
         title=post.title,
         web_version_url=web_version_url,
-    )
-    full_html = full_html.replace(
-        "</td></tr></table></td></tr></table></body></html>",
-        (
-            '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />'
-            '<p style="font-size:12px;line-height:1.5;color:#666;">'
+        footer_html=(
+            '<p style="font-size:12px;line-height:1.5;color:#666;margin:0;">'
             "You are receiving this because you subscribed to the Great Commission Benchmark newsletter. "
             "To unsubscribe, reply to this email with &quot;Unsubscribe&quot; or contact "
             '<a href="mailto:contact@greatcommissionbenchmark.ai" rel="noopener noreferrer">'
             "contact@greatcommissionbenchmark.ai</a>."
-            "</p></td></tr></table></td></tr></table></body></html>"
+            "</p>"
         ),
     )
     mark_send_step("rendered")

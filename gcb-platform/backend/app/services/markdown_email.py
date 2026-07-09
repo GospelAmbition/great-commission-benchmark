@@ -50,6 +50,11 @@ _ALLOWED_ATTRIBUTES: dict[str, list[str]] = {
     "td": ["align"],
 }
 
+SPONSOR_ATTRIBUTION = (
+    "Designed and created by Gospel Ambition in partnership with Visual Story Network "
+    "and the Shepherd Network"
+)
+
 
 def _allowed_image_hosts() -> set[str]:
     hosts = {
@@ -105,7 +110,13 @@ def markdown_to_email_html_fragment(markdown_source: str) -> str:
     return f'<div class="gcb-newsletter-body" style="font-family:Georgia,serif;line-height:1.5;color:#111;">{cleaned}</div>'
 
 
-def wrap_email_shell(inner_html: str, *, title: str, web_version_url: str | None) -> str:
+def wrap_email_shell(
+    inner_html: str,
+    *,
+    title: str,
+    web_version_url: str | None,
+    footer_html: str | None = None,
+) -> str:
     """Minimal table-based wrapper for client compatibility."""
     title_esc = escape(title)
     link_block = ""
@@ -116,6 +127,13 @@ def wrap_email_shell(inner_html: str, *, title: str, web_version_url: str | None
             f'<a href="{escape(web_version_url)}" rel="noopener noreferrer">View in browser</a>.'
             f"</p>"
         )
+    footer_block = (
+        '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />'
+        f"{footer_html or ''}"
+        '<p style="font-size:12px;line-height:1.5;color:#666;margin:12px 0 0;">'
+        f"{escape(SPONSOR_ATTRIBUTION)}"
+        "</p>"
+    )
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><title>{title_esc}</title></head>
 <body style="margin:0;padding:0;background:#f4f4f5;">
@@ -125,4 +143,5 @@ def wrap_email_shell(inner_html: str, *, title: str, web_version_url: str | None
 <tr><td>
 {link_block}
 {inner_html}
+{footer_block}
 </td></tr></table></td></tr></table></body></html>"""
