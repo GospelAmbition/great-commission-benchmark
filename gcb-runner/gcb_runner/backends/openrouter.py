@@ -1,5 +1,7 @@
 """OpenRouter backend for LLM completions."""
 
+import asyncio
+import random
 from typing import Any
 
 import httpx
@@ -17,6 +19,11 @@ from gcb_runner.backends.common import (
 # Maximum length of the raw-message summary captured for audit on Class B
 # extractions. Kept short on purpose — this is for diagnosis, not archival.
 _RAW_SUMMARY_MAX = 2000
+_TRANSIENT_STATUS_CODES = {408, 409, 429, 500, 502, 503, 504}
+_MAX_TRANSIENT_ATTEMPTS = 8
+_INITIAL_RETRY_DELAY_SECONDS = 1.0
+_MAX_RETRY_DELAY_SECONDS = 30.0
+_MAX_COMPLETION_TOKENS = 4096
 
 
 def _truncate(value: str, limit: int = _RAW_SUMMARY_MAX) -> str:
@@ -33,6 +40,28 @@ def _summarize_message(message: Any) -> str:
         return _truncate(_json.dumps(message, default=str))
     except Exception:
         return _truncate(repr(message))
+
+
+def _retry_after_seconds(response: httpx.Response) -> float | None:
+    retry_after = response.headers.get("retry-after")
+    if retry_after is None:
+        return None
+    try:
+        value = float(retry_after)
+    except ValueError:
+        return None
+    return max(0.0, min(value, _MAX_RETRY_DELAY_SECONDS))
+
+
+def _error_code_is_transient(error: Any) -> bool:
+    if not isinstance(error, dict):
+        return False
+    code = error.get("code")
+    try:
+        numeric_code = int(code)
+    except (TypeError, ValueError):
+        return False
+    return numeric_code in _TRANSIENT_STATUS_CODES
 
 
 def extract_openrouter_message(
@@ -232,13 +261,42 @@ class OpenRouterBackend:
             elif model.startswith("claude-"):
                 model = f"anthropic/{model}"
 
-        response = await client.post(
-            "/chat/completions",
-            json={
-                "model": model,
-                "messages": messages,
-            },
-        )
+        payload = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": _MAX_COMPLETION_TOKENS,
+        }
+        response: httpx.Response | None = None
+        response_data: dict[str, Any] | None = None
+        for attempt in range(1, _MAX_TRANSIENT_ATTEMPTS + 1):
+            response = await client.post("/chat/completions", json=payload)
+
+            should_retry = response.status_code in _TRANSIENT_STATUS_CODES
+            response_data = None
+            if response.status_code == 200:
+                try:
+                    parsed = response.json()
+                except Exception:
+                    parsed = None
+                if isinstance(parsed, dict):
+                    response_data = parsed
+                    should_retry = _error_code_is_transient(parsed.get("error"))
+
+            if not should_retry:
+                break
+            if attempt == _MAX_TRANSIENT_ATTEMPTS:
+                break
+
+            retry_after = _retry_after_seconds(response)
+            if retry_after is None:
+                retry_after = min(
+                    _INITIAL_RETRY_DELAY_SECONDS * (2 ** (attempt - 1)),
+                    _MAX_RETRY_DELAY_SECONDS,
+                )
+                retry_after += random.uniform(0, 0.25)
+            await asyncio.sleep(retry_after)
+
+        assert response is not None
 
         if response.status_code != 200:
             error_msg = response.text
@@ -265,13 +323,22 @@ class OpenRouterBackend:
             raise RuntimeError(f"OpenRouter API error ({response.status_code}): {error_msg}")
 
         try:
-            data: dict[str, Any] = response.json()
+            data: dict[str, Any] = response_data if response_data is not None else response.json()
         except Exception as exc:
             return CompletionResult(
                 text=None,
                 outcome=EXTRACTION_PROVIDER_ERROR,
                 sources=[],
                 raw_message_summary=_truncate(f"Invalid JSON from OpenRouter: {exc!r}"),
+                provider="openrouter",
+            )
+
+        if isinstance(data.get("error"), dict):
+            return CompletionResult(
+                text=None,
+                outcome=EXTRACTION_PROVIDER_ERROR,
+                sources=[],
+                raw_message_summary=_summarize_message(data),
                 provider="openrouter",
             )
 
