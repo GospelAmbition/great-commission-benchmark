@@ -119,7 +119,7 @@ export default function AboutPage() {
                   <h2 className="text-2xl font-semibold text-foreground">Our Mission</h2>
                   <div className="space-y-4 text-muted-foreground">
                     <p>
-                      This benchmark is primarily <strong>focused on obedience, rather than intelligence</strong>.
+                      This benchmark is primarily <strong>focused on compliance, rather than intelligence or biblical knowledge</strong>.
                     </p>
                     <p>
                       The Great Commission Benchmark evaluates AI models on their ability to support Great Commission Christians—missionaries, evangelists, disciple-makers, and ministry workers who actively respond to Jesus&apos; command to make disciples.
