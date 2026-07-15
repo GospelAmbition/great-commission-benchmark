@@ -84,7 +84,7 @@ export default function Home() {
                 <span className="block text-primary font-light text-5xl md:text-6xl lg:text-7xl">Great Commission</span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl leading-relaxed">
-                We measure which AI models meaningfully support gospel outreach work, and which oppose it.
+                We measure which AI models meaningfully support gospel outreach and which oppose it.
               </p>
               <Button asChild size="lg" className="text-base px-8">
                 <Link href="/leaderboard">
