@@ -7,7 +7,8 @@ from sqlalchemy import func, and_, or_
 from uuid import UUID
 import logging
 
-from app.core.auth import get_db
+from app.core.auth import get_db, get_db_sync
+from app.core.db_errors import raise_if_db_unavailable
 from app.core.cache import cache, make_cache_key, CACHE_TTL, CACHE_STALE_TTL
 from app.db.models.test_run import TestRun
 from app.db.models.model import Model
@@ -15,6 +16,7 @@ from app.db.models.question_set import QuestionSet
 from app.db.models.result import Result
 from app.db.models.question import Question
 from app.db.models.blog_post import BlogPost, blog_post_models
+from app.services.leaderboard_queries import get_latest_completed_test_runs
 from app.services.openrouter import OpenRouterClient
 from app.services.payment import PaymentService
 from app.schemas.public import (
@@ -293,204 +295,190 @@ async def get_leaderboard(
             # Trigger background refresh if data is stale
             if should_refresh:
                 import asyncio
-                asyncio.create_task(_refresh_leaderboard_cache(cache_key, cache_params, db))
+                asyncio.create_task(_refresh_leaderboard_cache(cache_key, cache_params))
         return cached_result
     
     response.headers["X-Cache"] = "MISS"
     
-    # Get question set version
-    if version == "current":
-        question_set = db.query(QuestionSet).filter(
-            QuestionSet.status == "active"
-        ).order_by(QuestionSet.created_at.desc()).first()
-    else:
-        question_set = db.query(QuestionSet).filter(
-            QuestionSet.semantic_version == version
-        ).first()
+    try:
+        # Get question set version
+        if version == "current":
+            question_set = db.query(QuestionSet).filter(
+                QuestionSet.status == "active"
+            ).order_by(QuestionSet.created_at.desc()).first()
+        else:
+            question_set = db.query(QuestionSet).filter(
+                QuestionSet.semantic_version == version
+            ).first()
+        
+        # Return empty leaderboard if no question set exists
+        if not question_set:
+            return LeaderboardResponse(
+                semantic_version="1.0.0",
+                marketing_version="1.0",
+                filters={
+                    "category": category,
+                    "tier": str(tier) if tier else None,
+                    "provider": provider,
+                    "trust_tier": trust_tier
+                },
+                total_models=0,
+                entries=[],
+                pagination={
+                    "limit": limit,
+                    "offset": offset,
+                    "total": 0,
+                    "has_more": False
+                }
+            )
+        
+        # Query most recent completed test run per model
+        entries = []
+        unique_test_runs = get_latest_completed_test_runs(
+            db,
+            question_set_id=question_set.id,
+            provider=provider,
+            trust_tier=trust_tier,
+        )
+        
+        # Precompute tier categories for tier filter (if needed)
+        tier_categories = set()
+        if tier:
+            tier_cats = db.query(Question.category).filter(
+                Question.question_set_id == question_set.id,
+                Question.tier == tier
+            ).distinct().all()
+            tier_categories = {c[0] for c in tier_cats if c[0]}
+        
+        # Build entries from stored scores only (no recalculation)
+        for test_run in unique_test_runs:
+            cat_scores = test_run.category_scores or {}
+            
+            # Filter by category/tier if specified
+            if category and category not in cat_scores:
+                continue
+            if tier and not (tier_categories & set(cat_scores.keys())):
+                continue
+            
+            scores_data = {
+                "overall": float(test_run.overall_score),
+                "tier1": float(test_run.tier1_score or 0),
+                "tier2": float(test_run.tier2_score or 0),
+                "tier3": float(test_run.tier3_score or 0),
+                "category_scores": cat_scores,
+                "verdict_distribution": test_run.verdict_distribution or {
+                    "ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "ERROR": 0
+                },
+                "total_questions": test_run.total_questions or 0,
+            }
+            
+            entry = LeaderboardEntry(
+                rank=0,
+                model=ModelSummary(
+                    id=test_run.model.id,
+                    name=test_run.model.name,
+                    provider=test_run.model.provider,
+                    model_id=test_run.model.model_id,
+                    description=test_run.model.description,
+                ),
+                test_run=TestRunSummary(
+                    id=test_run.id,
+                    trust_tier=test_run.trust_tier,
+                    completed_at=test_run.completed_at,
+                    question_set_version=question_set.semantic_version
+                ),
+                scores=Scores(
+                    overall=scores_data["overall"],
+                    tier1=scores_data["tier1"],
+                    tier2=scores_data["tier2"],
+                    tier3=scores_data["tier3"]
+                ),
+                category_scores=scores_data["category_scores"],
+                verdict_distribution=VerdictDistribution(**scores_data["verdict_distribution"]),
+                total_questions=scores_data["total_questions"],
+                metadata={
+                    "submission_date": test_run.completed_at.isoformat() if test_run.completed_at else "",
+                    "methodology_version": question_set.semantic_version
+                },
+                test_count=1,
+                score_range=None
+            )
+            entries.append(entry)
     
-    # Return empty leaderboard if no question set exists
-    if not question_set:
-        return LeaderboardResponse(
-            semantic_version="1.0.0",
-            marketing_version="1.0",
+        # Sort entries
+        reverse_order = (order == "desc")
+        if sort == "score":
+            entries.sort(key=lambda e: e.scores.overall, reverse=reverse_order)
+        elif sort == "date":
+            entries.sort(key=lambda e: e.test_run.completed_at or datetime.min, reverse=reverse_order)
+        elif sort == "tier1":
+            entries.sort(key=lambda e: e.scores.tier1, reverse=reverse_order)
+        elif sort == "tier2":
+            entries.sort(key=lambda e: e.scores.tier2, reverse=reverse_order)
+        elif sort == "tier3":
+            entries.sort(key=lambda e: e.scores.tier3, reverse=reverse_order)
+        
+        # Store total before pagination
+        total_models = len(entries)
+        
+        # Apply pagination after sorting
+        if limit is None:
+            pagination_limit = total_models
+            paginated_entries = entries
+            effective_offset = 0
+        else:
+            pagination_limit = limit
+            paginated_entries = entries[offset:offset + limit]
+            effective_offset = offset
+        
+        # Update ranks after sorting and pagination
+        for idx, entry in enumerate(paginated_entries):
+            entry.rank = effective_offset + idx + 1
+        
+        result = LeaderboardResponse(
+            semantic_version=question_set.semantic_version,
+            marketing_version=question_set.marketing_version,
             filters={
                 "category": category,
                 "tier": str(tier) if tier else None,
                 "provider": provider,
                 "trust_tier": trust_tier
             },
-            total_models=0,
-            entries=[],
+            total_models=total_models,
+            entries=paginated_entries,
             pagination={
-                "limit": limit,
-                "offset": offset,
-                "total": 0,
-                "has_more": False
+                "limit": pagination_limit,
+                "offset": effective_offset,
+                "total": total_models,
+                "has_more": False if limit is None else (offset + limit) < total_models
             }
         )
-    
-    # Query most recent completed test run per model
-    # Uses only the most recent test to reflect the current state of each model
-    entries = []
-    
-    # Build query for completed test runs with eager loading
-    # Exclude test runs without pre-computed scores (no recalculation for visitors)
-    # Exclude bogus 0-question runs (e.g. failed/deleted tests that left a 0% record)
-    query = db.query(TestRun).options(
-        joinedload(TestRun.model),
-        joinedload(TestRun.question_set)
-    ).join(Model, TestRun.model_id == Model.id).filter(
-        TestRun.status == "completed",
-        TestRun.question_set_id == question_set.id,
-        TestRun.overall_score.isnot(None),
-        or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
-        Model.is_active == True
-    )
-    
-    if provider:
-        query = query.filter(Model.provider == provider)
-    if trust_tier:
-        query = query.filter(TestRun.trust_tier == trust_tier)
-    
-    # Get test runs ordered by completed_at desc
-    test_runs = query.order_by(TestRun.completed_at.desc()).all()
-    
-    # Deduplicate: keep only the most recent test per model
-    seen_models = set()
-    unique_test_runs = []
-    for test_run in test_runs:
-        if test_run.model_id not in seen_models:
-            seen_models.add(test_run.model_id)
-            unique_test_runs.append(test_run)
-    
-    # Precompute tier categories for tier filter (if needed)
-    tier_categories = set()
-    if tier:
-        tier_cats = db.query(Question.category).filter(
-            Question.question_set_id == question_set.id,
-            Question.tier == tier
-        ).distinct().all()
-        tier_categories = {c[0] for c in tier_cats if c[0]}
-    
-    # Build entries from stored scores only (no recalculation)
-    for test_run in unique_test_runs:
-        cat_scores = test_run.category_scores or {}
         
-        # Filter by category/tier if specified
-        if category and category not in cat_scores:
-            continue
-        if tier and not (tier_categories & set(cat_scores.keys())):
-            continue
-        
-        scores_data = {
-            "overall": float(test_run.overall_score),
-            "tier1": float(test_run.tier1_score or 0),
-            "tier2": float(test_run.tier2_score or 0),
-            "tier3": float(test_run.tier3_score or 0),
-            "category_scores": cat_scores,
-            "verdict_distribution": test_run.verdict_distribution or {
-                "ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "ERROR": 0
-            },
-            "total_questions": test_run.total_questions or 0,
-        }
-        
-        entry = LeaderboardEntry(
-            rank=0,
-            model=ModelSummary(
-                id=test_run.model.id,
-                name=test_run.model.name,
-                provider=test_run.model.provider,
-                model_id=test_run.model.model_id,
-                description=test_run.model.description,
-            ),
-            test_run=TestRunSummary(
-                id=test_run.id,
-                trust_tier=test_run.trust_tier,
-                completed_at=test_run.completed_at,
-                question_set_version=question_set.semantic_version
-            ),
-            scores=Scores(
-                overall=scores_data["overall"],
-                tier1=scores_data["tier1"],
-                tier2=scores_data["tier2"],
-                tier3=scores_data["tier3"]
-            ),
-            category_scores=scores_data["category_scores"],
-            verdict_distribution=VerdictDistribution(**scores_data["verdict_distribution"]),
-            total_questions=scores_data["total_questions"],
-            metadata={
-                "submission_date": test_run.completed_at.isoformat() if test_run.completed_at else "",
-                "methodology_version": question_set.semantic_version
-            },
-            test_count=1,
-            score_range=None
+        # Cache with stale-while-revalidate TTLs
+        await cache.set(
+            cache_key, 
+            result, 
+            ttl_seconds=CACHE_TTL["leaderboard"],
+            stale_ttl_seconds=CACHE_STALE_TTL["leaderboard"]
         )
-        entries.append(entry)
-    
-    # Sort entries
-    reverse_order = (order == "desc")
-    if sort == "score":
-        entries.sort(key=lambda e: e.scores.overall, reverse=reverse_order)
-    elif sort == "date":
-        entries.sort(key=lambda e: e.test_run.completed_at or datetime.min, reverse=reverse_order)
-    elif sort == "tier1":
-        entries.sort(key=lambda e: e.scores.tier1, reverse=reverse_order)
-    elif sort == "tier2":
-        entries.sort(key=lambda e: e.scores.tier2, reverse=reverse_order)
-    elif sort == "tier3":
-        entries.sort(key=lambda e: e.scores.tier3, reverse=reverse_order)
-    
-    # Store total before pagination
-    total_models = len(entries)
-    
-    # Apply pagination after sorting
-    paginated_entries = entries[offset:offset+limit]
-    
-    # Update ranks after sorting and pagination
-    for idx, entry in enumerate(paginated_entries):
-        entry.rank = offset + idx + 1
-    
-    result = LeaderboardResponse(
-        semantic_version=question_set.semantic_version,
-        marketing_version=question_set.marketing_version,
-        filters={
-            "category": category,
-            "tier": str(tier) if tier else None,
-            "provider": provider,
-            "trust_tier": trust_tier
-        },
-        total_models=total_models,
-        entries=paginated_entries,
-        pagination={
-            "limit": limit,
-            "offset": offset,
-            "total": total_models,
-            "has_more": (offset + limit) < total_models
-        }
-    )
-    
-    # Cache with stale-while-revalidate TTLs
-    await cache.set(
-        cache_key, 
-        result, 
-        ttl_seconds=CACHE_TTL["leaderboard"],
-        stale_ttl_seconds=CACHE_STALE_TTL["leaderboard"]
-    )
-    
-    return result
+        
+        return result
+    except Exception as exc:
+        raise_if_db_unavailable(exc)
 
 
-async def _refresh_leaderboard_cache(cache_key: str, params: dict, db: Session):
+async def _refresh_leaderboard_cache(cache_key: str, params: dict):
     """Background task to refresh a stale leaderboard cache entry.
     
     This is called when a user hits a stale cache entry.
     The user gets immediate response with stale data while this refreshes.
     """
+    db = None
     try:
         logger.info(f"Background refresh started for cache key: {cache_key}")
         await cache.mark_refreshing(cache_key)
         
-        # Import and use the cache warmer's generation function to avoid code duplication
+        db = get_db_sync()
         from app.services.cache_warmer import _generate_leaderboard_data
         
         result = await _generate_leaderboard_data(
@@ -517,6 +505,8 @@ async def _refresh_leaderboard_cache(cache_key: str, params: dict, db: Session):
     except Exception as e:
         logger.error(f"Background refresh failed for {cache_key}: {e}")
     finally:
+        if db is not None:
+            db.close()
         await cache.unmark_refreshing(cache_key)
 
 
@@ -873,73 +863,76 @@ async def get_stats(response: Response, db: Session = Depends(get_db)):
     
     response.headers["X-Cache"] = "MISS"
     
-    # Get current version
-    current_qs = db.query(QuestionSet).filter(QuestionSet.status == "active").first()
-    current_version = current_qs.semantic_version if current_qs else "1.0"
-    
-    # Count models tested - only models with completed test runs (with scores) for current benchmark
-    if current_qs:
-        total_models_tested = db.query(Model).join(TestRun).filter(
-            Model.is_active == True,
-            TestRun.question_set_id == current_qs.id,
-            TestRun.status == "completed",
-            TestRun.overall_score.isnot(None),
-        ).distinct().count()
-    else:
-        total_models_tested = 0
-    
-    # Count test runs - only for current benchmark (with scores)
-    if current_qs:
-        total_test_runs = db.query(TestRun).filter(
-            TestRun.question_set_id == current_qs.id,
-            TestRun.status == "completed",
-            TestRun.overall_score.isnot(None),
-        ).count()
-    else:
-        total_test_runs = 0
-    
-    # Top and average scores from stored values only
-    if current_qs:
-        top_score_result = db.query(func.max(TestRun.overall_score)).filter(
-            TestRun.question_set_id == current_qs.id,
-            TestRun.status == "completed",
-            TestRun.overall_score.isnot(None),
-        ).scalar()
-        avg_score_result = db.query(func.avg(TestRun.overall_score)).filter(
-            TestRun.question_set_id == current_qs.id,
-            TestRun.status == "completed",
-            TestRun.overall_score.isnot(None),
-        ).scalar()
-        top_score = float(top_score_result) if top_score_result is not None else 0.0
-        average_score = float(avg_score_result) if avg_score_result is not None else 0.0
-    else:
-        top_score = 0.0
-        average_score = 0.0
-    
-    # Count providers - only providers with models tested (with scores) in current benchmark
-    if current_qs:
-        providers_represented = db.query(Model.provider).join(TestRun).filter(
-            TestRun.question_set_id == current_qs.id,
-            TestRun.status == "completed",
-            TestRun.overall_score.isnot(None),
-        ).distinct().count()
-    else:
-        providers_represented = 0
-    
-    result = StatsResponse(
-        total_models_tested=total_models_tested,
-        total_test_runs=total_test_runs,
-        current_benchmark_version=current_version,
-        top_score=round(top_score, 2),
-        average_score=round(average_score, 2),
-        providers_represented=providers_represented,
-        last_updated=datetime.utcnow()
-    )
-    
-    # Cache the result
-    await cache.set(cache_key, result, CACHE_TTL["public_stats"])
-    
-    return result
+    try:
+        # Get current version
+        current_qs = db.query(QuestionSet).filter(QuestionSet.status == "active").first()
+        current_version = current_qs.semantic_version if current_qs else "1.0"
+        
+        # Count models tested - only models with completed test runs (with scores) for current benchmark
+        if current_qs:
+            total_models_tested = db.query(Model).join(TestRun).filter(
+                Model.is_active == True,
+                TestRun.question_set_id == current_qs.id,
+                TestRun.status == "completed",
+                TestRun.overall_score.isnot(None),
+            ).distinct().count()
+        else:
+            total_models_tested = 0
+        
+        # Count test runs - only for current benchmark (with scores)
+        if current_qs:
+            total_test_runs = db.query(TestRun).filter(
+                TestRun.question_set_id == current_qs.id,
+                TestRun.status == "completed",
+                TestRun.overall_score.isnot(None),
+            ).count()
+        else:
+            total_test_runs = 0
+        
+        # Top and average scores from stored values only
+        if current_qs:
+            top_score_result = db.query(func.max(TestRun.overall_score)).filter(
+                TestRun.question_set_id == current_qs.id,
+                TestRun.status == "completed",
+                TestRun.overall_score.isnot(None),
+            ).scalar()
+            avg_score_result = db.query(func.avg(TestRun.overall_score)).filter(
+                TestRun.question_set_id == current_qs.id,
+                TestRun.status == "completed",
+                TestRun.overall_score.isnot(None),
+            ).scalar()
+            top_score = float(top_score_result) if top_score_result is not None else 0.0
+            average_score = float(avg_score_result) if avg_score_result is not None else 0.0
+        else:
+            top_score = 0.0
+            average_score = 0.0
+        
+        # Count providers - only providers with models tested (with scores) in current benchmark
+        if current_qs:
+            providers_represented = db.query(Model.provider).join(TestRun).filter(
+                TestRun.question_set_id == current_qs.id,
+                TestRun.status == "completed",
+                TestRun.overall_score.isnot(None),
+            ).distinct().count()
+        else:
+            providers_represented = 0
+        
+        result = StatsResponse(
+            total_models_tested=total_models_tested,
+            total_test_runs=total_test_runs,
+            current_benchmark_version=current_version,
+            top_score=round(top_score, 2),
+            average_score=round(average_score, 2),
+            providers_represented=providers_represented,
+            last_updated=datetime.utcnow()
+        )
+        
+        # Cache the result
+        await cache.set(cache_key, result, CACHE_TTL["public_stats"])
+        
+        return result
+    except Exception as exc:
+        raise_if_db_unavailable(exc)
 
 
 @router.get("/leaderboard/compare")
@@ -1066,71 +1059,74 @@ async def get_leaderboard_page(
 
     # Trigger background leaderboard refresh if stale
     if lb_cached is not None and not lb_fresh and lb_should_refresh:
-        asyncio.create_task(_refresh_leaderboard_cache(lb_cache_key, default_leaderboard_params, db))
+        asyncio.create_task(_refresh_leaderboard_cache(lb_cache_key, default_leaderboard_params))
 
     # If both are cached, return immediately
     if lb_cached is not None and fo_cached is not None:
         response.headers["X-Cache"] = "HIT" if lb_fresh else "STALE"
         return {"leaderboard": lb_cached, "filter_options": fo_cached}
 
-    # If leaderboard is missing from cache, compute it (cold start)
-    if lb_cached is None:
-        response.headers["X-Cache"] = "MISS"
-        from app.services.cache_warmer import _generate_leaderboard_data
-        lb_cached = await _generate_leaderboard_data(db, **default_leaderboard_params)
-        await cache.set(
-            lb_cache_key,
-            lb_cached,
-            ttl_seconds=CACHE_TTL["leaderboard"],
-            stale_ttl_seconds=CACHE_STALE_TTL["leaderboard"],
-        )
-
-    # If filter options are missing from cache, compute them
-    if fo_cached is None:
-        providers = db.query(Model.provider).join(
-            TestRun, TestRun.model_id == Model.id
-        ).filter(
-            TestRun.status == "completed",
-            Model.is_active == True,
-        ).distinct().all()
-        providers = sorted([p[0] for p in providers if p[0]])
-
-        active_qs = db.query(QuestionSet).filter(QuestionSet.status == "active").first()
-        categories = []
-        if active_qs:
-            cat_results = db.query(Question.category).filter(
-                Question.question_set_id == active_qs.id
-            ).distinct().all()
-            categories = sorted([c[0] for c in cat_results if c[0]])
-
-        trust_tiers = db.query(TestRun.trust_tier).filter(
-            TestRun.status == "completed",
-            TestRun.trust_tier.isnot(None),
-        ).distinct().all()
-        trust_tiers = sorted([t[0] for t in trust_tiers if t[0]])
-
-        versions = db.query(QuestionSet.semantic_version).filter(
-            or_(
-                QuestionSet.status == "active",
-                (QuestionSet.status == "archived") & (QuestionSet.is_publicly_visible == True),
+    try:
+        # If leaderboard is missing from cache, compute it (cold start)
+        if lb_cached is None:
+            response.headers["X-Cache"] = "MISS"
+            from app.services.cache_warmer import _generate_leaderboard_data
+            lb_cached = await _generate_leaderboard_data(db, **default_leaderboard_params)
+            await cache.set(
+                lb_cache_key,
+                lb_cached,
+                ttl_seconds=CACHE_TTL["leaderboard"],
+                stale_ttl_seconds=CACHE_STALE_TTL["leaderboard"],
             )
-        ).distinct().all()
-        versions = sorted([v[0] for v in versions if v[0]], reverse=True)
 
-        fo_cached = {
-            "providers": providers,
-            "categories": categories,
-            "trust_tiers": trust_tiers,
-            "tiers": [
-                {"value": "tier1", "label": "Tier 1 (Task)"},
-                {"value": "tier2", "label": "Tier 2 (Doctrine)"},
-                {"value": "tier3", "label": "Tier 3 (Worldview)"},
-            ],
-            "versions": versions,
-        }
-        await cache.set(fo_cache_key, fo_cached, 300)
+        # If filter options are missing from cache, compute them
+        if fo_cached is None:
+            providers = db.query(Model.provider).join(
+                TestRun, TestRun.model_id == Model.id
+            ).filter(
+                TestRun.status == "completed",
+                Model.is_active == True,
+            ).distinct().all()
+            providers = sorted([p[0] for p in providers if p[0]])
 
-    return {"leaderboard": lb_cached, "filter_options": fo_cached}
+            active_qs = db.query(QuestionSet).filter(QuestionSet.status == "active").first()
+            categories = []
+            if active_qs:
+                cat_results = db.query(Question.category).filter(
+                    Question.question_set_id == active_qs.id
+                ).distinct().all()
+                categories = sorted([c[0] for c in cat_results if c[0]])
+
+            trust_tiers = db.query(TestRun.trust_tier).filter(
+                TestRun.status == "completed",
+                TestRun.trust_tier.isnot(None),
+            ).distinct().all()
+            trust_tiers = sorted([t[0] for t in trust_tiers if t[0]])
+
+            versions = db.query(QuestionSet.semantic_version).filter(
+                or_(
+                    QuestionSet.status == "active",
+                    (QuestionSet.status == "archived") & (QuestionSet.is_publicly_visible == True),
+                )
+            ).distinct().all()
+            versions = sorted([v[0] for v in versions if v[0]], reverse=True)
+
+            fo_cached = {
+                "providers": providers,
+                "categories": categories,
+                "trust_tiers": trust_tiers,
+                "tiers": [
+                    {"value": "tier1", "label": "Tier 1 (Task)"},
+                    {"value": "tier2", "label": "Tier 2 (Doctrine)"},
+                    {"value": "tier3", "label": "Tier 3 (Worldview)"},
+                ],
+                "versions": versions,
+            }
+            await cache.set(fo_cache_key, fo_cached, 300)
+
+        return {"leaderboard": lb_cached, "filter_options": fo_cached}
+    except Exception as exc:
+        raise_if_db_unavailable(exc)
 
 
 @router.get("/category-rankings")
@@ -1163,107 +1159,96 @@ async def get_category_rankings(
             response.headers["X-Cache"] = "STALE"
             if should_refresh:
                 import asyncio
-                asyncio.create_task(_refresh_category_rankings_cache(cache_key, limit_per_category, db))
+                asyncio.create_task(_refresh_category_rankings_cache(cache_key, limit_per_category))
         return cached_result
     
     response.headers["X-Cache"] = "MISS"
     
-    # Get active question set
-    question_set = db.query(QuestionSet).filter(
-        QuestionSet.status == "active"
-    ).order_by(QuestionSet.created_at.desc()).first()
-    
-    if not question_set:
-        return {"categories": {}, "total_models": 0}
-    
-    # Get all distinct categories from the question set
-    categories = db.query(Question.category).filter(
-        Question.question_set_id == question_set.id
-    ).distinct().all()
-    category_codes = sorted([c[0] for c in categories if c[0]])
-    
-    # Get all completed test runs with pre-computed scores for this question set
-    # Exclude bogus 0-question runs (e.g. failed/deleted tests)
-    test_runs = db.query(TestRun).options(
-        joinedload(TestRun.model),
-        joinedload(TestRun.question_set)
-    ).join(Model, TestRun.model_id == Model.id).filter(
-        TestRun.status == "completed",
-        TestRun.question_set_id == question_set.id,
-        TestRun.overall_score.isnot(None),
-        or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
-        Model.is_active == True
-    ).order_by(TestRun.completed_at.desc()).all()
-    
-    # Deduplicate: keep only the most recent test per model
-    seen_models = set()
-    unique_test_runs = []
-    for test_run in test_runs:
-        if test_run.model_id not in seen_models:
-            seen_models.add(test_run.model_id)
-            unique_test_runs.append(test_run)
-    
-    # Build scores from stored data only
-    test_run_scores = {}
-    for test_run in unique_test_runs:
-        cat_scores = test_run.category_scores or {}
-        test_run_scores[test_run.id] = {
-            "test_run": test_run,
-            "scores": {
-                "category_scores": cat_scores,
+    try:
+        # Get active question set
+        question_set = db.query(QuestionSet).filter(
+            QuestionSet.status == "active"
+        ).order_by(QuestionSet.created_at.desc()).first()
+        
+        if not question_set:
+            return {"categories": {}, "total_models": 0}
+        
+        # Get all distinct categories from the question set
+        categories = db.query(Question.category).filter(
+            Question.question_set_id == question_set.id
+        ).distinct().all()
+        category_codes = sorted([c[0] for c in categories if c[0]])
+        
+        unique_test_runs = get_latest_completed_test_runs(
+            db,
+            question_set_id=question_set.id,
+        )
+        
+        # Build scores from stored data only
+        test_run_scores = {}
+        for test_run in unique_test_runs:
+            cat_scores = test_run.category_scores or {}
+            test_run_scores[test_run.id] = {
+                "test_run": test_run,
+                "scores": {
+                    "category_scores": cat_scores,
+                }
             }
-        }
-    
-    # Build category rankings
-    categories_data = {}
-    for category_code in category_codes:
-        # Get top models for this category based on category score
-        category_models = []
-        for test_run_id, data in test_run_scores.items():
-            test_run = data["test_run"]
-            scores = data["scores"]
-            category_score = scores.get("category_scores", {}).get(category_code)
+        
+        # Build category rankings
+        categories_data = {}
+        for category_code in category_codes:
+            # Get top models for this category based on category score
+            category_models = []
+            for test_run_id, data in test_run_scores.items():
+                test_run = data["test_run"]
+                scores = data["scores"]
+                category_score = scores.get("category_scores", {}).get(category_code)
+                
+                if category_score is not None:
+                    category_models.append({
+                        "model_id": test_run.model.model_id,
+                        "model_name": test_run.model.name,
+                        "provider": test_run.model.provider,
+                        "score": round(category_score, 2)
+                    })
             
-            if category_score is not None:
-                category_models.append({
-                    "model_id": test_run.model.model_id,
-                    "model_name": test_run.model.name,
-                    "provider": test_run.model.provider,
-                    "score": round(category_score, 2)
-                })
+            # Sort by category score descending and take top N
+            category_models.sort(key=lambda x: x["score"], reverse=True)
+            top_models = category_models[:limit_per_category]
+            
+            categories_data[category_code] = {
+                "models": top_models,
+                "total_models": len(category_models)
+            }
         
-        # Sort by category score descending and take top N
-        category_models.sort(key=lambda x: x["score"], reverse=True)
-        top_models = category_models[:limit_per_category]
-        
-        categories_data[category_code] = {
-            "models": top_models,
-            "total_models": len(category_models)
+        result = {
+            "categories": categories_data,
+            "total_models": len(unique_test_runs),
+            "benchmark_version": question_set.semantic_version
         }
-    
-    result = {
-        "categories": categories_data,
-        "total_models": len(unique_test_runs),
-        "benchmark_version": question_set.semantic_version
-    }
-    
-    # Cache with stale-while-revalidate TTLs
-    await cache.set(
-        cache_key, 
-        result, 
-        ttl_seconds=CACHE_TTL["category_rankings"],
-        stale_ttl_seconds=CACHE_STALE_TTL["category_rankings"]
-    )
-    
-    return result
+        
+        # Cache with stale-while-revalidate TTLs
+        await cache.set(
+            cache_key, 
+            result, 
+            ttl_seconds=CACHE_TTL["category_rankings"],
+            stale_ttl_seconds=CACHE_STALE_TTL["category_rankings"]
+        )
+        
+        return result
+    except Exception as exc:
+        raise_if_db_unavailable(exc)
 
 
-async def _refresh_category_rankings_cache(cache_key: str, limit_per_category: int, db: Session):
+async def _refresh_category_rankings_cache(cache_key: str, limit_per_category: int):
     """Background task to refresh a stale category rankings cache entry."""
+    db = None
     try:
         logger.info(f"Background refresh started for cache key: {cache_key}")
         await cache.mark_refreshing(cache_key)
         
+        db = get_db_sync()
         from app.services.cache_warmer import _generate_category_rankings_data
         
         result = await _generate_category_rankings_data(db, limit_per_category)
@@ -1279,6 +1264,8 @@ async def _refresh_category_rankings_cache(cache_key: str, limit_per_category: i
     except Exception as e:
         logger.error(f"Background refresh failed for {cache_key}: {e}")
     finally:
+        if db is not None:
+            db.close()
         await cache.unmark_refreshing(cache_key)
 
 
