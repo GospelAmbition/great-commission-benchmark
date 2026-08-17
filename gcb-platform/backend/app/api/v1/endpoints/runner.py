@@ -481,6 +481,11 @@ async def bulk_submit(
         compute_and_store_test_run_scores(db, test_run)
 
         db.commit()
+        db.refresh(test_run)
+
+        from app.services.leaderboard_refresh import refresh_leaderboard_after_test_publish
+
+        await refresh_leaderboard_after_test_publish(db, test_run)
         
         # Extract scores
         summary = export_data.get("summary", {})

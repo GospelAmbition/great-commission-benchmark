@@ -2140,8 +2140,15 @@ async def refresh_cache(
         
         # Re-warm all caches
         await warm_all_caches()
+
+        from app.services.leaderboard_refresh import trigger_frontend_revalidation
+
+        revalidated = await trigger_frontend_revalidation()
         
-        return {"message": "Cache refreshed successfully"}
+        return {
+            "message": "Cache refreshed successfully",
+            "frontend_revalidated": revalidated,
+        }
     except Exception as e:
         logger.error(f"Failed to refresh cache: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to refresh cache: {str(e)}")

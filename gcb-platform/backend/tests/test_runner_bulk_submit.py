@@ -169,6 +169,32 @@ def test_bulk_submit_preserves_existing_description(
     sync_mock.assert_not_awaited()
 
 
+def test_bulk_submit_refreshes_leaderboard_cache(
+    client,
+    db_session,
+    admin_user,
+    test_question_set,
+    test_questions,
+    monkeypatch,
+):
+    from main import app
+    from app.api.v1.endpoints import runner
+
+    _authorize_runner(app, runner, admin_user, db_session)
+
+    refresh_mock = AsyncMock()
+    monkeypatch.setattr(
+        "app.services.leaderboard_refresh.refresh_leaderboard_after_test_publish",
+        refresh_mock,
+    )
+
+    response = _bulk_submit(client, "test-provider/cache-refresh", test_question_set, test_questions)
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "published"
+    refresh_mock.assert_awaited_once()
+
+
 def test_bulk_submit_continues_when_description_sync_fails(
     client,
     db_session,

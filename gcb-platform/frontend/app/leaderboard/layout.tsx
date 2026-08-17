@@ -26,7 +26,8 @@ async function getLeaderboardPageData(): Promise<{
 }> {
   try {
     const response = await fetch(`${API_URL}${LEADERBOARD_PAGE_ENDPOINT}`, {
-      next: { revalidate: 60 * 60 * 24 * 30 }, // Monthly-ish ISR; backend cache handles freshness after admin updates.
+      // Keep a modest ISR window; publish flows call /api/revalidate on demand.
+      next: { revalidate: 3600 },
     });
     if (!response.ok) return { initialData: null, rawEntries: null };
     const data = await response.json();
