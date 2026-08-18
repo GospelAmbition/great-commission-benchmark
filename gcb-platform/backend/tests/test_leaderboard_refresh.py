@@ -25,7 +25,7 @@ async def test_refresh_leaderboard_after_test_publish_clears_and_warms(db_sessio
         "app.services.aggregation.AggregationService.recalculate_model_stats",
         return_value=None,
     ) as recalc_mock, patch(
-        "app.core.cache.invalidate_cache",
+        "app.services.published_cache.invalidate_published_data",
         new_callable=AsyncMock,
     ) as invalidate_mock, patch(
         "app.services.cache_warmer.warm_filter_options_cache",
@@ -44,7 +44,7 @@ async def test_refresh_leaderboard_after_test_publish_clears_and_warms(db_sessio
         await refresh_leaderboard_after_test_publish(db_session, test_run)
 
     recalc_mock.assert_called_once_with(db_session, model_id, test_question_set.id)
-    invalidate_mock.assert_awaited_once_with("leaderboard")
+    invalidate_mock.assert_awaited_once_with(model_id)
     warm_filters_mock.assert_awaited_once_with(db_session)
     warm_leaderboard_mock.assert_awaited_once_with(db_session)
     warm_categories_mock.assert_awaited_once_with(db_session)

@@ -12,13 +12,28 @@ import { toast } from "sonner";
 import { ExternalLink, RefreshCw, Mail, MessageSquare, Bell, ScrollText } from "lucide-react";
 import { apiClient } from "@/lib/api";
 
+interface AdminDashboardStats {
+  total_users: number;
+  total_tests: number;
+  total_revenue: number;
+  moderation_queue_size: number;
+  total_api_keys: number;
+  active_api_keys: number;
+  newsletter_subscribers: number;
+  newsletter_active: number;
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const user = session?.user;
   const userLoading = status === "loading";
   const { canAdmin, isAdmin, loading: profileLoading } = useUserProfile();
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [refreshingCache, setRefreshingCache] = useState(false);
@@ -90,15 +105,18 @@ export default function AdminDashboardPage() {
       }
       const data = await response.json();
       toast.success(data.message || `Synced ${data.updated_count || 0} model(s)`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to sync model descriptions:", error);
-      toast.error(error.message || "Failed to sync model descriptions");
+      toast.error(errorMessage(error, "Failed to sync model descriptions"));
     } finally {
       setSyncing(false);
     }
   }
 
   async function refreshCache() {
+    if (!window.confirm("Clear cached leaderboard data and rebuild it from published results?")) {
+      return;
+    }
     setRefreshingCache(true);
     try {
       const response = await fetch("/api/admin/cache/refresh", {
@@ -109,10 +127,14 @@ export default function AdminDashboardPage() {
         throw new Error(error.detail || "Failed to refresh cache");
       }
       const data = await response.json();
-      toast.success(data.message || "Cache refreshed successfully");
-    } catch (error: any) {
+      const seconds = typeof data.duration_ms === "number"
+        ? `${(data.duration_ms / 1000).toFixed(1)}s`
+        : "an unknown duration";
+      const modelCount = data.model_snapshots_built ?? 0;
+      toast.success(`Leaderboard rebuilt in ${seconds} (${modelCount} model snapshots)`);
+    } catch (error: unknown) {
       console.error("Failed to refresh cache:", error);
-      toast.error(error.message || "Failed to refresh cache");
+      toast.error(errorMessage(error, "Failed to refresh cache"));
     } finally {
       setRefreshingCache(false);
     }
@@ -127,9 +149,9 @@ export default function AdminDashboardPage() {
       } else {
         toast.error(result.message || "Failed to send test email");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to send test email:", error);
-      toast.error(error.message || "Failed to send test email");
+      toast.error(errorMessage(error, "Failed to send test email"));
     } finally {
       setTestingEmail(false);
     }
@@ -219,7 +241,7 @@ export default function AdminDashboardPage() {
           <CardContent>
             <div className="text-3xl font-bold">{stats?.active_api_keys || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats?.total_api_keys || 0} total ({stats?.total_api_keys - stats?.active_api_keys || 0} revoked)
+              {stats?.total_api_keys || 0} total ({(stats?.total_api_keys ?? 0) - (stats?.active_api_keys ?? 0)} revoked)
             </p>
           </CardContent>
         </Card>
@@ -391,8 +413,8 @@ export default function AdminDashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Cache Management</CardTitle>
-            <CardDescription>Manually refresh the leaderboard and public data caches</CardDescription>
+            <CardTitle>Leaderboard Cache</CardTitle>
+            <CardDescription>Rebuild leaderboard data, model snapshots, rankings, filters, and totals</CardDescription>
           </CardHeader>
           <CardContent>
             <Button 
@@ -401,7 +423,7 @@ export default function AdminDashboardPage() {
               variant="outline"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${refreshingCache ? "animate-spin" : ""}`} />
-              {refreshingCache ? "Refreshing..." : "Refresh Cache"}
+              {refreshingCache ? "Rebuilding…" : "Rebuild leaderboard"}
             </Button>
           </CardContent>
         </Card>

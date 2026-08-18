@@ -307,42 +307,10 @@ async def get_runner_models(
             status_code=403,
             detail="Insufficient permissions. Requires admin or benchmark editor access."
         )
-    
-    models = db.query(Model).filter(
-        Model.is_active == True
-    ).order_by(Model.name).all()
-    
-    # Get the current active question set for version context
-    active_qs = db.query(QuestionSet).filter(
-        QuestionSet.status == "active"
-    ).first()
-    current_version = active_qs.semantic_version if active_qs else None
-    
-    model_items = []
-    for model in models:
-        # Check if this model has already been tested on the current version
-        latest_test = None
-        if active_qs:
-            latest_test = db.query(TestRun).filter(
-                TestRun.model_id == model.id,
-                TestRun.question_set_id == active_qs.id,
-                TestRun.status == "completed"
-            ).order_by(TestRun.completed_at.desc()).first()
-        
-        model_items.append({
-            "id": str(model.id),
-            "model_id": model.model_id,
-            "name": model.name,
-            "provider": model.provider,
-            "last_tested_version": current_version if latest_test else None,
-            "last_tested_at": latest_test.completed_at.isoformat() if latest_test and latest_test.completed_at else None,
-        })
-    
-    return {
-        "models": model_items,
-        "total": len(model_items),
-        "current_version": current_version,
-    }
+
+    from app.services.runner_models import get_runner_models
+
+    return await get_runner_models(db)
 
 
 @router.post("/bulk-submit")

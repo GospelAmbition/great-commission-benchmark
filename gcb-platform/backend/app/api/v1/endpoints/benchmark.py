@@ -11,7 +11,6 @@ from uuid import UUID
 from datetime import datetime
 
 from app.core.auth import get_db, require_benchmark_viewer, require_benchmark_editor
-from app.core.cache import invalidate_cache
 from app.db.models.user import User
 from app.db.models.question import Question
 from app.db.models.question_set import QuestionSet
@@ -441,7 +440,8 @@ async def archive_question_set(
     db.commit()
     
     # Invalidate cache for versions endpoint since visibility/status changed
-    await invalidate_cache("versions")
+    from app.services.published_cache import invalidate_published_data
+    await invalidate_published_data(include_versions=True)
     
     return {
         "message": f"Question set {question_set.semantic_version} archived",
@@ -486,6 +486,9 @@ async def publish_version(
     question_set.status = "active"
     question_set.is_publicly_visible = True
     db.commit()
+
+    from app.services.published_cache import invalidate_published_data
+    await invalidate_published_data(include_versions=True)
     
     return {
         "version": question_set.semantic_version,
@@ -522,7 +525,8 @@ async def toggle_question_set_visibility(
     db.commit()
     
     # Invalidate cache for versions endpoint since visibility changed
-    await invalidate_cache("versions")
+    from app.services.published_cache import invalidate_published_data
+    await invalidate_published_data(include_versions=True)
     
     return {
         "message": f"Question set {question_set.semantic_version} visibility updated",

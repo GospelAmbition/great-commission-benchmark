@@ -29,7 +29,7 @@ async def refresh_leaderboard_after_test_publish(
     revalidation for public pages that embed leaderboard data.
     """
     from app.services.aggregation import AggregationService
-    from app.core.cache import invalidate_cache
+    from app.services.published_cache import invalidate_published_data
     from app.services.cache_warmer import (
         warm_category_rankings_cache,
         warm_filter_options_cache,
@@ -50,7 +50,7 @@ async def refresh_leaderboard_after_test_publish(
         )
 
     try:
-        await invalidate_cache("leaderboard")
+        await invalidate_published_data(test_run.model_id)
         await warm_filter_options_cache(db)
         await warm_leaderboard_cache(db)
         await warm_category_rankings_cache(db)

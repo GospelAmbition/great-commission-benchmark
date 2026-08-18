@@ -38,11 +38,9 @@ async def invalidate_model_stats_cache(model_id: Optional[UUID] = None, question
         model_id: Optional model UUID to invalidate specific model caches
         question_set_id: Optional question set UUID to scope invalidation
     """
-    from app.core.cache import cache
-    
-    # For now, clear all caches since leaderboard keys include many filter combinations
-    # A future optimization could track and invalidate only specific cache keys
-    await cache.clear()
+    from app.services.published_cache import invalidate_published_data
+
+    await invalidate_published_data(model_id)
     logger.info(f"Cache invalidated for model={model_id}, question_set={question_set_id}")
 
 

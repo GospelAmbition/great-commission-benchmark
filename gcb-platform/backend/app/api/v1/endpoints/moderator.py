@@ -539,8 +539,8 @@ async def revert_community_submission_to_rejected(
         logger.warning("Stats recalculation after revert failed: %s", e)
 
     try:
-        from app.core.cache import invalidate_cache
-        await invalidate_cache("leaderboard")
+        from app.services.published_cache import invalidate_published_data
+        await invalidate_published_data(model_id)
     except Exception as e:
         logger.warning("Leaderboard cache invalidation after revert failed: %s", e)
 
@@ -940,6 +940,9 @@ async def reject_automated_test_run(
         AggregationService.recalculate_model_stats(db, run.model_id, run.question_set_id)
     except Exception as e:
         logger.warning(f"Stats recalculation failed after rejecting test run: {e}")
+
+    from app.services.published_cache import invalidate_published_data
+    await invalidate_published_data(run.model_id)
     
     logger.info(
         f"Automated test run {test_run_id} rejected by {current_user.email}"
@@ -997,6 +1000,9 @@ async def restore_automated_test_run(
         AggregationService.update_stats_for_test_run(db, run)
     except Exception as e:
         logger.warning(f"Stats recalculation failed after restoring test run: {e}")
+
+    from app.services.published_cache import invalidate_published_data
+    await invalidate_published_data(run.model_id)
     
     logger.info(
         f"Automated test run {test_run_id} restored by {current_user.email}"
@@ -1071,8 +1077,8 @@ async def update_model_archived(
         metadata={"archived": request.archived, "model_name": model.name}
     )
 
-    from app.core.cache import invalidate_cache
-    await invalidate_cache("leaderboard")
+    from app.services.published_cache import invalidate_published_data
+    await invalidate_published_data(model.id)
     return {
         "model_id": str(model.id),
         "model_id_str": model.model_id,

@@ -987,8 +987,8 @@ async def archive_question_set(
     )
     
     # Invalidate cache for versions endpoint since visibility/status changed
-    from app.core.cache import invalidate_cache
-    await invalidate_cache("versions")
+    from app.services.published_cache import invalidate_published_data
+    await invalidate_published_data(include_versions=True)
     
     return {
         "message": f"Question set {question_set.semantic_version} archived",
@@ -1034,8 +1034,8 @@ async def toggle_question_set_visibility(
     )
     
     # Invalidate cache for versions endpoint since visibility changed
-    from app.core.cache import invalidate_cache
-    await invalidate_cache("versions")
+    from app.services.published_cache import invalidate_published_data
+    await invalidate_published_data(include_versions=True)
     
     return {
         "message": f"Question set {question_set.semantic_version} visibility updated",
@@ -1151,6 +1151,9 @@ async def update_question_set_status(
         entity_type="question_set", entity_id=str(question_set.id),
         metadata={"old_status": old_status, "new_status": new_status, "version": question_set.semantic_version}
     )
+
+    from app.services.published_cache import invalidate_published_data
+    await invalidate_published_data(include_versions=True)
 
     return {
         "message": f"Question set {question_set.semantic_version} status changed from {old_status} to {new_status}",
@@ -1464,8 +1467,8 @@ async def delete_test_run(
         logger.warning("Stats recalculation after test run delete failed: %s", e)
     
     try:
-        from app.core.cache import invalidate_cache
-        await invalidate_cache("leaderboard")
+        from app.services.published_cache import invalidate_published_data
+        await invalidate_published_data(model_id)
     except Exception as e:
         logger.warning("Leaderboard cache invalidation after test run delete failed: %s", e)
     
@@ -1591,6 +1594,9 @@ async def delete_model(
     
     db.delete(model)
     db.commit()
+
+    from app.services.published_cache import invalidate_published_data
+    await invalidate_published_data(model_id)
     
     return {
         "message": "Model deleted",
@@ -1612,7 +1618,7 @@ async def recalculate_model_scores(
     """
     from app.services.scoring import compute_and_store_test_run_scores
     from app.services.aggregation import AggregationService
-    from app.core.cache import cache
+    from app.services.published_cache import invalidate_published_data
 
     model = db.query(Model).filter(Model.id == model_id).first()
     if not model:
@@ -1644,7 +1650,7 @@ async def recalculate_model_scores(
             logger.warning(f"Failed to update ModelVersionStats for model {mid}: {e}")
 
     # Invalidate caches so leaderboard reflects updated scores
-    await cache.clear()
+    await invalidate_published_data(model_id)
 
     return {
         "message": f"Recalculated scores for {updated_count} test run(s)",
@@ -2106,7 +2112,7 @@ async def sync_model_descriptions(
                     errors.append(f"{model.name}: {str(e)}")
                     continue
             
-            return {
+            response_payload = {
                 "success": True,
                 "message": f"Synced {updated_count} model(s)",
                 "updated_count": updated_count,
@@ -2116,11 +2122,15 @@ async def sync_model_descriptions(
         else:
             # Sync only models without descriptions
             updated_count = await sync_all_model_descriptions(db)
-            return {
+            response_payload = {
                 "success": True,
                 "message": f"Synced {updated_count} model(s)",
                 "updated_count": updated_count
             }
+        if updated_count:
+            from app.services.published_cache import clear_published_caches
+            await clear_published_caches()
+        return response_payload
     except Exception as e:
         logger.error(f"Error syncing model descriptions: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -2128,25 +2138,50 @@ async def sync_model_descriptions(
 
 @router.post("/cache/refresh")
 async def refresh_cache(
-    current_user: User = Depends(require_admin_flexible)
+    current_user: User = Depends(require_admin_flexible),
+    db: Session = Depends(get_db),
 ):
-    """Manually refresh all caches"""
+    """Invalidate and rebuild leaderboard and published-model caches."""
+    from time import perf_counter
+
     from app.services.cache_warmer import warm_all_caches
-    from app.core.cache import cache
+    from app.services.published_cache import clear_published_caches
+
+    if not has_permission(current_user, "can_admin"):
+        raise HTTPException(status_code=403, detail="Admin permission required")
+
+    started = perf_counter()
     
     try:
-        # Clear existing cache first
-        await cache.clear()
-        
-        # Re-warm all caches
-        await warm_all_caches()
+        cleared = await clear_published_caches()
+        rebuild = await warm_all_caches(include_published_models=True)
 
         from app.services.leaderboard_refresh import trigger_frontend_revalidation
 
         revalidated = await trigger_frontend_revalidation()
-        
+
+        duration_ms = round((perf_counter() - started) * 1000)
+        ActionLogService.log_action(
+            db,
+            "cache.leaderboard_rebuild",
+            "user",
+            actor_user_id=current_user.id,
+            entity_type="cache",
+            entity_id="leaderboard",
+            metadata={
+                "duration_ms": duration_ms,
+                "model_snapshots_built": rebuild["model_snapshots_built"],
+                "warnings": rebuild["warnings"],
+            },
+        )
+
         return {
-            "message": "Cache refreshed successfully",
+            "message": "Leaderboard rebuilt successfully",
+            "duration_ms": duration_ms,
+            "cleared_namespaces": cleared,
+            "warmed": rebuild["warmed"],
+            "model_snapshots_built": rebuild["model_snapshots_built"],
+            "warnings": rebuild["warnings"],
             "frontend_revalidated": revalidated,
         }
     except Exception as e:
@@ -3385,8 +3420,8 @@ async def archive_model(
         raise HTTPException(status_code=404, detail="Model not found")
     model.is_active = False
     db.commit()
-    from app.core.cache import invalidate_cache
-    await invalidate_cache("leaderboard")
+    from app.services.published_cache import invalidate_published_data
+    await invalidate_published_data(model.id)
     return {
         "model_id": str(model.id),
         "model_id_str": model.model_id,

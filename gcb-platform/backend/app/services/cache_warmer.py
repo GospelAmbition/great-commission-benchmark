@@ -404,7 +404,7 @@ async def _generate_category_rankings_data(db: Session, limit_per_category: int 
     }
 
 
-async def warm_all_caches() -> None:
+async def warm_all_caches(*, include_published_models: bool = False) -> dict:
     """Warm all critical caches on startup."""
     logger.info("Starting cache warming...")
     start_time = datetime.utcnow()
@@ -421,13 +421,36 @@ async def warm_all_caches() -> None:
         logger.info(f"Database not available for cache warming: {e}")
         if db:
             db.close()
-        return
+        return {"warmed": {}, "model_snapshots_built": 0, "warnings": [str(e)]}
+
+    warmed: dict[str, int | bool] = {}
+    model_snapshots_built = 0
+    warnings: list[str] = []
     
     try:
         # Warm caches in order of importance
         await warm_filter_options_cache(db)
+        warmed["filter_options"] = True
         await warm_leaderboard_cache(db)
+        warmed["leaderboard"] = True
         await warm_category_rankings_cache(db)
+        warmed["category_rankings"] = True
+
+        if include_published_models:
+            from fastapi import Response
+            from app.api.v1.endpoints.public import get_stats, list_versions
+            from app.services.model_snapshots import warm_model_snapshots
+            from app.services.runner_models import get_runner_models
+
+            model_snapshots_built, snapshot_warnings = await warm_model_snapshots(db)
+            warnings.extend(snapshot_warnings)
+            warmed["model_snapshots"] = model_snapshots_built
+            runner_payload = await get_runner_models(db, force_rebuild=True)
+            warmed["runner_models"] = runner_payload.get("total", 0)
+            await list_versions(Response(), db)
+            warmed["versions"] = True
+            await get_stats(Response(), db)
+            warmed["public_stats"] = True
         
         elapsed = (datetime.utcnow() - start_time).total_seconds()
         logger.info(f"Cache warming completed in {elapsed:.2f} seconds")
@@ -438,9 +461,16 @@ async def warm_all_caches() -> None:
             logger.info(f"Cache warming skipped - database connection issue: {e}")
         else:
             logger.error(f"Cache warming failed: {e}", exc_info=True)
+        warnings.append(str(e))
     finally:
         if db:
             db.close()
+
+    return {
+        "warmed": warmed,
+        "model_snapshots_built": model_snapshots_built,
+        "warnings": warnings,
+    }
 
 
 async def _background_refresh_loop() -> None:

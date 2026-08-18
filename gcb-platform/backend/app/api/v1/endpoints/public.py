@@ -17,6 +17,7 @@ from app.db.models.result import Result
 from app.db.models.question import Question
 from app.db.models.blog_post import BlogPost, blog_post_models
 from app.services.leaderboard_queries import get_latest_completed_test_runs
+from app.services.model_snapshots import get_model_snapshot
 from app.services.openrouter import OpenRouterClient
 from app.services.payment import PaymentService
 from app.schemas.public import (
@@ -519,6 +520,16 @@ async def list_models(
     db: Session = Depends(get_db)
 ):
     """List all tested models. Excludes models with no valid completed test (e.g. failed/deleted)."""
+    cache_key = make_cache_key("models_list", {
+        "provider": provider,
+        "search": search,
+        "limit": limit,
+        "offset": offset,
+    })
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     # Only models that have at least one valid completed test run
     has_valid_test = db.query(TestRun.model_id).filter(
         TestRun.status == "completed",
@@ -568,7 +579,7 @@ async def list_models(
     
     total = query.count()
     
-    return ModelsListResponse(
+    result = ModelsListResponse(
         models=model_items,
         pagination={
             "limit": limit,
@@ -577,6 +588,13 @@ async def list_models(
             "has_more": (offset + limit) < total
         }
     )
+    await cache.set(
+        cache_key,
+        result,
+        ttl_seconds=CACHE_TTL["models_list"],
+        stale_ttl_seconds=CACHE_TTL["models_list"],
+    )
+    return result
 
 
 @router.get("/available-models")
@@ -673,7 +691,7 @@ async def get_model_by_model_id(
         raise HTTPException(status_code=404, detail="Model not found")
     
     # Use shared helper to get model detail data
-    data = _get_model_detail_data(db, model)
+    data = await get_model_snapshot(db, model)
     if not data["best_result"]:
         raise HTTPException(status_code=404, detail="Model has no valid benchmark results")
     best_result = data["best_result"]
@@ -734,7 +752,7 @@ async def get_model_detail(
         raise HTTPException(status_code=404, detail="Model not found")
     
     # Use shared helper to get model detail data
-    data = _get_model_detail_data(db, model)
+    data = await get_model_snapshot(db, model)
     if not data["best_result"]:
         raise HTTPException(status_code=404, detail="Model has no valid benchmark results")
     
@@ -945,6 +963,15 @@ async def compare_models(
     """Compare multiple models"""
     if len(models) > 5:
         raise HTTPException(status_code=400, detail="Maximum 5 models can be compared")
+
+    cache_key = make_cache_key("model_comparison", {
+        "models": [str(model_id) for model_id in models],
+        "version": version,
+        "category": category,
+    })
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
     
     # Get version
     if version == "current":
@@ -1019,6 +1046,12 @@ async def compare_models(
             }
         }
     
+    await cache.set(
+        cache_key,
+        comparison_data,
+        ttl_seconds=CACHE_TTL["model_comparison"],
+        stale_ttl_seconds=CACHE_STALE_TTL["model_comparison"],
+    )
     return comparison_data
 
 

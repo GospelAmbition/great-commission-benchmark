@@ -102,6 +102,15 @@ class SimpleCache:
         async with self._lock:
             if key in self._cache:
                 del self._cache[key]
+
+    async def delete_prefix(self, prefix: str) -> int:
+        """Delete every entry whose application key starts with ``prefix``."""
+        async with self._lock:
+            keys = [key for key in self._cache if key.startswith(prefix)]
+            for key in keys:
+                del self._cache[key]
+            self._refreshing_keys.difference_update(keys)
+            return len(keys)
     
     async def clear(self):
         """Clear all cached values"""
@@ -269,6 +278,23 @@ class RedisCache:
         except Exception as exc:
             logger.warning("RedisCache.delete error for %s: %s", key, exc)
 
+    async def delete_prefix(self, prefix: str) -> int:
+        """Delete application keys matching ``prefix`` without flushing Redis."""
+        deleted = 0
+        try:
+            cursor = 0
+            pattern = self._k(f"{prefix}*")
+            while True:
+                cursor, keys = await self._redis.scan(cursor, match=pattern, count=200)
+                if keys:
+                    deleted += int(await self._redis.delete(*keys))
+                if cursor == 0:
+                    break
+            return deleted
+        except Exception as exc:
+            logger.warning("RedisCache.delete_prefix error for %s: %s", prefix, exc)
+            return deleted
+
     async def clear(self) -> None:
         """Delete all GCB-prefixed keys from Redis."""
         try:
@@ -343,6 +369,9 @@ CACHE_TTL = {
     "public_stats": 86400,       # 24 hours
     "versions": 86400,           # 24 hours
     "models_list": 86400,        # 24 hours
+    "runner_models": 86400,      # 24 hours
+    "model_snapshot": 2592000,   # 30 days; invalidated on published-data changes
+    "model_comparison": 86400,   # 24 hours
 }
 
 # Stale TTL - how long to serve stale data while refreshing (30 days for critical endpoints)
@@ -354,6 +383,9 @@ CACHE_STALE_TTL = {
     "public_stats": 2592000,      # 30 days
     "versions": 2592000,          # 30 days
     "models_list": 2592000,       # 30 days
+    "runner_models": 86400,       # hard expiry; mutations invalidate immediately
+    "model_snapshot": 2592000,    # hard expiry
+    "model_comparison": 2592000,  # 30 days
 }
 
 
@@ -402,12 +434,10 @@ def cached(prefix: str, ttl: int = 300, stale_ttl: Optional[int] = None):
 async def invalidate_cache(prefix: str):
     """Invalidate all cache entries with given prefix
     
-    This is a simple implementation that clears the entire cache.
-    For a production system, you'd want Redis with key patterns.
+    Both cache backends support prefix deletion, so unrelated cached data is
+    retained when one derived collection changes.
     """
-    # For simplicity, just clear the entire cache
-    # In production, use Redis with SCAN and pattern matching
-    await cache.clear()
+    return await cache.delete_prefix(prefix)
 
 
 # Type alias for refresh callback
