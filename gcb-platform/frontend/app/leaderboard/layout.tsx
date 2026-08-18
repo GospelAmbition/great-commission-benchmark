@@ -26,8 +26,11 @@ async function getLeaderboardPageData(): Promise<{
 }> {
   try {
     const response = await fetch(`${API_URL}${LEADERBOARD_PAGE_ENDPOINT}`, {
-      // Keep a modest ISR window; publish flows call /api/revalidate on demand.
-      next: { revalidate: 3600 },
+      // The API response is already backed by Redis and invalidated whenever a
+      // result is published. Avoid a second, deployment-local Next.js cache
+      // that can continue serving an older model catalog when cross-service
+      // revalidation is delayed or unavailable.
+      cache: "no-store",
     });
     if (!response.ok) return { initialData: null, rawEntries: null };
     const data = await response.json();

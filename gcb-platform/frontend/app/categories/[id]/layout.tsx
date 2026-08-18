@@ -34,7 +34,10 @@ export async function generateMetadata({
 async function getCategoryRankings(categoryId: string) {
   try {
     const response = await fetch(`${API_URL}/api/public/leaderboard?category=${categoryId}&limit=10`, {
-      next: { revalidate: 3600 }, // Cache for 1 hour
+      // Publication invalidates the backend's Redis leaderboard cache. Read
+      // through that canonical cache so category pages cannot retain an older
+      // Next.js ISR snapshot after a new model is published.
+      cache: "no-store",
     });
     if (!response.ok) return null;
     const data = await response.json();
