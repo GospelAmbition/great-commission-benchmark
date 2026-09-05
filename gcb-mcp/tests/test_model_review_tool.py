@@ -98,7 +98,7 @@ def test_full_export_article_shape_and_exclusions() -> None:
     assert "What this benchmark is measuring" not in article["content"]
     assert "Capability With a Refusal Burden" not in article["title"]
     assert "A containment-first rollout" not in article["content"]
-    assert "Where it leaned into the task" in article["content"]
+    assert "Strongest categories" in article["content"]
     assert 1200 <= article["diagnostics"]["content_word_count"] <= 1800
 
 
@@ -125,6 +125,13 @@ def test_review_brief_payload_includes_behavioral_findings() -> None:
     assert brief["comparison_context"]["nearest_peers"][0]["model_id"] == "peer/model"
 
 
+def test_packaged_review_guide_includes_ai_writing_donts() -> None:
+    guide = server._read_article_review_guide()
+
+    assert "Great Commission benchmarks" in guide
+    assert "It's not just X" in guide or "It’s not just X" in guide
+
+
 def test_post_fingerprint_flags_repeated_review_language() -> None:
     fingerprint = server._post_fingerprint(
         {
@@ -149,6 +156,32 @@ def test_quality_gate_flags_recent_heading_reuse() -> None:
 
     assert result["passes"] is False
     assert result["repeated_recent_headings"] == ["Shared Heading"]
+
+
+def test_quality_gate_rejects_strong_weak_title_formula() -> None:
+    result = server._quality_gate_findings(
+        title="Demo Review: Strong on outreach, weak on doctrine",
+        content="## Findings\n\nA useful body.",
+        recent_fingerprints=[],
+    )
+
+    assert result["passes"] is False
+    assert result["title_uses_strong_weak_formula"] is True
+
+
+def test_title_candidates_use_plain_review_findings() -> None:
+    titles = server._build_title_candidates(
+        model_id="demo/model",
+        model_name="Demo Model",
+        strongest=[],
+        weakest=[],
+        verdicts={"accepted": 42, "compromised": 47, "refused": 61},
+        hedge_patterns=[{"pattern": "hedging"}],
+    )
+
+    assert titles
+    assert all(title.startswith("Demo Model Review: ") for title in titles)
+    assert all("Strong on" not in title for title in titles)
 
 
 def test_prepare_model_review_brief_uses_source_peer_and_recent_context(monkeypatch) -> None:
@@ -214,7 +247,7 @@ def test_create_model_review_draft_generates_header_and_draft(monkeypatch) -> No
         return "model-review-category"
 
     async def fake_slug(title: str) -> dict:
-        assert "grok-build" in title
+        assert title.startswith("Grok Build 0.1 Review:")
         return {"slug": "grok-build-review"}
 
     async def fake_header(**kwargs) -> dict:

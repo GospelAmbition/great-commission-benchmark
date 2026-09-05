@@ -16,7 +16,7 @@ Recognition of the initials **“GCB”** is still low. In newsletter **titles**
 
 ## Tone and audience (required)
 
-Before writing or editing newsletter prose, read the repository file **`insights/_article_review_prompt.md`** (Great Commission Benchmark workspace). Match its audience (ministry and technical leaders), spiritual voice, technical voice, style guidelines, and “what to avoid” sections. The newsletter is **shorter** than a full model review (digest, not 1,200+ words), but the **voice must match** model reviews: professional, strategic, warm, scan-friendly (short paragraphs, bullets, clear headings).
+Before writing or editing newsletter prose, read **`insights/_article_review_prompt.md`** and **`gcb-mcp/gcb_mcp/prompts/ai_writing_donts.md`** (Great Commission Benchmark workspace). Match the review-prompt audience (ministry and technical leaders), spiritual voice, technical voice, style guidelines, and “what to avoid” sections, and do not use the canned AI-writing patterns in the donts file. The newsletter is **shorter** than a full model review (digest, not 1,200+ words), but the **voice must match** model reviews: professional, strategic, warm, scan-friendly (short paragraphs, bullets, clear headings).
 
 ## Forward-facing communication (not an internal report)
 

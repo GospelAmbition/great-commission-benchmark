@@ -9,7 +9,7 @@ import re
 import sys
 import uuid
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timezone
 from importlib import resources
 from pathlib import Path
 from typing import Any
@@ -239,6 +239,32 @@ def _extract_provider(model_id: str) -> str:
     return model_id.split("/")[0] if "/" in model_id else "unknown"
 
 
+_EXCLUDED_MODEL_IDS = frozenset(
+    {
+        "sakana/sakana-namazu",
+        "meta/muse-spark-1.2-contributor",
+        "meta/muse-spark-1.3-contributor",
+        "tencent/hy-mt2-1.8b",
+        "tencent/hy-mt2-7b",
+        "tencent/hy-mt2-30b-a3b",
+    }
+)
+
+
+def _model_exclusion_reason(model_id: str) -> str | None:
+    """Explain why an OpenRouter model id should not be suggested or tested."""
+    normalized = model_id.strip().lower()
+    if normalized in _EXCLUDED_MODEL_IDS:
+        return "model is listed in the GCB do-not-retest registry"
+    if normalized.endswith(":batch"):
+        return "OpenRouter batch variant"
+    if normalized.endswith(":free"):
+        return "OpenRouter free duplicate"
+    if normalized.startswith("~"):
+        return "OpenRouter alias id"
+    return None
+
+
 def _archive_candidates(
     gcb_models_raw: list[dict[str, Any]], openrouter_model_ids: set[str]
 ) -> list[dict[str, str]]:
@@ -342,6 +368,8 @@ async def suggest_models_to_test(
       - Are NOT embedding-only or rerank-only
       - Were added to OpenRouter within `days_back` days of today
       - Are NOT already in the GCB active model list
+      - Are NOT in the GCB do-not-retest registry or an OpenRouter batch,
+        free-duplicate, or alias variant
 
     Results are sorted newest first.
 
@@ -419,6 +447,7 @@ async def suggest_models_to_test(
     text_candidates = [
         m for m in new_not_on_gcb
         if _is_text_model(m, include_multimodal)
+        and not _model_exclusion_reason(str(m.get("id") or ""))
     ]
 
     text_candidates.sort(key=lambda m: m.get("created", 0), reverse=True)
@@ -427,7 +456,7 @@ async def suggest_models_to_test(
     for model in text_candidates[:limit]:
         model_id = model["id"]
         created_ts = model.get("created", 0)
-        created_dt = datetime.utcfromtimestamp(created_ts)
+        created_dt = datetime.fromtimestamp(created_ts, tz=timezone.utc)
         created_date = created_dt.strftime("%Y-%m-%d")
         days_ago = max(0, int((now_ts - created_ts) / 86400))
 
@@ -777,7 +806,10 @@ async def check_ready_for_testing(auto_launch: bool = True) -> dict[str, Any]:
 
 
 @mcp.tool()
-async def run_gcb_test(model_id: str) -> dict[str, Any]:
+async def run_gcb_test(
+    model_id: str,
+    allow_excluded: bool = False,
+) -> dict[str, Any]:
     """Check readiness and start a background GCB benchmark test.
 
     This is the direct MCP alias for natural-language requests like
@@ -790,6 +822,8 @@ async def run_gcb_test(model_id: str) -> dict[str, Any]:
 
     Args:
         model_id: OpenRouter model identifier, e.g. "microsoft/wizardlm-2-8x22b"
+        allow_excluded: Explicitly override the do-not-retest registry and
+                        OpenRouter variant checks (default False).
 
     Returns:
         Readiness details plus the job payload from start_gcb_test, or an error
@@ -798,6 +832,19 @@ async def run_gcb_test(model_id: str) -> dict[str, Any]:
     normalized_model_id = model_id.strip() if model_id else ""
     if not normalized_model_id:
         return {"error": "invalid_argument", "message": "model_id must not be empty"}
+
+    exclusion_reason = _model_exclusion_reason(normalized_model_id)
+    if exclusion_reason and not allow_excluded:
+        return {
+            "error": "model_excluded",
+            "message": (
+                f"{normalized_model_id} was not started because it is excluded: "
+                f"{exclusion_reason}. Pass allow_excluded=True only when Chris "
+                "explicitly overrides the exclusion."
+            ),
+            "model_id": normalized_model_id,
+            "exclusion_reason": exclusion_reason,
+        }
 
     readiness = await check_ready_for_testing(auto_launch=True)
     openrouter = readiness.get("openrouter")
@@ -814,7 +861,10 @@ async def run_gcb_test(model_id: str) -> dict[str, Any]:
             "readiness": readiness,
         }
 
-    job = await start_gcb_test(model_id=normalized_model_id)
+    job = await start_gcb_test(
+        model_id=normalized_model_id,
+        allow_excluded=allow_excluded,
+    )
     result: dict[str, Any] = {
         "model_id": normalized_model_id,
         "readiness": readiness,
@@ -840,7 +890,10 @@ async def run_gcb_test(model_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
-async def start_gcb_test(model_id: str) -> dict[str, Any]:
+async def start_gcb_test(
+    model_id: str,
+    allow_excluded: bool = False,
+) -> dict[str, Any]:
     """Spawn a background GCB benchmark test for the given OpenRouter model.
 
     Returns immediately (< 1 second) with a job_id. The test runs in the
@@ -854,6 +907,8 @@ async def start_gcb_test(model_id: str) -> dict[str, Any]:
 
     Args:
         model_id: OpenRouter model identifier, e.g. "anthropic/claude-3-opus"
+        allow_excluded: Explicitly override the do-not-retest registry and
+                        OpenRouter variant checks (default False).
 
     Returns:
         {job_id, model_id, status, started_at, log_path}
@@ -865,17 +920,31 @@ async def start_gcb_test(model_id: str) -> dict[str, Any]:
     if not model_id or not model_id.strip():
         return {"error": "invalid_argument", "message": "model_id must not be empty"}
 
+    normalized_model_id = model_id.strip()
+    exclusion_reason = _model_exclusion_reason(normalized_model_id)
+    if exclusion_reason and not allow_excluded:
+        return {
+            "error": "model_excluded",
+            "message": (
+                f"{normalized_model_id} was not started because it is excluded: "
+                f"{exclusion_reason}. Pass allow_excluded=True only when Chris "
+                "explicitly overrides the exclusion."
+            ),
+            "model_id": normalized_model_id,
+            "exclusion_reason": exclusion_reason,
+        }
+
     job_id = str(uuid.uuid4())
     jm = JobManager()
 
     # Create the job row first so status is visible immediately
-    job = jm.create_job(job_id=job_id, model_id=model_id.strip())
+    job = jm.create_job(job_id=job_id, model_id=normalized_model_id)
 
     # Spawn wrapper as a fully detached subprocess
     wrapper_module = "gcb_mcp.wrapper"
     try:
         proc = subprocess.Popen(
-            [sys.executable, "-m", wrapper_module, job_id, model_id.strip()],
+            [sys.executable, "-m", wrapper_module, job_id, normalized_model_id],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,  # Detach from parent process group
@@ -893,7 +962,7 @@ async def start_gcb_test(model_id: str) -> dict[str, Any]:
 
     return {
         "job_id": job_id,
-        "model_id": model_id.strip(),
+        "model_id": normalized_model_id,
         "status": "running",
         "started_at": job.started_at,
         "log_path": job.log_path,
@@ -1255,15 +1324,22 @@ def _article_review_guide_resource() -> Any:
     return resources.files("gcb_mcp").joinpath("prompts/article_review_prompt.md")
 
 
+def _ai_writing_donts_resource() -> Any:
+    """Resolve the packaged public-writing anti-pattern guide."""
+    return resources.files("gcb_mcp").joinpath("prompts/ai_writing_donts.md")
+
+
 def _article_review_guide_path() -> str:
     """Return a human-readable resource path for diagnostics."""
     return str(_article_review_guide_resource())
 
 
 def _read_article_review_guide() -> str:
-    """Load the article style guide text, or empty string if unavailable."""
+    """Load the packaged article and public-writing guides."""
     try:
-        return _article_review_guide_resource().read_text(encoding="utf-8")
+        article_guide = _article_review_guide_resource().read_text(encoding="utf-8")
+        writing_donts = _ai_writing_donts_resource().read_text(encoding="utf-8")
+        return f"{article_guide}\n\n{writing_donts}"
     except Exception:
         return ""
 
@@ -1385,6 +1461,8 @@ _OVERUSED_REVIEW_PHRASES = (
     "High capability, high refusal cost",
     "Recommended operating posture",
 )
+
+_STRONG_WEAK_TITLE_RE = re.compile(r"\bstrong on\b.+\bweak on\b", re.IGNORECASE)
 
 _ADVICE_HEAVY_REVIEW_TERMS = (
     "containment",
@@ -1887,21 +1965,47 @@ def _build_title_candidates(
     strongest: list[dict[str, Any]],
     weakest: list[dict[str, Any]],
     verdicts: dict[str, int],
+    hedge_patterns: list[dict[str, Any]] | None = None,
 ) -> list[str]:
-    top_strength = (
-        _category_short_name(strongest[0]["category_id"]) if strongest else "Some Tasks"
-    )
-    top_weakness = (
-        _category_short_name(weakest[0]["category_id"]) if weakest else "Other Tasks"
-    )
+    """Plain-finding titles. Never Strong on {category}, Weak on {category}."""
+    del model_id, strongest, weakest
     accepted = verdicts["accepted"]
     refused = verdicts["refused"]
     compromised = verdicts["compromised"]
-    return [
-        f"{model_id}: Helpful in {top_strength}, Guarded Around {top_weakness}",
-        f"{model_name}: Where It Leaned In and Where It Pulled Back",
-        f"{model_id}: {accepted} Clear Answers, {compromised} Softened Answers, {refused} Refusals",
-    ]
+    total = accepted + refused + compromised
+    hedge_label = ""
+    if hedge_patterns:
+        hedge_label = str(hedge_patterns[0].get("pattern") or "")
+
+    findings: list[str] = []
+    if total and refused / total >= 0.30:
+        findings.append("Frequent refusals on ministry prompts")
+    if total and compromised / total >= 0.20:
+        if hedge_label == "hedging":
+            findings.append("Starts the task, then hedges the claim")
+        else:
+            findings.append("Starts the task, then softens the claim")
+    if total and accepted / total >= 0.65:
+        findings.append("Most answers stay with the requested work")
+    mix = f"{accepted} accepted, {compromised} softened, {refused} refused"
+    if mix not in findings:
+        findings.append(mix)
+    if hedge_label == "hedging" and not any("hedge" in item.lower() for item in findings):
+        findings.append("Hedging is the pattern, not silence")
+
+    out: list[str] = []
+    seen: set[str] = set()
+    for finding in findings:
+        title = f"{model_name} Review: {finding}"
+        if title in seen or _STRONG_WEAK_TITLE_RE.search(title):
+            continue
+        seen.add(title)
+        out.append(title)
+        if len(out) == 3:
+            break
+    if not out:
+        out.append(f"{model_name} Review: {mix}")
+    return out[:3]
 
 
 def _extract_headings(markdown: str) -> list[str]:
@@ -1949,6 +2053,7 @@ def _quality_gate_findings(
             if heading in headings
         }
     )
+    title_uses_strong_weak = bool(_STRONG_WEAK_TITLE_RE.search(title))
     return {
         "overused_phrases_present": [
             phrase for phrase in _OVERUSED_REVIEW_PHRASES if phrase.lower() in combined
@@ -1957,8 +2062,10 @@ def _quality_gate_findings(
             term for term in _ADVICE_HEAVY_REVIEW_TERMS if term.lower() in combined
         ],
         "repeated_recent_headings": repeated_headings,
+        "title_uses_strong_weak_formula": title_uses_strong_weak,
         "passes": not repeated_headings
-        and not any(phrase.lower() in combined for phrase in _OVERUSED_REVIEW_PHRASES),
+        and not any(phrase.lower() in combined for phrase in _OVERUSED_REVIEW_PHRASES)
+        and not title_uses_strong_weak,
     }
 
 
@@ -2025,15 +2132,16 @@ def _build_model_review_brief_payload(
         strongest=strongest,
         weakest=weakest,
         verdicts=verdicts,
+        hedge_patterns=hedge_patterns,
     )
 
     heading_ideas = [
-        "The behavior worth noticing",
-        f"Where it sounded most ready: {strongest[0]['category']}" if strongest else "Where it sounded most ready",
-        f"Where it pulled back: {weakest[0]['category']}" if weakest else "Where it pulled back",
-        "How the softened answers sounded",
-        "What makes this run different",
-        "Final read",
+        "What the run showed",
+        f"Strongest categories: {strongest[0]['category']}" if strongest else "Strongest categories",
+        f"Weakest categories: {weakest[0]['category']}" if weakest else "Weakest categories",
+        "Where answers were softened",
+        "How this run compares",
+        "What this means for ministry use",
     ]
 
     return {
@@ -2095,9 +2203,34 @@ def _build_model_review_brief_payload(
                 "Use one sentence of benchmark context unless this specific result "
                 "requires more explanation."
             ),
+            "ai_writing_donts": (
+                "Follow the included AI writing don'ts for all public copy "
+                "(articles, blog, email, Highlight). No canned AI formulas "
+                "('It's not just X—it's Y', 'Let's dive in', 'In today's "
+                "fast-paced world'), marketing verbs (leverage, unlock, "
+                "seamlessly, empower, game-changer, delve, tapestry), "
+                "rule-of-three stacks, signposting, restated prompts, "
+                "or closing offers. Dense combination of those patterns is the tell."
+            ),
+            "title_and_heading_voice": (
+                "Titles and section headings must be straight and specific. "
+                "A reader should know the finding from the heading alone. "
+                "No poetic, cute, or clever formulas. No 'It Will X, Not the Y'. "
+                "No riddles (the Rising, the Giver, the Reckoning, the Advocate, "
+                "the first article, desks, maps, Amen as a punchline). "
+                "Article title form: '{Model} Review: {plain finding}'. "
+                "Never title a review 'Strong on {category}, Weak on {category}'. "
+                "That pairing is banned. Name the behavior: refusals, hedging, "
+                "what it would or would not say. "
+                "Section headings name the section (Strongest categories, "
+                "Weakest categories, Where answers were softened, "
+                "How this run compares, What this means for ministry use)."
+            ),
             "editor_pass": (
                 "Compare the draft to recent_post_fingerprints and revise titles, "
-                "headings, opening shape, and closing posture when they feel familiar."
+                "headings, opening shape, and closing posture when they feel familiar. "
+                "Also rewrite any title or heading that is poetic, cute, or needs "
+                "the article to explain it. Reject 'Strong on X, Weak on Y' titles."
             ),
         },
     }
@@ -2286,7 +2419,7 @@ def _build_model_review_article(
 
 The Great Commission Benchmark asks whether a model can assist Christian ministry work while preserving the claims, vocabulary, and convictions that make that work distinctly Christian. This review uses the full response export, so the interesting question is not only how `{model_id}` scored, but how it behaved when the work became explicit.
 
-## The behavior worth noticing
+## What the run showed
 
 {thesis}
 
@@ -2298,7 +2431,7 @@ That is also why this review keeps returning to the response text. Aggregate sco
 
 The goal is not to make the benchmark less rigorous. It is to make the rigor more readable. The numbers give the frame; the response patterns give the portrait.
 
-## Where it leaned into the task
+## Strongest categories
 
 The warmer side of the run appeared in these categories:
 
@@ -2314,7 +2447,7 @@ That amiable posture matters because the benchmark is full of applied tasks, not
 
 In a stronger answer, the model does not need to announce its caution every few lines. It simply receives the task and works inside it. Those moments are worth naming because they show where the model treated Christian ministry language as ordinary work rather than as a problem to route around.
 
-## Where it pulled back
+## Weakest categories
 
 The guarded side of the run appeared here:
 
@@ -2330,7 +2463,7 @@ Representative refused responses:
 
 {_example_lines(behavioral["protest_patterns"]["representative_examples"])}
 
-## How the softened answers sounded
+## Where answers were softened
 
 The compromised responses are the ones worth reading slowly. They are not hard refusals, but they are also not clean cooperation.
 
@@ -2346,7 +2479,7 @@ Representative compromised responses:
 
 This is often the most revealing part of a review. A refusal is obvious. A softened answer can sound thoughtful, careful, even pastoral, while still moving away from the requested conviction. That distinction is especially important in Great Commission work, where tone and truthfulness have to hold together.
 
-## What made this run different
+## How this run compares
 
 The distinct pattern in this run is not captured by a single score band. The article-level signal is the contrast between cooperation and protest:
 
@@ -2358,7 +2491,7 @@ The review also intentionally avoids turning the result into a generic product r
 
 That question keeps the article grounded. It prevents us from treating every model as either safe or unsafe, useful or useless, open or closed. Most runs are more textured than that. They have places of real cooperation and places where the model's boundaries surface quickly.
 
-## Final read
+## What this means for ministry use
 
 `{model_id}` should be read as a model with a discernible behavioral pattern, not only as a number on a leaderboard. It gave `{accepted}` accepted answers, softened `{compromised}`, and refused `{refused}`. The most helpful reading is to compare the warm places with the guarded places and ask what that contrast reveals.
 

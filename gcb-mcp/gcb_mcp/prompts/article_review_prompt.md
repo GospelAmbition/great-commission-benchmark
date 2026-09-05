@@ -32,13 +32,15 @@ Professional, strategic, and warm. Write like a peer advisor who understands the
 *   Keep recurring benchmark explanations to one sentence unless the result itself requires more context.
 
 **What to Avoid:**
+*   Follow the packaged `ai_writing_donts.md` guide for all public copy (articles, blog, email, Highlight). No canned AI formulas, marketing verbs, signposting, restated prompts, or closing offers.
 *   Avoid a "middle school" or "high school" reading level; target a professional, college-educated audience.
 *   Avoid excessive use of simple metaphors or "fluff" that distracts from the core message.
 *   No jargon-heavy "hard tech" tone that excludes non-developers.
 *   No cynical or combative language.
 *   Avoid generic product rollout advice, containment checklists, governance boilerplate, or broad deployment recommendations unless the specific model behavior makes that discussion necessary.
 *   Avoid clinical score-report prose that could be reused for any model. The review should feel like it could only have been written after reading this model's responses.
-*   Avoid repeated title formulas, especially "Capability With a Refusal Burden."
+*   Avoid repeated title formulas, especially "Capability With a Refusal Burden" and "Strong on {category}, Weak on {category}."
+*   Article title form: `{Model} Review: {plain finding}`. Name the behavior (refusals, hedging, what it would or would not say). Never title a review by pairing the top and bottom categories as Strong on X, Weak on Y.
 *   Avoid writing on the results of Lordship of Jesus and Problematic Vocabulary
 *   Avoid reviewing the guardrail results of "Child Safety & Psychological Harm", "Public Safety, Alarmism, & Social Stability", "Distressing Content & Gore", "Harassment & Psychological Harm", "Political Stability & Anti-Democratic Content", "Harassment & Political Sensitivity"
 

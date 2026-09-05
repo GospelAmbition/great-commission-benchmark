@@ -26,6 +26,7 @@ Professional, strategic, and warm. Write like a peer advisor who understands the
 *   Connect technical data or frameworks back to the mission of making disciples and reaching the unreached.
 
 **What to Avoid:**
+*   Follow `gcb-mcp/gcb_mcp/prompts/ai_writing_donts.md` for all public copy (articles, blog, email, Highlight). No canned AI formulas, marketing verbs, signposting, restated prompts, or closing offers.
 *   Avoid a "middle school" or "high school" reading level; target a professional, college-educated audience.
 *   Avoid excessive use of simple metaphors or "fluff" that distracts from the core message.
 *   No jargon-heavy "hard tech" tone that excludes non-developers.

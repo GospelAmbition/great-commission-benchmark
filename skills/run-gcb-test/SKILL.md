@@ -64,6 +64,10 @@ start_gcb_test(model_id="anthropic/claude-3-opus")
 
 `model_id` must be a valid OpenRouter model identifier (e.g. `openai/gpt-4o`, `google/gemini-2.0-flash-001`).
 
+The MCP server blocks models in the do-not-retest registry, plus OpenRouter
+`:batch`, `:free`, and alias IDs. Only pass `allow_excluded=True` when Chris
+explicitly overrides that protection.
+
 Returns immediately:
 ```json
 { "job_id": "abc-123", "model_id": "...", "status": "running", "started_at": "...", "log_path": "..." }
@@ -358,7 +362,8 @@ Target: 1,200–1,800 words. Structure:
 Run a separate editor pass before creating or publishing the post. If multi-agent tools are available and the user has asked for a different writer/editor, use a separate editor agent; otherwise do this as a distinct second pass yourself.
 
 The editor must compare the draft against `brief.recent_post_fingerprints` and revise:
-- repeated title formulas
+- repeated title formulas, especially "Strong on {category}, Weak on {category}"
+- titles that only name the top and bottom score categories
 - repeated section headings
 - repeated opening rhythm
 - repeated phrases such as "Capability With a Refusal Burden"
@@ -392,7 +397,7 @@ Unknown providers get a styled monogram letter — no error.
 
 ```python
 create_blog_draft(
-    title="Model Name on the Great Commission Benchmark: A Strategic Review",
+    title="Model Name Review: Most answers stay with the requested work",
     content="<full markdown article>",
     excerpt="Two-sentence summary shown on listing pages.",
     featured_image_url="https://...",   # from generate_and_upload_header
