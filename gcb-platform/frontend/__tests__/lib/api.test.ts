@@ -73,6 +73,22 @@ describe('ApiClient', () => {
     });
   });
 
+  describe('getRecentTests', () => {
+    it('requests the requested number of recent tests', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ items: [], total: 0, current_version: '2.0' }),
+      });
+
+      await apiClient.getRecentTests(5);
+
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:8001/api/public/recent-tests?limit=5',
+        expect.objectContaining({ method: 'GET' })
+      );
+    });
+  });
+
   describe('compareModels', () => {
     it('makes POST request with model IDs', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({

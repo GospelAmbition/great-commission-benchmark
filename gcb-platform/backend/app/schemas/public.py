@@ -71,6 +71,29 @@ class LeaderboardResponse(GCBBaseModel):
     pagination: PaginationResponse
 
 
+class RecentTestArticle(GCBBaseModel):
+    """Most recent published article associated with a tested model."""
+    id: UUID
+    title: str
+    slug: str
+
+
+class RecentTestItem(GCBBaseModel):
+    """One model's latest completed test in the current benchmark."""
+    rank: int
+    model: ModelSummary
+    test_run: TestRunSummary
+    score: float
+    article: Optional[RecentTestArticle] = None
+
+
+class RecentTestsResponse(GCBBaseModel):
+    """Models ordered by the completion time of their latest valid test."""
+    items: List[RecentTestItem]
+    total: int
+    current_version: str
+
+
 class ModelListItem(GCBBaseModel):
     """Model list item"""
     id: UUID

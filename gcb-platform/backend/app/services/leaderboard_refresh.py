@@ -13,7 +13,7 @@ from app.db.models.test_run import TestRun
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_REVALIDATE_PATHS = ["/", "/leaderboard", "/categories"]
+DEFAULT_REVALIDATE_PATHS = ["/", "/leaderboard", "/recent-tests", "/categories"]
 
 
 async def refresh_leaderboard_after_test_publish(

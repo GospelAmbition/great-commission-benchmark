@@ -12,6 +12,7 @@ from app.core.cache import cache
 DERIVED_NAMESPACES = (
     "runner_models",
     "leaderboard",
+    "recent_tests",
     "category_rankings",
     "filter_options",
     "public_stats",

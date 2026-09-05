@@ -15,6 +15,7 @@ const staticPages: {
 }[] = [
   { path: "", priority: 1.0, changeFrequency: "daily" },
   { path: "/leaderboard", priority: 0.9, changeFrequency: "daily" },
+  { path: "/recent-tests", priority: 0.9, changeFrequency: "daily" },
   { path: "/leaderboard/compare", priority: 0.8, changeFrequency: "daily" },
   { path: "/about", priority: 0.8, changeFrequency: "weekly" },
   { path: "/categories", priority: 0.8, changeFrequency: "weekly" },

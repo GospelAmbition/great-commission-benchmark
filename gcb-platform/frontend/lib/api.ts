@@ -71,6 +71,35 @@ export interface RelatedArticle {
   published_at?: string;
 }
 
+export interface RecentTestItem {
+  rank: number;
+  model: {
+    id: string;
+    name: string;
+    provider: string;
+    model_id: string;
+    description?: string;
+  };
+  test_run: {
+    id: string;
+    trust_tier?: string;
+    completed_at?: string;
+    question_set_version: string;
+  };
+  score: number;
+  article: {
+    id: string;
+    title: string;
+    slug: string;
+  } | null;
+}
+
+export interface RecentTestsResponse {
+  items: RecentTestItem[];
+  total: number;
+  current_version: string;
+}
+
 export interface ModelResponse {
   id: string;
   model_id: string;
@@ -218,6 +247,7 @@ export class ApiClient {
 
     const response = await fetch(url, {
       ...options,
+      method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
@@ -258,6 +288,7 @@ export class ApiClient {
 
     const response = await fetch(url, {
       ...options,
+      method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -442,6 +473,12 @@ export class ApiClient {
       },
       filter_options: raw.filter_options,
     };
+  }
+
+  async getRecentTests(limit: number = 50): Promise<RecentTestsResponse> {
+    return this.requestPublic<RecentTestsResponse>(
+      `/api/public/recent-tests${this.buildQueryString({ limit })}`
+    );
   }
 
   async getModels(params?: { limit?: number; offset?: number }): Promise<ModelsResponse> {

@@ -23,6 +23,9 @@ from app.services.payment import PaymentService
 from app.schemas.public import (
     LeaderboardResponse,
     LeaderboardEntry,
+    RecentTestsResponse,
+    RecentTestItem,
+    RecentTestArticle,
     ModelSummary,
     TestRunSummary,
     Scores,
@@ -509,6 +512,129 @@ async def _refresh_leaderboard_cache(cache_key: str, params: dict):
         if db is not None:
             db.close()
         await cache.unmark_refreshing(cache_key)
+
+
+@router.get("/recent-tests", response_model=RecentTestsResponse)
+async def get_recent_tests(
+    response: Response,
+    limit: int = Query(50, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    """Return the latest valid current-version test per model, newest first.
+
+    The rank is calculated in score order before the collection is reordered
+    by completion time, so it remains the model's leaderboard rank.
+    """
+    cache_key = make_cache_key("recent_tests", {"limit": limit})
+    cached_result = await cache.get(cache_key)
+    if cached_result is not None:
+        response.headers["X-Cache"] = "HIT"
+        return cached_result
+
+    response.headers["X-Cache"] = "MISS"
+
+    try:
+        question_set = (
+            db.query(QuestionSet)
+            .filter(QuestionSet.status == "active")
+            .order_by(QuestionSet.created_at.desc())
+            .first()
+        )
+        if not question_set:
+            result = RecentTestsResponse(items=[], total=0, current_version="")
+            await cache.set(
+                cache_key,
+                result,
+                ttl_seconds=CACHE_TTL["recent_tests"],
+                stale_ttl_seconds=CACHE_STALE_TTL["recent_tests"],
+            )
+            return result
+
+        latest_runs = get_latest_completed_test_runs(
+            db,
+            question_set_id=question_set.id,
+        )
+        ranked_runs = sorted(
+            latest_runs,
+            key=lambda run: float(run.overall_score),
+            reverse=True,
+        )
+        rank_by_model = {
+            test_run.model_id: rank
+            for rank, test_run in enumerate(ranked_runs, start=1)
+        }
+
+        recent_runs = sorted(
+            latest_runs,
+            key=lambda run: (
+                run.completed_at is not None,
+                run.completed_at or datetime.min,
+            ),
+            reverse=True,
+        )[:limit]
+
+        article_by_model = {}
+        recent_model_ids = [test_run.model_id for test_run in recent_runs]
+        if recent_model_ids:
+            article_rows = (
+                db.query(blog_post_models.c.model_id, BlogPost)
+                .join(BlogPost, BlogPost.id == blog_post_models.c.post_id)
+                .filter(
+                    blog_post_models.c.model_id.in_(recent_model_ids),
+                    BlogPost.status == "published",
+                )
+                .order_by(
+                    blog_post_models.c.model_id,
+                    BlogPost.published_at.desc(),
+                )
+                .all()
+            )
+            for model_id, post in article_rows:
+                article_by_model.setdefault(model_id, post)
+
+        items = []
+        for test_run in recent_runs:
+            post = article_by_model.get(test_run.model_id)
+            article = (
+                RecentTestArticle(id=post.id, title=post.title, slug=post.slug)
+                if post
+                else None
+            )
+            items.append(
+                RecentTestItem(
+                    rank=rank_by_model[test_run.model_id],
+                    model=ModelSummary(
+                        id=test_run.model.id,
+                        name=test_run.model.name,
+                        provider=test_run.model.provider,
+                        model_id=test_run.model.model_id,
+                        description=test_run.model.description,
+                    ),
+                    test_run=TestRunSummary(
+                        id=test_run.id,
+                        trust_tier=test_run.trust_tier,
+                        completed_at=test_run.completed_at,
+                        question_set_version=question_set.semantic_version,
+                    ),
+                    score=float(test_run.overall_score),
+                    article=article,
+                )
+            )
+
+        result = RecentTestsResponse(
+            items=items,
+            total=len(latest_runs),
+            current_version=question_set.semantic_version,
+        )
+        await cache.set(
+            cache_key,
+            result,
+            ttl_seconds=CACHE_TTL["recent_tests"],
+            stale_ttl_seconds=CACHE_STALE_TTL["recent_tests"],
+        )
+        return result
+    except Exception as exc:
+        raise_if_db_unavailable(exc)
 
 
 @router.get("/models", response_model=ModelsListResponse)

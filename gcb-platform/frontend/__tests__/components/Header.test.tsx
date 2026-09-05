@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { Header } from '@/components/layout/Header';
 
 // Mock NextAuth
@@ -11,6 +11,22 @@ jest.mock('next-auth/react', () => ({
     status: 'unauthenticated',
   }),
   signOut: jest.fn(),
+}));
+
+jest.mock('next/navigation', () => ({
+  usePathname: () => '/',
+  useRouter: () => ({ push: jest.fn() }),
+}));
+
+jest.mock('@/lib/useUserProfile', () => ({
+  useUserProfile: () => ({
+    isAdmin: false,
+    isModerator: false,
+    canViewBenchmark: false,
+    canModerate: false,
+    canManageBlog: false,
+    canAdmin: false,
+  }),
 }));
 
 describe('Header Component', () => {
@@ -24,6 +40,7 @@ describe('Header Component', () => {
     render(<Header />);
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Leaderboard')).toBeInTheDocument();
+    expect(screen.getByText('Recent Tests')).toBeInTheDocument();
     expect(screen.getByText('Insights')).toBeInTheDocument();
     expect(screen.getByText('About')).toBeInTheDocument();
   });
@@ -32,5 +49,12 @@ describe('Header Component', () => {
     render(<Header />);
     const loginButton = screen.getByRole('link', { name: /login/i });
     expect(loginButton).toBeInTheDocument();
+  });
+
+  it('includes Recent Tests in the mobile navigation', () => {
+    render(<Header />);
+    fireEvent.click(screen.getByRole('button', { name: /open navigation menu/i }));
+
+    expect(screen.getByRole('link', { name: 'Recent Tests' })).toHaveClass('text-base');
   });
 });

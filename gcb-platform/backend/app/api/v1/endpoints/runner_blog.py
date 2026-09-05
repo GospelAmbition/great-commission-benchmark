@@ -33,6 +33,13 @@ from app.services.action_log import ActionLogService
 router = APIRouter()
 
 
+async def _invalidate_recent_tests_cache() -> None:
+    """Refresh model/article links exposed by the Recent Tests collection."""
+    from app.services.published_cache import invalidate_namespaces
+
+    await invalidate_namespaces("recent_tests")
+
+
 class BlogAPIKeyAuth:
     """Dependency for API key authentication that requires can_manage_blog permission"""
     
@@ -261,6 +268,7 @@ async def create_post(
     db.add(post)
     db.commit()
     db.refresh(post)
+    await _invalidate_recent_tests_cache()
 
     ActionLogService.log_action(
         db, "blog_post.create", "api_key",
@@ -357,6 +365,7 @@ async def update_post(
     
     db.commit()
     db.refresh(post)
+    await _invalidate_recent_tests_cache()
 
     ActionLogService.log_action(
         db, "blog_post.update", "api_key",
@@ -388,6 +397,7 @@ async def delete_post(
     post_slug, post_title = post.slug, post.title
     db.delete(post)
     db.commit()
+    await _invalidate_recent_tests_cache()
 
     ActionLogService.log_action(
         db, "blog_post.delete", "api_key",
@@ -429,6 +439,7 @@ async def publish_post(
     
     db.commit()
     db.refresh(post)
+    await _invalidate_recent_tests_cache()
 
     ActionLogService.log_action(
         db, "blog_post.publish", "api_key",
@@ -469,6 +480,7 @@ async def unpublish_post(
     
     db.commit()
     db.refresh(post)
+    await _invalidate_recent_tests_cache()
 
     ActionLogService.log_action(
         db, "blog_post.unpublish", "api_key",

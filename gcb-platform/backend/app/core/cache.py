@@ -364,6 +364,7 @@ cache = _make_cache()
 # This ensures users always get instant responses while data is refreshed in background
 CACHE_TTL = {
     "leaderboard": 86400,        # 24 hours fresh, then serve stale while refreshing
+    "recent_tests": 86400,       # 24 hours; invalidated when tests/articles change
     "category_rankings": 86400,  # 24 hours
     "model_details": 86400,      # 24 hours
     "public_stats": 86400,       # 24 hours
@@ -378,6 +379,7 @@ CACHE_TTL = {
 # This ensures that even if a refresh fails, users still get data
 CACHE_STALE_TTL = {
     "leaderboard": 2592000,       # 30 days - serve stale rather than wait
+    "recent_tests": 2592000,      # 30 days
     "category_rankings": 2592000, # 30 days
     "model_details": 2592000,     # 30 days
     "public_stats": 2592000,      # 30 days

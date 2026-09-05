@@ -12,22 +12,33 @@ jest.mock('next-auth/react', () => ({
   }),
 }));
 
+jest.mock('@/lib/api', () => ({
+  apiClient: {
+    getLeaderboard: jest.fn(() => new Promise(() => {})),
+    getStats: jest.fn(() => new Promise(() => {})),
+    getRecentTests: jest.fn(() => new Promise(() => {})),
+  },
+}));
+
+jest.mock('@/components/home/GuardrailsAnimation', () => ({
+  GuardrailsAnimation: () => null,
+}));
+
 describe('Home Page', () => {
   it('renders the main heading', () => {
     render(<Home />);
     const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toHaveTextContent('Great Commission Benchmark');
+    expect(heading).toHaveTextContent(/Evaluating AI for the\s*Great Commission/);
   });
 
   it('renders the description', () => {
     render(<Home />);
-    const description = screen.getByText(/Evaluating LLMs on their ability to support Great Commission Christians/);
+    const description = screen.getByText(/We measure which AI models meaningfully support gospel outreach/);
     expect(description).toBeInTheDocument();
   });
 
-  it('shows login button when user is not authenticated', () => {
+  it('links to the full recent tests page', () => {
     render(<Home />);
-    const loginButton = screen.getByRole('link', { name: /login/i });
-    expect(loginButton).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /view all recent tests/i })).toHaveAttribute('href', '/recent-tests');
   });
 });

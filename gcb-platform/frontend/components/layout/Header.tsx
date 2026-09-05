@@ -14,14 +14,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MenuIcon, SearchIcon } from "@/lib/icons";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useUserProfile } from "@/lib/useUserProfile";
 import { SearchModal } from "./SearchModal";
 import { prefetchLeaderboardPage } from "../../lib/leaderboard-prefetch";
 
 export function Header() {
   const { data: session, status } = useSession();
-  const { isAdmin, isModerator, isBlogManager, isBenchmarkDeveloper, canViewBenchmark, canModerate, canManageBlog, canAdmin } = useUserProfile();
+  const { isAdmin, isModerator, canViewBenchmark, canModerate, canManageBlog, canAdmin } = useUserProfile();
   const pathname = usePathname();
   const user = session?.user;
   const isLoading = status === "loading";
@@ -84,6 +84,16 @@ export function Header() {
             }`}
           >
             Leaderboard
+          </Link>
+          <Link
+            href="/recent-tests"
+            className={`px-3 py-2 rounded-md transition-all ${
+              isActive("/recent-tests")
+                ? "text-primary bg-primary/10 font-semibold"
+                : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+            }`}
+          >
+            Recent Tests
           </Link>
           <Link
             href="/categories"
@@ -192,7 +202,7 @@ export function Header() {
             </>
           ) : (
             <Button asChild variant="glow" size="sm">
-              <a href="/api/auth/signin">Login</a>
+              <Link href="/api/auth/signin">Login</Link>
             </Button>
           )}
 
@@ -205,6 +215,8 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" aria-label="Mobile navigation" className="border-l border-white/10 bg-card">
+              <SheetTitle className="sr-only">Main navigation</SheetTitle>
+              <SheetDescription className="sr-only">Browse Great Commission Benchmark pages.</SheetDescription>
               <nav className="flex flex-col space-y-2 mt-8" aria-label="Mobile navigation">
                 <Link
                   href="/"
@@ -227,6 +239,16 @@ export function Header() {
                   }`}
                 >
                   Leaderboard
+                </Link>
+                <Link
+                  href="/recent-tests"
+                  className={`text-base font-medium transition-all px-4 py-2.5 rounded-lg ${
+                    isActive("/recent-tests")
+                      ? "text-primary bg-primary/10 border-l-2 border-primary"
+                      : "text-foreground hover:bg-white/5"
+                  }`}
+                >
+                  Recent Tests
                 </Link>
                 <Link
                   href="/categories"

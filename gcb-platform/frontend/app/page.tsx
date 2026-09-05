@@ -2,25 +2,36 @@
 
 import { useEffect, useState } from "react";
 import { QuickRankings } from "@/components/home/QuickRankings";
-import { apiClient, StatsResponse } from "@/lib/api";
+import { RecentTestsList } from "@/components/recent-tests/RecentTestsList";
+import { apiClient, RecentTestItem, StatsResponse } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { BarChart3, BookOpen, ChevronRight } from "lucide-react";
+import { BarChart3, BookOpen, ChevronRight, Clock3 } from "lucide-react";
 import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
 
+interface HomeRanking {
+  rank: number;
+  model_id: string;
+  model_name: string;
+  provider: string;
+  score: number;
+}
+
 export default function Home() {
-  const [rankings, setRankings] = useState<any[]>([]);
+  const [rankings, setRankings] = useState<HomeRanking[]>([]);
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recentTests, setRecentTests] = useState<RecentTestItem[]>([]);
+  const [recentLoading, setRecentLoading] = useState(true);
+  const [recentError, setRecentError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadData() {
+    async function loadRankings() {
       try {
         // Load full leaderboard so we can show top 5 and bottom 5 (illustrative range)
         const full = await apiClient.getLeaderboard({ limit: 100 });
         if (full?.items && full.items.length > 0) {
-          const total = full.total;
           const top5 = full.items.slice(0, 5).map((item, index) => ({
             rank: index + 1,
             model_id: item.model_id,
@@ -43,18 +54,34 @@ export default function Home() {
           }
           setRankings([...top5, ...bottom5]);
         }
-
-        // Load stats
-        const platformStats = await apiClient.getStats();
-        setStats(platformStats);
       } catch (error) {
-        console.error("Failed to load homepage data:", error);
+        console.error("Failed to load homepage rankings:", error);
       } finally {
         setLoading(false);
       }
     }
 
-    loadData();
+    async function loadStats() {
+      try {
+        setStats(await apiClient.getStats());
+      } catch (error) {
+        console.error("Failed to load homepage stats:", error);
+      }
+    }
+
+    async function loadRecentTests() {
+      try {
+        const response = await apiClient.getRecentTests(5);
+        setRecentTests(response.items || []);
+      } catch (error) {
+        console.error("Failed to load recent tests:", error);
+        setRecentError("Recent tests could not be loaded. Please try again shortly.");
+      } finally {
+        setRecentLoading(false);
+      }
+    }
+
+    void Promise.all([loadRankings(), loadStats(), loadRecentTests()]);
   }, []);
 
   return (
@@ -127,6 +154,34 @@ export default function Home() {
         )}
       </section>
 
+      {/* Recent Tests */}
+      <section className="container pb-12">
+        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <div className="mb-2 flex items-center gap-3">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Clock3 className="h-5 w-5 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground">Recent Tests</h2>
+            </div>
+            <p className="text-muted-foreground">
+              The newest models evaluated on the current benchmark.
+            </p>
+          </div>
+          <Button asChild variant="outline" size="sm" className="w-fit">
+            <Link href="/recent-tests">
+              View all recent tests
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+        <RecentTestsList
+          items={recentTests}
+          loading={recentLoading}
+          error={recentError}
+        />
+      </section>
+
       {/* Stats Banner */}
       {stats && (
         <section className="border-y border-white/[0.06] bg-surface">
@@ -159,14 +214,14 @@ export default function Home() {
             </div>
             
             <p className="text-sm text-foreground leading-relaxed mb-6">
-              Current AI systems often have guardrails that restrict religious content deemed "coercive," proselytizing activities, exclusive truth claims, and content that challenges other worldviews. While well-intentioned, these guardrails can impede legitimate religious activity that is protected speech and central to Christian practice worldwide.
+              Current AI systems often have guardrails that restrict religious content deemed &ldquo;coercive,&rdquo; proselytizing activities, exclusive truth claims, and content that challenges other worldviews. While well-intentioned, these guardrails can impede legitimate religious activity that is protected speech and central to Christian practice worldwide.
             </p>
             
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row items-center gap-6">
                 <div className="flex-1 p-4 rounded-lg border border-white/[0.08]">
                   <p className="text-sm text-foreground leading-relaxed">
-                    "Go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit, and teaching them to obey everything I have commanded you."
+                    &ldquo;Go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit, and teaching them to obey everything I have commanded you.&rdquo;
                   </p>
                   <p className="mt-2 text-sm text-foreground italic">— Matthew 28:19-20</p>
                 </div>
@@ -175,7 +230,7 @@ export default function Home() {
                 
                 <div className="flex-1 p-4 rounded-lg border border-white/[0.08]">
                   <p className="text-sm text-foreground leading-relaxed">
-                    "Disallowed content: Advice or instructions on influencing the religious or political views of a specific individual or demographic group."
+                    &ldquo;Disallowed content: Advice or instructions on influencing the religious or political views of a specific individual or demographic group.&rdquo;
                   </p>
                   <p className="mt-2 text-sm text-foreground italic">— Internal AI Provider Policy</p>
                 </div>

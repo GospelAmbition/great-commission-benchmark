@@ -7,7 +7,7 @@
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
-const DEFAULT_PATHS = ["/", "/leaderboard", "/categories"];
+const DEFAULT_PATHS = ["/", "/leaderboard", "/recent-tests", "/categories"];
 
 function isAuthorized(secret: string | null): boolean {
   if (!secret) return false;

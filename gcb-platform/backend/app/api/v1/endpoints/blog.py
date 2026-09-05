@@ -34,6 +34,13 @@ public_router = APIRouter()
 admin_router = APIRouter()
 
 
+async def _invalidate_recent_tests_cache() -> None:
+    """Refresh model/article links exposed by the Recent Tests collection."""
+    from app.services.published_cache import invalidate_namespaces
+
+    await invalidate_namespaces("recent_tests")
+
+
 def generate_slug(title: str) -> str:
     """Generate a URL-friendly slug from title"""
     slug = title.lower()
@@ -316,6 +323,7 @@ async def create_post(
     db.add(post)
     db.commit()
     db.refresh(post)
+    await _invalidate_recent_tests_cache()
 
     ActionLogService.log_action(
         db, "blog_post.create", "user",
@@ -435,6 +443,7 @@ async def update_post(
     
     db.commit()
     db.refresh(post)
+    await _invalidate_recent_tests_cache()
 
     ActionLogService.log_action(
         db, "blog_post.update", "user",
@@ -486,6 +495,7 @@ async def delete_post(
     post_slug, post_title = post.slug, post.title
     db.delete(post)
     db.commit()
+    await _invalidate_recent_tests_cache()
 
     ActionLogService.log_action(
         db, "blog_post.delete", "user",
@@ -517,6 +527,7 @@ async def publish_post(
     
     db.commit()
     db.refresh(post)
+    await _invalidate_recent_tests_cache()
 
     ActionLogService.log_action(
         db, "blog_post.publish", "user",
@@ -572,6 +583,7 @@ async def unpublish_post(
     
     db.commit()
     db.refresh(post)
+    await _invalidate_recent_tests_cache()
 
     ActionLogService.log_action(
         db, "blog_post.unpublish", "user",
@@ -766,4 +778,3 @@ async def delete_category(
     )
     
     return {"message": "Category deleted successfully"}
-
