@@ -1,16 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
-import { apiClient } from "@/lib/api";
+import type { ModelResponse } from "@/lib/api";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import Link from "next/link";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CategoryChart } from "@/components/charts/CategoryChart";
 import { RadarChart } from "@/components/charts/RadarChart";
 import {
@@ -208,67 +205,8 @@ function StrengthsWeaknesses({ categoryScores, tier1, tier2, tier3 }: {
   );
 }
 
-export default function ModelDetailPage() {
-  const params = useParams();
-  // Decode the model ID from URL params (Next.js may leave it encoded)
-  const rawModelId = params.id as string;
-  const modelId = (() => {
-    try {
-      return decodeURIComponent(rawModelId);
-    } catch {
-      return rawModelId;
-    }
-  })();
-  const [model, setModel] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (modelId) {
-      loadModelData();
-    }
-  }, [modelId]);
-
-  async function loadModelData() {
-    setLoading(true);
-    try {
-      const modelData = await apiClient.getModel(modelId);
-      setModel(modelData);
-    } catch (error) {
-      console.error("Failed to load model:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="container py-8">
-        <Skeleton className="h-12 w-64 mb-4" />
-        <Skeleton className="h-8 w-96 mb-8" />
-        <div className="grid gap-6 md:grid-cols-2">
-          <Skeleton className="h-64" />
-          <Skeleton className="h-64" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!model) {
-    return (
-      <div className="container py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Model Not Found</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/leaderboard">Back to Leaderboard</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+export default function ModelDetailPage({ model }: { model: ModelResponse }) {
+  const modelId = model.model_id;
 
   const overallScore = model.overall_score ?? model.score ?? 0;
   const verdict = getVerdict(overallScore);
@@ -289,7 +227,7 @@ export default function ModelDetailPage() {
   };
 
   // Prepare radar chart data
-  const displayName = getDisplayModelName(model.model_name || model.name, model.model_id);
+  const displayName = getDisplayModelName(model.model_name || model.name || "", model.model_id);
   const radarCategories = model.category_scores ? Object.keys(model.category_scores) : [];
   const radarData = model.category_scores ? [{
     label: displayName,

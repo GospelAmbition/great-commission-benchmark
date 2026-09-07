@@ -101,6 +101,13 @@ export interface RecentTestsResponse {
 }
 
 export interface ModelResponse {
+  is_active?: boolean;
+  related_models?: Array<{
+    model_id: string;
+    name: string;
+    provider: string;
+    relationship: "family" | "provider" | "other";
+  }>;
   id: string;
   model_id: string;
   model_name?: string;

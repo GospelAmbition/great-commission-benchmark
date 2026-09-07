@@ -32,7 +32,7 @@ const staticPages: {
   { path: "/tester-agreement", priority: 0.3, changeFrequency: "yearly" },
 ];
 
-const LEADERBOARD_PAGE_SIZE = 100; // Backend max for /api/public/leaderboard
+const MODEL_PAGE_SIZE = 100;
 const BLOG_PAGE_SIZE = 50; // Backend max for /api/blog/posts
 
 // Fetch models from API for dynamic routes (paginated to include all models)
@@ -45,14 +45,14 @@ async function fetchModels(): Promise<
   try {
     for (;;) {
       const response = await fetch(
-        `${API_URL}/api/public/leaderboard?limit=${LEADERBOARD_PAGE_SIZE}&offset=${offset}`,
+        `${API_URL}/api/public/model-pages?limit=${MODEL_PAGE_SIZE}&offset=${offset}`,
         cacheOpt
       );
       if (!response.ok) break;
       const data = await response.json();
-      const entries = data.entries || [];
+      const entries = data.items || [];
       for (const entry of entries) {
-        const modelId = entry.model?.model_id;
+        const modelId = entry.model_id;
         if (modelId) {
           all.push({
             model_id: modelId,
@@ -60,9 +60,9 @@ async function fetchModels(): Promise<
           });
         }
       }
-      const hasMore = data.pagination?.has_more === true;
+      const hasMore = data.has_more === true;
       if (!hasMore || entries.length === 0) break;
-      offset += LEADERBOARD_PAGE_SIZE;
+      offset += MODEL_PAGE_SIZE;
     }
     return all;
   } catch {

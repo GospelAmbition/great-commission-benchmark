@@ -806,15 +806,73 @@ async def list_available_models(
     }
 
 
+@router.get("/model-pages")
+async def list_model_pages(
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    """Public model URLs, including archived pages, for sitemap discovery."""
+    has_valid_test = db.query(TestRun.id).filter(
+        TestRun.model_id == Model.id,
+        TestRun.status == "completed",
+        TestRun.overall_score.isnot(None),
+        or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
+    ).exists()
+    models = db.query(Model).filter(
+        or_(Model.is_active == False, has_valid_test),
+    ).order_by(Model.model_id).offset(offset).limit(limit + 1).all()
+    return {
+        "items": [{"model_id": model.model_id} for model in models[:limit]],
+        "has_more": len(models) > limit,
+    }
+
+
+def _archived_model_detail(db: Session, model: Model) -> dict:
+    # Only recommend active models whose detail pages have published results.
+    candidates = db.query(Model).filter(
+        Model.is_active == True,
+        Model.id != model.id,
+        db.query(TestRun.id).filter(
+            TestRun.model_id == Model.id,
+            TestRun.status == "completed",
+            TestRun.overall_score.isnot(None),
+            or_(TestRun.total_questions.is_(None), TestRun.total_questions > 0),
+        ).exists(),
+    ).order_by(Model.name).all()
+    family = model.model_id.split("/", 1)[-1].split("-", 1)[0].lower()
+    namespace = model.model_id.split("/", 1)[0]
+    def relevance(candidate):
+        same_provider = candidate.model_id.split("/", 1)[0] == namespace
+        same_family = candidate.model_id.split("/", 1)[-1].split("-", 1)[0].lower() == family
+        return (0 if same_provider and same_family else 1 if same_provider else 2, candidate.name)
+    candidates.sort(key=relevance)
+    return {
+        "id": str(model.id), "model_id": model.model_id,
+        "model_name": model.name, "name": model.name,
+        "provider": model.provider, "description": model.description,
+        "is_active": False,
+        "related_models": [
+            {"model_id": candidate.model_id, "name": candidate.name,
+             "provider": candidate.provider,
+             "relationship": ("family", "provider", "other")[relevance(candidate)[0]]}
+            for candidate in candidates[:6]
+        ],
+        "related_articles": _get_related_articles(db, model),
+    }
+
+
 @router.get("/models/by-id")
 async def get_model_by_model_id(
     model_id: str = Query(..., description="Model identifier string (e.g., 'qwen/qwen3-coder-30b')"),
     db: Session = Depends(get_db)
 ):
-    """Get detailed model information by model_id string. Returns 404 if model has no valid completed test."""
+    """Get published results or an archive page by OpenRouter model ID."""
     model = db.query(Model).filter(Model.model_id == model_id).first()
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
+    if not model.is_active:
+        return _archived_model_detail(db, model)
     
     # Use shared helper to get model detail data
     data = await get_model_snapshot(db, model)
@@ -839,6 +897,7 @@ async def get_model_by_model_id(
         "id": str(model.id),
         "model_id": model.model_id,
         "model_name": model.name,
+        "is_active": True,
         "name": model.name,
         "provider": model.provider,
         "description": model.description,
@@ -872,10 +931,19 @@ async def get_model_detail(
     model_id: UUID,
     db: Session = Depends(get_db)
 ):
-    """Get detailed model information by UUID. Returns 404 if model has no valid completed test."""
+    """Get published results or archive information by UUID."""
     model = db.query(Model).filter(Model.id == model_id).first()
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
+    if not model.is_active:
+        archived = _archived_model_detail(db, model)
+        return {
+            "model": archived, "is_active": False,
+            "best_result": None, "test_history": [], "category_breakdown": {},
+            "leaderboard_rank": None, "total_models_tested": 0,
+            "related_models": archived["related_models"],
+            "related_articles": archived["related_articles"],
+        }
     
     # Use shared helper to get model detail data
     data = await get_model_snapshot(db, model)

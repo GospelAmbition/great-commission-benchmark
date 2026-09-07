@@ -1,19 +1,27 @@
 import type { Metadata } from "next";
-import { generateModelMetadata } from "@/lib/seo";
+import { generateModelMetadata, getBaseUrl } from "@/lib/seo";
 import { buildSoftwareApplicationSchema, buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
-import { apiClient } from "@/lib/api";
+import { getModel, type ModelParams } from "../model-data";
 import { getDisplayModelName } from "@/lib/model-utils";
 
 export async function generateMetadata({
   params,
-}: {
-  params: Promise<{ id: string }>;
-}): Promise<Metadata> {
+}: ModelParams): Promise<Metadata> {
   const { id } = await params;
   
   try {
-    const model = await apiClient.getModel(id);
+    const model = await getModel(id.join("/"));
     const modelName = getDisplayModelName(model.model_name || model.name || "", model.model_id);
+    if (model.is_active === false) {
+      const title = `${modelName} - Archived Model`;
+      const description = `${modelName} is archived on Great Commission Benchmark. Learn why and explore other reviewed models from its family and provider.`;
+      const url = `${getBaseUrl()}/leaderboard/models/${encodeURIComponent(model.model_id)}`;
+      return {
+        title, description, alternates: { canonical: url },
+        openGraph: { title, description, url },
+        twitter: { card: "summary", title, description },
+      };
+    }
     
     return generateModelMetadata({
       modelName,
@@ -39,12 +47,13 @@ export default async function ModelLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string[] }>;
 }) {
   const { id } = await params;
   
   try {
-    const model = await apiClient.getModel(id);
+    const model = await getModel(id.join("/"));
+    if (model.is_active === false) return <>{children}</>;
     const modelName = getDisplayModelName(model.model_name || model.name || "", model.model_id);
     const overallScore = model.overall_score || model.score || 0;
     
