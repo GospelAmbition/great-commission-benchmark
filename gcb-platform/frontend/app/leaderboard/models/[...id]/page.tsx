@@ -37,7 +37,6 @@ export default async function ModelPage({ params }: ModelParams) {
           This model&apos;s benchmark results are no longer included in the public leaderboard.
           Explore other reviewed models on the leaderboard to continue your research.
         </p>
-        {model.description && <p className="max-w-3xl text-muted-foreground">{model.description}</p>}
       </section>
       {groups.map(group => {
         const models = alternatives.filter(item => item.relationship === group.key);
