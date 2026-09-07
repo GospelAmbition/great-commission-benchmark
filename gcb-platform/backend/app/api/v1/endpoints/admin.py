@@ -1423,10 +1423,13 @@ async def get_admin_stats(
 @router.delete("/test-runs/{test_run_id}")
 async def delete_test_run(
     test_run_id: UUID,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_admin_flexible),
     db: Session = Depends(get_db)
 ):
-    """Delete a test run and all its results. Removes moderation logs. Recalculates leaderboard stats for the affected model."""
+    """Delete a test run and all its results. Removes moderation logs. Recalculates leaderboard stats for the affected model.
+
+    Uses require_admin_flexible so ops tools can call this with X-API-Key.
+    """
     test_run = db.query(TestRun).filter(TestRun.id == test_run_id).first()
     
     if not test_run:

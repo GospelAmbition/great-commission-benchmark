@@ -396,6 +396,33 @@ async def bulk_submit(
             except Exception:
                 pass
         
+        # Idempotency: same model + completed_at + automated trust tier
+        # means this export was already published (finish watches re-fire).
+        existing = (
+            db.query(TestRun)
+            .filter(
+                TestRun.model_id == model.id,
+                TestRun.trust_tier == "automated",
+                TestRun.status == "completed",
+                TestRun.completed_at == completed_at,
+            )
+            .order_by(TestRun.created_at.desc())
+            .first()
+        )
+        if existing is not None:
+            return {
+                "status": "published",
+                "already_uploaded": True,
+                "test_run_id": str(existing.id),
+                "model_id": model_id_str,
+                "results_created": 0,
+                "score": float(existing.overall_score or 0),
+                "message": (
+                    f"Results already published for {model_id_str} "
+                    f"(test_run {existing.id}); refusing duplicate bulk-submit."
+                ),
+            }
+
         # Create the TestRun directly (bypassing CommunitySubmission)
         test_run = TestRun(
             user_id=user.id,
