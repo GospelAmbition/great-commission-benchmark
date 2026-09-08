@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,9 @@ import { toast } from "sonner";
 import { API_URL } from "@/lib/api";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
 import { RecaptchaScript } from "@/components/recaptcha/RecaptchaScript";
-import { trackNewsletterSignup } from "@/lib/analytics";
+import { trackEvent, trackNewsletterSignup } from "@/lib/analytics";
+
+import { NEWSLETTER_PROMISE, newsletterSource } from "@/lib/newsletter";
 
 export default function NewsletterPage() {
   const { data: session } = useSession();
@@ -19,19 +21,27 @@ export default function NewsletterPage() {
   const [email, setEmail] = useState("");
   const [subscribing, setSubscribing] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("Successfully subscribed!");
+  const submittingRef = useRef(false);
   const { executeRecaptcha } = useRecaptcha();
 
   useEffect(() => {
-    if (user?.email) {
-      setEmail(user.email);
+    if (user?.email && !submittingRef.current) {
+      setEmail(current => current || user.email || "");
     }
   }, [user]);
 
   async function handleSubscribe() {
-    if (!email || !email.includes("@")) {
+    if (submittingRef.current) return;
+    const source = newsletterSource(new URLSearchParams(window.location.search).get("source"));
+    trackEvent("newsletter_form_submit", { source });
+    const normalizedEmail = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       toast.error("Please enter a valid email address");
+      trackEvent("newsletter_signup_outcome", { source, outcome: "invalid_email" });
       return;
     }
+    submittingRef.current = true;
     setSubscribing(true);
     try {
       // Get reCAPTCHA token if configured
@@ -53,6 +63,7 @@ export default function NewsletterPage() {
         
         if (!recaptchaToken) {
           toast.error("Security verification failed. Please wait a moment and try again.");
+          trackEvent("newsletter_signup_outcome", { source, outcome: "security_error" });
           setSubscribing(false);
           return;
         }
@@ -64,16 +75,17 @@ export default function NewsletterPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, recaptcha_token: recaptchaToken }),
+        body: JSON.stringify({ email: normalizedEmail, recaptcha_token: recaptchaToken }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.detail || errorData.message || "Failed to subscribe";
+        const errorMessage = typeof errorData.detail === "string" ? errorData.detail : typeof errorData.message === "string" ? errorData.message : "Failed to subscribe";
         
         // Check if it's a reCAPTCHA error from backend
         if (errorMessage.toLowerCase().includes("recaptcha") || errorMessage.toLowerCase().includes("security verification")) {
           toast.error("Security verification failed. Please try again.");
+          trackEvent("newsletter_signup_outcome", { source, outcome: "security_error" });
         } else {
           throw new Error(errorMessage);
         }
@@ -82,14 +94,20 @@ export default function NewsletterPage() {
       }
 
       const data = await response.json();
-      toast.success(data.message || "Successfully subscribed to newsletter");
+      if (data.success === false) throw new Error("Failed to subscribe. Please try again.");
+      const outcome = data.message === "Email already subscribed" ? "already_subscribed" : data.message === "Subscription reactivated" ? "reactivated" : "subscribed";
+      const message = outcome === "already_subscribed" ? "You’re already subscribed!" : outcome === "reactivated" ? "Your subscription is active again!" : "Successfully subscribed!";
+      toast.success(message);
+      setSuccessMessage(message);
       setIsSubscribed(true);
-      // Track conversion
-      trackNewsletterSignup("newsletter_page");
+      trackEvent("newsletter_signup_outcome", { source, outcome });
+      // Accepted submissions include existing subscribers; this is not net subscriber growth.
+      trackNewsletterSignup(source);
     } catch (error) {
-      console.error("Failed to subscribe to newsletter:", error);
+      trackEvent("newsletter_signup_outcome", { source, outcome: "request_error" });
       toast.error(error instanceof Error ? error.message : "Failed to subscribe to newsletter");
     } finally {
+      submittingRef.current = false;
       setSubscribing(false);
     }
   }
@@ -108,10 +126,10 @@ export default function NewsletterPage() {
             <div className="p-2 rounded-lg bg-primary/10">
               <Mail className="h-5 w-5 text-primary" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Newsletter</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Get the GCB digest</h1>
           </div>
           <p className="text-muted-foreground">
-            Stay updated with the latest features, benchmark results, and announcements
+            {NEWSLETTER_PROMISE}
           </p>
         </div>
       </div>
@@ -124,26 +142,26 @@ export default function NewsletterPage() {
                 <Mail className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle>Subscribe to Our Newsletter</CardTitle>
+                <CardTitle>Get the GCB digest</CardTitle>
                 <CardDescription>
-                  Receive updates about new features, benchmark results, and important announcements
+                  Monthly digest, plus occasional highlights on important model releases.
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {isSubscribed ? (
-              <div className="p-6 rounded-lg bg-primary/10 border border-primary/20 text-center">
+              <div role="status" className="p-6 rounded-lg bg-primary/10 border border-primary/20 text-center">
                 <CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-3" />
                 <p className="text-lg font-medium text-primary mb-2">
-                  Successfully Subscribed!
+                  {successMessage}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  You'll receive updates about new features, benchmark results, and important announcements.
+                  {NEWSLETTER_PROMISE}
                 </p>
               </div>
             ) : (
-              <>
+              <form noValidate onSubmit={(event) => { event.preventDefault(); void handleSubscribe(); }} className="space-y-4">
                 <div>
                   <Label htmlFor="newsletter-email">Email Address</Label>
                   <Input
@@ -153,11 +171,9 @@ export default function NewsletterPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="your.email@example.com"
                     className="mt-1"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !subscribing && email) {
-                        handleSubscribe();
-                      }
-                    }}
+                    autoComplete="email"
+                    name="email"
+                    required
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     {user 
@@ -166,7 +182,7 @@ export default function NewsletterPage() {
                   </p>
                 </div>
                 <Button 
-                  onClick={handleSubscribe} 
+                  type="submit"
                   disabled={subscribing || !email}
                   className="w-full"
                   size="lg"
@@ -176,7 +192,7 @@ export default function NewsletterPage() {
                 <p className="text-xs text-center text-muted-foreground">
                   We respect your privacy. Unsubscribe at any time.
                 </p>
-              </>
+              </form>
             )}
           </CardContent>
         </Card>
@@ -189,19 +205,19 @@ export default function NewsletterPage() {
             <div className="flex items-start gap-3">
               <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-primary" />
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">New Features:</span> Be the first to know about platform updates and improvements
+                <span className="font-medium text-foreground">Monthly Digest:</span> New model evaluations and insights for Great Commission work
               </p>
             </div>
             <div className="flex items-start gap-3">
               <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-primary" />
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Benchmark Results:</span> Get notified when new models are tested and added to the leaderboard
+                <span className="font-medium text-foreground">Release Highlights:</span> Occasional emails covering important model releases
               </p>
             </div>
             <div className="flex items-start gap-3">
               <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-primary" />
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Announcements:</span> Stay informed about important updates and community news
+                <span className="font-medium text-foreground">Easy to Join:</span> No account required. Unsubscribe at any time.
               </p>
             </div>
           </CardContent>

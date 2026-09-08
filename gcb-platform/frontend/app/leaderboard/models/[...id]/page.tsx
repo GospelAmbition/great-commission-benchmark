@@ -1,3 +1,4 @@
+import { NewsletterOffer } from "@/components/marketing/NewsletterOffer";
 import Link from "next/link";
 import { ArrowRight, Archive } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,7 @@ export default async function ModelPage({ params }: ModelParams) {
           Explore other reviewed models on the leaderboard to continue your research.
         </p>
       </section>
+      <NewsletterOffer source="model_archived" title="Stay informed as new models are evaluated." />
       {groups.map(group => {
         const models = alternatives.filter(item => item.relationship === group.key);
         if (!models.length) return null;

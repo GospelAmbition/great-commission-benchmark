@@ -1,5 +1,6 @@
 "use client";
 
+import { NewsletterOffer } from "@/components/marketing/NewsletterOffer";
 import Link from "next/link";
 import { AuthLink } from "@/components/ui/auth-link";
 
@@ -8,6 +9,7 @@ export function Footer() {
     <footer className="relative bg-surface border-t border-white/[0.06] overflow-hidden" role="contentinfo" aria-label="Site footer">
       <div className="absolute inset-0 bg-gradient-to-b from-[#09090b] via-[#220a0a] to-[#09090b] opacity-80" />
       <div className="relative container py-10 md:py-12">
+        <div className="mb-8"><NewsletterOffer source="footer" /></div>
         <div className="grid grid-cols-2 gap-6 md:grid-cols-4 md:gap-8">
           <div>
             <h3 className="mb-3 text-sm font-semibold text-foreground">Platform</h3>
@@ -77,11 +79,7 @@ export function Footer() {
                   Contact
                 </Link>
               </li>
-              <li>
-                <Link href="/newsletter" className="text-muted-foreground hover:text-primary transition-colors">
-                  Newsletter
-                </Link>
-              </li>
+
             </ul>
           </div>
         </div>

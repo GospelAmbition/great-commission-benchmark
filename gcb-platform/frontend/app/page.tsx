@@ -1,5 +1,6 @@
 "use client";
 
+import { NewsletterButton, NewsletterOffer } from "@/components/marketing/NewsletterOffer";
 import { useEffect, useState } from "react";
 import { QuickRankings } from "@/components/home/QuickRankings";
 import { RecentTestsList } from "@/components/recent-tests/RecentTestsList";
@@ -113,12 +114,15 @@ export default function Home() {
               <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl leading-relaxed">
                 We measure which AI models meaningfully support gospel outreach and which oppose it.
               </p>
+              <div className="flex flex-wrap gap-3">
               <Button asChild size="lg" className="text-base px-8">
                 <Link href="/leaderboard">
                   View Full Leaderboard
                   <ChevronRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
+              <NewsletterButton source="home_hero" variant="outline" size="lg">Get the GCB digest</NewsletterButton>
+              </div>
             </div>
             
             {/* Guardrails Animation - hidden on smaller screens */}
@@ -181,6 +185,7 @@ export default function Home() {
           error={recentError}
         />
       </section>
+      <section className="container pb-12"><NewsletterOffer source="home_results" /></section>
 
       {/* Stats Banner */}
       {stats && (

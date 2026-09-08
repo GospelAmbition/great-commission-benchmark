@@ -1,5 +1,6 @@
 "use client";
 
+import { NewsletterOffer } from "@/components/marketing/NewsletterOffer";
 import { useEffect, useMemo, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -262,6 +263,7 @@ function LeaderboardContent() {
       </div>
 
       <div className="container py-6 space-y-4">
+        <NewsletterOffer source="leaderboard" title="Follow the latest benchmark results." compact />
         {/* Model Comparison Instructions */}
         {selectedModels.size === 0 ? (
           <Card className="bg-primary/5 border-primary/20">

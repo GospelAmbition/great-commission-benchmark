@@ -1,5 +1,6 @@
 "use client";
 
+import { NewsletterButton, NewsletterOffer } from "@/components/marketing/NewsletterOffer";
 import { useEffect, useState } from "react";
 import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
@@ -160,6 +161,7 @@ export default function BlogPostPage() {
 
         {/* Title */}
         <h1 className="text-4xl font-bold">{post.title}</h1>
+        <NewsletterButton source="article_header" variant="link" className="mt-3 px-0">Get the GCB digest</NewsletterButton>
       </header>
 
       {/* Featured Image */}
@@ -222,6 +224,7 @@ export default function BlogPostPage() {
         </ReactMarkdown>
       </div>
 
+      <div className="my-8"><NewsletterOffer source="article_end" title="Get more insights like this in your inbox." /></div>
       {/* Benchmark Results Link */}
       {post.related_models && post.related_models.length > 0 && (
         <div className="my-8">

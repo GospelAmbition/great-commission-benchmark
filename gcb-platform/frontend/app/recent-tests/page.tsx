@@ -1,3 +1,4 @@
+import { NewsletterOffer } from "@/components/marketing/NewsletterOffer";
 import { Clock3 } from "lucide-react";
 import { RecentTestsList } from "@/components/recent-tests/RecentTestsList";
 import { API_URL, type RecentTestsResponse } from "@/lib/api";
@@ -65,6 +66,7 @@ export default async function RecentTestsPage() {
       </section>
 
       <section className="container py-8 md:py-10">
+        <div className="mb-6"><NewsletterOffer source="recent_tests" title="Follow the latest benchmark results." compact /></div>
         <RecentTestsList items={items} error={error} />
       </section>
     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { NewsletterButton } from "@/components/marketing/NewsletterOffer";
 import { useEffect, useState, Suspense, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -233,6 +234,7 @@ function InsightsContent() {
             Practical guides, insights, and resources for Christian missionaries and outreach workers 
             navigating AI guardrails in their ministry work.
           </p>
+          <NewsletterButton source="insights_header" className="mt-4">Get the GCB digest</NewsletterButton>
         </div>
         
         {/* Guardrails Animation - positioned on right */}

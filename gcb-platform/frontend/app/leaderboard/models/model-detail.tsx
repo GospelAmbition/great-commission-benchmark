@@ -1,5 +1,6 @@
 "use client";
 
+import { NewsletterOffer } from "@/components/marketing/NewsletterOffer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -351,6 +352,7 @@ export default function ModelDetailPage({ model }: { model: ModelResponse }) {
         </Card>
       </div>
 
+      <div className="mb-10"><NewsletterOffer source="model_results" title="Stay informed as new models are evaluated." /></div>
       {/* Overview Section */}
       <section className="space-y-6 mb-10">
         {/* Radar Chart - The Model Shape */}

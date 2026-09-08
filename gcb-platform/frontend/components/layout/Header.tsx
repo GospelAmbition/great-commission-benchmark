@@ -1,5 +1,6 @@
 "use client";
 
+import { NewsletterButton } from "@/components/marketing/NewsletterOffer";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -47,7 +48,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-md border-b border-white/[0.06]" role="banner">
       <div className="container flex h-14 items-center">
-        <Link href="/" className="mr-8 flex items-center space-x-2 group" aria-label="Great Commission Benchmark - Home">
+        <Link href="/" className="mr-3 xl:mr-6 flex items-center space-x-2 group" aria-label="Great Commission Benchmark - Home">
           <div className="flex items-center gap-2">
             <div 
               className="h-6 px-1.5 rounded flex items-center justify-center shadow-[0_0_10px_rgba(220,38,38,0.2)]" 
@@ -55,14 +56,14 @@ export function Header() {
             >
               <span className="text-white font-bold text-xs">GCB</span>
             </div>
-            <span className="font-bold text-lg text-foreground hidden sm:inline">
+            <span className="font-bold text-lg text-foreground hidden sm:inline xl:hidden 2xl:inline">
               Great Commission Benchmark
             </span>
           </div>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-1 text-sm font-medium" aria-label="Main navigation">
+        <nav className="hidden xl:flex items-center space-x-1 text-sm font-medium" aria-label="Main navigation">
           <Link
             href="/"
             className={`px-3 py-2 rounded-md transition-all ${
@@ -128,6 +129,7 @@ export function Header() {
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-3">
+          <NewsletterButton source="header" variant="glow" size="sm" />
           {/* Search Button */}
           <Button
             variant="ghost"
@@ -201,14 +203,14 @@ export function Header() {
               </DropdownMenu>
             </>
           ) : (
-            <Button asChild variant="glow" size="sm">
+            <Button asChild variant="ghost" size="sm">
               <Link href="/api/auth/signin">Login</Link>
             </Button>
           )}
 
           {/* Mobile Menu */}
           <Sheet>
-            <SheetTrigger asChild className="md:hidden">
+            <SheetTrigger asChild className="xl:hidden">
               <Button variant="ghost" size="icon" aria-label="Open navigation menu" className="text-foreground hover:bg-white/5">
                 <MenuIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="sr-only">Toggle menu</span>
