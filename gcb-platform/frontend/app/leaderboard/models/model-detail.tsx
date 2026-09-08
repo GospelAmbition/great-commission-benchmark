@@ -248,7 +248,7 @@ export default function ModelDetailPage({ model }: { model: ModelResponse }) {
           </h1>
           <div className="flex items-center justify-between flex-wrap gap-4">
             {model.description ? (
-              <p className="text-muted-foreground text-lg w-2/3">{model.description}</p>
+              <p className="text-muted-foreground text-lg whitespace-pre-line break-words w-full lg:w-2/3">{model.description}</p>
             ) : (
               <div className="w-2/3"></div>
             )}
@@ -382,7 +382,7 @@ export default function ModelDetailPage({ model }: { model: ModelResponse }) {
               {model.description && (
                 <div>
                   <span className="text-sm text-muted-foreground">Description</span>
-                  <p className="text-sm mt-1">{model.description}</p>
+                  <p className="text-sm mt-1 whitespace-pre-line break-words">{model.description}</p>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
