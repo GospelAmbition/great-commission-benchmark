@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
 from typing import Any
 
@@ -11,32 +10,19 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_API_BASE = "https://api.greatcommissionbenchmark.ai/api"
-
-
 def _api_base() -> str:
     """Return the base URL for GCB runner API endpoints (ends in /api).
 
-    Per-request overrides from :mod:`gcb_mcp.context` win over the
-    ``GCB_API_BASE_URL`` env var so the in-process HTTP MCP can target a
-    co-located backend without leaking config into other tasks.
+    Uses :func:`gcb_mcp.credentials.resolve_gcb_api_base_url` so per-request
+    overrides, env vars, and ``~/.gcb-runner/config.json`` share one precedence
+    chain with the rest of the MCP server.
     """
-    try:
-        from gcb_mcp.context import current as _current_ctx
+    from gcb_mcp.credentials import resolve_gcb_api_base_url
 
-        ctx_url = _current_ctx().api_base_url.strip().rstrip("/")
-    except Exception:  # pragma: no cover - defensive
-        ctx_url = ""
-
-    env = ctx_url or os.environ.get("GCB_API_BASE_URL", "").strip().rstrip("/")
-    if not env:
-        return _DEFAULT_API_BASE
-    # Redirect non-api domain to API subdomain
-    if "api." not in env:
-        env = env.replace("greatcommissionbenchmark.ai", "api.greatcommissionbenchmark.ai")
-    if not env.endswith("/api"):
-        env = f"{env}/api"
-    return env
+    base = resolve_gcb_api_base_url()
+    if base.endswith("/api"):
+        return base
+    return f"{base}/api"
 
 
 def _api_key() -> str:
