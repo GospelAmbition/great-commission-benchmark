@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
 
 import httpx
@@ -17,29 +16,16 @@ _PUBLIC_BASE = "https://api.greatcommissionbenchmark.ai/api/public"
 def _public_base() -> str:
     """Return the base URL for GCB public API endpoints.
 
-    Supports three forms of GCB_API_BASE_URL:
-      - https://api.greatcommissionbenchmark.ai/api  → .../public
-      - https://api.greatcommissionbenchmark.ai      → .../api/public
-      - https://greatcommissionbenchmark.ai          → rewrites to api subdomain
-
-    Per-request overrides from :mod:`gcb_mcp.context` win over env vars.
-    Default: https://api.greatcommissionbenchmark.ai/api/public
+    Uses :func:`gcb_mcp.credentials.resolve_gcb_api_base_url` so per-request
+    overrides, env vars, and ``~/.gcb-runner/config.json`` share one precedence
+    chain with the rest of the MCP server.
     """
-    try:
-        from gcb_mcp.context import current as _current_ctx
+    from gcb_mcp.credentials import resolve_gcb_api_base_url
 
-        ctx_url = _current_ctx().api_base_url.strip().rstrip("/")
-    except Exception:  # pragma: no cover - defensive
-        ctx_url = ""
-    env = ctx_url or os.environ.get("GCB_API_BASE_URL", "").strip().rstrip("/")
-    if not env:
-        return "https://api.greatcommissionbenchmark.ai/api/public"
-    # If the env var points at the non-api domain, redirect to the API subdomain
-    if "api." not in env:
-        env = env.replace("greatcommissionbenchmark.ai", "api.greatcommissionbenchmark.ai")
-    if env.endswith("/api"):
-        return f"{env}/public"
-    return f"{env}/api/public"
+    base = resolve_gcb_api_base_url()
+    if base.endswith("/api"):
+        return f"{base}/public"
+    return f"{base}/api/public"
 
 
 async def list_published_models(limit: int = 50) -> dict[str, Any]:

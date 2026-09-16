@@ -69,18 +69,9 @@ mcp = FastMCP(
 
 
 def _base_url() -> str:
-    # Per-request override (HTTP server / OAuth requests) wins.
-    try:
-        from gcb_mcp.context import current as _current_ctx
+    from gcb_mcp.credentials import resolve_gcb_api_base_url
 
-        ctx_url = _current_ctx().api_base_url.strip()
-        if ctx_url:
-            return ctx_url.rstrip("/")
-    except Exception:  # pragma: no cover - defensive
-        pass
-    return os.environ.get(
-        "GCB_API_BASE_URL", "https://greatcommissionbenchmark.ai"
-    ).rstrip("/")
+    return resolve_gcb_api_base_url()
 
 
 def _api_key() -> str:
@@ -294,7 +285,8 @@ async def list_active_models() -> dict[str, Any]:
     Environment:
         GCB_API_KEY: optional if platform.api_key exists in ~/.gcb-runner/config.json;
         otherwise set this env var to your dashboard API key (X-API-Key).
-        GCB_API_BASE_URL: optional. Default https://greatcommissionbenchmark.ai
+        GCB_API_BASE_URL: optional. Falls back to platform.url in
+        ~/.gcb-runner/config.json, then https://api.greatcommissionbenchmark.ai
 
     The API key's user must have admin or benchmark editor (can_edit_benchmark)
     permission, same as the bulk tester / runner CLI.

@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 LMSTUDIO_BASE_URL = "http://localhost:1234/v1"
 JUDGE_MODEL = "openai/gpt-oss-20b"
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
-GCB_API_BASE_URL = "https://greatcommissionbenchmark.ai"
 
 # How long to wait for LMStudio server to start, in seconds
 _SERVER_START_TIMEOUT = 30
@@ -266,16 +265,9 @@ async def check_gcb_api(api_key: str | None = None) -> dict[str, Any]:
         result["error"] = missing_gcb_api_key_message()
         return result
 
-    try:
-        from gcb_mcp.context import current as _current_ctx
+    from gcb_mcp.credentials import resolve_gcb_api_base_url
 
-        ctx_url = _current_ctx().api_base_url.strip().rstrip("/")
-    except Exception:  # pragma: no cover - defensive
-        ctx_url = ""
-    base_url = (
-        ctx_url
-        or os.environ.get("GCB_API_BASE_URL", GCB_API_BASE_URL).rstrip("/")
-    )
+    base_url = resolve_gcb_api_base_url()
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(
