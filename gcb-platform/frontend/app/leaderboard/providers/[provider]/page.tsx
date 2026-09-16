@@ -71,7 +71,7 @@ export default function ProviderDetailPage() {
   async function loadProviderModels() {
     setLoading(true);
     try {
-      const data = await apiClient.getLeaderboard({ provider, limit: 100 });
+      const data = await apiClient.getLeaderboard({ provider, limit: 200 });
       setModels(data.items || []);
     } catch (error) {
       console.error("Failed to load provider models:", error);

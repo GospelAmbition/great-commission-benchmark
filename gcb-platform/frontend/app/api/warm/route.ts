@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { API_URL } from "@/lib/api";
 
-const LEADERBOARD_PAGE_SIZE = 100;
+const LEADERBOARD_PAGE_SIZE = 200;
 const BLOG_PAGE_SIZE = 50;
 const BATCH_SIZE = 8; // concurrent requests per batch
 

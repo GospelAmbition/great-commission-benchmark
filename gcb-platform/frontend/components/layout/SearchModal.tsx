@@ -58,7 +58,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
     setLoading(true);
     try {
       const [leaderboardData, filterOptions] = await Promise.all([
-        apiClient.getLeaderboard({ limit: 100 }),
+        apiClient.getLeaderboard({ limit: 200 }),
         apiClient.getFilterOptions(),
       ]);
       
