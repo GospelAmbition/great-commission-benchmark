@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
 import type { RecentTestItem } from "@/lib/api";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -39,7 +39,7 @@ function scoreClass(score: number): string {
 function ModelDetails({ item }: { item: RecentTestItem }) {
   const modelHref = `/leaderboard/models/${encodeURIComponent(item.model.model_id)}`;
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 whitespace-normal [overflow-wrap:anywhere]">
       <Link
         href={modelHref}
         className="font-semibold text-foreground transition-colors hover:text-primary"
@@ -53,7 +53,7 @@ function ModelDetails({ item }: { item: RecentTestItem }) {
         <span className="text-xs text-muted-foreground">{item.model.model_id}</span>
       </div>
       {item.model.description && (
-        <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-2 max-w-2xl whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
           {item.model.description}
         </p>
       )}
@@ -63,22 +63,21 @@ function ModelDetails({ item }: { item: RecentTestItem }) {
 
 function Actions({ item }: { item: RecentTestItem }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 text-sm">
-      <Link
-        href={`/leaderboard/models/${encodeURIComponent(item.model.model_id)}`}
-        className="font-medium text-primary hover:underline"
-      >
-        Model
-      </Link>
-      {item.article && (
-        <Link
-          href={`/insights/${encodeURIComponent(item.article.slug)}`}
-          className="inline-flex items-center gap-1 font-medium text-foreground hover:text-primary"
-          aria-label={`Read ${item.article.title}`}
-        >
-          Article
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+    <div className="flex flex-wrap items-center gap-2">
+      <Button asChild variant="outline" size="sm">
+        <Link href={`/leaderboard/models/${encodeURIComponent(item.model.model_id)}`}>
+          Model
         </Link>
+      </Button>
+      {item.article && (
+        <Button asChild variant="outline" size="sm">
+          <Link
+            href={`/insights/${encodeURIComponent(item.article.slug)}`}
+            aria-label={`Read ${item.article.title}`}
+          >
+            Article
+          </Link>
+        </Button>
       )}
     </div>
   );
@@ -114,7 +113,7 @@ export function RecentTestsList({ items, loading = false, error = null }: Recent
   return (
     <>
       <div className="hidden overflow-hidden rounded-lg border border-white/[0.08] bg-card md:block">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow className="border-white/[0.08] hover:bg-transparent">
               <TableHead className="w-20">Rank</TableHead>
@@ -158,7 +157,7 @@ export function RecentTestsList({ items, loading = false, error = null }: Recent
               </span>
             </div>
             <ModelDetails item={item} />
-            <div className="mt-4 flex items-center justify-between gap-4 border-t border-white/[0.06] pt-3">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.06] pt-3">
               <span className="text-xs text-muted-foreground">
                 Tested {formatCompletedAt(item.test_run.completed_at)}
               </span>
