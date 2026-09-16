@@ -14,7 +14,7 @@ export async function generateMetadata({
   const providerDisplayName = formatProvider(provider);
 
   try {
-    const data = await apiClient.getLeaderboard({ provider, limit: 100 });
+    const data = await apiClient.getLeaderboard({ provider, limit: 200 });
     const modelCount = data.items?.length || 0;
     const avgScore = modelCount > 0
       ? data.items.reduce((sum, m) => sum + m.overall_score, 0) / modelCount

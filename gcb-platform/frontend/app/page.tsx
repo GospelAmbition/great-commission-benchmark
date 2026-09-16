@@ -31,7 +31,7 @@ export default function Home() {
     async function loadRankings() {
       try {
         // Load full leaderboard so we can show top 5 and bottom 5 (illustrative range)
-        const full = await apiClient.getLeaderboard({ limit: 100 });
+        const full = await apiClient.getLeaderboard({ limit: 200 });
         if (full?.items && full.items.length > 0) {
           const top5 = full.items.slice(0, 5).map((item, index) => ({
             rank: index + 1,

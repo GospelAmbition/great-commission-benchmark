@@ -169,3 +169,10 @@ def test_get_leaderboard_returns_503_on_db_outage(api_client, leaderboard_test_d
 
     assert response.status_code == 503
     assert response.json()["detail"] == "Database service temporarily unavailable"
+
+
+def test_get_leaderboard_limit_validation(api_client):
+    """Leaderboard accepts limit up to 200 and rejects above 200."""
+    assert api_client.get("/api/public/leaderboard?limit=200").status_code == 200
+    assert api_client.get("/api/public/leaderboard?limit=201").status_code == 422
+    assert api_client.get("/api/public/leaderboard?limit=0").status_code == 422
