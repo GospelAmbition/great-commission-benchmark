@@ -8,6 +8,15 @@ protection with `allow_excluded=True`.
 
 Also skip OpenRouter `:batch` IDs, `:free` duplicates, and alias IDs (e.g. `~provider/model-latest`).
 
+## sakana/fugu-max
+
+- Date: 2026-09-17 (reject-listed after retest)
+- Job: `b1d155fa-4f94-4d79-9ca7-ad2f7189290a`
+- Result: `COMPLETE_INVALID` — score 77.0; 3 remaining `PROVIDER_ERROR` after default max-5 repair
+- Cause: OpenRouter HTTP 451 `PROVIDER_ERROR` on questions `ed822ece-004e-4496-8f93-6c0049bea73d`, `0e6984b9-8146-4fd1-86a9-a5d2f4644560`, `8935d30e-60ef-47e0-bffb-cb0c85699062`
+- Prior failure: 2026-09-16 job `d7b5f5df-566b-4815-a2ea-47a5d8097867` — `COMPLETE_INVALID` at 79.3 with the same 3 HTTP 451s
+- Why not repair: retest failed again with persistent provider errors after repair. Do not retest. Do not upload. Do not `allow_invalid`.
+
 ## sakana/sakana-namazu
 
 - Date: 2026-08-18

@@ -116,6 +116,7 @@ def test_run_gcb_test_blocks_excluded_model_before_readiness(monkeypatch) -> Non
 
 
 def test_model_exclusion_rules_cover_registry_and_openrouter_variants() -> None:
+    assert server._model_exclusion_reason("sakana/fugu-max")
     assert server._model_exclusion_reason("sakana/sakana-namazu")
     assert server._model_exclusion_reason("provider/model:batch")
     assert server._model_exclusion_reason("provider/model:free")
