@@ -17,6 +17,14 @@ Also skip OpenRouter `:batch` IDs, `:free` duplicates, and alias IDs (e.g. `~pro
 - Prior failure: 2026-09-16 job `d7b5f5df-566b-4815-a2ea-47a5d8097867` — `COMPLETE_INVALID` at 79.3 with the same 3 HTTP 451s
 - Why not repair: retest failed again with persistent provider errors after repair. Do not retest. Do not upload. Do not `allow_invalid`.
 
+## sakana/fugu-ultra-v2
+
+- Date: 2026-09-18 (reject-listed after retest)
+- Job: `86f63338-816a-40aa-a37a-36b8b35eb7f9`
+- Result: `COMPLETE_INVALID` — score ~65.7; 118/150 scored; 32 remaining `PROVIDER_ERROR` after default max-5 repair
+- Cause: OpenRouter provider errors left 32 questions unscored/incomplete
+- Why not repair: retest finished invalid with persistent provider errors and incomplete scoring. Do not retest. Do not upload. Do not `allow_invalid`.
+
 ## sakana/sakana-namazu
 
 - Date: 2026-08-18

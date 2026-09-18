@@ -233,6 +233,7 @@ def _extract_provider(model_id: str) -> str:
 _EXCLUDED_MODEL_IDS = frozenset(
     {
         "sakana/fugu-max",
+        "sakana/fugu-ultra-v2",
         "sakana/sakana-namazu",
         "meta/muse-spark-1.2-contributor",
         "meta/muse-spark-1.3-contributor",
