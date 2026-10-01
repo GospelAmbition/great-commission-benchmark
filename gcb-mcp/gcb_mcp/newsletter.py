@@ -432,6 +432,7 @@ def build_newsletter_markdown(
         model_link = model_page_url(str(mid))
 
         lines.append(f"### {i}. {name}\n")
+        lines.append(f"\n> ## **{overall} / 100**\n> **Overall score**\n\n")
         para = (spotlight_paragraphs or {}).get(str(mid), "").strip()
         if para:
             lines.append(para + "\n\n")
@@ -440,16 +441,11 @@ def build_newsletter_markdown(
         if desc:
             lines.append(f"> {desc}\n")
         lines.append(
-            f"- **Overall score:** **{overall}** / 100  \n"
             f"- **[See full benchmark result]({model_link})**\n"
         )
         if review_link:
             lines.append(f"- **[Read the insight article]({review_link})**\n")
 
-    lines.append(
-        "\n\nOverall scores summarize automated testing across ministry-shaped scenarios—use them alongside Scripture, "
-        "sound doctrine, and your team's policies—not as a substitute for spiritual discernment.\n"
-    )
     lines.append("---\n")
     lines.append("## Explore, test, and serve\n")
     lines.append(
