@@ -146,7 +146,7 @@ export default function RootLayout({
             </main>
             <Footer />
           </div>
-          <Toaster />
+          <Toaster position="top-right" />
           <UmamiAnalytics />
           <HelpinatorWidget />
           </UserProfileProvider>

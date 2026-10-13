@@ -335,11 +335,16 @@
 }
 
 /* Helpinator help widget (components/helpinator/HelpinatorWidget.tsx).
-   offset-y clears the bottom-right Sonner toasts. */
+   Mapped to the theme tokens, so it follows .light too. Toasts are top-right
+   (app/layout.tsx) to keep the bottom-right corner free for the launcher. */
 helpinator-widget {
   --helpinator-primary: var(--primary);
   --helpinator-on-primary: var(--primary-foreground);
-  --helpinator-font: inherit;
+  --helpinator-bg: var(--popover);
+  --helpinator-text: var(--popover-foreground);
+  --helpinator-muted: var(--info-muted);
+  --helpinator-border: var(--border);
+  --helpinator-bot-bubble: var(--secondary);
+  --helpinator-font: var(--font-sans);
   --helpinator-radius: var(--radius);
-  --helpinator-offset-y: 16px;
 }
