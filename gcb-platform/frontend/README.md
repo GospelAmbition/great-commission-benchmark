@@ -168,6 +168,8 @@ Charts use Chart.js with react-chartjs-2.
 | `WARM_SECRET` | Secret for post-deploy warm-up; generate with `openssl rand -hex 32` | Optional (Railway) |
 | `NEXT_PUBLIC_UMAMI_SCRIPT_URL` | Analytics URL | Optional |
 | `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Analytics ID | Optional |
+| `NEXT_PUBLIC_HELPINATOR_HOST` | Helpinator help widget host (e.g. `https://apps.gospelambition.org`); build-time | Optional |
+| `NEXT_PUBLIC_HELPINATOR_WIDGET_ID` | Helpinator widget ID; widget hidden if unset; build-time | Optional |
 
 ## Google OAuth Setup
 

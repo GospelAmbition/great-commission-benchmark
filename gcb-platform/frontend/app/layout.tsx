@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { UmamiAnalytics } from "@/components/analytics/UmamiAnalytics";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { HelpinatorWidget } from "@/components/helpinator/HelpinatorWidget";
 import { SITE_CONFIG, getBaseUrl, getDefaultOpenGraph, getDefaultTwitterCard } from "@/lib/seo";
 import { buildOrganizationSchema, buildWebsiteSchema, JsonLdScript } from "@/lib/structured-data";
 import "./globals.css";
@@ -147,6 +148,7 @@ export default function RootLayout({
           </div>
           <Toaster />
           <UmamiAnalytics />
+          <HelpinatorWidget />
           </UserProfileProvider>
         </SessionProvider>
       </body>

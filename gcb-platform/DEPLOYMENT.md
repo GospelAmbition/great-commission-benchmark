@@ -127,6 +127,10 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_xxxxxxxx
 # Analytics (optional)
 NEXT_PUBLIC_UMAMI_SCRIPT_URL=https://analytics.greatcommissionbenchmark.ai/umami.js
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=your-website-id
+
+# Helpinator help widget (optional; baked in at build time)
+NEXT_PUBLIC_HELPINATOR_HOST=https://apps.gospelambition.org
+NEXT_PUBLIC_HELPINATOR_WIDGET_ID=xxxxxxxx-xxxxxx-4fc7-a8a6-1316e6f7f433
 ```
 
 ### Railway Test Environment Variables

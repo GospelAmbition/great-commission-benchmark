@@ -60,60 +60,60 @@
 /* Dark-first design system - inspired by Vellum/Scale leaderboards */
 :root {
   --radius: 0.5rem;
-  
+
   /* Base colors - dark theme default */
   --background: #09090b;
   --foreground: #fafafa;
-  
+
   /* Surface layers for depth */
   --surface: #0c0c0f;
   --surface-elevated: #18181b;
-  
+
   /* Card and popover */
   --card: #111113;
   --card-foreground: #fafafa;
   --popover: #18181b;
   --popover-foreground: #fafafa;
-  
+
   /* Primary - red accent */
   --primary: #dc2626;
   --primary-foreground: #ffffff;
   --glow-primary: rgba(220, 38, 38, 0.4);
-  
+
   /* Secondary */
   --secondary: #27272a;
   --secondary-foreground: #fafafa;
-  
+
   /* Muted */
   --muted: #18181b;
   --muted-foreground: rgba(255, 255, 255, 0.95);
-  
+
   /* Accent */
   --accent: rgba(220, 38, 38, 0.15);
   --accent-foreground: #ef4444;
-  
+
   /* Destructive */
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  
+
   /* Borders and inputs */
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.08);
   --ring: #dc2626;
-  
+
   /* Info bar - for stats sections */
   --info: #18181b;
   --info-foreground: #fafafa;
   --info-muted: rgba(255, 255, 255, 0.7);
   --info-border: rgba(255, 255, 255, 0.1);
-  
+
   /* Charts - vibrant on dark */
   --chart-1: #ef4444;
   --chart-2: #f97316;
   --chart-3: #22c55e;
   --chart-4: #3b82f6;
   --chart-5: #a855f7;
-  
+
   /* Sidebar */
   --sidebar: #0c0c0f;
   --sidebar-foreground: #fafafa;
@@ -176,36 +176,36 @@
     @apply bg-background text-foreground antialiased;
     font-weight: 300; /* Light weight for base text */
   }
-  
+
   /* Smooth scrolling */
   html {
     scroll-behavior: smooth;
   }
-  
+
   /* Lighter headings */
   h1, h2, h3, h4, h5, h6 {
     font-weight: 400; /* Regular weight for headings */
   }
-  
+
   /* Thin weight utility for extra-light text */
   .font-thin {
     font-weight: 100;
   }
-  
+
   .font-extralight {
     font-weight: 200;
   }
-  
+
   .font-light {
     font-weight: 300;
   }
-  
+
   /* Better focus styles */
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
-  
+
   /* Selection color - works on dark */
   ::selection {
     background-color: rgba(220, 38, 38, 0.3);
@@ -219,7 +219,7 @@
     max-width: 1280px;
     width: 100%;
   }
-  
+
   @media (min-width: 1536px) {
     .container {
       max-width: 1792px;
@@ -332,4 +332,14 @@
 }
 .border-glow:hover {
   box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.3), 0 0 20px rgba(220, 38, 38, 0.1);
+}
+
+/* Helpinator help widget (components/helpinator/HelpinatorWidget.tsx).
+   offset-y clears the bottom-right Sonner toasts. */
+helpinator-widget {
+  --helpinator-primary: var(--primary);
+  --helpinator-on-primary: var(--primary-foreground);
+  --helpinator-font: inherit;
+  --helpinator-radius: var(--radius);
+  --helpinator-offset-y: 16px;
 }
