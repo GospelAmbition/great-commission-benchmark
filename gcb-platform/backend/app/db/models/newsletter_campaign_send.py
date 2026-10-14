@@ -21,6 +21,9 @@ class NewsletterCampaignSend(Base):
     recipient_count = Column(Integer, nullable=True)
     status = Column(String(20), nullable=False, default="sent", index=True)
     provider = Column(String(50), nullable=False, default="mailerlite")
+    error_message = Column(String(255), nullable=True)
+    target_group_id = Column(String(255), nullable=True)
+    last_checked_at = Column(DateTime(timezone=True), nullable=True)
     sent_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 

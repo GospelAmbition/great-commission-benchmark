@@ -23,6 +23,7 @@ from app.db.models.notification_setting import NotificationSetting
 from app.db.models.action_log import ActionLog
 from app.db.models.newsletter_test_recipient import NewsletterTestRecipient
 from app.db.models.newsletter_campaign_send import NewsletterCampaignSend
+from app.db.models.newsletter_webhook_event import NewsletterWebhookEvent
 
 __all__ = [
     "User",
@@ -48,4 +49,8 @@ __all__ = [
     "ActionLog",
     "NewsletterTestRecipient",
     "NewsletterCampaignSend",
+    "NewsletterWebhookEvent",
+    "NewsletterSubscriberMerge",
 ]
+
+from app.db.models.newsletter_subscriber_merge import NewsletterSubscriberMerge

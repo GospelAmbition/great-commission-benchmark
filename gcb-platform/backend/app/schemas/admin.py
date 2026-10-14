@@ -370,6 +370,9 @@ class NewsletterSubscriberListItem(BaseModel):
     mailerlite_subscriber_id: Optional[str] = None
     subscribed_at: Optional[datetime] = None
     unsubscribed_at: Optional[datetime] = None
+    sync_status: str = "pending"
+    sync_error: Optional[str] = None
+    mailerlite_synced_at: Optional[datetime] = None
 
 
 class NewsletterSubscriberListResponse(BaseModel):
@@ -386,6 +389,14 @@ class NewsletterSubscriberDetail(BaseModel):
     mailerlite_subscriber_id: Optional[str] = None
     subscribed_at: Optional[datetime] = None
     unsubscribed_at: Optional[datetime] = None
+    name: Optional[str] = None
+    source: str = "legacy_platform"
+    consent_note: Optional[str] = None
+    imported_at: Optional[datetime] = None
+    import_batch_id: Optional[UUID] = None
+    sync_status: str = "pending"
+    sync_error: Optional[str] = None
+    mailerlite_synced_at: Optional[datetime] = None
     # Live MailerLite data (populated when MailerLite is configured)
     mailerlite_status: Optional[str] = None
     mailerlite_subscribed_at: Optional[str] = None
@@ -400,6 +411,12 @@ class NewsletterStatsResponse(BaseModel):
     unsubscribed: int
     synced_to_mailerlite: int
     mailerlite_configured: bool
+    sync_pending: int = 0
+    sync_errors: int = 0
+    sync_enabled: bool = False
+    last_synced_at: Optional[datetime] = None
+    webhook_configured: bool = False
+    last_webhook_at: Optional[datetime] = None
 
 
 class MailerLiteSubscriberItem(BaseModel):

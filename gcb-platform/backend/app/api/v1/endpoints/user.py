@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, Query, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from uuid import UUID
 
 from app.core.auth import get_db
@@ -51,7 +52,7 @@ def _build_profile_response(current_user: User, db: Session) -> UserProfileRespo
         total_contribution=0,
     )
     newsletter_subscriber = db.query(NewsletterSubscriber).filter(
-        NewsletterSubscriber.email == current_user.email,
+        func.lower(func.trim(NewsletterSubscriber.email)) == current_user.email.strip().lower(),
         NewsletterSubscriber.is_active == True
     ).first()
     is_newsletter_subscribed = newsletter_subscriber is not None
@@ -345,11 +346,11 @@ async def unsubscribe_newsletter_authenticated(
 ):
     """Unsubscribe authenticated user from newsletter"""
     from app.db.models.newsletter_subscriber import NewsletterSubscriber
-    from app.services.newsletter import NewsletterService
+    from app.services.newsletter_sync import queue_sync
     
     # Find subscriber by user's email
     subscriber = db.query(NewsletterSubscriber).filter(
-        NewsletterSubscriber.email == current_user.email
+        func.lower(func.trim(NewsletterSubscriber.email)) == current_user.email.strip().lower()
     ).first()
     
     if not subscriber:
@@ -358,7 +359,7 @@ async def unsubscribe_newsletter_authenticated(
             "message": "You are not subscribed to the newsletter"
         }
     
-    if not subscriber.is_active:
+    if not subscriber.is_active and not subscriber.resubscribe_nonce and not subscriber.resubscribe_pending:
         return {
             "success": True,
             "message": "You are already unsubscribed from the newsletter"
@@ -368,8 +369,7 @@ async def unsubscribe_newsletter_authenticated(
     subscriber.is_active = False
     subscriber.unsubscribed_at = datetime.utcnow()
     
-    # Sync with MailerLite
-    await NewsletterService.remove_subscriber_from_mailerlite(current_user.email)
+    queue_sync(subscriber)
     
     db.commit()
     

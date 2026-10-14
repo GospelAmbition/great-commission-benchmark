@@ -42,6 +42,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useUserProfile } from "@/lib/useUserProfile";
+import { NewsletterImport } from "@/components/admin/NewsletterImport";
+import { NewsletterSync } from "@/components/admin/NewsletterSync";
+import { NewsletterCampaignSends } from "@/components/admin/NewsletterCampaignSends";
+import { NewsletterMailerLiteImport } from "@/components/admin/NewsletterMailerLiteImport";
 import {
   Mail,
   ChevronRight,
@@ -67,6 +71,12 @@ interface NewsletterStats {
   unsubscribed: number;
   synced_to_mailerlite: number;
   mailerlite_configured: boolean;
+  sync_pending: number;
+  sync_errors: number;
+  sync_enabled: boolean;
+  last_synced_at: string | null;
+  webhook_configured: boolean;
+  last_webhook_at: string | null;
 }
 
 interface SubscriberItem {
@@ -76,9 +86,17 @@ interface SubscriberItem {
   mailerlite_subscriber_id: string | null;
   subscribed_at: string | null;
   unsubscribed_at: string | null;
+  sync_status: string;
+  sync_error: string | null;
+  mailerlite_synced_at: string | null;
 }
 
 interface SubscriberDetail extends SubscriberItem {
+  name: string | null;
+  source: string;
+  consent_note: string | null;
+  imported_at: string | null;
+  import_batch_id: string | null;
   mailerlite_status: string | null;
   mailerlite_subscribed_at: string | null;
   mailerlite_opens_count: number | null;
@@ -296,6 +314,8 @@ export default function AdminNewsletterPage() {
       toast.error("Failed to sync subscriber");
     } finally {
       setSyncingId(null);
+      loadSubscribers();
+      loadStats();
     }
   }
 
@@ -308,7 +328,7 @@ export default function AdminNewsletterPage() {
         { method: "DELETE" }
       );
       if (response.ok) {
-        toast.success(`Subscriber ${deleteTarget.email} removed`);
+        toast.success(`Subscriber ${deleteTarget.email} unsubscribed`);
         setDeleteTarget(null);
         loadSubscribers();
         loadStats();
@@ -411,14 +431,18 @@ export default function AdminNewsletterPage() {
             <Mail className="h-8 w-8 text-primary" />
             <h1 className="text-4xl font-bold">Newsletter Subscribers</h1>
           </div>
-          <Button
-            variant="outline"
-            onClick={handleExportCsv}
-            disabled={exporting}
-          >
-            <Download className={`h-4 w-4 mr-2 ${exporting ? "animate-pulse" : ""}`} />
-            {exporting ? "Exporting..." : "Export CSV"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <NewsletterImport onImported={() => { loadSubscribers(); loadStats(); }} />
+            <NewsletterMailerLiteImport onImported={() => { loadSubscribers(); loadStats(); }} />
+            <Button
+              variant="outline"
+              onClick={handleExportCsv}
+              disabled={exporting}
+            >
+              <Download className={`h-4 w-4 mr-2 ${exporting ? "animate-pulse" : ""}`} />
+              {exporting ? "Exporting..." : "Export CSV"}
+            </Button>
+          </div>
         </div>
         <p className="mt-2 text-muted-foreground">
           Manage newsletter subscribers and view MailerLite sync status
@@ -501,6 +525,10 @@ export default function AdminNewsletterPage() {
           </CardContent>
         </Card>
       </div>
+
+      {stats && <NewsletterSync pending={stats.sync_pending} errors={stats.sync_errors} enabled={stats.sync_enabled} lastSyncedAt={stats.last_synced_at} webhookConfigured={stats.webhook_configured} lastWebhookAt={stats.last_webhook_at} onQueued={() => { loadStats(); loadSubscribers(); }} />}
+
+      <NewsletterCampaignSends />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -610,10 +638,10 @@ export default function AdminNewsletterPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {sub.mailerlite_subscriber_id ? (
+                            {sub.sync_status === "synced" ? (
                               <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
                                 <Link2 className="h-3 w-3 mr-1" />
-                                Synced
+                                Verified
                               </Badge>
                             ) : (
                               <Badge
@@ -621,9 +649,10 @@ export default function AdminNewsletterPage() {
                                 className="text-muted-foreground"
                               >
                                 <CloudOff className="h-3 w-3 mr-1" />
-                                Not synced
+                                {sub.sync_status === "error" ? "Retry needed" : sub.sync_status === "processing" ? "Syncing" : "Pending"}
                               </Badge>
                             )}
+                            {sub.sync_error && <p className="text-xs text-destructive mt-1">{sub.sync_error}</p>}
                           </TableCell>
                           <TableCell>
                             {sub.subscribed_at ? (
@@ -680,7 +709,7 @@ export default function AdminNewsletterPage() {
                                 size="sm"
                                 className="text-red-400 hover:text-red-300"
                                 onClick={() => setDeleteTarget(sub)}
-                                title="Remove subscriber"
+                                title="Unsubscribe"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -930,6 +959,14 @@ export default function AdminNewsletterPage() {
                 </div>
               </div>
 
+              {/* Subscriber provenance */}
+              <div className="border-t border-white/[0.06] pt-4 space-y-2">
+                <h4 className="text-sm font-semibold text-muted-foreground">Subscriber source</h4>
+                <p className="text-sm">{selectedSubscriber.source}</p>
+                {selectedSubscriber.name && <p className="text-sm">{selectedSubscriber.name}</p>}
+                {selectedSubscriber.consent_note && <p className="text-sm">Permission: {selectedSubscriber.consent_note}</p>}
+                {selectedSubscriber.imported_at && <p className="text-sm">Imported {new Date(selectedSubscriber.imported_at).toLocaleString()}</p>}
+              </div>
               {/* MailerLite data */}
               <div className="border-t border-white/[0.06] pt-4">
                 <h4 className="text-sm font-semibold text-muted-foreground mb-2">
@@ -1004,11 +1041,10 @@ export default function AdminNewsletterPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Remove Subscriber</DialogTitle>
+            <DialogTitle>Unsubscribe</DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove{" "}
-              <strong>{deleteTarget?.email}</strong> from the newsletter? This
-              will also unsubscribe them from MailerLite.
+              Unsubscribe <strong>{deleteTarget?.email}</strong> from the newsletter?
+              Their unsubscribe record will be retained and the change queued for MailerLite.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1020,7 +1056,7 @@ export default function AdminNewsletterPage() {
               onClick={handleDelete}
               disabled={deleting}
             >
-              {deleting ? "Removing..." : "Remove Subscriber"}
+              {deleting ? "Unsubscribing..." : "Unsubscribe"}
             </Button>
           </DialogFooter>
         </DialogContent>
