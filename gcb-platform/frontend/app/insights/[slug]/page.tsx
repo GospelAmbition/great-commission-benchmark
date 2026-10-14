@@ -14,17 +14,28 @@ import { ChevronLeft, Tag } from "lucide-react";
 import { ModelBenchmarkLink } from "@/components/blog/ModelBenchmarkLink";
 import { generateInsightMetadata } from "@/lib/seo";
 import { buildArticleSchema, buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
-import { getBlogPost } from "@/lib/server-data";
+import { decodeRouteParam, getBlogPost, type PublicBlogPost } from "@/lib/server-data";
 
 type InsightParams = { params: Promise<{ slug: string }> };
 
+async function loadPost(slug: string): Promise<{ post: PublicBlogPost | null; error: boolean }> {
+  try {
+    return { post: await getBlogPost(slug), error: false };
+  } catch (error) {
+    console.error("Failed to load insight post:", error);
+    return { post: null, error: true };
+  }
+}
+
 export async function generateMetadata({ params }: InsightParams): Promise<Metadata> {
-  const { slug } = await params;
-  const post = await getBlogPost(slug).catch(() => null);
+  const slug = decodeRouteParam((await params).slug);
+  const { post, error } = await loadPost(slug);
   if (!post) {
     return {
       title: "Insight Article",
       description: "Read insights and analysis about AI models and the Great Commission Benchmark.",
+      // Don't let crawlers index the error state shown when the post fails to load.
+      ...(error && { robots: { index: false, follow: false } }),
     };
   }
   return generateInsightMetadata({
@@ -48,8 +59,23 @@ function formatDate(dateString?: string) {
 }
 
 export default async function BlogPostPage({ params }: InsightParams) {
-  const { slug } = await params;
-  const post = await getBlogPost(slug);
+  const slug = decodeRouteParam((await params).slug);
+  const { post, error } = await loadPost(slug);
+  if (error) {
+    return (
+      <article className="w-full py-8 max-w-[800px] mx-auto px-4">
+        <Button asChild variant="ghost" className="mb-8">
+          <Link href="/insights">
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back to Insights
+          </Link>
+        </Button>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+          This article could not be loaded. Please try again shortly.
+        </div>
+      </article>
+    );
+  }
   if (!post) notFound();
 
   // Estimate word count and reading time from content
@@ -73,7 +99,7 @@ export default async function BlogPostPage({ params }: InsightParams) {
   const breadcrumbSchema = buildBreadcrumbSchema([
     { name: "Home", path: "/" },
     { name: "Insights", path: "/insights" },
-    { name: post.title, path: `/insights/${slug}` },
+    { name: post.title, path: `/insights/${encodeURIComponent(slug)}` },
   ]);
 
   return (

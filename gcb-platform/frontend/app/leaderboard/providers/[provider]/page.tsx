@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ProviderIcon } from "@/components/ui/provider-icon";
 import type { LeaderboardItem } from "@/lib/api";
-import { getBlogPosts, getProviderModels } from "@/lib/server-data";
+import { decodeRouteParam, getBlogPosts, getProviderModels } from "@/lib/server-data";
 import { generatePageMetadata } from "@/lib/seo";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import { Shield, ShieldAlert, ShieldX, CheckCircle2 } from "lucide-react";
@@ -50,7 +49,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ provider: string }>;
 }): Promise<Metadata> {
-  const provider = decodeProvider((await params).provider);
+  const provider = decodeRouteParam((await params).provider);
   const providerDisplayName = formatProvider(provider);
 
   try {
@@ -88,15 +87,19 @@ export async function generateMetadata({
       title: `${providerDisplayName} AI Models`,
       description: `View ${providerDisplayName} AI models on the Great Commission Benchmark.`,
       path: `/leaderboard/providers/${encodeURIComponent(provider)}`,
+      // Don't let crawlers index the error state shown when models fail to load.
+      noIndex: true,
     });
   }
 }
 
-function decodeProvider(rawProvider: string) {
+async function loadProviderModels(provider: string): Promise<{ models: LeaderboardItem[]; error: boolean }> {
   try {
-    return decodeURIComponent(rawProvider);
-  } catch {
-    return rawProvider;
+    const data = await getProviderModels(provider);
+    return { models: data.items || [], error: false };
+  } catch (error) {
+    console.error("Failed to load provider models:", error);
+    return { models: [], error: true };
   }
 }
 
@@ -118,13 +121,11 @@ async function loadProviderArticles(provider: string) {
 }
 
 export default async function ProviderDetailPage({ params }: { params: Promise<{ provider: string }> }) {
-  const provider = decodeProvider((await params).provider);
-  const [modelData, articles] = await Promise.all([
-    getProviderModels(provider),
+  const provider = decodeRouteParam((await params).provider);
+  const [{ models, error: modelsError }, articles] = await Promise.all([
+    loadProviderModels(provider),
     loadProviderArticles(provider),
   ]);
-  const models: LeaderboardItem[] = modelData.items || [];
-  if (models.length === 0) notFound();
 
   const providerDisplayName = formatProvider(provider);
 
@@ -214,7 +215,11 @@ export default async function ProviderDetailPage({ params }: { params: Promise<{
         <h2 className="text-2xl font-semibold">Models</h2>
       </div>
 
-      {modelCount === 0 ? (
+      {modelsError ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+          {providerDisplayName} models could not be loaded. Please try again shortly.
+        </div>
+      ) : modelCount === 0 ? (
         <Card>
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground">

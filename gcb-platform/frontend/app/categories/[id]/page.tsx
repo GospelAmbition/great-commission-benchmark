@@ -78,10 +78,10 @@ interface CategoryModel {
   trust_tier?: string;
 }
 
-async function loadCategoryModels(categoryId: string): Promise<CategoryModel[]> {
+async function loadCategoryModels(categoryId: string): Promise<{ models: CategoryModel[]; error: boolean }> {
   try {
     const result = await getCategoryModels(categoryId);
-    return (result.items || []).map((item) => ({
+    const models = (result.items || []).map((item) => ({
       model_id: item.model_id,
       model_name: item.model_name,
       provider: item.provider,
@@ -92,15 +92,16 @@ async function loadCategoryModels(categoryId: string): Promise<CategoryModel[]> 
       tier3_score: item.tier3_score,
       trust_tier: item.trust_tier,
     }));
+    return { models, error: false };
   } catch (error) {
     console.error("Failed to load category data:", error);
-    return [];
+    return { models: [], error: true };
   }
 }
 
 export default async function CategoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: categoryId } = await params;
-  const models = await loadCategoryModels(categoryId);
+  const { models, error: modelsError } = await loadCategoryModels(categoryId);
 
   // Check if categoryId is a numeric code (like "1.1") or a string key (like "scripture")
   const isNumericCode = /^\d+\.\d+$/.test(categoryId);
@@ -156,116 +157,124 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
         </Card>
       </div>
 
-      {/* Top Performers */}
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
-        {topPerformers.map((model, index) => (
-          <Card key={model.model_id} className={index === 0 ? "border-[--ga-red]" : ""}>
+      {modelsError ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+          Category results could not be loaded. Please try again shortly.
+        </div>
+      ) : (
+        <>
+          {/* Top Performers */}
+          <div className="grid gap-6 md:grid-cols-3 mb-8">
+            {topPerformers.map((model, index) => (
+              <Card key={model.model_id} className={index === 0 ? "border-[--ga-red]" : ""}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <Badge variant={index === 0 ? "default" : "outline"}>#{index + 1}</Badge>
+                    {model.trust_tier && (
+                      <Badge variant="outline">{model.trust_tier}</Badge>
+                    )}
+                  </div>
+                  <CardTitle className="text-lg mt-2">{model.model_name}</CardTitle>
+                  <CardDescription className="flex items-center gap-2">
+                    <ProviderIcon provider={model.provider} size={14} />
+                    {model.provider}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-[--ga-red]">
+                    {model.category_score.toFixed(1)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Overall: {model.overall_score.toFixed(1)}
+                  </p>
+                  <Button asChild variant="outline" className="w-full mt-4">
+                    <Link href={`/leaderboard/models/${encodeURIComponent(model.model_id)}`}>View Details</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Top Performers Chart */}
+          {topPerformers.length > 0 && (
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Top Performers Comparison</CardTitle>
+                <CardDescription>
+                  Comparing {categoryInfo.name} scores for top performers
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TopPerformersChart
+                  data={topPerformers.map((model) => ({
+                    model_name: model.model_name,
+                    score: model.category_score,
+                    provider: model.provider,
+                  }))}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Full Rankings */}
+          <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <Badge variant={index === 0 ? "default" : "outline"}>#{index + 1}</Badge>
-                {model.trust_tier && (
-                  <Badge variant="outline">{model.trust_tier}</Badge>
-                )}
-              </div>
-              <CardTitle className="text-lg mt-2">{model.model_name}</CardTitle>
-              <CardDescription className="flex items-center gap-2">
-                <ProviderIcon provider={model.provider} size={14} />
-                {model.provider}
+              <CardTitle>All Models - {categoryInfo.name} Rankings</CardTitle>
+              <CardDescription>
+                {models.length} models ranked by {categoryInfo.name.toLowerCase()} performance
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-[--ga-red]">
-                {model.category_score.toFixed(1)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Overall: {model.overall_score.toFixed(1)}
-              </p>
-              <Button asChild variant="outline" className="w-full mt-4">
-                <Link href={`/leaderboard/models/${encodeURIComponent(model.model_id)}`}>View Details</Link>
-              </Button>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Rank</TableHead>
+                    <TableHead>Model</TableHead>
+                    <TableHead>Provider</TableHead>
+                    <TableHead>{categoryInfo.name} Score</TableHead>
+                    <TableHead>Overall Score</TableHead>
+                    <TableHead>Trust</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {models.map((model, index) => (
+                    <TableRow key={model.model_id}>
+                      <TableCell className="font-medium">{index + 1}</TableCell>
+                      <TableCell>
+                        <Link
+                          href={`/leaderboard/models/${encodeURIComponent(model.model_id)}`}
+                          className="hover:underline font-medium"
+                        >
+                          {model.model_name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <ProviderIcon provider={model.provider} size={16} />
+                          <Badge variant="secondary">{model.provider}</Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-semibold text-[--ga-red]">
+                        {model.category_score.toFixed(1)}
+                      </TableCell>
+                      <TableCell>{model.overall_score.toFixed(1)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{model.trust_tier || "automated"}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/leaderboard/models/${encodeURIComponent(model.model_id)}`}>View</Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {/* Top Performers Chart */}
-      {topPerformers.length > 0 && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Top Performers Comparison</CardTitle>
-            <CardDescription>
-              Comparing {categoryInfo.name} scores for top performers
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TopPerformersChart
-              data={topPerformers.map((model) => ({
-                model_name: model.model_name,
-                score: model.category_score,
-                provider: model.provider,
-              }))}
-            />
-          </CardContent>
-        </Card>
+        </>
       )}
-
-      {/* Full Rankings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Models - {categoryInfo.name} Rankings</CardTitle>
-          <CardDescription>
-            {models.length} models ranked by {categoryInfo.name.toLowerCase()} performance
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Rank</TableHead>
-                <TableHead>Model</TableHead>
-                <TableHead>Provider</TableHead>
-                <TableHead>{categoryInfo.name} Score</TableHead>
-                <TableHead>Overall Score</TableHead>
-                <TableHead>Trust</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {models.map((model, index) => (
-                <TableRow key={model.model_id}>
-                  <TableCell className="font-medium">{index + 1}</TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/leaderboard/models/${encodeURIComponent(model.model_id)}`}
-                      className="hover:underline font-medium"
-                    >
-                      {model.model_name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <ProviderIcon provider={model.provider} size={16} />
-                      <Badge variant="secondary">{model.provider}</Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-semibold text-[--ga-red]">
-                    {model.category_score.toFixed(1)}
-                  </TableCell>
-                  <TableCell>{model.overall_score.toFixed(1)}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{model.trust_tier || "automated"}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={`/leaderboard/models/${encodeURIComponent(model.model_id)}`}>View</Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
   );
 }

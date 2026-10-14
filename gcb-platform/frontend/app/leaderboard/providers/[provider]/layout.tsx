@@ -1,5 +1,6 @@
 import { buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
 import { formatProvider } from "@/lib/model-utils";
+import { decodeRouteParam } from "@/lib/server-data";
 
 export default async function ProviderLayout({
   children,
@@ -8,8 +9,7 @@ export default async function ProviderLayout({
   children: React.ReactNode;
   params: Promise<{ provider: string }>;
 }) {
-  const { provider: rawProvider } = await params;
-  const provider = decodeURIComponent(rawProvider);
+  const provider = decodeRouteParam((await params).provider);
   const providerDisplayName = formatProvider(provider);
 
   const breadcrumbSchema = buildBreadcrumbSchema([

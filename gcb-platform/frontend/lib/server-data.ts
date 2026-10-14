@@ -28,6 +28,18 @@ function toPublicPost(post: BlogPost & { related_models?: PublicBlogRelatedModel
   return { ...post, author: { id: post.author?.id, name: post.author?.name } };
 }
 
+/**
+ * Dynamic route params arrive still percent-encoded (e.g. `caf%C3%A9`).
+ * Malformed escapes fall back to the raw value instead of throwing.
+ */
+export function decodeRouteParam(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 async function getJson<T>(path: string): Promise<T | null> {
   const response = await fetch(`${API_URL}${path}`, { cache: "no-store" });
   if (response.status === 404) return null;

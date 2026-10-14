@@ -1,7 +1,7 @@
 import { NewsletterOffer } from "@/components/marketing/NewsletterOffer";
 import { QuickRankings } from "@/components/home/QuickRankings";
 import { RecentTestsList } from "@/components/recent-tests/RecentTestsList";
-import { apiClient, type RecentTestItem, type StatsResponse } from "@/lib/api";
+import { apiClient, type LeaderboardItem, type RecentTestItem, type StatsResponse } from "@/lib/api";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BarChart3, BookOpen, ChevronRight, Clock3 } from "lucide-react";
@@ -17,29 +17,29 @@ interface HomeRanking {
 
 async function loadRankings(): Promise<HomeRanking[]> {
   try {
-    // Load full leaderboard so we can show top 5 and bottom 5 (illustrative range)
-    const full = await apiClient.getLeaderboard({ limit: 200 });
-    if (!full?.items?.length) return [];
-    const top5 = full.items.slice(0, 5).map((item, index) => ({
-      rank: index + 1,
+    // Fetch only the ends of the leaderboard: top 5, and bottom 5 via ascending sort.
+    // The bottom query over-fetches because the client drops zero-score entries.
+    const [top, bottom] = await Promise.all([
+      apiClient.getLeaderboard({ limit: 5, sort: "score", order: "desc" }),
+      apiClient.getLeaderboard({ limit: 10, sort: "score", order: "asc" }),
+    ]);
+    if (!top?.items?.length) return [];
+    const toRanking = (item: LeaderboardItem, rank: number): HomeRanking => ({
+      rank,
       model_id: item.model_id,
       model_name: item.model_name,
       provider: item.provider,
       score: item.overall_score,
-    }));
+    });
+    const top5 = top.items.map((item, index) => toRanking(item, index + 1));
     const top5Ids = new Set(top5.map((r) => r.model_id));
-    const bottom5: HomeRanking[] = [];
-    for (let i = Math.max(5, full.items.length - 5); i < full.items.length; i++) {
-      const item = full.items[i];
-      if (top5Ids.has(item.model_id)) continue;
-      bottom5.push({
-        rank: i + 1,
-        model_id: item.model_id,
-        model_name: item.model_name,
-        provider: item.provider,
-        score: item.overall_score,
-      });
-    }
+    // Zero-score entries sort last in descending order, so they don't shift the
+    // rank of any scored model: descending rank = total - ascending rank + 1.
+    const bottom5 = bottom.items
+      .slice(0, 5)
+      .reverse()
+      .filter((item) => !top5Ids.has(item.model_id))
+      .map((item) => toRanking(item, bottom.total - (item.rank ?? 0) + 1));
     return [...top5, ...bottom5];
   } catch (error) {
     console.error("Failed to load homepage rankings:", error);

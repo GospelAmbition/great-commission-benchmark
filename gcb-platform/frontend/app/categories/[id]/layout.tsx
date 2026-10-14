@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { generateCategoryMetadata } from "@/lib/seo";
 import { CATEGORY_NAMES, TIER_CATEGORIES } from "@/lib/benchmark-definitions";
+import { getCategoryModels } from "@/lib/server-data";
 
 export async function generateMetadata({
   params,
@@ -21,11 +22,16 @@ export async function generateMetadata({
     }
   }
   
-  return generateCategoryMetadata({
+  const metadata = generateCategoryMetadata({
     categoryName,
     categoryCode: id,
     tier,
   });
+
+  // Shares the page's cached request. Don't let crawlers index the error
+  // state shown when results fail to load.
+  const loadFailed = await getCategoryModels(id).then(() => false, () => true);
+  return loadFailed ? { ...metadata, robots: { index: false, follow: false } } : metadata;
 }
 
 export default function CategoryLayout({ children }: { children: React.ReactNode }) {
