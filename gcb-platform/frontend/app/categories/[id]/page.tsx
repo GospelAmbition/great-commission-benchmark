@@ -1,7 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,9 +9,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { apiClient } from "@/lib/api";
+import { getCategoryModels } from "@/lib/server-data";
+import { getCanonicalUrl } from "@/lib/seo";
+import { buildItemListSchema, buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
 import Link from "next/link";
-import { Skeleton } from "@/components/ui/skeleton";
 import { TopPerformersChart } from "@/components/charts/TopPerformersChart";
 import { ProviderIcon } from "@/components/ui/provider-icon";
 import { ChevronLeft } from "lucide-react";
@@ -81,11 +78,29 @@ interface CategoryModel {
   trust_tier?: string;
 }
 
-export default function CategoryPage() {
-  const params = useParams();
-  const categoryId = params.id as string;
-  const [models, setModels] = useState<CategoryModel[]>([]);
-  const [loading, setLoading] = useState(true);
+async function loadCategoryModels(categoryId: string): Promise<CategoryModel[]> {
+  try {
+    const result = await getCategoryModels(categoryId);
+    return (result.items || []).map((item) => ({
+      model_id: item.model_id,
+      model_name: item.model_name,
+      provider: item.provider,
+      category_score: item.category_scores?.[categoryId] || item.overall_score,
+      overall_score: item.overall_score,
+      tier1_score: item.tier1_score,
+      tier2_score: item.tier2_score,
+      tier3_score: item.tier3_score,
+      trust_tier: item.trust_tier,
+    }));
+  } catch (error) {
+    console.error("Failed to load category data:", error);
+    return [];
+  }
+}
+
+export default async function CategoryPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: categoryId } = await params;
+  const models = await loadCategoryModels(categoryId);
 
   // Check if categoryId is a numeric code (like "1.1") or a string key (like "scripture")
   const isNumericCode = /^\d+\.\d+$/.test(categoryId);
@@ -102,57 +117,27 @@ export default function CategoryPage() {
         tier: "Unknown",
       };
 
-  useEffect(() => {
-    if (categoryId) {
-      loadCategoryData();
-    }
-  }, [categoryId]);
-
-  async function loadCategoryData() {
-    setLoading(true);
-    try {
-      const result = await apiClient.getLeaderboard({
-        category: categoryId,
-        limit: 50,
-        sort: "score",
-        order: "desc",
-      });
-      if (result.items) {
-        setModels(
-          result.items.map((item: any) => ({
-            model_id: item.model_id,
-            model_name: item.model_name,
-            provider: item.provider,
-            category_score: item.category_scores?.[categoryId] || item.overall_score,
-            overall_score: item.overall_score,
-            tier1_score: item.tier1_score,
-            tier2_score: item.tier2_score,
-            tier3_score: item.tier3_score,
-            trust_tier: item.trust_tier,
-          }))
-        );
-      }
-    } catch (error) {
-      console.error("Failed to load category data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="container py-8">
-        <Skeleton className="h-12 w-64 mb-4" />
-        <Skeleton className="h-8 w-96 mb-8" />
-        <Skeleton className="h-96" />
-      </div>
-    );
-  }
+  const schemaCategoryName = CATEGORY_NAMES[categoryId] || categoryId.replace(/_/g, " ");
+  const itemListSchema = models.length > 0
+    ? buildItemListSchema(models.slice(0, 10).map((model, index) => ({
+        name: model.model_name || model.model_id || "Unknown Model",
+        url: getCanonicalUrl(`/leaderboard/models/${encodeURIComponent(model.model_id)}`),
+        position: index + 1,
+        description: `${model.model_name || "AI Model"} scored ${model.category_score.toFixed(1)}% in ${schemaCategoryName}`,
+      })))
+    : null;
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: "Home", path: "/" },
+    { name: "Categories", path: "/categories" },
+    { name: schemaCategoryName, path: `/categories/${categoryId}` },
+  ]);
 
   const topPerformers = models.slice(0, 3);
 
   return (
     <div className="container py-8">
+      {itemListSchema && <JsonLdScript data={itemListSchema} />}
+      <JsonLdScript data={breadcrumbSchema} />
       <div className="mb-8">
         <Button asChild variant="ghost" className="mb-4 gap-2">
           <Link href="/categories">

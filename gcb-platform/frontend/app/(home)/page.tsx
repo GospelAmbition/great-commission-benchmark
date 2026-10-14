@@ -1,15 +1,11 @@
-"use client";
-
-import { NewsletterButton, NewsletterOffer } from "@/components/marketing/NewsletterOffer";
-import { useEffect, useState } from "react";
+import { NewsletterOffer } from "@/components/marketing/NewsletterOffer";
 import { QuickRankings } from "@/components/home/QuickRankings";
 import { RecentTestsList } from "@/components/recent-tests/RecentTestsList";
-import { apiClient, RecentTestItem, StatsResponse } from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
+import { apiClient, type RecentTestItem, type StatsResponse } from "@/lib/api";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BarChart3, BookOpen, ChevronRight, Clock3 } from "lucide-react";
-import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
+import { HomeHero } from "@/components/home/HomeHero";
 
 interface HomeRanking {
   rank: number;
@@ -19,119 +15,66 @@ interface HomeRanking {
   score: number;
 }
 
-export default function Home() {
-  const [rankings, setRankings] = useState<HomeRanking[]>([]);
-  const [stats, setStats] = useState<StatsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [recentTests, setRecentTests] = useState<RecentTestItem[]>([]);
-  const [recentLoading, setRecentLoading] = useState(true);
-  const [recentError, setRecentError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadRankings() {
-      try {
-        // Load full leaderboard so we can show top 5 and bottom 5 (illustrative range)
-        const full = await apiClient.getLeaderboard({ limit: 200 });
-        if (full?.items && full.items.length > 0) {
-          const top5 = full.items.slice(0, 5).map((item, index) => ({
-            rank: index + 1,
-            model_id: item.model_id,
-            model_name: item.model_name,
-            provider: item.provider,
-            score: item.overall_score,
-          }));
-          const top5Ids = new Set(top5.map((r) => r.model_id));
-          const bottom5: Array<{ rank: number; model_id: string; model_name: string; provider: string; score: number }> = [];
-          for (let i = Math.max(5, full.items.length - 5); i < full.items.length; i++) {
-            const item = full.items[i];
-            if (top5Ids.has(item.model_id)) continue;
-            bottom5.push({
-              rank: i + 1,
-              model_id: item.model_id,
-              model_name: item.model_name,
-              provider: item.provider,
-              score: item.overall_score,
-            });
-          }
-          setRankings([...top5, ...bottom5]);
-        }
-      } catch (error) {
-        console.error("Failed to load homepage rankings:", error);
-      } finally {
-        setLoading(false);
-      }
+async function loadRankings(): Promise<HomeRanking[]> {
+  try {
+    // Load full leaderboard so we can show top 5 and bottom 5 (illustrative range)
+    const full = await apiClient.getLeaderboard({ limit: 200 });
+    if (!full?.items?.length) return [];
+    const top5 = full.items.slice(0, 5).map((item, index) => ({
+      rank: index + 1,
+      model_id: item.model_id,
+      model_name: item.model_name,
+      provider: item.provider,
+      score: item.overall_score,
+    }));
+    const top5Ids = new Set(top5.map((r) => r.model_id));
+    const bottom5: HomeRanking[] = [];
+    for (let i = Math.max(5, full.items.length - 5); i < full.items.length; i++) {
+      const item = full.items[i];
+      if (top5Ids.has(item.model_id)) continue;
+      bottom5.push({
+        rank: i + 1,
+        model_id: item.model_id,
+        model_name: item.model_name,
+        provider: item.provider,
+        score: item.overall_score,
+      });
     }
+    return [...top5, ...bottom5];
+  } catch (error) {
+    console.error("Failed to load homepage rankings:", error);
+    return [];
+  }
+}
 
-    async function loadStats() {
-      try {
-        setStats(await apiClient.getStats());
-      } catch (error) {
-        console.error("Failed to load homepage stats:", error);
-      }
-    }
+async function loadStats(): Promise<StatsResponse | null> {
+  try {
+    return await apiClient.getStats();
+  } catch (error) {
+    console.error("Failed to load homepage stats:", error);
+    return null;
+  }
+}
 
-    async function loadRecentTests() {
-      try {
-        const response = await apiClient.getRecentTests(5);
-        setRecentTests(response.items || []);
-      } catch (error) {
-        console.error("Failed to load recent tests:", error);
-        setRecentError("Recent tests could not be loaded. Please try again shortly.");
-      } finally {
-        setRecentLoading(false);
-      }
-    }
+async function loadRecentTests(): Promise<{ items: RecentTestItem[]; error: string | null }> {
+  try {
+    const response = await apiClient.getRecentTests(5);
+    return { items: response.items || [], error: null };
+  } catch (error) {
+    console.error("Failed to load recent tests:", error);
+    return { items: [], error: "Recent tests could not be loaded. Please try again shortly." };
+  }
+}
 
-    void Promise.all([loadRankings(), loadStats(), loadRecentTests()]);
-  }, []);
+// Render per request so data is never frozen at build time.
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const [rankings, stats, recent] = await Promise.all([loadRankings(), loadStats(), loadRecentTests()]);
 
   return (
     <div className="flex flex-col">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        {/* Background with subtle gradient */}
-        <div className="absolute inset-0 gradient-hero" />
-        
-        {/* Red glow effect */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] gradient-red-glow opacity-50" />
-        
-        {/* Grid pattern overlay */}
-        <div 
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: '60px 60px'
-          }}
-        />
-        
-        <div className="container relative py-16 md:py-24">
-          <div className="flex items-center justify-between">
-            <div className="max-w-3xl animate-fade-in-up">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-light text-foreground mb-6 leading-tight tracking-tight">
-                Evaluating AI for the
-                <span className="block text-primary font-light text-5xl md:text-6xl lg:text-7xl">Great Commission</span>
-              </h1>
-              <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl leading-relaxed">
-                We measure which AI models meaningfully support gospel outreach and which oppose it.
-              </p>
-              <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg" className="text-base px-8">
-                <Link href="/leaderboard">
-                  View Full Leaderboard
-                  <ChevronRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <NewsletterButton source="home_hero" variant="outline" size="lg">Get the GCB digest</NewsletterButton>
-              </div>
-            </div>
-            
-            {/* Guardrails Animation - hidden on smaller screens */}
-            <div className="hidden lg:block shrink-0">
-              <GuardrailsAnimation />
-            </div>
-          </div>
-        </div>
-      </section>
+      <HomeHero />
 
       {/* Quick Rankings */}
       <section className="container py-12">
@@ -147,15 +90,7 @@ export default function Home() {
           </p>
         </div>
 
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-14 w-full" />
-            ))}
-          </div>
-        ) : (
-          <QuickRankings rankings={rankings} />
-        )}
+        <QuickRankings rankings={rankings} />
       </section>
 
       {/* Recent Tests */}
@@ -179,11 +114,7 @@ export default function Home() {
             </Link>
           </Button>
         </div>
-        <RecentTestsList
-          items={recentTests}
-          loading={recentLoading}
-          error={recentError}
-        />
+        <RecentTestsList items={recent.items} error={recent.error} />
       </section>
       <section className="container pb-12"><NewsletterOffer source="home_results" /></section>
 
