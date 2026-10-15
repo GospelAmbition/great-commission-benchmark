@@ -1,13 +1,8 @@
-"use client";
-
-import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Grid3X3 } from "lucide-react";
 import { CategoryRankingCard, type CategoryModel } from "@/components/leaderboard";
-import { GuardrailsAnimation } from "@/components/home/GuardrailsAnimation";
+import { CategoriesHeader } from "./categories-header";
 import {
   TIER_CATEGORIES,
   CATEGORY_NAMES,
@@ -29,93 +24,42 @@ function getAllCategoryCodes(): string[] {
   ];
 }
 
-export default function CategoriesPage() {
-  const [categoryRankings, setCategoryRankings] = useState<Record<string, CategoryRankingData>>({});
-  const [loading, setLoading] = useState(true);
-
-  const loadCategoryRankings = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Use the optimized single-request endpoint instead of 19 parallel calls
-      const response = await apiClient.getCategoryRankings({ limit_per_category: 5 });
-      
-      // Transform response to match expected format
-      const rankingsMap: Record<string, CategoryRankingData> = {};
-      const allCategories = getAllCategoryCodes();
-      
-      for (const categoryCode of allCategories) {
-        const categoryData = response.categories[categoryCode];
-        if (categoryData) {
-          rankingsMap[categoryCode] = {
-            categoryCode,
-            models: categoryData.models.map((m) => ({
-              model_id: m.model_id,
-              model_name: m.model_name,
-              provider: m.provider,
-              score: m.score,
-            })),
-            totalModels: categoryData.total_models,
-          };
-        } else {
-          rankingsMap[categoryCode] = {
-            categoryCode,
-            models: [],
-            totalModels: 0,
-          };
-        }
-      }
-      
-      setCategoryRankings(rankingsMap);
-    } catch (error) {
-      console.error("Failed to load category rankings:", error);
-    } finally {
-      setLoading(false);
+async function loadCategoryRankings(): Promise<Record<string, CategoryRankingData>> {
+  const rankingsMap: Record<string, CategoryRankingData> = {};
+  try {
+    // Use the optimized single-request endpoint instead of 19 parallel calls
+    const response = await apiClient.getCategoryRankings({ limit_per_category: 5 });
+    for (const categoryCode of getAllCategoryCodes()) {
+      const categoryData = response.categories[categoryCode];
+      rankingsMap[categoryCode] = {
+        categoryCode,
+        models: (categoryData?.models || []).map((m) => ({
+          model_id: m.model_id,
+          model_name: m.model_name,
+          provider: m.provider,
+          score: m.score,
+        })),
+        totalModels: categoryData?.total_models || 0,
+      };
     }
-  }, []);
+  } catch (error) {
+    console.error("Failed to load category rankings:", error);
+  }
+  return rankingsMap;
+}
 
-  useEffect(() => {
-    loadCategoryRankings();
-  }, [loadCategoryRankings]);
+// Render per request so data is never frozen at build time.
+export const dynamic = "force-dynamic";
+
+export default async function CategoriesPage() {
+  const categoryRankings = await loadCategoryRankings();
 
   return (
     <div className="flex flex-col">
-      {/* Page Header */}
-      <div className="relative border-b border-white/[0.06] overflow-x-hidden">
-        {/* Background gradient */}
-        <div className="absolute inset-0 gradient-hero" />
-        <div className="absolute top-1/2 right-0 w-96 h-96 gradient-red-glow opacity-40" />
-        
-        <div className="container relative py-8">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Grid3X3 className="h-5 w-5 text-primary" />
-                </div>
-                <h1 className="text-3xl md:text-4xl font-light text-foreground">Categories</h1>
-              </div>
-              <p className="text-muted-foreground max-w-2xl font-light">
-                Browse benchmark categories and see how AI models perform in each area of ministry and theological understanding
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        {/* Guardrails Animation - positioned on right, allowed to overflow */}
-        <div className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
-          <GuardrailsAnimation />
-        </div>
-      </div>
+      <CategoriesHeader />
 
       <div className="container py-6 space-y-6">
-        {loading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-              <Skeleton key={i} className="h-64" />
-            ))}
-          </div>
-        ) : (
-          <>
+        <>
             {/* Tier 1: Task Capability */}
             <div>
               <div className="flex items-center gap-3 mb-6">
@@ -195,8 +139,7 @@ export default function CategoriesPage() {
                 })}
               </div>
             </div>
-          </>
-        )}
+        </>
 
         {/* Disclaimer */}
         <div className="flex items-start gap-3 p-3 bg-white/[0.02] rounded-lg border border-white/[0.06]">

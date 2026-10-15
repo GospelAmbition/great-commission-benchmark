@@ -1,8 +1,6 @@
-"use client";
-
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { NewsletterButton, NewsletterOffer } from "@/components/marketing/NewsletterOffer";
-import { useEffect, useState } from "react";
-import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
@@ -11,130 +9,103 @@ import rehypeRaw from "rehype-raw";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, Tag } from "lucide-react";
 import { ModelBenchmarkLink } from "@/components/blog/ModelBenchmarkLink";
+import { generateInsightMetadata } from "@/lib/seo";
+import { buildArticleSchema, buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
+import { decodeRouteParam, getBlogPost, type PublicBlogPost } from "@/lib/server-data";
 
-interface BlogCategory {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-}
+type InsightParams = { params: Promise<{ slug: string }> };
 
-interface RelatedModel {
-  id: string;
-  model_id: string;
-  name: string;
-  provider: string;
-}
-
-interface BlogPost {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt?: string;
-  content?: string;
-  featured_image_url?: string;
-  status: string;
-  author: {
-    id: string;
-    name?: string;
-    email: string;
-  };
-  categories: BlogCategory[];
-  related_models?: RelatedModel[];
-  created_at: string;
-  updated_at: string;
-  published_at?: string;
-}
-
-export default function BlogPostPage() {
-  const params = useParams();
-  const slug = params.slug as string;
-  const [post, setPost] = useState<BlogPost | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (slug) {
-      loadPost();
-    }
-  }, [slug]);
-
-  async function loadPost() {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/blog/posts/${slug}`);
-      if (response.ok) {
-        const data = await response.json();
-        setPost(data);
-      } else if (response.status === 404) {
-        setError("Post not found");
-      } else {
-        setError("Failed to load post");
-      }
-    } catch (err) {
-      console.error("Failed to load post:", err);
-      setError("Failed to load post");
-    } finally {
-      setLoading(false);
-    }
+async function loadPost(slug: string): Promise<{ post: PublicBlogPost | null; error: boolean }> {
+  try {
+    return { post: await getBlogPost(slug), error: false };
+  } catch (error) {
+    console.error("Failed to load insight post:", error);
+    return { post: null, error: true };
   }
+}
 
-  function formatDate(dateString?: string) {
-    if (!dateString) return "";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+export async function generateMetadata({ params }: InsightParams): Promise<Metadata> {
+  const slug = decodeRouteParam((await params).slug);
+  const { post, error } = await loadPost(slug);
+  if (!post) {
+    return {
+      title: "Insight Article",
+      description: "Read insights and analysis about AI models and the Great Commission Benchmark.",
+      // Don't let crawlers index the error state shown when the post fails to load.
+      ...(error && { robots: { index: false, follow: false } }),
+    };
   }
+  return generateInsightMetadata({
+    title: post.title,
+    excerpt: post.excerpt || post.title,
+    slug: post.slug,
+    publishedAt: post.published_at,
+    author: post.author?.name,
+    imageUrl: post.featured_image_url,
+  });
+}
 
-  if (loading) {
+function formatDate(dateString?: string) {
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export default async function BlogPostPage({ params }: InsightParams) {
+  const slug = decodeRouteParam((await params).slug);
+  const { post, error } = await loadPost(slug);
+  if (error) {
     return (
-      <div className="w-full py-8 max-w-[800px] mx-auto px-4">
-        <Skeleton className="h-8 w-32 mb-8" />
-        <Skeleton className="h-12 w-3/4 mb-4" />
-        <Skeleton className="h-6 w-1/2 mb-8" />
-        <Skeleton className="h-64 w-full mb-8" />
-        <div className="space-y-4">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !post) {
-    return (
-      <div className="w-full py-8 max-w-[800px] mx-auto px-4">
-        <Link href="/insights">
-          <Button variant="ghost" className="mb-8">
+      <article className="w-full py-8 max-w-[800px] mx-auto px-4">
+        <Button asChild variant="ghost" className="mb-8">
+          <Link href="/insights">
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back to Insights
-          </Button>
-        </Link>
-        <Card className="p-12 text-center">
-          <CardContent>
-            <h1 className="text-2xl font-bold mb-4">Post Not Found</h1>
-            <p className="text-muted-foreground mb-6">
-              The article you&apos;re looking for doesn&apos;t exist or has been removed.
-            </p>
-            <Link href="/insights">
-              <Button>Browse All Articles</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+          </Link>
+        </Button>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+          This article could not be loaded. Please try again shortly.
+        </div>
+      </article>
     );
   }
+  if (!post) notFound();
+
+  // Estimate word count and reading time from content
+  const wordCount = post.content ? post.content.split(/\s+/).length : undefined;
+  const readingTime = wordCount ? Math.ceil(wordCount / 200) : undefined; // ~200 words per minute
+
+  const articleSchema = buildArticleSchema({
+    title: post.title,
+    description: post.excerpt || post.title,
+    slug: post.slug,
+    publishedAt: post.published_at || post.created_at,
+    modifiedAt: post.updated_at,
+    author: post.author?.name,
+    imageUrl: post.featured_image_url,
+    categories: post.categories?.map(c => ({ name: c.name, slug: c.slug })),
+    section: post.categories?.[0]?.name,
+    wordCount,
+    readingTime,
+  });
+
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: "Home", path: "/" },
+    { name: "Insights", path: "/insights" },
+    { name: post.title, path: `/insights/${encodeURIComponent(slug)}` },
+  ]);
 
   return (
     <article className="w-full py-8 max-w-[800px] mx-auto px-4">
+      <JsonLdScript data={[articleSchema, breadcrumbSchema]} />
+
       {/* Back Button */}
       <Link href="/insights">
         <Button variant="ghost" className="mb-8">

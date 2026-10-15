@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { generateCategoryMetadata, getCanonicalUrl } from "@/lib/seo";
+import { generateCategoryMetadata } from "@/lib/seo";
 import { CATEGORY_NAMES, TIER_CATEGORIES } from "@/lib/benchmark-definitions";
-import { buildItemListSchema, buildBreadcrumbSchema, JsonLdScript } from "@/lib/structured-data";
-import { API_URL } from "@/lib/api";
+import { getCategoryModels } from "@/lib/server-data";
 
 export async function generateMetadata({
   params,
@@ -23,70 +22,18 @@ export async function generateMetadata({
     }
   }
   
-  return generateCategoryMetadata({
+  const metadata = generateCategoryMetadata({
     categoryName,
     categoryCode: id,
     tier,
   });
+
+  // Shares the page's cached request. Don't let crawlers index the error
+  // state shown when results fail to load.
+  const loadFailed = await getCategoryModels(id).then(() => false, () => true);
+  return loadFailed ? { ...metadata, robots: { index: false, follow: false } } : metadata;
 }
 
-// Fetch category rankings server-side for structured data
-async function getCategoryRankings(categoryId: string) {
-  try {
-    const response = await fetch(`${API_URL}/api/public/leaderboard?category=${categoryId}&limit=10`, {
-      // Publication invalidates the backend's Redis leaderboard cache. Read
-      // through that canonical cache so category pages cannot retain an older
-      // Next.js ISR snapshot after a new model is published.
-      cache: "no-store",
-    });
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.entries || [];
-  } catch {
-    return null;
-  }
-}
-
-export default async function CategoryLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode;
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const categoryName = CATEGORY_NAMES[id] || id.replace(/_/g, " ");
-  const entries = await getCategoryRankings(id);
-  
-  // Generate ItemList schema with top models for this category
-  const itemListData = entries
-    ? entries.slice(0, 10).map((entry: {
-        model?: { model_id?: string; name?: string; provider?: string };
-        scores?: { overall?: number };
-        category_scores?: Record<string, number>;
-      }, index: number) => {
-        const categoryScore = entry.category_scores?.[id] || entry.scores?.overall || 0;
-        return {
-          name: entry.model?.name || entry.model?.model_id || "Unknown Model",
-          url: getCanonicalUrl(`/leaderboard/models/${encodeURIComponent(entry.model?.model_id || "")}`),
-          position: index + 1,
-          description: `${entry.model?.name || "AI Model"} scored ${categoryScore.toFixed(1)}% in ${categoryName}`,
-        };
-      })
-    : [];
-
-  const itemListSchema = itemListData.length > 0 ? buildItemListSchema(itemListData) : null;
-  const breadcrumbSchema = buildBreadcrumbSchema([
-    { name: "Home", path: "/" },
-    { name: "Categories", path: "/categories" },
-    { name: categoryName, path: `/categories/${id}` },
-  ]);
-
-  return (
-    <>
-      {itemListSchema && <JsonLdScript data={itemListSchema} />}
-      <JsonLdScript data={breadcrumbSchema} />
-      {children}
-    </>
-  );
+export default function CategoryLayout({ children }: { children: React.ReactNode }) {
+  return children;
 }
