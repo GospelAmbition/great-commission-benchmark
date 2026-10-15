@@ -371,7 +371,8 @@ async def bulk_submit(
     try:
         # Get or create the Model record
         model = processor.get_or_create_model(model_id_str, model_name)
-        if not model.description:
+        from app.services.model_description import is_abbreviated
+        if not model.description or is_abbreviated(model.description):
             from app.services.model_sync import sync_model_description
             await sync_model_description(db, model, commit=False)
         

@@ -2114,47 +2114,36 @@ async def list_stripe_refunds(
 @router.post("/models/sync-descriptions")
 async def sync_model_descriptions(
     all_models: bool = Query(False, description="Sync all models, even if they already have descriptions"),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(3, ge=1, le=10),
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    """Sync model descriptions from OpenRouter API"""
+    """Sync one bounded batch; offsets count all models, including complete descriptions."""
     try:
-        if all_models:
-            # Sync all models
-            models = db.query(Model).all()
-            updated_count = 0
-            errors = []
-            
-            from app.services.model_sync import sync_model_description
-            
-            for model in models:
-                try:
-                    result = await sync_model_description(db, model)
-                    if result:
-                        updated_count += 1
-                except Exception as e:
-                    errors.append(f"{model.name}: {str(e)}")
-                    continue
-            
-            response_payload = {
-                "success": True,
-                "message": f"Synced {updated_count} model(s)",
-                "updated_count": updated_count,
-                "total_models": len(models),
-                "errors": errors if errors else None
-            }
-        else:
-            # Sync only models without descriptions
-            updated_count = await sync_all_model_descriptions(db)
-            response_payload = {
-                "success": True,
-                "message": f"Synced {updated_count} model(s)",
-                "updated_count": updated_count
-            }
+        total_models = db.query(Model).count()
+        updated_count = await sync_all_model_descriptions(
+            db, all_models=all_models, offset=offset, limit=limit
+        )
         if updated_count:
             from app.services.published_cache import clear_published_caches
             await clear_published_caches()
-        return response_payload
+        next_offset = offset + limit if offset + limit < total_models else None
+        remaining_incomplete = None
+        if next_offset is None:
+            from app.services.model_description import is_abbreviated
+            remaining_incomplete = sum(
+                1 for (description,) in db.query(Model.description).all()
+                if not description or not description.strip() or is_abbreviated(description)
+            )
+        return {
+            "success": True,
+            "message": f"Synced {updated_count} model(s)",
+            "updated_count": updated_count,
+            "total_models": total_models,
+            "next_offset": next_offset,
+            "remaining_incomplete": remaining_incomplete,
+        }
     except Exception as e:
         logger.error(f"Error syncing model descriptions: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

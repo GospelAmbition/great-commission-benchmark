@@ -2,7 +2,7 @@
 """
 Sync model descriptions from OpenRouter API.
 
-This script fetches descriptions for all models that don't have one yet
+This script fetches descriptions for all models with missing or abbreviated descriptions
 from the OpenRouter API and stores them in the database.
 
 Usage:
@@ -22,7 +22,20 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy.orm import Session
 from app.db.base import SessionLocal
 from app.db.models.model import Model
-from app.services.model_sync import sync_all_model_descriptions, sync_model_description
+from app.services.model_sync import sync_all_model_descriptions
+
+
+async def sync_all_batches(db: Session, all_models: bool = False) -> int:
+    total = db.query(Model).count()
+    updated = 0
+    for offset in range(0, total, 10):
+        batch_updated = await sync_all_model_descriptions(db, all_models=all_models, offset=offset, limit=10)
+        updated += batch_updated
+        if batch_updated:
+            from app.services.published_cache import clear_published_caches
+            await clear_published_caches()
+        print(f"  Processed {min(offset + 10, total)}/{total}; updated {updated}")
+    return updated
 
 
 async def sync_descriptions(all_models: bool = False):
@@ -36,28 +49,14 @@ async def sync_descriptions(all_models: bool = False):
         
         if all_models:
             print("\nSyncing ALL models (including those with existing descriptions)...\n")
-            # Get all models
-            models = db.query(Model).all()
-            updated_count = 0
-            
-            for model in models:
-                try:
-                    result = await sync_model_description(db, model)
-                    if result:
-                        updated_count += 1
-                        print(f"  ✓ Updated: {model.name} ({model.model_id})")
-                    else:
-                        print(f"  - No description available: {model.name} ({model.model_id})")
-                except Exception as e:
-                    print(f"  ✗ Error syncing {model.name}: {e}")
-                    continue
-            
+            updated_count = await sync_all_batches(db, all_models=True)
+
             print(f"\n{'=' * 60}")
             print(f"Sync complete! Updated {updated_count} model(s)")
             print("=" * 60)
         else:
-            print("\nSyncing only models without descriptions...\n")
-            updated_count = await sync_all_model_descriptions(db)
+            print("\nRepairing missing or abbreviated descriptions...\n")
+            updated_count = await sync_all_batches(db)
             
             print(f"\n{'=' * 60}")
             print(f"Sync complete! Updated {updated_count} model(s)")

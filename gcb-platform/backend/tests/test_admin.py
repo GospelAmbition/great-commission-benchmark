@@ -618,3 +618,90 @@ class TestAdminStats:
         assert "total_reviews" in data["moderation"]
         
         app.dependency_overrides.clear()
+
+
+class TestAdminDescriptionSync:
+    @pytest.fixture
+    def sync_setup(self, client, db_session, admin_user, monkeypatch):
+        from unittest.mock import AsyncMock
+        from main import app
+        from app.core.auth import get_current_user
+        from app.db.models.model import Model
+        from app.api.v1.endpoints import admin
+        from app.services import published_cache
+
+        async def authenticate():
+            return admin_user
+
+        app.dependency_overrides[get_current_user] = authenticate
+        for index in range(4):
+            db_session.add(Model(model_id=f"test/model-{index}", name=f"Model {index}", provider="Test"))
+        db_session.commit()
+        sync = AsyncMock(return_value=2)
+        clear = AsyncMock()
+        monkeypatch.setattr(admin, "sync_all_model_descriptions", sync)
+        monkeypatch.setattr(published_cache, "clear_published_caches", clear)
+        return sync, clear
+
+    def test_batches_preserve_offsets_and_invalidate_only_changes(self, client, db_session, sync_setup):
+        sync, clear = sync_setup
+        response = client.post("/api/admin/models/sync-descriptions?all_models=true&offset=0&limit=3")
+        assert response.status_code == 200
+        assert response.json()["updated_count"] == 2
+        assert response.json()["total_models"] == 4
+        assert response.json()["next_offset"] == 3
+        assert response.json()["remaining_incomplete"] is None
+        sync.assert_awaited_once_with(db_session, all_models=True, offset=0, limit=3)
+        clear.assert_awaited_once()
+
+        sync.reset_mock()
+        sync.return_value = 0
+        response = client.post("/api/admin/models/sync-descriptions?offset=3&limit=3")
+        assert response.status_code == 200
+        assert response.json()["updated_count"] == 0
+        assert response.json()["total_models"] == 4
+        assert response.json()["next_offset"] is None
+        assert response.json()["remaining_incomplete"] == 4
+        sync.assert_awaited_once_with(db_session, all_models=False, offset=3, limit=3)
+        clear.assert_awaited_once()
+
+    @pytest.mark.parametrize("query", ["limit=11", "limit=0", "offset=-1"])
+    def test_rejects_unbounded_or_invalid_batches(self, client, sync_setup, query):
+        sync, clear = sync_setup
+        assert client.post(f"/api/admin/models/sync-descriptions?{query}").status_code == 422
+        sync.assert_not_awaited()
+        clear.assert_not_awaited()
+
+    def test_non_admin_cannot_start_sync(self, client, sync_setup, test_user):
+        from main import app
+        from app.core.auth import get_current_user
+
+        async def authenticate():
+            return test_user
+
+        app.dependency_overrides[get_current_user] = authenticate
+        assert client.post("/api/admin/models/sync-descriptions").status_code == 403
+        sync, clear = sync_setup
+        sync.assert_not_awaited()
+        clear.assert_not_awaited()
+
+
+    @pytest.mark.parametrize("descriptions, expected", [
+        ([None, " ", "Still abbreviated…", "Complete description."], 3),
+        (["Complete description."] * 4, 0),
+    ])
+    def test_final_batch_reports_remaining_stored_descriptions(self, client, db_session, sync_setup, descriptions, expected):
+        from app.db.models.model import Model
+        sync, _ = sync_setup
+        models = db_session.query(Model).order_by(Model.model_id).all()
+
+        async def apply_batch(*args, **kwargs):
+            for model, description in zip(models, descriptions):
+                model.description = description
+            db_session.commit()
+            return 1
+
+        sync.side_effect = apply_batch
+        response = client.post("/api/admin/models/sync-descriptions?offset=3&limit=3")
+        assert response.status_code == 200
+        assert response.json()["remaining_incomplete"] == expected

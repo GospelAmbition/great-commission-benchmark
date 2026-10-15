@@ -36,6 +36,7 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState("");
   const [refreshingCache, setRefreshingCache] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
 
@@ -95,21 +96,45 @@ export default function AdminDashboardPage() {
 
   async function syncModelDescriptions() {
     setSyncing(true);
+    setSyncProgress("Starting...");
+    let updatedCount = 0;
     try {
-      const response = await fetch("/api/admin/models/sync-descriptions", {
-        method: "POST",
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to sync model descriptions");
+      let offset = 0;
+      let remainingIncomplete = 0;
+      while (true) {
+        const query = new URLSearchParams({ all_models: "false", offset: String(offset), limit: "3" });
+        const response = await fetch(`/api/admin/models/sync-descriptions?${query}`, { method: "POST" });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || "Failed to sync model descriptions");
+        }
+        const data = await response.json();
+        updatedCount += data.updated_count || 0;
+        const nextOffset = data.next_offset;
+        setSyncProgress(`${nextOffset ?? data.total_models} of ${data.total_models} checked`);
+        if (nextOffset === null) {
+          remainingIncomplete = data.remaining_incomplete;
+          if (!Number.isInteger(remainingIncomplete) || remainingIncomplete < 0) {
+            throw new Error("Description sync did not report the remaining incomplete descriptions");
+          }
+          break;
+        }
+        if (!Number.isInteger(nextOffset) || nextOffset <= offset) {
+          throw new Error("Description sync returned an invalid continuation");
+        }
+        offset = nextOffset;
       }
-      const data = await response.json();
-      toast.success(data.message || `Synced ${data.updated_count || 0} model(s)`);
+      if (remainingIncomplete > 0) {
+        toast.warning(`Synced ${updatedCount} model(s). ${remainingIncomplete} description(s) remain incomplete; retry sync to fetch missing full descriptions.`);
+      } else {
+        toast.success(`Synced ${updatedCount} model(s). All stored descriptions are complete.`);
+      }
     } catch (error: unknown) {
       console.error("Failed to sync model descriptions:", error);
-      toast.error(errorMessage(error, "Failed to sync model descriptions"));
+      toast.error(`${errorMessage(error, "Failed to sync model descriptions")} (${updatedCount} model(s) updated before stopping)`);
     } finally {
       setSyncing(false);
+      setSyncProgress("");
     }
   }
 
@@ -407,7 +432,7 @@ export default function AdminDashboardPage() {
               variant="outline"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-              {syncing ? "Syncing..." : "Sync Model Descriptions"}
+              {syncing ? `Syncing: ${syncProgress}` : "Sync Model Descriptions"}
             </Button>
           </CardContent>
         </Card>

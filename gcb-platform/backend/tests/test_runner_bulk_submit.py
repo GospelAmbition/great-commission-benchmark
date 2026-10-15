@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
+import pytest
+
 from app.db.models.model import Model
 
 
@@ -224,3 +226,25 @@ def test_bulk_submit_continues_when_description_sync_fails(
 
     model = db_session.query(Model).filter(Model.model_id == "test-provider/no-description").one()
     assert model.description is None
+
+
+@pytest.mark.parametrize("description,should_sync", [("Upstream summary...", True), ("Full stored description.", False)])
+def test_bulk_submit_retries_only_incomplete_descriptions(
+    client, db_session, admin_user, test_question_set, test_questions, monkeypatch,
+    description, should_sync,
+):
+    from main import app
+    from app.api.v1.endpoints import runner
+
+    _authorize_runner(app, runner, admin_user, db_session)
+    model_id = "test-provider/description-retry"
+    model = Model(model_id=model_id, name="Description retry", provider="test-provider", description=description)
+    db_session.add(model)
+    db_session.commit()
+    sync = AsyncMock(return_value=False)
+    monkeypatch.setattr("app.services.model_sync.sync_model_description", sync)
+    response = _bulk_submit(client, model_id, test_question_set, test_questions)
+    assert response.status_code == 200
+    assert response.json()["status"] == "published"
+    assert sync.await_count == int(should_sync)
+    assert model.description == description
