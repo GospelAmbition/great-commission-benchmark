@@ -44,7 +44,9 @@ auto-merge when PR CI is requested or completes, including forks. CI runs on
 open, reopen, ready-for-review and new commits.
 Draft PRs are not opted in. The workflow runs from the trusted default branch
 under `workflow_run`; it only reads PR metadata and requests native auto-merge.
-It never checks out PR code, consumes PR artifacts, or bypasses checks/reviews.
+An already-green PR can merge immediately under the same protection rules, with
+its inspected head commit pinned. The workflow never checks out PR code, consumes
+PR artifacts, or bypasses checks/reviews.
 Its token has only repository contents and pull-request write permissions.
 Manual workflow dispatch reapplies opt-in to existing ready PRs.
 

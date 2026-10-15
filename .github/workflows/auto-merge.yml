@@ -36,8 +36,9 @@ jobs:
             if [[ $(jq -r '.state == "open" and .draft == false and .base.ref == "main" and .auto_merge == null' <<< "$pr") != true ]]; then
               continue
             fi
-            node_id=$(jq -r .node_id <<< "$pr")
-            # Native GitHub evaluates required checks and protection rules.
-            # This mutation enables auto-merge; it never directly merges/bypasses.
-            gh api graphql -f id="$node_id" -f query='mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number autoMergeRequest { enabledAt } } } }'
+            head_sha=$(jq -r .head.sha <<< "$pr")
+            # Queue native auto-merge, or merge an already-green PR under the
+            # same branch protection. Never use --admin or bypass checks.
+            # Matching the inspected head prevents merging an unseen update.
+            gh pr merge "$number" --repo "$GH_REPO" --auto --squash --match-head-commit "$head_sha"
           done
