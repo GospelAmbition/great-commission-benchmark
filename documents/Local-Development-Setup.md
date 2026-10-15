@@ -2,7 +2,15 @@
 
 This document provides step-by-step instructions for setting up a local development environment for the Great Commission Benchmark project.
 
-**Last Updated:** December 17, 2025
+**Local command quick start updated:** October 15, 2026
+
+For the supported macOS/Linux shortcut, run `./launch` from the Git repository
+root. It starts Docker PostgreSQL and the host frontend/backend, installs
+dependencies, and applies local migrations. Use `./launch status` and
+`./launch close` to manage the background servers. `./sync` separately confirms
+and refreshes local data from Railway with a backup. See the current
+[root-command setup and recovery instructions](../gcb-platform/README.md#repository-root-commands).
+The sections below describe manual setup.
 
 ---
 
@@ -26,7 +34,7 @@ This document provides step-by-step instructions for setting up a local developm
 
 | Software | Version | Purpose | Installation |
 |----------|---------|---------|--------------|
-| **Node.js** | 18+ (20.x LTS recommended) | Next.js frontend | [nodejs.org](https://nodejs.org) |
+| **Node.js** | 20.9+ | Next.js frontend | [nodejs.org](https://nodejs.org) |
 | **Python** | 3.11+ | FastAPI backend, CLI tools | [python.org](https://python.org) |
 | **PostgreSQL** | 15+ | Platform database | [postgresql.org](https://postgresql.org) or Docker |
 | **Git** | Latest | Version control | [git-scm.com](https://git-scm.com) |
@@ -47,7 +55,7 @@ This document provides step-by-step instructions for setting up a local developm
 node --version  # Should show v20.x.x
 
 # Check Python
-python --version  # Should show Python 3.10+
+python --version  # Should show Python 3.11+
 
 # Check PostgreSQL
 psql --version  # Should show psql 15+
