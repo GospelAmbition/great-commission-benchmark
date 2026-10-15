@@ -3,25 +3,16 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.main import app
-from app.db.base import Base, engine, SessionLocal
+from main import app
 from app.db.models.user import User
 from app.core.auth import get_current_user
 
-client = TestClient(app)
 
 
 @pytest.fixture
-def db():
-    """Create test database session"""
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=engine)
-
+def db(db_session):
+    """Use the isolated shared test database."""
+    return db_session
 
 @pytest.fixture
 def test_user(db: Session):
@@ -48,7 +39,7 @@ def mock_auth(test_user):
     app.dependency_overrides.clear()
 
 
-def test_upload_submission_valid(db, test_user, mock_auth):
+def test_upload_submission_valid(db, test_user, mock_auth, client):
     """Test uploading a valid submission"""
     export_data = {
         "version": "1.0",
@@ -78,7 +69,7 @@ def test_upload_submission_valid(db, test_user, mock_auth):
     assert "submission_id" in data
 
 
-def test_upload_submission_invalid(db, test_user, mock_auth):
+def test_upload_submission_invalid(db, test_user, mock_auth, client):
     """Test uploading an invalid submission"""
     export_data = {
         "version": "1.0",

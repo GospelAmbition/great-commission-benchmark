@@ -2,7 +2,6 @@
 import pytest
 from sqlalchemy.orm import Session
 
-from app.db.base import Base, engine, SessionLocal
 from app.db.models.test_run import TestRun
 from app.db.models.result import Result
 from app.db.models.question import Question
@@ -13,16 +12,9 @@ from app.services.scoring import ScoringService
 
 
 @pytest.fixture
-def db():
-    """Create test database session"""
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=engine)
-
+def db(db_session):
+    """Use the isolated shared test database."""
+    return db_session
 
 @pytest.fixture
 def test_data(db: Session):

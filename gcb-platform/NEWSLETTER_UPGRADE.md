@@ -273,3 +273,21 @@ of the production integration. Local tests and public DNS checks do not establis
 that live sync or account authentication is working.
 
 DNS reference: https://www.mailerlite.com/help/troubleshooting-domain-authentication
+
+### Guarded release from schema 031 without duplicate identities
+
+For an existing schema 031 installation with sync disabled and no canonical email
+duplicates, verify a restorable database backup and run:
+
+```bash
+python scripts/upgrade_newsletter_release.py --apply --backup-reference '<verified backup name or ID>'
+```
+
+This applies 032–037 in one transaction using Alembic's supplied connection. An
+exclusive subscriber-table lock pauses newsletter writers until commit, with a
+five-second lock acquisition timeout. The script aborts before migration if any
+duplicate exists, and rolls back if subscriber IDs, emails, active states, or
+subscription timestamps change. It also verifies that no merge archive rows were
+created. This path does not perform identity consolidation or external provider
+calls. Installations with duplicates must use the reviewed consolidation process
+above instead. Keep sync disabled until provider configuration is verified.

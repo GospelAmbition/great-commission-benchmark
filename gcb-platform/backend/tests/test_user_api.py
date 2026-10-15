@@ -4,25 +4,16 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from unittest.mock import patch
 
-from app.main import app
-from app.db.base import Base, engine, SessionLocal
+from main import app
 from app.db.models.user import User
 from app.core.auth import get_current_user
 
-client = TestClient(app)
 
 
 @pytest.fixture
-def db():
-    """Create test database session"""
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=engine)
-
+def db(db_session):
+    """Use the isolated shared test database."""
+    return db_session
 
 @pytest.fixture
 def test_user(db: Session):
@@ -50,7 +41,7 @@ def mock_auth(test_user):
     app.dependency_overrides.clear()
 
 
-def test_get_profile(db, test_user, mock_auth):
+def test_get_profile(db, test_user, mock_auth, client):
     """Test getting user profile"""
     response = client.get(
         "/api/user/profile",
@@ -63,7 +54,7 @@ def test_get_profile(db, test_user, mock_auth):
     assert data["user"]["email"] == test_user.email
 
 
-def test_update_profile(db, test_user, mock_auth):
+def test_update_profile(db, test_user, mock_auth, client):
     """Test updating user profile"""
     response = client.put(
         "/api/user/profile",
@@ -75,7 +66,7 @@ def test_update_profile(db, test_user, mock_auth):
     assert data["user"]["name"] == "Updated Name"
 
 
-def test_get_user_tests(db, test_user, mock_auth):
+def test_get_user_tests(db, test_user, mock_auth, client):
     """Test getting user tests"""
     response = client.get(
         "/api/user/tests",
@@ -87,7 +78,7 @@ def test_get_user_tests(db, test_user, mock_auth):
     assert "pagination" in data
 
 
-def test_get_user_submissions(db, test_user, mock_auth):
+def test_get_user_submissions(db, test_user, mock_auth, client):
     """Test getting user submissions"""
     response = client.get(
         "/api/user/submissions",
@@ -99,7 +90,7 @@ def test_get_user_submissions(db, test_user, mock_auth):
     assert "pagination" in data
 
 
-def test_get_user_activity(db, test_user, mock_auth):
+def test_get_user_activity(db, test_user, mock_auth, client):
     """Test getting user activity"""
     response = client.get(
         "/api/user/activity",
@@ -110,7 +101,7 @@ def test_get_user_activity(db, test_user, mock_auth):
     assert "activities" in data
 
 
-def test_get_notification_preferences(db, test_user, mock_auth):
+def test_get_notification_preferences(db, test_user, mock_auth, client):
     """Test getting notification preferences"""
     response = client.get(
         "/api/user/notifications",
@@ -121,7 +112,7 @@ def test_get_notification_preferences(db, test_user, mock_auth):
     assert "preferences" in data
 
 
-def test_update_notification_preferences(db, test_user, mock_auth):
+def test_update_notification_preferences(db, test_user, mock_auth, client):
     """Test updating notification preferences"""
     response = client.put(
         "/api/user/notifications",

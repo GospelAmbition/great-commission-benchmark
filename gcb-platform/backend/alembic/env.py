@@ -8,7 +8,7 @@ from sqlalchemy import pool
 from alembic import context
 
 # Add parent directory to path to import app modules
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.config import settings
 from app.db.base import Base
@@ -67,24 +67,31 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    supplied_connection = config.attributes.get("connection")
+    if supplied_connection is not None:
+        configure_connection(supplied_connection)
+        return
+
     configuration = config.get_section(config.config_ini_section, {})
     configuration["sqlalchemy.url"] = settings.DATABASE_URL
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        connect_args={"connect_timeout": 10},  # 10 second timeout for migrations
+        connect_args={"connect_timeout": 10},
     )
-
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            transaction_per_migration=True,
-        )
+        configure_connection(connection)
 
-        with context.begin_transaction():
-            context.run_migrations()
+
+def configure_connection(connection):
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        transaction_per_migration=True,
+    )
+    with context.begin_transaction():
+        context.run_migrations()
 
 
 if context.is_offline_mode():

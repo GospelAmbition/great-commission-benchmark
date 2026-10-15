@@ -317,3 +317,25 @@ async def test_group_verification_reads_all_pages_and_rejects_looping_cursor():
     api.request.side_effect = [pages[0], pages[0]]
     with pytest.raises(MailerLiteError, match="cursor"):
         await group_audience(api, "prod")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("meta", [None, {}, {"next_cursor": ""}, {"next_cursor": False}, {"next_cursor": 3}])
+async def test_audience_verification_rejects_incomplete_pagination(meta):
+    from app.services.newsletter_campaigns import group_audience
+    api = AsyncMock()
+    api.request.return_value = {"data": [{"email": "member@example.com", "status": "active"}], "meta": meta}
+    with pytest.raises(MailerLiteError):
+        await group_audience(api, "test-group")
+
+
+@pytest.mark.asyncio
+async def test_audience_verification_collects_all_pages():
+    from app.services.newsletter_campaigns import group_audience
+    api = AsyncMock()
+    api.request.side_effect = [
+        {"data": [{"email": "member@example.com", "status": "active"}], "meta": {"next_cursor": "page2"}},
+        {"data": [{"email": "extra@example.com", "status": "active"}], "meta": {"next_cursor": None}},
+    ]
+    assert await group_audience(api, "test-group") == {"member@example.com", "extra@example.com"}
+    assert api.request.call_args.kwargs["params"]["cursor"] == "page2"

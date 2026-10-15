@@ -1,6 +1,7 @@
 """Shared test fixtures for pytest"""
 import pytest
 import uuid
+from datetime import datetime, timezone
 import os
 from typing import Generator, Callable
 from unittest.mock import patch, MagicMock
@@ -195,7 +196,8 @@ def moderator_user(db_session: Session) -> User:
         auth0_id="moderator_auth0",
         email="moderator@example.com",
         name="Test Moderator",
-        role="moderator"
+        role="moderator",
+        can_moderate=True
     )
     db_session.add(user)
     db_session.commit()
@@ -210,7 +212,8 @@ def admin_user(db_session: Session) -> User:
         auth0_id="admin_auth0",
         email="admin@example.com",
         name="Test Admin",
-        role="admin"
+        role="admin",
+        can_admin=True
     )
     db_session.add(user)
     db_session.commit()
@@ -251,7 +254,8 @@ def test_question_set(db_session: Session) -> QuestionSet:
 def test_methodology_version(db_session: Session, test_question_set: QuestionSet) -> MethodologyVersion:
     """Create a test methodology version"""
     methodology = MethodologyVersion(
-        question_set_id=test_question_set.id
+        question_set_id=test_question_set.id,
+        active_from=datetime.now(timezone.utc)
     )
     db_session.add(methodology)
     db_session.commit()

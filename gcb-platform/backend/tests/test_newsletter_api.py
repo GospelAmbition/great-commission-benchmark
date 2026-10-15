@@ -3,25 +3,16 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.main import app
-from app.db.base import Base, engine, SessionLocal
+from main import app
 
-client = TestClient(app)
 
 
 @pytest.fixture
-def db():
-    """Create test database session"""
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=engine)
+def db(db_session):
+    """Use the isolated shared test database."""
+    return db_session
 
-
-def test_subscribe_newsletter(db):
+def test_subscribe_newsletter(db, client):
     """Test subscribing to newsletter"""
     response = client.post(
         "/api/newsletter/subscribe",
@@ -33,7 +24,7 @@ def test_subscribe_newsletter(db):
     assert "message" in data
 
 
-def test_subscribe_newsletter_duplicate(db):
+def test_subscribe_newsletter_duplicate(db, client):
     """Test subscribing with duplicate email"""
     # First subscription
     client.post(

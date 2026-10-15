@@ -58,10 +58,13 @@ async def group_audience(api, group_id):
             if not isinstance(row, dict) or not isinstance(row.get("email"), str) or row.get("status") != "active":
                 raise MailerLiteError("Invalid active group subscriber response")
             emails.add(row["email"].strip().lower())
-        cursor = result.get("meta", {}).get("next_cursor")
-        if not cursor:
+        meta = result.get("meta")
+        if not isinstance(meta, dict) or "next_cursor" not in meta:
+            raise MailerLiteError("Missing group pagination metadata")
+        cursor = meta["next_cursor"]
+        if cursor is None:
             return emails
-        if not isinstance(cursor, str) or cursor in cursors:
+        if not isinstance(cursor, str) or not cursor or cursor in cursors:
             raise MailerLiteError("Invalid group pagination cursor")
         cursors.add(cursor)
     raise MailerLiteError("Group pagination exceeded the verification limit")
