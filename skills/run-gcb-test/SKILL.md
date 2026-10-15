@@ -107,6 +107,7 @@ get_job_logs(job_id, tail=50) # inspect recent output
 ```python
 upload_result(job_id="abc-123")           # publish
 upload_result(job_id="abc-123", dry_run=True)  # preview only
+# If already_uploaded=true, stop — do not publish the same job twice.
 ```
 
 Only valid when `status == "succeeded"`. Returns:
@@ -362,6 +363,7 @@ Target: 1,200–1,800 words. Structure:
 Run a separate editor pass before creating or publishing the post. If multi-agent tools are available and the user has asked for a different writer/editor, use a separate editor agent; otherwise do this as a distinct second pass yourself.
 
 The editor must compare the draft against `brief.recent_post_fingerprints` and revise:
+- titles that are not exactly `{Model} Review` (no colon, no finding suffix)
 - repeated title formulas, especially "Strong on {category}, Weak on {category}"
 - titles that only name the top and bottom score categories
 - repeated section headings
@@ -397,7 +399,7 @@ Unknown providers get a styled monogram letter — no error.
 
 ```python
 create_blog_draft(
-    title="Model Name Review: Most answers stay with the requested work",
+    title="Model Name Review",
     content="<full markdown article>",
     excerpt="Two-sentence summary shown on listing pages.",
     featured_image_url="https://...",   # from generate_and_upload_header
