@@ -55,7 +55,6 @@ class NewsletterService:
             async with httpx.AsyncClient() as client:
                 payload: Dict[str, Any] = {
                     "email": email,
-                    "status": "active",
                 }
                 if group_id:
                     payload["groups"] = [group_id]

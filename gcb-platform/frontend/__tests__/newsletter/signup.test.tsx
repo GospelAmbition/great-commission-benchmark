@@ -8,7 +8,7 @@ jest.mock('@/components/recaptcha/RecaptchaScript', () => ({ RecaptchaScript: ()
 const mockExecute = jest.fn();
 jest.mock('@/hooks/useRecaptcha', () => ({ useRecaptcha: () => ({ executeRecaptcha: mockExecute }) }));
 jest.mock('@/lib/analytics', () => ({ trackEvent: jest.fn(), trackNewsletterSignup: jest.fn() }));
-jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
+jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn(), info: jest.fn() } }));
 const mockFetch = jest.fn();
 const originalKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 beforeEach(() => {
@@ -81,4 +81,13 @@ it('falls back to direct-page attribution for unrecognized sources', async () =>
   render(<NewsletterPage />); submit();
   await screen.findByRole('status');
   expect(trackNewsletterSignup).toHaveBeenCalledWith('newsletter_page');
+});
+
+it.each(['confirmation_required', 'sync_pending'])('does not count %s as an active subscription', async status => {
+  const message = 'Check your email or wait for subscription verification.';
+  mockFetch.mockResolvedValue({ ok: true, json: async () => ({ success: true, status, message }) });
+  render(<NewsletterPage />); submit();
+  expect(await screen.findByRole('status')).toHaveTextContent(message);
+  expect(trackNewsletterSignup).not.toHaveBeenCalled();
+  expect(toast.info).toHaveBeenCalledWith(message);
 });

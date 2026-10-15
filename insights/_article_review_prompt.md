@@ -27,14 +27,14 @@ Professional, strategic, and warm. Write like a peer advisor who understands the
 *   Connect technical data or frameworks back to the mission of making disciples and reaching the unreached.
 
 **Titles and section headings:**
-*   Straight, specific, and readable on a scan. A ministry reader should know the finding from the heading alone. Do not make them decode a riddle.
-*   Do not write poetic, cute, or clever titles. No “It Will X, Not the Y” formulas. No insider metaphors (the Rising, the Giver, the Reckoning, the Advocate, the first article, desks, maps, Amen as a punchline).
-*   Article title form: `{Model} Review: {plain finding}`. Say what the model did. Good: “It Affirms Salvation by Faith, Not That God Exists.” “Most Answers Come Back Softened.” “Frequent Hard Refusals on Gospel Prompts.” Bad: “Strong on Exclusivity, Weak on Existence of God.” “Strong on Outreach Copy, Weak on Field Research.” “It Will Finish the Faith, Then Stop at God.” Never pair the top and bottom categories as “Strong on X, Weak on Y.” Name the behavior instead.
+*   Article title form: `{Model} Review` only. Do not append a colon and a summarizing finding. The finding belongs in At a glance and the body.
+*   Good: “Muse Spark 1.3 Review.” “Gemini 3.8 Flash Review.” Bad: “Muse Spark 1.3 Review: Ready on sin, unsteady on the call to repent.” “Strong on Exclusivity, Weak on Existence of God.”
+*   Section headings stay straight and specific. A ministry reader should know the section from the heading alone. Do not make them decode a riddle.
+*   Do not write poetic, cute, or clever headings. No “It Will X, Not the Y” formulas. No insider metaphors (the Rising, the Giver, the Reckoning, the Advocate, the first article, desks, maps, Amen as a punchline).
 *   Section headings name the content of the section. Use labels like “Strongest categories,” “Weakest categories,” “Where answers were softened,” “How this run compares,” “What this means for ministry use.” Do not use “Three yeses on the way, none on the Giver,” “The desks that still write,” or “Fifty-one stops, thirty-nine almosts.”
-*   The same rule applies to H2s and H3s as to the article title.
 
 **What to Avoid:**
-*   Follow `gcb-mcp/gcb_mcp/prompts/ai_writing_donts.md` for all public copy (articles, blog, email, Highlight). No canned AI formulas, marketing verbs, signposting, restated prompts, or closing offers.
+*   Follow `insights/_ai_writing_donts.md` for all public copy (articles, blog, email, Highlight). No canned AI formulas, marketing verbs, signposting, restated prompts, or closing offers.
 *   Avoid a "middle school" or "high school" reading level; target a professional, college-educated audience.
 *   Avoid excessive use of simple metaphors or "fluff" that distracts from the core message.
 *   Avoid poetic or clever article titles and section headings. If a heading needs the article to explain it, rewrite it.

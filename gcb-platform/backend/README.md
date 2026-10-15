@@ -334,6 +334,51 @@ The following security headers are added to all responses:
 
 ### Monthly newsletter (MailerLite campaigns)
 
+Subscriber import and migration work is tracked in [Newsletter upgrade](../NEWSLETTER_UPGRADE.md).
+The admin newsletter screen supports CSV imports with a preview, source tracking,
+and protection for existing unsubscribes. Run migrations through `037` before
+deploying this feature. Imports save locally and queue MailerLite sync. Set
+`NEWSLETTER_SYNC_ENABLED=true` after validating the API key and production group
+to run the retry worker (default interval 30 seconds, configurable with
+`NEWSLETTER_SYNC_INTERVAL_SECONDS`). The admin screen's connection check makes
+read-only API calls; its retry and recheck actions queue work without sending mail.
+
+The subscriber tab also imports contacts from the configured MailerLite production
+group using `POST /api/admin/newsletter/mailerlite/import`. Preview with
+`dry_run=true`; apply with `dry_run=false` and the returned `snapshot_sha256`.
+The endpoint reads all five subscription statuses and every page, rejects a changed
+snapshot, and preserves local suppressions. New active contacts require
+`confirm_subscribed=true` and `consent_note`. Limits are 10,000 records, 2 MB and
+a 45-second scan; use CSV batches for larger lists or contacts outside this group.
+
+Migration `037` consolidates legacy case/whitespace variants, archives originals,
+preserves old unsubscribe links and enforces canonical email uniqueness. Back up
+and review duplicates first; stop new subscriber writes, drain sync leases and
+stop workers before applying it. The migration refuses outstanding leases and
+has no automatic downgrade because consolidation changes subscriber identities.
+Deploy the matching application before reopening writes. See the upgrade plan
+for the preservation rules and disposable PostgreSQL verification command.
+
+Register `POST /api/newsletter/webhooks/mailerlite` for subscriber unsubscribe,
+bounce, spam-report, delete and `campaign.sent` events with batching enabled. Store
+the returned ID and secret as `MAILERLITE_WEBHOOK_ID` and `MAILERLITE_WEBHOOK_SECRET`.
+Set `NEWSLETTER_TOKEN_SECRET` to a stable random value
+of at least 32 characters for recipient unsubscribe links (fallback:
+`NEXTAUTH_SECRET`). The public page is `/newsletter/unsubscribe`; merely opening
+it does not change a subscription. See the upgrade plan for remaining rollout gates.
+
+Inactive subscribers must confirm a resubscription email before reactivation.
+Confirmation delivery requires `RESEND_API_KEY`; it uses the existing transactional
+email service. The signed link opens `/newsletter/confirm`, expires after 24 hours,
+and is consumed only on POST to `/api/newsletter/confirm-resubscribe`. The subscriber
+remains inactive until the sync worker verifies MailerLite activation.
+
+Campaigns are created and scheduled through MailerLite, with its native unsubscribe
+link. Production sends require an enabled sync worker, verified webhook registration,
+no unresolved subscriber changes, and exact agreement between the active platform
+audience and MailerLite group. These checks run before creation and again before
+scheduling. Known subscriber records are also rechecked hourly by the sync worker.
+
 Admin endpoints (JWT or `X-API-Key` with **`can_admin`**, same flexible auth as other admin tooling):
 
 - `GET /api/admin/newsletter/preview-html?post_id=<uuid>` — returns `{ subject, html, web_version_url }` for a draft or published insights post.
@@ -342,10 +387,20 @@ Admin endpoints (JWT or `X-API-Key` with **`can_admin`**, same flexible auth as 
   - `dry_run` (`true|false`)
   - `audience` (`"test"` or `"production"`)
   - `confirm_production_send` (`true|false`, required for production send)
-  - `force_resend` (`true|false`, optional duplicate-send override for production)
+  - `force_resend` (`true|false`, permits an intentional repeat after confirmed completion;
+    cannot override an unresolved attempt)
 - `dry_run=true` validates audience routing and recipient counts without creating a campaign.
 - `audience="test"` may send draft or published posts to `MAILERLITE_TEST_GROUP_ID`.
 - `audience="production"` requires a published post and sends to `MAILERLITE_PROD_GROUP_ID` (fallback: `MAILERLITE_GROUP_ID`).
+- `GET /api/admin/newsletter/sends` lists attempts and safe error summaries.
+- `POST /api/admin/newsletter/sends/<send_id>/refresh` checks provider status without
+  sending. A scheduling timeout remains unresolved until delivery is verified;
+  a failed creation with no stored ID can be resolved as `not_sent`, because this
+  attempt never issued a scheduling request. There may be an unused provider draft.
+
+The admin newsletter page shows recent attempts. `scheduled` means MailerLite
+accepted delivery; only a verified provider response or signed completion webhook
+marks it `sent`. Errors never trigger a fallback through another email provider.
 
 Admin management endpoints for test recipients:
 - `GET /api/admin/newsletter/test-recipients`
@@ -353,7 +408,11 @@ Admin management endpoints for test recipients:
 - `PATCH /api/admin/newsletter/test-recipients/{recipient_id}`
 - `DELETE /api/admin/newsletter/test-recipients/{recipient_id}` (soft-deactivate)
 
-The campaign sender uses the address parsed from **`EMAIL_FROM`** (`Name <email@domain>`); that address must be a **verified sender** in MailerLite. Custom HTML may require a MailerLite plan that supports the HTML editor; if MailerLite rejects the payload, check the API error in server logs.
+The campaign sender uses the address parsed from **`EMAIL_FROM`** (`Name <email@domain>`);
+that address must be a verified sender in MailerLite. The custom HTML campaign API
+requires MailerLite's Advanced plan. Dry runs validate audiences and connectivity;
+sender, domain and plan eligibility are checked by MailerLite during creation.
+Confirm the account mailing address and footer in the rendered test email before rollout.
 
 Recommended operator workflow:
 1. Preview HTML (`/newsletter/preview-html`)

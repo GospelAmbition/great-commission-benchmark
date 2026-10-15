@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,6 +96,13 @@ export default function NewsletterPage() {
 
       const data = await response.json();
       if (data.success === false) throw new Error("Failed to subscribe. Please try again.");
+      if (data.status === "confirmation_required" || data.status === "sync_pending") {
+        setSuccessMessage(data.message);
+        setIsSubscribed(true);
+        toast.info(data.message);
+        trackEvent("newsletter_signup_outcome", { source, outcome: data.status });
+        return;
+      }
       const outcome = data.message === "Email already subscribed" ? "already_subscribed" : data.message === "Subscription reactivated" ? "reactivated" : "subscribed";
       const message = outcome === "already_subscribed" ? "You’re already subscribed!" : outcome === "reactivated" ? "Your subscription is active again!" : "Successfully subscribed!";
       toast.success(message);
@@ -190,7 +198,7 @@ export default function NewsletterPage() {
                   {subscribing ? "Subscribing..." : "Subscribe to Newsletter"}
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
-                  We respect your privacy. Unsubscribe at any time.
+                  We respect your privacy. <Link href="/newsletter/unsubscribe" className="underline">Unsubscribe at any time.</Link>
                 </p>
               </form>
             )}

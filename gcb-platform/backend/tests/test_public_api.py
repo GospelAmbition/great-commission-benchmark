@@ -3,8 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.main import app
-from app.db.base import Base, engine, SessionLocal
+from main import app
 from app.db.models.user import User
 from app.db.models.model import Model
 from app.db.models.question_set import QuestionSet
@@ -13,23 +12,15 @@ from app.db.models.test_run import TestRun
 from app.db.models.result import Result
 from app.db.models.methodology_version import MethodologyVersion
 
-client = TestClient(app)
 
 
 @pytest.fixture
-def db():
-    """Create test database session"""
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=engine)
-
+def db(db_session):
+    """Use the isolated shared test database."""
+    return db_session
 
 @pytest.fixture
-def test_data(db: Session):
+def test_data(db: Session, client):
     """Create test data"""
     # Create question set
     question_set = QuestionSet(
@@ -82,7 +73,7 @@ def test_data(db: Session):
     }
 
 
-def test_get_leaderboard_empty(db, test_data):
+def test_get_leaderboard_empty(db, test_data, client):
     """Test getting empty leaderboard"""
     response = client.get("/api/public/leaderboard")
     assert response.status_code == 200
@@ -91,7 +82,7 @@ def test_get_leaderboard_empty(db, test_data):
     assert len(data["entries"]) == 0
 
 
-def test_get_leaderboard_with_data(db, test_data):
+def test_get_leaderboard_with_data(db, test_data, client):
     """Test getting leaderboard with test data"""
     # Create a completed test run
     user = User(
@@ -143,7 +134,7 @@ def test_get_leaderboard_with_data(db, test_data):
     assert data["total_models"] >= 1
 
 
-def test_list_models(db, test_data):
+def test_list_models(db, test_data, client):
     """Test listing models"""
     response = client.get("/api/public/models")
     assert response.status_code == 200
@@ -152,7 +143,7 @@ def test_list_models(db, test_data):
     assert "pagination" in data
 
 
-def test_get_model_detail(db, test_data):
+def test_get_model_detail(db, test_data, client):
     """Test getting model detail"""
     model_id = test_data["model"].id
     response = client.get(f"/api/public/models/{model_id}")
@@ -162,7 +153,7 @@ def test_get_model_detail(db, test_data):
     assert data["model"]["id"] == str(model_id)
 
 
-def test_get_versions(db, test_data):
+def test_get_versions(db, test_data, client):
     """Test getting versions"""
     response = client.get("/api/public/versions")
     assert response.status_code == 200
@@ -172,7 +163,7 @@ def test_get_versions(db, test_data):
     assert len(data["versions"]) > 0
 
 
-def test_get_stats(db, test_data):
+def test_get_stats(db, test_data, client):
     """Test getting platform stats"""
     response = client.get("/api/public/stats")
     assert response.status_code == 200
@@ -182,7 +173,7 @@ def test_get_stats(db, test_data):
     assert "current_benchmark_version" in data
 
 
-def test_compare_models(db, test_data):
+def test_compare_models(db, test_data, client):
     """Test comparing models"""
     model_id = test_data["model"].id
     response = client.get(f"/api/public/leaderboard/compare?models={model_id}")

@@ -3,7 +3,7 @@ import pytest
 from datetime import datetime
 from fastapi.testclient import TestClient
 
-from app.main import app
+from main import app
 from app.db.models.user import User
 from app.core.auth import get_db
 

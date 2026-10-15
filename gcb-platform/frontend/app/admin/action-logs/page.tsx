@@ -244,6 +244,9 @@ export default function AdminActionLogsPage() {
                   <SelectItem value="blog_post.publish">Blog Post Publish</SelectItem>
                   <SelectItem value="blog_post.unpublish">Blog Post Unpublish</SelectItem>
                   <SelectItem value="newsletter.subscribe">Newsletter Subscribe</SelectItem>
+                  <SelectItem value="newsletter.import">Newsletter Import</SelectItem>
+                  <SelectItem value="newsletter.resubscribe_confirmed">Newsletter Resubscription Confirmed</SelectItem>
+                  <SelectItem value="newsletter.mailerlite_event">MailerLite Subscription Event</SelectItem>
                   <SelectItem value="newsletter.unsubscribe">Newsletter Unsubscribe</SelectItem>
                   <SelectItem value="contact.submit">Contact Submit</SelectItem>
                   <SelectItem value="contact.status_update">Contact Status Update</SelectItem>

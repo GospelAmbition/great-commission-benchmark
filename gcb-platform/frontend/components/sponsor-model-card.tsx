@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { loadStripe } from "@stripe/stripe-js";
+// Load payment scripts only when the sponsorship component initializes them.
+import { loadStripe } from "@stripe/stripe-js/pure";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

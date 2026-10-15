@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 import { Heart, Server, Users, Shield, ChevronLeft, Check, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
-import { loadStripe } from "@stripe/stripe-js";
+import { loadStripe } from "@stripe/stripe-js/pure";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";

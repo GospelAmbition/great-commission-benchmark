@@ -91,6 +91,7 @@ from app.schemas.sponsorship import (
     ModeratorListResponse,
 )
 from app.schemas.action_log import ActionLogListItem, ActionLogListResponse, ActionLogActor
+from app.schemas.newsletter_import import NewsletterImportRequest, NewsletterImportResponse
 
 router = APIRouter()
 
@@ -2586,7 +2587,33 @@ async def update_notification_setting(
 from app.db.models.newsletter_subscriber import NewsletterSubscriber
 from app.db.models.newsletter_test_recipient import NewsletterTestRecipient
 from app.db.models.newsletter_campaign_send import NewsletterCampaignSend
+from app.db.models.newsletter_webhook_event import NewsletterWebhookEvent
 from app.services.newsletter import NewsletterService
+from app.services.newsletter_sync import queue_sync, sync_one, MailerLiteClient, MailerLiteError
+from app.services.newsletter_links import unsubscribe_url, newsletter_footer
+from app.schemas.newsletter_import import MailerLiteImportRequest
+
+
+@router.post("/newsletter/mailerlite/import")
+async def import_mailerlite_subscribers(
+    request: MailerLiteImportRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Read all production-group statuses and preview or apply a local import."""
+    import httpx
+    from app.services.newsletter_migration import pull_subscribers, SnapshotChanged
+    from sqlalchemy.exc import IntegrityError
+    try:
+        async with httpx.AsyncClient() as client:
+            return await pull_subscribers(db, request, current_user.id, MailerLiteClient(client))
+    except (ValueError, MailerLiteError) as exc:
+        db.rollback()
+        code = 409 if isinstance(exc, SnapshotChanged) else 502 if isinstance(exc, MailerLiteError) else 400
+        raise HTTPException(status_code=code, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Subscriber data changed during import. Preview and retry.") from exc
 
 
 @router.get("/newsletter/stats", response_model=NewsletterStatsResponse)
@@ -2603,7 +2630,10 @@ async def get_newsletter_stats(
         NewsletterSubscriber.is_active == False
     ).count()
     synced = db.query(NewsletterSubscriber).filter(
-        NewsletterSubscriber.mailerlite_subscriber_id.isnot(None)
+        NewsletterSubscriber.sync_status == "synced",
+        NewsletterSubscriber.mailerlite_synced_at.isnot(None),
+        or_(NewsletterSubscriber.is_active == False,
+            NewsletterSubscriber.mailerlite_group_id == NewsletterService.production_group_id()),
     ).count()
 
     return NewsletterStatsResponse(
@@ -2611,7 +2641,13 @@ async def get_newsletter_stats(
         active=active,
         unsubscribed=unsubscribed,
         synced_to_mailerlite=synced,
-        mailerlite_configured=NewsletterService.is_configured()
+        mailerlite_configured=NewsletterService.is_configured(),
+        sync_pending=db.query(NewsletterSubscriber).filter(NewsletterSubscriber.sync_status.in_(["pending", "processing"])).count(),
+        sync_errors=db.query(NewsletterSubscriber).filter(NewsletterSubscriber.sync_status == "error").count(),
+        sync_enabled=settings.NEWSLETTER_SYNC_ENABLED,
+        last_synced_at=db.query(func.max(NewsletterSubscriber.mailerlite_synced_at)).scalar(),
+        webhook_configured=bool(settings.MAILERLITE_WEBHOOK_SECRET),
+        last_webhook_at=db.query(func.max(NewsletterWebhookEvent.received_at)).scalar(),
     )
 
 
@@ -2646,6 +2682,9 @@ async def list_newsletter_subscribers(
             mailerlite_subscriber_id=sub.mailerlite_subscriber_id,
             subscribed_at=sub.subscribed_at,
             unsubscribed_at=sub.unsubscribed_at,
+            sync_status=sub.sync_status,
+            sync_error=sub.sync_error,
+            mailerlite_synced_at=sub.mailerlite_synced_at,
         )
         for sub in subscribers
     ]
@@ -2675,15 +2714,25 @@ async def export_newsletter_subscribers(
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["email", "status", "subscribed_at", "unsubscribed_at", "mailerlite_subscriber_id"])
+    writer.writerow(["email", "status", "subscribed_at", "unsubscribed_at", "mailerlite_subscriber_id", "name", "source", "consent_note", "imported_at", "import_batch_id"])
+
+    def csv_text(value):
+        text = str(value or "")
+        # Treat user-supplied text as text when opened in Excel/Sheets.
+        return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) or text.startswith(("\t", "\r", "\n")) else text
 
     for sub in subscribers:
         writer.writerow([
-            sub.email,
+            csv_text(sub.email),
             "active" if sub.is_active else "unsubscribed",
             sub.subscribed_at.isoformat() if sub.subscribed_at else "",
             sub.unsubscribed_at.isoformat() if sub.unsubscribed_at else "",
             sub.mailerlite_subscriber_id or "",
+            csv_text(sub.name),
+            csv_text(sub.source),
+            csv_text(sub.consent_note),
+            sub.imported_at.isoformat() if sub.imported_at else "",
+            str(sub.import_batch_id) if sub.import_batch_id else "",
         ])
 
     output.seek(0)
@@ -2692,6 +2741,26 @@ async def export_newsletter_subscribers(
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="newsletter_subscribers.csv"'},
     )
+
+
+@router.post("/newsletter/subscribers/import", response_model=NewsletterImportResponse)
+async def import_newsletter_subscribers(
+    request: NewsletterImportRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Preview or apply a CSV import without sending email (admin only)."""
+    from sqlalchemy.exc import IntegrityError
+    from app.services.newsletter_import import import_subscribers
+
+    try:
+        return import_subscribers(db, request, current_user.id)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Subscriber data changed during import. Preview and retry the file.") from exc
 
 
 @router.get("/newsletter/subscribers/{subscriber_id}", response_model=NewsletterSubscriberDetail)
@@ -2715,6 +2784,14 @@ async def get_newsletter_subscriber(
         mailerlite_subscriber_id=subscriber.mailerlite_subscriber_id,
         subscribed_at=subscriber.subscribed_at,
         unsubscribed_at=subscriber.unsubscribed_at,
+        name=subscriber.name,
+        source=subscriber.source,
+        consent_note=subscriber.consent_note,
+        imported_at=subscriber.imported_at,
+        import_batch_id=subscriber.import_batch_id,
+        sync_status=subscriber.sync_status,
+        sync_error=subscriber.sync_error,
+        mailerlite_synced_at=subscriber.mailerlite_synced_at,
     )
 
     # Fetch live data from MailerLite if configured
@@ -2788,22 +2865,14 @@ async def sync_newsletter_subscriber(
             detail="MailerLite is not configured. Set MAILERLITE_API_KEY to enable."
         )
 
-    if subscriber.is_active:
-        mailerlite_id = await NewsletterService.sync_subscriber_to_mailerlite(subscriber.email)
-    else:
-        # For inactive subscribers, update MailerLite status to unsubscribed
-        await NewsletterService.remove_subscriber_from_mailerlite(subscriber.email)
-        mailerlite_id = subscriber.mailerlite_subscriber_id
-
-    if mailerlite_id:
-        subscriber.mailerlite_subscriber_id = str(mailerlite_id)
-        db.commit()
-
-    return {
-        "success": True,
-        "message": f"Subscriber {subscriber.email} synced to MailerLite",
-        "mailerlite_subscriber_id": subscriber.mailerlite_subscriber_id,
-    }
+    if not NewsletterService.production_group_id():
+        raise HTTPException(status_code=400, detail="Configure the MailerLite production group first.")
+    queue_sync(subscriber, resubscribe=subscriber.resubscribe_pending, cancel_confirmation=False)
+    db.commit()
+    result = await sync_one(db, subscriber_id)
+    if result["status"] != "synced":
+        raise HTTPException(status_code=502, detail="Sync is not verified yet. The subscriber remains queued for retry; check their sync status.")
+    return {"success": True, "message": "Subscriber state verified with MailerLite"}
 
 
 @router.delete("/newsletter/subscribers/{subscriber_id}")
@@ -2812,31 +2881,71 @@ async def delete_newsletter_subscriber(
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    """Remove a subscriber from the platform and unsubscribe from MailerLite (admin only)"""
+    """Unsubscribe and retain a suppression record so imports cannot restore it."""
     subscriber = db.query(NewsletterSubscriber).filter(
         NewsletterSubscriber.id == subscriber_id
-    ).first()
-
+    ).with_for_update().first()
     if not subscriber:
         raise HTTPException(status_code=404, detail="Subscriber not found")
-
-    email = subscriber.email
-
-    # Unsubscribe from MailerLite first
-    if NewsletterService.is_configured():
-        try:
-            await NewsletterService.remove_subscriber_from_mailerlite(email)
-        except Exception as e:
-            logger.warning(f"Failed to remove {email} from MailerLite: {e}")
-
-    # Remove from database
-    db.delete(subscriber)
+    subscriber.is_active = False
+    subscriber.unsubscribed_at = subscriber.unsubscribed_at or datetime.utcnow()
+    queue_sync(subscriber)
     db.commit()
+    ActionLogService.log_action(db, "newsletter.unsubscribe", "user", actor_user_id=current_user.id,
+                                entity_type="newsletter_subscriber", entity_id=str(subscriber_id),
+                                metadata={"source": "admin", "sync": "queued"})
+    return {"success": True, "message": "Subscriber unsubscribed; suppression retained and MailerLite sync queued"}
 
-    return {
-        "success": True,
-        "message": f"Subscriber {email} removed",
-    }
+
+@router.post("/newsletter/sync/retry")
+async def retry_newsletter_sync(
+    reconcile: bool = False,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Queue failed work, or recheck all subscribers against provider state."""
+    query = db.query(NewsletterSubscriber)
+    if not reconcile:
+        query = query.filter(NewsletterSubscriber.sync_status.in_(["pending", "error"]))
+    count = query.update({
+        NewsletterSubscriber.sync_status: "pending",
+        NewsletterSubscriber.sync_revision: NewsletterSubscriber.sync_revision + 1,
+        NewsletterSubscriber.sync_attempts: 0, NewsletterSubscriber.sync_error: None,
+        NewsletterSubscriber.sync_next_attempt_at: None,
+    }, synchronize_session=False)
+    db.commit()
+    ActionLogService.log_action(db, "newsletter.sync_queue", "user", actor_user_id=current_user.id,
+                                metadata={"count": count, "reconcile": reconcile})
+    return {"queued": count, "worker_enabled": settings.NEWSLETTER_SYNC_ENABLED}
+
+
+@router.get("/newsletter/connection")
+async def check_newsletter_connection(current_user: User = Depends(require_admin)):
+    """Verify credentials and audience groups without modifying MailerLite."""
+    import httpx
+
+    production = NewsletterService.production_group_id()
+    test = NewsletterService.test_group_id()
+    if not NewsletterService.is_configured() or not production:
+        raise HTTPException(status_code=400, detail="Configure the MailerLite API key and production group.")
+    if test and test == production:
+        raise HTTPException(status_code=400, detail="Test and production groups must be different.")
+    try:
+        async with httpx.AsyncClient() as client:
+            api = MailerLiteClient(client)
+            available = await api.request("GET", "/groups", params={"limit": 1000})
+            if not isinstance(available, list):
+                raise MailerLiteError("MailerLite returned invalid group data")
+            groups = {}
+            for audience, group_id in (("production", production), ("test", test)):
+                if group_id:
+                    data = next((g for g in available if isinstance(g, dict) and str(g.get("id")) == group_id), None)
+                    if data is None:
+                        raise MailerLiteError(f"MailerLite {audience} group could not be verified")
+                    groups[audience] = {"id": str(data["id"]), "name": data.get("name")}
+        return {"verified": True, "groups": groups, "worker_enabled": settings.NEWSLETTER_SYNC_ENABLED}
+    except MailerLiteError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get("/newsletter/test-recipients", response_model=NewsletterTestRecipientListResponse)
@@ -3071,6 +3180,7 @@ async def preview_newsletter_html(
         inner,
         title=post.title,
         web_version_url=web_version_url,
+        footer_html=newsletter_footer(unsubscribe_url()),
     )
     return NewsletterHtmlPreviewResponse(
         subject=post.title,
@@ -3085,274 +3195,39 @@ async def send_newsletter_campaign(
     current_user: User = Depends(require_admin_flexible),
     db: Session = Depends(get_db),
 ):
-    """Send newsletter post to test or production audience with safety guardrails."""
-    current_user_id = current_user.id
-    send_log: NewsletterCampaignSend | None = None
+    """Verify the platform audience and schedule delivery through MailerLite."""
+    from app.services.newsletter_campaigns import send_campaign, CampaignError
+    try:
+        return await send_campaign(db, request, current_user.id)
+    except CampaignError as exc:
+        db.rollback()
+        detail = str(exc)
+        if exc.send_log_id:
+            detail += f" Send log: {exc.send_log_id}"
+        raise HTTPException(status_code=exc.status_code, detail=detail) from exc
 
-    def mark_send_step(
-        status: str,
-        *,
-        recipient_count: int | None = None,
-        campaign_id: str | None = None,
-    ) -> None:
-        """Persist the latest newsletter send step before long-running work."""
-        if send_log is None:
-            return
-        send_log.status = status
-        if recipient_count is not None:
-            send_log.recipient_count = recipient_count
-        if campaign_id is not None:
-            send_log.campaign_id = campaign_id
-        db.add(send_log)
-        db.commit()
-        db.refresh(send_log)
 
-    post = db.query(BlogPost).filter(BlogPost.id == request.post_id).first()
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-
-    already_sent = db.query(NewsletterCampaignSend).filter(
-        NewsletterCampaignSend.post_id == post.id,
-        NewsletterCampaignSend.audience == request.audience,
-        NewsletterCampaignSend.campaign_type == request.campaign_type,
-        NewsletterCampaignSend.status == "sent",
-    ).first()
-
-    logger.info(
-        "newsletter_send_start post_id=%s audience=%s campaign_type=%s dry_run=%s force_resend=%s already_sent=%s",
-        post.id,
-        request.audience,
-        request.campaign_type,
-        request.dry_run,
-        request.force_resend,
-        bool(already_sent),
-    )
-
-    if not request.dry_run:
-        send_log = NewsletterCampaignSend(
-            post_id=post.id,
-            audience=request.audience,
-            campaign_type=request.campaign_type,
-            status="started",
-            provider="resend",
-            sent_by_user_id=current_user_id,
-        )
-        db.add(send_log)
-        db.commit()
-        db.refresh(send_log)
-        logger.info("newsletter_send_log_created send_log_id=%s post_id=%s", send_log.id, post.id)
-
-    if request.audience == "test":
-        recipients = db.query(NewsletterTestRecipient).filter(
-            NewsletterTestRecipient.is_active == True
-        ).all()
-        recipient_count_source = "newsletter_test_recipients"
-    else:
-        recipients = db.query(NewsletterSubscriber).filter(
-            NewsletterSubscriber.is_active == True
-        ).all()
-        recipient_count_source = "newsletter_subscribers_active"
-    recipient_emails = [recipient.email for recipient in recipients]
-    recipient_count = len(recipient_emails)
-
-    mark_send_step("counted", recipient_count=recipient_count)
-    logger.info(
-        "newsletter_send_recipient_count post_id=%s send_log_id=%s audience=%s count=%s source=%s",
-        post.id,
-        getattr(send_log, "id", None),
-        request.audience,
-        recipient_count,
-        recipient_count_source,
-    )
-
-    if request.dry_run:
-        return NewsletterSendResponse(
-            dry_run=True,
-            audience=request.audience,
-            campaign_type=request.campaign_type,
-            recipient_count=recipient_count,
-            recipient_count_source=recipient_count_source,
-            target_group_id=None,
-            post_status=post.status,
-            already_sent=bool(already_sent),
-            campaign_id=None,
-            send_log_id=None,
-            message=(
-                f"Dry run OK for {request.audience} audience: {recipient_count} recipients in "
-                f"{recipient_count_source}; post status={post.status}. "
-                f"Set dry_run=false to send individual emails via Resend."
-            ),
-        )
-
-    if request.audience == "production" and post.status != "published":
-        mark_send_step("failed")
-        raise HTTPException(
-            status_code=400,
-            detail="Post must be published before production send.",
-        )
-
-    if request.audience == "production" and not request.confirm_production_send:
-        mark_send_step("failed")
-        raise HTTPException(
-            status_code=400,
-            detail="Production send requires confirm_production_send=true.",
-        )
-
-    if already_sent and request.audience == "production" and not request.force_resend:
-        mark_send_step("failed")
-        raise HTTPException(
-            status_code=409,
-            detail="A production send already exists for this post. Set force_resend=true to override.",
-        )
-
-    if not settings.RESEND_API_KEY:
-        mark_send_step("failed")
-        raise HTTPException(
-            status_code=400,
-            detail="Resend is not configured. Set RESEND_API_KEY.",
-        )
-
-    if recipient_count == 0:
-        mark_send_step("failed")
-        raise HTTPException(
-            status_code=400,
-            detail=f"No active recipients found for {request.audience} audience.",
-        )
-
-    from app.services.markdown_email import markdown_to_email_html_fragment, wrap_email_shell  # noqa: PLC0415
-
-    mark_send_step("rendering")
-    logger.info("newsletter_send_rendering post_id=%s send_log_id=%s", post.id, getattr(send_log, "id", None))
-    inner = markdown_to_email_html_fragment(post.content or "")
-    web_version_url = (
-        f"https://greatcommissionbenchmark.ai/insights/{post.slug}" if post.slug else None
-    )
-    full_html = wrap_email_shell(
-        inner,
-        title=post.title,
-        web_version_url=web_version_url,
-        footer_html=(
-            '<p style="font-size:12px;line-height:1.5;color:#666;margin:0;">'
-            "You are receiving this because you subscribed to the Great Commission Benchmark newsletter. "
-            "To unsubscribe, reply to this email with &quot;Unsubscribe&quot; or contact "
-            '<a href="mailto:contact@greatcommissionbenchmark.ai" rel="noopener noreferrer">'
-            "contact@greatcommissionbenchmark.ai</a>."
-            "</p>"
-        ),
-    )
-    mark_send_step("rendered")
-    logger.info(
-        "newsletter_send_rendered post_id=%s send_log_id=%s html_chars=%s",
-        post.id,
-        getattr(send_log, "id", None),
-        len(full_html),
-    )
-
-    from_name, from_email = parseaddr(settings.EMAIL_FROM)
-    if not from_email:
-        mark_send_step("failed")
-        raise HTTPException(
-            status_code=500,
-            detail="EMAIL_FROM must be a valid address for campaign sender (e.g. 'Name <addr@domain>').",
-        )
-    if not from_name.strip():
-        from_name = "Great Commission Benchmark"
-
-    mark_send_step("sending")
-    logger.info(
-        "newsletter_send_resend_start post_id=%s send_log_id=%s audience=%s recipient_count=%s",
-        post.id,
-        getattr(send_log, "id", None),
-        request.audience,
-        recipient_count,
-    )
-
-    from app.services.email import EmailService  # noqa: PLC0415
-
-    sent_count = 0
-    failed_recipients: list[str] = []
-    for email in recipient_emails:
-        ok = await EmailService.send_email(
-            to=email,
-            subject=(post.title or "Great Commission Benchmark")[:255],
-            html_content=full_html,
-            from_email=settings.EMAIL_FROM,
-        )
-        if ok:
-            sent_count += 1
-        else:
-            failed_recipients.append(email)
-        logger.info(
-            "newsletter_send_resend_recipient post_id=%s send_log_id=%s recipient=%s ok=%s",
-            post.id,
-            getattr(send_log, "id", None),
-            email,
-            ok,
-        )
-
-    local_campaign_id = f"resend:{send_log.id}" if send_log else None
-    if failed_recipients:
-        mark_send_step("failed", campaign_id=local_campaign_id)
-        logger.error(
-            "newsletter_send_resend_failed post_id=%s send_log_id=%s sent_count=%s failed_count=%s",
-            post.id,
-            getattr(send_log, "id", None),
-            sent_count,
-            len(failed_recipients),
-        )
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "message": "Resend newsletter send failed for one or more recipients",
-                "sent_count": sent_count,
-                "failed_count": len(failed_recipients),
-                "failed_recipients": failed_recipients,
-                "send_log_id": str(send_log.id) if send_log else None,
-            },
-        )
-
-    mark_send_step("sent", campaign_id=local_campaign_id)
-    logger.info(
-        "newsletter_send_resend_sent post_id=%s send_log_id=%s sent_count=%s",
-        post.id,
-        getattr(send_log, "id", None),
-        sent_count,
-    )
-
-    ActionLogService.log_action(
-        db,
-        "newsletter.campaign_send",
-        "user",
-        actor_user_id=current_user_id,
-        entity_type="blog_post",
-        entity_id=str(post.id),
-        metadata={
-            "campaign_id": local_campaign_id,
-            "slug": post.slug,
-            "audience": request.audience,
-            "campaign_type": request.campaign_type,
-            "recipient_count": recipient_count,
-            "sent_count": sent_count,
-            "force_resend": request.force_resend,
-            "provider": "resend",
-        },
-    )
-
-    return NewsletterSendResponse(
-        dry_run=False,
-        audience=request.audience,
-        campaign_type=request.campaign_type,
-        recipient_count=recipient_count,
-        recipient_count_source=recipient_count_source,
-        target_group_id=None,
-        post_status=post.status,
-        already_sent=bool(already_sent),
-        campaign_id=local_campaign_id,
-        send_log_id=send_log.id if send_log else None,
-        message=(
-            f"Sent {request.campaign_type} via Resend to {sent_count} {request.audience} recipient(s)."
-        ),
-    )
+@router.post("/newsletter/sends/{send_id}/refresh")
+async def refresh_newsletter_send(
+    send_id: UUID,
+    current_user: User = Depends(require_admin_flexible),
+    db: Session = Depends(get_db),
+):
+    """Read the provider's campaign state without scheduling or retrying delivery."""
+    import httpx
+    from app.services.newsletter_campaigns import refresh_send, CampaignError
+    send = db.query(NewsletterCampaignSend).filter(NewsletterCampaignSend.id == send_id).first()
+    if not send:
+        raise HTTPException(status_code=404, detail="Send attempt not found")
+    if not NewsletterService.is_configured():
+        raise HTTPException(status_code=400, detail="MailerLite is not configured")
+    try:
+        async with httpx.AsyncClient() as client:
+            return await refresh_send(db, send, MailerLiteClient(client))
+    except CampaignError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    except MailerLiteError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get("/newsletter/sends")
@@ -3376,7 +3251,7 @@ async def list_newsletter_campaign_sends(
 
     total = query.count()
     rows = (
-        query.order_by(desc(NewsletterCampaignSend.created_at))
+        query.options(joinedload(NewsletterCampaignSend.post)).order_by(desc(NewsletterCampaignSend.created_at))
         .offset(offset)
         .limit(limit)
         .all()
@@ -3386,12 +3261,16 @@ async def list_newsletter_campaign_sends(
             {
                 "id": str(row.id),
                 "post_id": str(row.post_id),
+                "post_title": row.post.title if row.post else None,
                 "audience": row.audience,
                 "campaign_type": row.campaign_type,
                 "campaign_id": row.campaign_id,
                 "recipient_count": row.recipient_count,
                 "status": row.status,
                 "provider": row.provider,
+                "error_message": row.error_message,
+                "target_group_id": row.target_group_id,
+                "last_checked_at": row.last_checked_at.isoformat() if row.last_checked_at else None,
                 "sent_by_user_id": str(row.sent_by_user_id) if row.sent_by_user_id else None,
                 "created_at": row.created_at.isoformat() if row.created_at else None,
             }

@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     MAILERLITE_GROUP_ID: str = ""  # Optional: specific subscriber group ID
     MAILERLITE_TEST_GROUP_ID: str = ""  # Optional: QA/test audience group ID
     MAILERLITE_PROD_GROUP_ID: str = ""  # Optional: production audience group ID
+    NEWSLETTER_SYNC_ENABLED: bool = False  # Enable after validating account/group configuration
+    NEWSLETTER_SYNC_INTERVAL_SECONDS: int = Field(default=30, ge=5, le=3600)
+    MAILERLITE_WEBHOOK_SECRET: str = ""
+    MAILERLITE_WEBHOOK_ID: str = ""  # Registration verified before production sends
+    NEWSLETTER_TOKEN_SECRET: str = ""  # Stable signing key; falls back to NEXTAUTH_SECRET
+    NEWSLETTER_PUBLIC_URL: str = "https://greatcommissionbenchmark.ai"
     
     # S3-Compatible Storage (Railway Simple Storage or AWS S3)
     S3_ACCESS_KEY_ID: str = ""

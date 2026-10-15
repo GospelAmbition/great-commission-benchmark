@@ -51,12 +51,21 @@ async def lifespan(app: FastAPI):
     
     # Start cache warming task (non-blocking)
     asyncio.create_task(delayed_cache_warm())
+    newsletter_worker = None
+    if settings.NEWSLETTER_SYNC_ENABLED:
+        from app.services.newsletter_sync import sync_worker
+        newsletter_worker = asyncio.create_task(sync_worker())
     
     logger.info("Application startup complete - ready to serve requests")
     yield
     
     # Shutdown
     logger.info("Application shutting down...")
+    if newsletter_worker:
+        from contextlib import suppress
+        newsletter_worker.cancel()
+        with suppress(asyncio.CancelledError):
+            await newsletter_worker
     from app.services.cache_warmer import stop_background_refresh
     stop_background_refresh()
     logger.info("Application shutdown complete")

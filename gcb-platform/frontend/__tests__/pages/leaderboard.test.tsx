@@ -11,6 +11,7 @@ jest.mock('@/components/home/GuardrailsAnimation', () => ({
 
 jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/leaderboard',
 }));
 
 const initialData = {

@@ -2,6 +2,7 @@
 
 import Script from "next/script";
 import { usePathname } from "next/navigation";
+import { isNewsletterActionPath } from "@/lib/newsletter-privacy";
 
 // Signed-in / internal areas where the public help widget should not appear.
 const HIDDEN_PATH_PREFIXES = [
@@ -25,7 +26,7 @@ export function HelpinatorWidget() {
   const host = process.env.NEXT_PUBLIC_HELPINATOR_HOST;
   const widgetId = process.env.NEXT_PUBLIC_HELPINATOR_WIDGET_ID;
 
-  if (!host || !widgetId || isHiddenPath(pathname)) {
+  if (!host || !widgetId || !pathname || isHiddenPath(pathname) || isNewsletterActionPath(pathname)) {
     return null;
   }
 
