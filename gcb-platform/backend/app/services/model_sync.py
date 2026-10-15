@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models.model import Model
 from app.services.openrouter import OpenRouterClient
-from app.services.model_description import abbreviated_prefix, fetch_full_description, is_abbreviated, MAX_DESCRIPTION_BYTES
+from app.services.model_description import abbreviated_prefix, fetch_full_description, is_abbreviated, MAX_DESCRIPTION_BYTES, continues_description_prefix
 
 
 async def _update_description(model: Model, model_info: dict, refresh: bool = False) -> bool:
@@ -16,9 +16,10 @@ async def _update_description(model: Model, model_info: dict, refresh: bool = Fa
     if prefix:
         existing = model.description or ""
         # A refresh of an abbreviated API value must not destroy its full continuation.
-        if not refresh and existing.startswith(prefix) and len(existing) > len(prefix) and not is_abbreviated(existing):
+        if not refresh and continues_description_prefix(existing, prefix) and not is_abbreviated(existing):
             return False
-        full = await fetch_full_description(model.model_id, description)
+        canonical_model_id = model_info.get("id") or model.model_id
+        full = await fetch_full_description(canonical_model_id, description)
         if full:
             description = full
         elif existing and not is_abbreviated(existing):
@@ -64,6 +65,8 @@ async def sync_all_model_descriptions(db: Session, all_models: bool = False, off
         # Sequential enrichment prevents a backfill from flooding public model pages.
         for model in targets:
             model_info = catalog.get(model.model_id)
+            if not model_info:
+                model_info = await openrouter.get_model_details(model.model_id)
             if not model_info and is_abbreviated(model.description):
                 model_info = {"description": model.description}
             if model_info:
