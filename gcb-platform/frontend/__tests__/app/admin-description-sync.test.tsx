@@ -24,10 +24,11 @@ function respond(body: unknown, ok = true) {
 it('processes bounded batches to completion and totals the updates', async () => {
   mockFetch.mockResolvedValueOnce(respond({})); // Dashboard statistics
   mockFetch.mockResolvedValueOnce(respond({ updated_count: 2, total_models: 4, next_offset: 3 }));
-  mockFetch.mockResolvedValueOnce(respond({ updated_count: 1, total_models: 4, next_offset: null, remaining_incomplete: 0 }));
+  mockFetch.mockResolvedValueOnce(respond({ updated_count: 1, total_models: 4, next_offset: null, remaining_incomplete: 0, incomplete_model_ids: [] }));
   render(<AdminDashboardPage />);
   fireEvent.click(await screen.findByRole('button', { name: 'Sync Model Descriptions' }));
   await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Synced 3 model(s). All stored descriptions are complete.'));
+  expect(screen.getByRole('status')).toHaveTextContent('Checked 4 model(s). Synced 3 model(s). All stored descriptions are complete.');
   expect(mockFetch.mock.calls.slice(1)).toEqual([
     ['/api/admin/models/sync-descriptions?all_models=false&offset=0&limit=3', { method: 'POST' }],
     ['/api/admin/models/sync-descriptions?all_models=false&offset=3&limit=3', { method: 'POST' }],
@@ -44,6 +45,7 @@ it('stops after a failed batch and reports updates already completed', async () 
     render(<AdminDashboardPage />);
     fireEvent.click(await screen.findByRole('button', { name: 'Sync Model Descriptions' }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Upstream unavailable (2 model(s) updated before stopping)'));
+    expect(screen.getByRole('status')).toHaveTextContent('Upstream unavailable (2 model(s) updated before stopping)');
     expect(mockFetch).toHaveBeenCalledTimes(3);
     expect(toast.success).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Sync Model Descriptions' })).toBeEnabled();
@@ -55,10 +57,14 @@ it('stops after a failed batch and reports updates already completed', async () 
 
 it('reports incomplete descriptions after the final batch without claiming full completion', async () => {
   mockFetch.mockResolvedValueOnce(respond({}));
-  mockFetch.mockResolvedValueOnce(respond({ updated_count: 1, total_models: 3, next_offset: null, remaining_incomplete: 2 }));
+  mockFetch.mockResolvedValueOnce(respond({ updated_count: 1, total_models: 3, next_offset: null, remaining_incomplete: 2, incomplete_model_ids: ['example/first', 'example/second'] }));
   render(<AdminDashboardPage />);
   fireEvent.click(await screen.findByRole('button', { name: 'Sync Model Descriptions' }));
   await waitFor(() => expect(toast.warning).toHaveBeenCalledWith('Synced 1 model(s). 2 description(s) remain incomplete; retry sync to fetch missing full descriptions.'));
   expect(toast.success).not.toHaveBeenCalled();
+  expect(screen.getByRole('status')).toHaveTextContent('Checked 3 model(s). Synced 1 model(s). 2 description(s) remain incomplete');
+  fireEvent.click(screen.getByText('Models with incomplete descriptions'));
+  expect(screen.getByText('example/first')).toBeVisible();
+  expect(screen.getByText('example/second')).toBeVisible();
   expect(screen.getByRole('button', { name: 'Sync Model Descriptions' })).toBeEnabled();
 });

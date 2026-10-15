@@ -37,6 +37,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState("");
+  const [syncResult, setSyncResult] = useState<{ message: string; modelIds: string[] } | null>(null);
   const [refreshingCache, setRefreshingCache] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
 
@@ -97,10 +98,13 @@ export default function AdminDashboardPage() {
   async function syncModelDescriptions() {
     setSyncing(true);
     setSyncProgress("Starting...");
+    setSyncResult(null);
     let updatedCount = 0;
     try {
       let offset = 0;
       let remainingIncomplete = 0;
+      let totalModels = 0;
+      let incompleteModelIds: string[] = [];
       while (true) {
         const query = new URLSearchParams({ all_models: "false", offset: String(offset), limit: "3" });
         const response = await fetch(`/api/admin/models/sync-descriptions?${query}`, { method: "POST" });
@@ -117,6 +121,11 @@ export default function AdminDashboardPage() {
           if (!Number.isInteger(remainingIncomplete) || remainingIncomplete < 0) {
             throw new Error("Description sync did not report the remaining incomplete descriptions");
           }
+          incompleteModelIds = data.incomplete_model_ids;
+          if (!Array.isArray(incompleteModelIds) || incompleteModelIds.length !== remainingIncomplete || incompleteModelIds.some(id => typeof id !== "string")) {
+            throw new Error("Description sync did not report the incomplete model IDs");
+          }
+          totalModels = data.total_models;
           break;
         }
         if (!Number.isInteger(nextOffset) || nextOffset <= offset) {
@@ -124,14 +133,20 @@ export default function AdminDashboardPage() {
         }
         offset = nextOffset;
       }
+      const message = remainingIncomplete > 0
+        ? `Synced ${updatedCount} model(s). ${remainingIncomplete} description(s) remain incomplete; retry sync to fetch missing full descriptions.`
+        : `Synced ${updatedCount} model(s). All stored descriptions are complete.`;
+      setSyncResult({ message: `Checked ${totalModels} model(s). ${message}`, modelIds: incompleteModelIds });
       if (remainingIncomplete > 0) {
-        toast.warning(`Synced ${updatedCount} model(s). ${remainingIncomplete} description(s) remain incomplete; retry sync to fetch missing full descriptions.`);
+        toast.warning(message);
       } else {
-        toast.success(`Synced ${updatedCount} model(s). All stored descriptions are complete.`);
+        toast.success(message);
       }
     } catch (error: unknown) {
       console.error("Failed to sync model descriptions:", error);
-      toast.error(`${errorMessage(error, "Failed to sync model descriptions")} (${updatedCount} model(s) updated before stopping)`);
+      const message = `${errorMessage(error, "Failed to sync model descriptions")} (${updatedCount} model(s) updated before stopping)`;
+      setSyncResult({ message, modelIds: [] });
+      toast.error(message);
     } finally {
       setSyncing(false);
       setSyncProgress("");
@@ -434,6 +449,19 @@ export default function AdminDashboardPage() {
               <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
               {syncing ? `Syncing: ${syncProgress}` : "Sync Model Descriptions"}
             </Button>
+            {syncResult && (
+              <div role="status" className="mt-3 text-sm text-muted-foreground">
+                <p>{syncResult.message}</p>
+                {syncResult.modelIds.length > 0 && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer">Models with incomplete descriptions</summary>
+                    <ul className="mt-2 list-disc pl-5">
+                      {syncResult.modelIds.map(modelId => <li key={modelId} className="break-all">{modelId}</li>)}
+                    </ul>
+                  </details>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>

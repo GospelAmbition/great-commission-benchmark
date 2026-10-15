@@ -2130,12 +2130,14 @@ async def sync_model_descriptions(
             await clear_published_caches()
         next_offset = offset + limit if offset + limit < total_models else None
         remaining_incomplete = None
+        incomplete_model_ids = None
         if next_offset is None:
             from app.services.model_description import is_abbreviated
-            remaining_incomplete = sum(
-                1 for (description,) in db.query(Model.description).all()
+            incomplete_model_ids = [
+                model_id for model_id, description in db.query(Model.model_id, Model.description).order_by(Model.model_id).all()
                 if not description or not description.strip() or is_abbreviated(description)
-            )
+            ]
+            remaining_incomplete = len(incomplete_model_ids)
         return {
             "success": True,
             "message": f"Synced {updated_count} model(s)",
@@ -2143,6 +2145,7 @@ async def sync_model_descriptions(
             "total_models": total_models,
             "next_offset": next_offset,
             "remaining_incomplete": remaining_incomplete,
+            "incomplete_model_ids": incomplete_model_ids,
         }
     except Exception as e:
         logger.error(f"Error syncing model descriptions: {str(e)}", exc_info=True)
