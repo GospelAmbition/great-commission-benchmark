@@ -18,6 +18,14 @@ The frontend is at <http://localhost:3001>, with API docs at
 migrations; it never syncs production data. See [local setup and database refresh](gcb-platform/README.md#repository-root-commands)
 for prerequisites, configuration, logs, and backup recovery.
 
+## Pull requests
+
+Ready PRs targeting `main` automatically opt into squash auto-merge. GitHub
+requires the branch to be up to date and all four CI checks to pass: backend,
+frontend, runner, and local scripts. Draft PRs remain open. See the
+[merge policy](documents/Deployment-Procedures.md#pull-request-checks-and-auto-merge)
+for check coverage, the existing lint baseline, and automation permissions.
+
 ---
 
 ## The Problem
