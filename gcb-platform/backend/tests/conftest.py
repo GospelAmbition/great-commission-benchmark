@@ -12,6 +12,25 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 
+# Tests must never connect to a configured shared Redis instance.
+os.environ["REDIS_URL"] = ""
+
+
+@pytest.fixture(autouse=True)
+def isolated_response_cache(monkeypatch):
+    """Each database fixture gets its own matching response cache."""
+    import sys
+    from app.core import cache as cache_module
+
+    isolated = cache_module.SimpleCache()
+    for name, module in list(sys.modules.items()):
+        if name.startswith("app.") and isinstance(
+            getattr(module, "cache", None), (cache_module.SimpleCache, cache_module.RedisCache)
+        ):
+            monkeypatch.setattr(module, "cache", isolated)
+    yield
+
+
 # Custom UUID type that works with SQLite
 class UUIDType(TypeDecorator):
     """Platform-independent UUID type."""

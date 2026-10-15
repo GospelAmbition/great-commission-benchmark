@@ -31,7 +31,7 @@ async def stripe_webhook(
     
     # Verify webhook signature
     try:
-        event = PaymentService.verify_webhook_signature(payload, signature)
+        event = PaymentService.verify_webhook_signature(payload, signature, db=db)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid webhook signature: {str(e)}")
     

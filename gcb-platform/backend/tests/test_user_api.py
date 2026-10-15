@@ -1,8 +1,6 @@
 """Tests for user API endpoints"""
 import pytest
-from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from unittest.mock import patch
 
 from main import app
 from app.db.models.user import User
@@ -66,16 +64,33 @@ def test_update_profile(db, test_user, mock_auth, client):
     assert data["user"]["name"] == "Updated Name"
 
 
-def test_get_user_tests(db, test_user, mock_auth, client):
-    """Test getting user tests"""
-    response = client.get(
-        "/api/user/tests",
-        headers={"Authorization": "Bearer test_token"}
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert "tests" in data
-    assert "pagination" in data
+def test_user_submissions_are_private_and_paginated(db, test_user, mock_auth, client):
+    """The submissions dashboard replaces the retired platform-tests listing."""
+    from datetime import datetime, timedelta
+    from app.db.models.community_submission import CommunitySubmission
+    other = User(auth0_id="other|123", email="other@example.com", name="Other")
+    db.add(other)
+    db.flush()
+    now = datetime.utcnow()
+    records = []
+    for index, owner in enumerate([test_user, test_user, other]):
+        record = CommunitySubmission(
+            user_id=owner.id, model_name=f"model-{index}", cli_version="1.0",
+            question_set_version="1.0", results_package={},
+            submitted_at=now + timedelta(seconds=index),
+        )
+        db.add(record)
+        records.append(record)
+    db.commit()
+    first = client.get("/api/user/submissions?limit=1&offset=0")
+    assert first.status_code == 200
+    assert [item["id"] for item in first.json()["submissions"]] == [str(records[1].id)]
+    assert first.json()["pagination"] == {"limit": 1, "offset": 0, "total": 2, "has_more": True}
+    second = client.get("/api/user/submissions?limit=1&offset=1").json()
+    assert [item["id"] for item in second["submissions"]] == [str(records[0].id)]
+    assert second["pagination"]["has_more"] is False
+    assert client.get(f"/api/user/submissions/{records[2].id}").status_code == 404
+    assert client.get(f"/api/user/submissions/{records[0].id}").status_code == 200
 
 
 def test_get_user_submissions(db, test_user, mock_auth, client):

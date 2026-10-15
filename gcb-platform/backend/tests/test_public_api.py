@@ -82,7 +82,8 @@ def test_get_leaderboard_empty(db, test_data, client):
     assert len(data["entries"]) == 0
 
 
-def test_get_leaderboard_with_data(db, test_data, client):
+@pytest.fixture
+def published_run(db, test_data):
     """Test getting leaderboard with test data"""
     # Create a completed test run
     user = User(
@@ -128,10 +129,15 @@ def test_get_leaderboard_with_data(db, test_data, client):
     compute_and_store_test_run_scores(db, test_run)
     db.commit()
     
+    return test_run
+
+
+def test_get_leaderboard_with_data(db, test_data, published_run, client):
     response = client.get("/api/public/leaderboard")
     assert response.status_code == 200
     data = response.json()
-    assert data["total_models"] >= 1
+    assert data["total_models"] == 1
+    assert data["entries"][0]["model"]["id"] == str(test_data["model"].id)
 
 
 def test_list_models(db, test_data, client):
@@ -143,7 +149,7 @@ def test_list_models(db, test_data, client):
     assert "pagination" in data
 
 
-def test_get_model_detail(db, test_data, client):
+def test_get_model_detail(db, test_data, published_run, client):
     """Test getting model detail"""
     model_id = test_data["model"].id
     response = client.get(f"/api/public/models/{model_id}")
@@ -179,3 +185,7 @@ def test_compare_models(db, test_data, client):
     response = client.get(f"/api/public/leaderboard/compare?models={model_id}")
     # Should work even with one model
     assert response.status_code in [200, 400]  # 400 if validation fails
+
+def test_unpublished_active_model_is_not_public(db, test_data, client):
+    response = client.get(f"/api/public/models/{test_data['model'].id}")
+    assert response.status_code == 404

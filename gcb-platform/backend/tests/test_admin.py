@@ -457,6 +457,10 @@ class TestAdminVersionManagement:
         app.dependency_overrides[require_admin] = override_auth
         
         question_ids = [str(q.id) for q in test_questions]
+        original_set_ids = {q.id: q.question_set_id for q in test_questions}
+        test_questions[0].question_metadata = {"difficulty": "hard"}
+        test_questions[0].notes = "Preserve source context"
+        db_session.commit()
         
         response = client.post(
             "/api/admin/versions",
@@ -472,9 +476,48 @@ class TestAdminVersionManagement:
         assert data["semantic_version"] == "2.0.0"
         assert data["question_count"] == len(test_questions)
         assert "tier_distribution" in data
+        created = db_session.query(QuestionSet).filter_by(semantic_version="2.0.0").one()
+        assert created.status == "draft"
+        assert created.marketing_version == "Version 2.0.0"
+        assert created.notes == "Test version 2"
+        copies = db_session.query(Question).filter_by(question_set_id=created.id).all()
+        assert len(copies) == len(test_questions)
+        assert not {q.id for q in copies}.intersection(original_set_ids)
+        for source in test_questions:
+            db_session.refresh(source)
+            assert source.question_set_id == original_set_ids[source.id]
+            copy = next(q for q in copies if q.content == source.content)
+            for field in ("category", "tier", "subcategory", "expected_verdict", "question_metadata", "notes"):
+                assert getattr(copy, field) == getattr(source, field)
+            assert copy.is_locked is False
         
         app.dependency_overrides.clear()
     
+    @pytest.mark.parametrize("version,status", [("1.0", 400), ("", 422), ("12345678901", 422)])
+    def test_create_version_rejects_duplicate_or_invalid_length(
+        self, client, db_session, admin_user, test_question_set, test_questions, version, status
+    ):
+        from main import app
+        from app.core.auth import get_current_user
+
+        async def override_auth():
+            return admin_user
+
+        app.dependency_overrides[get_current_user] = override_auth
+        original_count = db_session.query(QuestionSet).count()
+        question_count = db_session.query(Question).count()
+        response = client.post("/api/admin/versions", json={
+            "semantic_version": test_question_set.semantic_version if version == "1.0" else version,
+            "question_ids": [str(q.id) for q in test_questions],
+        })
+        assert response.status_code == status
+        if status == 400:
+            assert "already exists" in response.json()["detail"]
+        assert db_session.query(QuestionSet).count() == original_count
+        assert db_session.query(Question).count() == question_count
+        db_session.refresh(test_question_set)
+        assert test_question_set.status == "active"
+
     def test_publish_version(
         self,
         client,
@@ -505,9 +548,18 @@ class TestAdminVersionManagement:
             "/api/admin/versions/3.0.0/publish"
         )
         
+        assert response.status_code == 400
+        assert "Only locked versions" in response.json()["detail"]
+        db_session.refresh(test_question_set)
+        assert test_question_set.status == "active"
+        draft_version.status = "locked"
+        db_session.commit()
+        response = client.put("/api/admin/versions/3.0.0/publish")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "active"
+        db_session.refresh(draft_version)
+        assert draft_version.is_publicly_visible is True
         
         # Verify the original test_question_set is now archived
         db_session.refresh(test_question_set)

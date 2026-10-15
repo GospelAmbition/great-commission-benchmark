@@ -1,9 +1,18 @@
 """Tests for payment endpoints"""
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+import stripe
 from decimal import Decimal
 
 from app.services.payment import PaymentService
+from app.core.config import settings
+
+
+@pytest.fixture(autouse=True)
+def configured_stripe(monkeypatch):
+    """Provide deterministic credentials without contacting Stripe."""
+    monkeypatch.setattr(settings, "STRIPE_SECRET_KEY", "sk_test_unit_tests")
+    monkeypatch.setattr(stripe, "api_key", None)
+
 
 
 class TestPaymentService:
@@ -20,7 +29,10 @@ class TestPaymentService:
         assert result["id"] == "pi_test_123"
         assert result["client_secret"] == "pi_test_123_secret_456"
         assert result["status"] == "requires_payment_method"
-        mock_stripe["intent"].create.assert_called_once()
+        mock_stripe["intent"].create.assert_called_once_with(
+            amount=2000, currency="usd", automatic_payment_methods={"enabled": True},
+            metadata={"test_id": "test-123"}, receipt_email="test@example.com"
+        )
     
     def test_create_refund(self, mock_stripe):
         """Test creating a Stripe refund"""
@@ -32,7 +44,9 @@ class TestPaymentService:
         
         assert result["id"] == "re_test_123"
         assert result["status"] == "succeeded"
-        mock_stripe["refund"].create.assert_called_once()
+        mock_stripe["refund"].create.assert_called_once_with(
+            payment_intent="pi_test_123", amount=2000, reason="requested_by_customer"
+        )
     
     def test_get_payment_intent(self, mock_stripe):
         """Test retrieving a payment intent"""
