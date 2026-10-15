@@ -351,7 +351,7 @@ async def unsubscribe_newsletter_authenticated(
     # Find subscriber by user's email
     subscriber = db.query(NewsletterSubscriber).filter(
         func.lower(func.trim(NewsletterSubscriber.email)) == current_user.email.strip().lower()
-    ).first()
+    ).with_for_update().first()
     
     if not subscriber:
         return {
