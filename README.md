@@ -2,6 +2,22 @@
 
 A benchmark test designed to evaluate Large Language Models (LLMs) on their ability to support the activities and use cases common to **Great Commission Christians**—missionaries, evangelists, disciple-makers, and others who actively respond to Jesus' command to make disciples.
 
+## Local development
+
+From this repository root (macOS or Linux):
+
+```bash
+./launch          # Start Docker PostgreSQL and background frontend/backend
+./launch status   # Show local service status
+./launch close    # Stop web servers; keep the database running
+./sync            # Separately confirm and replace local data from Railway
+```
+
+The frontend is at <http://localhost:3001>, with API docs at
+<http://localhost:8001/docs>. `./launch` installs dependencies and applies local
+migrations; it never syncs production data. See [local setup and database refresh](gcb-platform/README.md#repository-root-commands)
+for prerequisites, configuration, logs, and backup recovery.
+
 ---
 
 ## The Problem

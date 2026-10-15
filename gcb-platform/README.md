@@ -7,7 +7,7 @@ A comprehensive platform for evaluating Large Language Models (LLMs) on their ab
 ```
 gcb-platform/
 ├── backend/          # FastAPI application (Python 3.11+)
-├── frontend/         # Next.js application (Node.js 18+)
+├── frontend/         # Next.js application (Node.js 20.9+)
 ├── docker-compose.yml
 └── README.md
 ```
@@ -28,9 +28,92 @@ gcb-platform/
 
 ## Quick Start
 
+### Repository root commands
+
+Run these from the Git repository root (one directory above `gcb-platform`):
+
+```bash
+./launch --check   # Read-only prerequisite/context/port check
+./launch          # Same as ./launch start; wait for readiness, then return
+./launch status
+./launch close    # ./launch stop is an alias
+./sync --help
+./sync            # Prompts: type overwrite local gcb
+```
+
+Requires macOS or Linux, Python 3.11+ for the backend, `python3` for the launcher,
+Node.js 20.9+, npm, and Docker Compose. On macOS, the commands open Docker Desktop
+if its daemon is stopped and wait for readiness. On Linux, start the Docker daemon
+first. Only local Docker Unix-socket contexts are accepted; remote contexts are
+refused. No host PostgreSQL or Redis installation is needed.
+
+`./launch` starts the existing Compose PostgreSQL 17 service, installs backend
+requirements in an existing `backend/.venv` or `backend/venv` (or creates `.venv`),
+and runs `npm ci` when dependency manifests change or dependencies are missing.
+It applies Alembic migrations to the local database, starts Uvicorn on port 8001
+and Next.js on port 3001, and waits for HTTP readiness. Repeated calls reuse the
+running launcher; use `./launch close` then `./launch` to restart. An unrelated
+process using either web port causes an error. If either managed server fails,
+the launcher stops both servers. Docker PostgreSQL remains running after close.
+
+The launcher pins the database to `127.0.0.1:5433/gcb` with the Compose development
+credentials (`postgres` / `postgres`); PostgreSQL is published only on loopback. Set `POSTGRES_PORT` in the invoking shell to
+use another local database port; the same value is passed to Compose and Alembic.
+It pins API/site/auth/CORS URLs to localhost, disables Redis and the newsletter
+sync worker, and generates a shared local NextAuth secret. Existing
+`backend/.env` and `frontend/.env.local` files remain available for optional
+integration settings; they are not rewritten. Google sign-in requires
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `frontend/.env.local`, with the
+OAuth redirect URI `http://localhost:3001/api/auth/callback/google` allowed.
+Outbound Resend, MailerLite, Stripe, S3 and OpenRouter credentials are cleared in
+the local process. The separate local auth secret also prevents decryption of
+copied production Stripe credentials. No copied database records are rewritten
+for this isolation. Public pages can run without OAuth or paid service credentials. Launch does not
+populate an empty database with benchmark results; use sync separately if needed.
+
+Private logs, dependency stamps, and the local auth secret live in ignored
+`.local-run/` at the repository root:
+
+```bash
+tail -f .local-run/launch.log .local-run/backend.log .local-run/frontend.log
+```
+
+`./sync` uses `RAILWAY_DATABASE_URL` from the invoking process or
+`gcb-platform/backend/.env` (process value wins). Use Railway's externally
+reachable PostgreSQL connection URL, not a `railway.internal` hostname. Stop
+managed web servers with `./launch close` first. After typed confirmation, sync
+starts local PostgreSQL, saves a private local SQL backup, reads Railway with a
+PostgreSQL 17 dump client in read-only mode, and replaces the local application
+schema in one transaction. A dump failure leaves local data intact; a restore
+failure rolls back. The script refuses concurrent launch/sync and remote Docker
+targets. It never writes to the Railway database, and launch never calls sync.
+
+Sync prints the private backup/dump paths. Keep the backup and prepared recovery file until you have verified
+the refreshed database, then delete it when no longer needed. To recover a saved
+backup with web servers stopped (replace `/path/to/local-recovery.sql` with the
+printed prepared-recovery path). Use the same local Docker context;
+`./launch --check` verifies it without changing data:
+
+```bash
+docker compose -p gcb-platform -f gcb-platform/docker-compose.yml exec -T postgres \
+  psql -X -h 127.0.0.1 -U postgres -d gcb --single-transaction -v ON_ERROR_STOP=1 \
+  < /path/to/local-recovery.sql
+```
+
+The database is a point-in-time snapshot. PostgreSQL 17, UTF8 and `en_US.utf8`
+match the verified production database. Compose uses a separate `postgres17_data`
+volume; any older PostgreSQL 15 volume is retained rather than opened by a newer
+server. Application schema/data are restored; source role ownership and grants
+are intentionally omitted for the local `postgres` role. Unsupported additional
+schemas or server major versions fail before restore.
+
+Run `./launch` after sync or recovery to apply any newer local migrations; those
+migrations can intentionally advance the local schema beyond the snapshot.
+These commands do not configure or deploy Railway services.
+
 ### Prerequisites
 
-- Node.js 18+ (for frontend)
+- Node.js 20.9+ (for frontend)
 - Python 3.11+ (for backend)
 - PostgreSQL 15+ (or Docker)
 - Google Cloud account (for OAuth, required for authentication)

@@ -116,4 +116,5 @@ dmypy.json
 .pyre_configuration.local.json
 .venv-clean/
 .venv-test/
+.local-run/
 */build-env/
