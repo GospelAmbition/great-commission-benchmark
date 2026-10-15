@@ -4,6 +4,19 @@ This repository is for the Great Commission Benchmark (GCB). When the user says
 `gcb`, assume they mean Great Commission Benchmark context unless they clearly
 refer to something else.
 
+## Hosting and Deployment Routing
+
+GitHub hosts the repository. Railway is the production deployment platform for
+the GCB frontend and backend. Use Railway for deployment status, logs, and
+hosting diagnostics; verify the relevant service and revision before reporting
+deployment success or failure.
+
+Start with `documents/Deployment-Procedures.md`,
+`gcb-platform/frontend/railway.json`, and `gcb-platform/backend/railway.json`.
+Third-party PR checks alone do not establish the production hosting platform.
+Report unrelated preview failures separately from Railway deployment status.
+If Railway status is unavailable, say so.
+
 ## Benchmark Test Shorthand
 
 When the user asks to run a GCB test or benchmark on a model, treat the model
