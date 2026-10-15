@@ -1,17 +1,19 @@
 /**
- * Warm-up API route: primes all public pages so the first real user gets fast responses.
+ * Warm-up API route: exercises public routes and their underlying data caches.
  * Call after deploy (e.g. via Railway start script) with WARM_SECRET.
  *
- * Next.js renders dynamic routes on first request and caches them; this route
- * triggers that rendering so the cache is warm.
+ * Dynamic routes still render per request; warming does not cache their HTML.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { API_URL } from "@/lib/api";
+import { warmPages, createWarmJobStarter } from "@/lib/warm-pages";
 
 const LEADERBOARD_PAGE_SIZE = 200;
 const BLOG_PAGE_SIZE = 50;
-const BATCH_SIZE = 8; // concurrent requests per batch
+const startWarmJob = createWarmJobStarter((error) => {
+  console.warn("[warm] background error:", error);
+});
 
 const STATIC_PATHS = [
   "",
@@ -39,7 +41,7 @@ async function fetchModels(): Promise<string[]> {
     for (;;) {
       const res = await fetch(
         `${API_URL}/api/public/leaderboard?limit=${LEADERBOARD_PAGE_SIZE}&offset=${offset}`,
-        { next: { revalidate: 3600 } }
+        { next: { revalidate: 3600 }, signal: AbortSignal.timeout(15_000) }
       );
       if (!res.ok) break;
       const data = await res.json();
@@ -61,6 +63,7 @@ async function fetchCategories(): Promise<string[]> {
   try {
     const res = await fetch(`${API_URL}/api/public/filter-options`, {
       next: { revalidate: 86400 },
+      signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) return [];
     const data = await res.json();
@@ -77,7 +80,7 @@ async function fetchBlogSlugs(): Promise<string[]> {
     for (;;) {
       const res = await fetch(
         `${API_URL}/api/blog/posts?limit=${BLOG_PAGE_SIZE}&offset=${offset}`,
-        { next: { revalidate: 3600 } }
+        { next: { revalidate: 3600 }, signal: AbortSignal.timeout(15_000) }
       );
       if (!res.ok) break;
       const data = await res.json();
@@ -117,43 +120,6 @@ async function buildPaths(): Promise<string[]> {
   return paths;
 }
 
-async function fetchInBatches(
-  baseUrl: string,
-  paths: string[]
-): Promise<{ ok: number; failed: number; errors: string[] }> {
-  let ok = 0;
-  let failed = 0;
-  const errors: string[] = [];
-
-  for (let i = 0; i < paths.length; i += BATCH_SIZE) {
-    const batch = paths.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(
-      batch.map((path) => {
-        const url = path
-          ? `${baseUrl}${path}`
-          : baseUrl.replace(/\/$/, "") || `${baseUrl}/`;
-        return fetch(url, { headers: { "User-Agent": "GCB-Warm/1.0" } });
-      })
-    );
-    for (let j = 0; j < results.length; j++) {
-      const r = results[j];
-      const path = batch[j];
-      if (r.status === "fulfilled" && r.value.ok) {
-        ok++;
-      } else {
-        failed++;
-        const msg =
-          r.status === "rejected"
-            ? (r as PromiseRejectedResult).reason?.message
-            : (r as PromiseFulfilledResult<Response>).value?.status;
-        if (errors.length < 10) errors.push(`${path}: ${msg}`);
-      }
-    }
-  }
-
-  return { ok, failed, errors };
-}
-
 export async function GET(request: NextRequest) {
   const secret = process.env.WARM_SECRET;
   if (!secret) {
@@ -174,26 +140,22 @@ export async function GET(request: NextRequest) {
   const baseUrl = origin.endsWith("/") ? origin.slice(0, -1) : origin;
 
   // Run warming in background so the client gets a quick response (avoids socket hang up)
-  void (async () => {
-    try {
-      const paths = await buildPaths();
-      const { ok, failed, errors } = await fetchInBatches(baseUrl, paths);
-      console.log(
-        "[warm] background done:",
-        ok,
-        "ok,",
-        failed,
-        "failed, total",
-        paths.length
-      );
-      if (errors.length) console.warn("[warm] sample errors:", errors);
-    } catch (e) {
-      console.warn("[warm] background error:", e);
-    }
-  })();
+  const started = startWarmJob(async () => {
+    const paths = await buildPaths();
+    const { ok, failed, errors } = await warmPages(baseUrl, paths);
+    console.log(
+      "[warm] background done:",
+      ok,
+      "ok,",
+      failed,
+      "failed, total",
+      paths.length
+    );
+    if (errors.length) console.warn("[warm] sample errors:", errors);
+  });
 
   return NextResponse.json(
-    { status: "started", message: "Warming in background" },
+    { status: started ? "started" : "already_running", message: started ? "Warming in background" : "Warm-up already in progress" },
     { status: 202 }
   );
 }

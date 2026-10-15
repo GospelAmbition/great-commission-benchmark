@@ -295,6 +295,8 @@ export class ApiClient {
 
     const response = await fetch(url, {
       ...options,
+      // Bound public reads, including response bodies, so SSR can show its fallback.
+      signal: options.signal ?? AbortSignal.timeout(10_000),
       method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',

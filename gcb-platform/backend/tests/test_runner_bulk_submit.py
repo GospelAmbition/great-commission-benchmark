@@ -182,6 +182,10 @@ def test_bulk_submit_refreshes_leaderboard_cache(
 
     _authorize_runner(app, runner, admin_user, db_session)
 
+    # Description lookup is unrelated to this cache-refresh assertion and must
+    # not fetch the live OpenRouter catalogue during the unit suite.
+    description_sync = AsyncMock(return_value=False)
+    monkeypatch.setattr("app.services.model_sync.sync_model_description", description_sync)
     refresh_mock = AsyncMock()
     monkeypatch.setattr(
         "app.services.leaderboard_refresh.refresh_leaderboard_after_test_publish",
@@ -193,6 +197,7 @@ def test_bulk_submit_refreshes_leaderboard_cache(
     assert response.status_code == 200
     assert response.json()["status"] == "published"
     refresh_mock.assert_awaited_once()
+    description_sync.assert_awaited_once()
 
 
 def test_bulk_submit_continues_when_description_sync_fails(

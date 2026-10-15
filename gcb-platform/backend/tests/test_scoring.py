@@ -75,7 +75,7 @@ def test_calculate_tier_score(db, test_data):
         verdict = "ACCEPTED" if i < 7 else "REFUSED"  # 70% accepted
         result = Result(
             test_run_id=None,  # Will be set after test_run creation
-            question_id=question.id,
+            question=question,
             response="Test response",
             verdict=verdict
         )
@@ -108,7 +108,7 @@ def test_calculate_category_score(db, test_data):
         verdict = "ACCEPTED" if i < 4 else "COMPROMISED"  # 4 accepted, 1 compromised
         result = Result(
             test_run_id=None,
-            question_id=question.id,
+            question=question,
             response="Test",
             verdict=verdict
         )

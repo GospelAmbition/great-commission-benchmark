@@ -1170,6 +1170,16 @@ async def create_version(
     db: Session = Depends(get_db)
 ):
     """Create a new version draft"""
+    # Versions are addressed by semantic_version in publication and runner APIs.
+    existing = db.query(QuestionSet).filter(
+        QuestionSet.semantic_version == request.semantic_version
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Question set with version {request.semantic_version} already exists"
+        )
+
     # Validate questions exist
     questions = db.query(Question).filter(Question.id.in_(request.question_ids)).all()
     
@@ -1189,15 +1199,25 @@ async def create_version(
     # Create question set
     question_set = QuestionSet(
         semantic_version=request.semantic_version,
+        marketing_version=f"Version {request.semantic_version}",
         status="draft",
-        description=request.description
+        notes=request.description
     )
     db.add(question_set)
     db.flush()
     
-    # Associate questions with question set
+    # Preserve the source version and historical results by copying questions.
     for question in questions:
-        question.question_set_id = question_set.id
+        db.add(Question(
+            question_set_id=question_set.id,
+            content=question.content,
+            category=question.category,
+            tier=question.tier,
+            subcategory=question.subcategory,
+            expected_verdict=question.expected_verdict,
+            question_metadata=question.question_metadata,
+            notes=question.notes,
+        ))
     
     db.commit()
     db.refresh(question_set)

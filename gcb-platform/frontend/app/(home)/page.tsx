@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NewsletterOffer } from "@/components/marketing/NewsletterOffer";
 import { QuickRankings } from "@/components/home/QuickRankings";
 import { RecentTestsList } from "@/components/recent-tests/RecentTestsList";
@@ -69,8 +71,20 @@ async function loadRecentTests(): Promise<{ items: RecentTestItem[]; error: stri
 // Render per request so data is never frozen at build time.
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
-  const [rankings, stats, recent] = await Promise.all([loadRankings(), loadStats(), loadRecentTests()]);
+async function Rankings() {
+  return <QuickRankings rankings={await loadRankings()} />;
+}
+
+async function RecentTests() {
+  const recent = await loadRecentTests();
+  return <RecentTestsList items={recent.items} error={recent.error} />;
+}
+
+function SectionLoading() {
+  return <div role="status" aria-label="Loading benchmark data"><Skeleton className="h-48 w-full" /></div>;
+}
+
+export default function Home() {
 
   return (
     <div className="flex flex-col">
@@ -90,7 +104,7 @@ export default async function Home() {
           </p>
         </div>
 
-        <QuickRankings rankings={rankings} />
+        <Suspense fallback={<SectionLoading />}><Rankings /></Suspense>
       </section>
 
       {/* Recent Tests */}
@@ -114,31 +128,12 @@ export default async function Home() {
             </Link>
           </Button>
         </div>
-        <RecentTestsList items={recent.items} error={recent.error} />
+        <Suspense fallback={<SectionLoading />}><RecentTests /></Suspense>
       </section>
       <section className="container pb-12"><NewsletterOffer source="home_results" /></section>
 
       {/* Stats Banner */}
-      {stats && (
-        <section className="border-y border-white/[0.06] bg-surface">
-          <div className="container">
-            <div className="grid grid-cols-3">
-              <div className="text-center py-6 md:py-8">
-                <div className="text-3xl md:text-4xl font-bold text-foreground mb-1">{stats.total_models_tested}</div>
-                <div className="text-xs md:text-sm text-muted-foreground uppercase tracking-wider">Models Tested</div>
-              </div>
-              <div className="text-center py-6 md:py-8 border-l border-white/[0.06]">
-                <div className="text-3xl md:text-4xl font-bold text-foreground mb-1">{stats.providers_represented}</div>
-                <div className="text-xs md:text-sm text-muted-foreground uppercase tracking-wider">Providers</div>
-              </div>
-              <div className="text-center py-6 md:py-8 border-l border-white/[0.06]">
-                <div className="text-3xl md:text-4xl font-bold text-primary mb-1">{stats.current_benchmark_version}</div>
-                <div className="text-xs md:text-sm text-muted-foreground uppercase tracking-wider">Current Benchmark Version</div>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+      <Suspense fallback={null}><StatsBanner /></Suspense>
 
       {/* The Challenge */}
       <section className="border-t border-white/[0.06] bg-surface py-12">
@@ -178,5 +173,33 @@ export default async function Home() {
 
 
     </div>
+  );
+}
+
+async function StatsBanner() {
+  const stats = await loadStats();
+  return (
+    <>
+      {stats && (
+        <section className="border-y border-white/[0.06] bg-surface">
+          <div className="container">
+            <div className="grid grid-cols-3">
+              <div className="text-center py-6 md:py-8">
+                <div className="text-3xl md:text-4xl font-bold text-foreground mb-1">{stats.total_models_tested}</div>
+                <div className="text-xs md:text-sm text-muted-foreground uppercase tracking-wider">Models Tested</div>
+              </div>
+              <div className="text-center py-6 md:py-8 border-l border-white/[0.06]">
+                <div className="text-3xl md:text-4xl font-bold text-foreground mb-1">{stats.providers_represented}</div>
+                <div className="text-xs md:text-sm text-muted-foreground uppercase tracking-wider">Providers</div>
+              </div>
+              <div className="text-center py-6 md:py-8 border-l border-white/[0.06]">
+                <div className="text-3xl md:text-4xl font-bold text-primary mb-1">{stats.current_benchmark_version}</div>
+                <div className="text-xs md:text-sm text-muted-foreground uppercase tracking-wider">Current Benchmark Version</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+    </>
   );
 }
