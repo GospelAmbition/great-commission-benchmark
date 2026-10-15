@@ -32,6 +32,8 @@ mandatory approvals (no previous review requirement existed).
 
 The CI workflow runs every check on every PR to `main`, without path filters.
 Backend tests use isolated test databases, frontend checks include tests/lint/build,
+frontend lint uses the checked-in `eslint-suppressions.json` baseline for 107
+pre-existing errors (new error counts fail; prune suppressions as debt is fixed),
 runner tests use their own Python environment, and local-script tests mock Docker
 and database operations. CI has read-only repository access and no production
 secrets. Check names are stable because branch protection refers to them.

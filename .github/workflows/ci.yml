@@ -46,7 +46,7 @@ jobs:
       run:
         working-directory: gcb-platform/frontend
     env:
-      NEXT_PUBLIC_API_URL: http://127.0.0.1:9
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:65534
       NEXTAUTH_SECRET: ci-only-not-a-production-secret
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
