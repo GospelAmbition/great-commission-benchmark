@@ -23,7 +23,7 @@ jobs:
       run:
         working-directory: gcb-platform/backend
     env:
-      DATABASE_URL: 'sqlite:///:memory:'
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:9/gcb_ci
       REDIS_URL: ''
       NEWSLETTER_SYNC_ENABLED: 'false'
       NEXTAUTH_SECRET: ci-only-not-a-production-secret
