@@ -300,8 +300,8 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      {/* Admin Actions */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* Priority Admin Actions */}
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle>User Management</CardTitle>
@@ -335,6 +335,23 @@ export default function AdminDashboardPage() {
             </Button>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Newsletter Management
+            </CardTitle>
+            <CardDescription>View and manage newsletter subscribers and MailerLite sync status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="brand">
+              <Link href="/admin/newsletter">Manage Newsletter</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-6">
         <Card>
           <CardHeader>
             <CardTitle>Data Management</CardTitle>
@@ -390,20 +407,6 @@ export default function AdminDashboardPage() {
           <CardContent>
             <Button asChild variant="outline">
               <Link href="/admin/contacts">View Submissions</Link>
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Newsletter Management
-            </CardTitle>
-            <CardDescription>View and manage newsletter subscribers and MailerLite sync status</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline">
-              <Link href="/admin/newsletter">Manage Newsletter</Link>
             </Button>
           </CardContent>
         </Card>

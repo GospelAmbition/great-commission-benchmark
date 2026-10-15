@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ type Preview = {
   rows: { row: number; email: string; action: string; message: string }[]; rows_truncated: boolean;
 };
 
-export function NewsletterMailerLiteImport({ onImported }: { onImported: () => void }) {
+export function NewsletterMailerLiteImport({ onImported, children }: { onImported: () => void; children?: ReactNode }) {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [consent, setConsent] = useState(false);
   const [note, setNote] = useState("");
@@ -50,9 +50,11 @@ export function NewsletterMailerLiteImport({ onImported }: { onImported: () => v
     }
   }
 
-  return <Card className="mb-8">
-    <CardHeader><CardTitle>Import existing MailerLite contacts</CardTitle></CardHeader>
+  return <Card className="h-full min-w-0">
+    <CardHeader><CardTitle>Import subscribers</CardTitle></CardHeader>
     <CardContent className="space-y-4">
+      {children}
+      <h3 className="font-semibold">Import existing MailerLite contacts</h3>
       <p className="text-sm text-muted-foreground">Bring contacts from the configured production group into the platform. Includes active, unsubscribed, unconfirmed, bounced and junk statuses. Existing opt-outs stay inactive. Up to 10,000 records; use CSV batches for larger groups or contacts outside this group.</p>
       <Button variant="outline" disabled={busy} onClick={() => run()}>Preview MailerLite import</Button>
       {preview && <div className="space-y-3">
