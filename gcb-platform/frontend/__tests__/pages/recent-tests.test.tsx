@@ -1,12 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import Home from '@/app/page';
+import Home from '@/app/(home)/page';
 import RecentTestsPage from '@/app/recent-tests/page';
 
 global.fetch = jest.fn();
 
 describe('Recent Tests pages', () => {
-  it('includes the five-item preview section and full-page link on the homepage', () => {
-    const html = renderToStaticMarkup(<Home />);
+  it('includes the five-item preview section and full-page link on the homepage', async () => {
+    const html = renderToStaticMarkup(await Home());
 
     expect(html).toContain('Recent Tests');
     expect(html).toContain('href="/recent-tests"');

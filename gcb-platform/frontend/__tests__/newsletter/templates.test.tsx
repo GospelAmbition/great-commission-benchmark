@@ -19,8 +19,8 @@ it.each([true, false])('includes newsletter offer on model page, active=%s', asy
 });
 it('renders both article offers without requiring article content edits', async () => {
   global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ title: 'Example insight', content: 'Article body', categories: [], published_at: '2026-09-08', updated_at: '2026-09-08' }) });
-  render(<BlogPostPage />);
-  expect(await screen.findByRole('heading', { name: 'Example insight' })).toBeInTheDocument();
+  render(await BlogPostPage({ params: Promise.resolve({ slug: 'example' }) }));
+  expect(screen.getByRole('heading', { name: 'Example insight' })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Get the GCB digest' })).toHaveAttribute('href', '/newsletter?source=article_header');
   expect(screen.getByRole('link', { name: 'Subscribe' })).toHaveAttribute('href', '/newsletter?source=article_end');
 });

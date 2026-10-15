@@ -1,15 +1,13 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ProviderIcon } from "@/components/ui/provider-icon";
-import { apiClient, LeaderboardItem } from "@/lib/api";
+import type { LeaderboardItem } from "@/lib/api";
+import { decodeRouteParam, getBlogPosts, getProviderModels } from "@/lib/server-data";
+import { generatePageMetadata } from "@/lib/seo";
 import { formatProvider, getDisplayModelName } from "@/lib/model-utils";
 import { Shield, ShieldAlert, ShieldX, CheckCircle2 } from "lucide-react";
 import { RelatedArticles } from "@/components/blog/RelatedArticles";
@@ -46,58 +44,88 @@ function getVerdictInfo(score: number) {
   }
 }
 
-export default function ProviderDetailPage() {
-  const params = useParams();
-  const rawProvider = params.provider as string;
-  const provider = (() => {
-    try {
-      return decodeURIComponent(rawProvider);
-    } catch {
-      return rawProvider;
-    }
-  })();
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ provider: string }>;
+}): Promise<Metadata> {
+  const provider = decodeRouteParam((await params).provider);
+  const providerDisplayName = formatProvider(provider);
 
-  const [models, setModels] = useState<LeaderboardItem[]>([]);
-  const [articles, setArticles] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  try {
+    const data = await getProviderModels(provider);
+    const modelCount = data.items?.length || 0;
+    const avgScore = modelCount > 0
+      ? data.items.reduce((sum, m) => sum + m.overall_score, 0) / modelCount
+      : 0;
+    const topScore = modelCount > 0
+      ? Math.max(...data.items.map((m) => m.overall_score))
+      : 0;
 
-  useEffect(() => {
-    if (provider) {
-      loadProviderModels();
-      loadProviderArticles();
-    }
-  }, [provider]);
+    const description = modelCount > 0
+      ? `${providerDisplayName} has ${modelCount} AI model${modelCount !== 1 ? "s" : ""} tested on the Great Commission Benchmark. Top score: ${topScore.toFixed(1)}%, average: ${avgScore.toFixed(1)}%.`
+      : `View ${providerDisplayName} AI models on the Great Commission Benchmark.`;
 
-  async function loadProviderModels() {
-    setLoading(true);
-    try {
-      const data = await apiClient.getLeaderboard({ provider, limit: 200 });
-      setModels(data.items || []);
-    } catch (error) {
-      console.error("Failed to load provider models:", error);
-    } finally {
-      setLoading(false);
-    }
+    return generatePageMetadata({
+      title: `${providerDisplayName} AI Models`,
+      description,
+      path: `/leaderboard/providers/${encodeURIComponent(provider)}`,
+      keywords: [
+        providerDisplayName,
+        "AI models",
+        "benchmark results",
+        "model comparison",
+        "LLM",
+        "Great Commission",
+      ],
+      openGraph: {
+        type: "website",
+      },
+    });
+  } catch {
+    return generatePageMetadata({
+      title: `${providerDisplayName} AI Models`,
+      description: `View ${providerDisplayName} AI models on the Great Commission Benchmark.`,
+      path: `/leaderboard/providers/${encodeURIComponent(provider)}`,
+      // Don't let crawlers index the error state shown when models fail to load.
+      noIndex: true,
+    });
   }
+}
 
-  async function loadProviderArticles() {
-    try {
-      const res = await fetch(`/api/blog/posts?provider=${encodeURIComponent(provider)}&limit=5`);
-      if (res.ok) {
-        const data = await res.json();
-        setArticles((data.items || []).map((p: any) => ({
-          id: p.id,
-          title: p.title,
-          slug: p.slug,
-          excerpt: p.excerpt,
-          featured_image_url: p.featured_image_url,
-          published_at: p.published_at,
-        })));
-      }
-    } catch (error) {
-      console.error("Failed to load provider articles:", error);
-    }
+async function loadProviderModels(provider: string): Promise<{ models: LeaderboardItem[]; error: boolean }> {
+  try {
+    const data = await getProviderModels(provider);
+    return { models: data.items || [], error: false };
+  } catch (error) {
+    console.error("Failed to load provider models:", error);
+    return { models: [], error: true };
   }
+}
+
+async function loadProviderArticles(provider: string) {
+  try {
+    const data = await getBlogPosts({ provider, limit: 5, offset: 0 });
+    return data.items.map((p) => ({
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      excerpt: p.excerpt,
+      featured_image_url: p.featured_image_url,
+      published_at: p.published_at,
+    }));
+  } catch (error) {
+    console.error("Failed to load provider articles:", error);
+    return [];
+  }
+}
+
+export default async function ProviderDetailPage({ params }: { params: Promise<{ provider: string }> }) {
+  const provider = decodeRouteParam((await params).provider);
+  const [{ models, error: modelsError }, articles] = await Promise.all([
+    loadProviderModels(provider),
+    loadProviderArticles(provider),
+  ]);
 
   const providerDisplayName = formatProvider(provider);
 
@@ -109,21 +137,6 @@ export default function ProviderDetailPage() {
   const topScore = modelCount > 0
     ? Math.max(...models.map((m) => m.overall_score))
     : 0;
-
-  if (loading) {
-    return (
-      <div className="container py-8">
-        <Skeleton className="h-8 w-48 mb-4" />
-        <Skeleton className="h-12 w-64 mb-2" />
-        <Skeleton className="h-6 w-96 mb-8" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-48" />
-          ))}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="container py-8">
@@ -202,7 +215,11 @@ export default function ProviderDetailPage() {
         <h2 className="text-2xl font-semibold">Models</h2>
       </div>
 
-      {modelCount === 0 ? (
+      {modelsError ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+          {providerDisplayName} models could not be loaded. Please try again shortly.
+        </div>
+      ) : modelCount === 0 ? (
         <Card>
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground">
