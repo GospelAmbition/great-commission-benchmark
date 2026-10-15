@@ -1,6 +1,6 @@
 """Admin API schemas"""
 from typing import Optional, List, Dict, Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import datetime
 
@@ -133,7 +133,7 @@ class QuestionSetCreateRequest(BaseModel):
 
 class VersionCreateRequest(BaseModel):
     """Version create request"""
-    semantic_version: str
+    semantic_version: str = Field(min_length=1, max_length=10)
     question_ids: List[UUID]
     description: Optional[str] = None
 
