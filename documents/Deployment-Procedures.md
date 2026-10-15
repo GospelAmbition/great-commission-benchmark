@@ -38,9 +38,10 @@ secrets. Check names are stable because branch protection refers to them.
 
 GitHub native auto-merge is enabled at repository level. The separate
 `Enable native auto-merge` workflow opts every non-draft PR to `main` into squash
-auto-merge on open, reopen, ready-for-review, and new commits, including forks.
-Draft PRs are not opted in. The workflow runs from the trusted base branch under
-`pull_request_target`; it only reads PR metadata and requests native auto-merge.
+auto-merge when PR CI is requested or completes, including forks. CI runs on
+open, reopen, ready-for-review and new commits.
+Draft PRs are not opted in. The workflow runs from the trusted default branch
+under `workflow_run`; it only reads PR metadata and requests native auto-merge.
 It never checks out PR code, consumes PR artifacts, or bypasses checks/reviews.
 Its token has only repository contents and pull-request write permissions.
 Manual workflow dispatch reapplies opt-in to existing ready PRs.

@@ -1,18 +1,18 @@
 name: Enable native auto-merge
 
-# Trusted base-branch workflow only. Never checkout PR code, download artifacts,
+# Trusted default-branch workflow only. Never checkout PR code, download artifacts,
 # run PR scripts, or interpolate PR titles/bodies into executable commands here.
 on:
-  pull_request_target:
-    branches: [main]
-    types: [opened, reopened, ready_for_review, synchronize]
+  workflow_run:
+    workflows: [CI]
+    types: [requested, completed]
   workflow_dispatch:
 
 permissions: {}
 
 jobs:
   enable:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -21,7 +21,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
       - name: Enable squash auto-merge on ready PRs targeting main
         shell: bash
@@ -29,11 +29,8 @@ jobs:
           set -euo pipefail
           # Dispatch also repairs opt-in for any already-open ready PRs. No PR
           # source, secrets, caches, or artifacts are consumed by this workflow.
-          if [[ -n "$PR_NUMBER" ]]; then
-            numbers=("$PR_NUMBER")
-          else
-            mapfile -t numbers < <(gh pr list --repo "$GH_REPO" --base main --state open --limit 1000 --json number,isDraft --jq '.[] | select(.isDraft == false) | .number')
-          fi
+          prs=$(gh pr list --repo "$GH_REPO" --base main --state open --limit 1000 --json number,isDraft,headRefOid)
+          mapfile -t numbers < <(jq -r --arg sha "$HEAD_SHA" '.[] | select(.isDraft == false and ($sha == "" or .headRefOid == $sha)) | .number' <<< "$prs")
           for number in "${numbers[@]}"; do
             pr=$(gh api "repos/$GH_REPO/pulls/$number")
             if [[ $(jq -r '.state == "open" and .draft == false and .base.ref == "main" and .auto_merge == null' <<< "$pr") != true ]]; then
