@@ -36,7 +36,7 @@ it.each([
   expect(await screen.findByRole('status')).toHaveTextContent(heading);
   expect(trackNewsletterSignup).toHaveBeenCalledWith('article_end');
   expect(trackEvent).toHaveBeenCalledWith('newsletter_signup_outcome', { source: 'article_end', outcome });
-  expect(JSON.parse(mockFetch.mock.calls[0][1].body).email).toBe('reader@example.com');
+  expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toMatchObject({ email: 'reader@example.com', source: 'article_end' });
   expect(JSON.stringify((trackEvent as jest.Mock).mock.calls)).not.toContain('reader@example.com');
 });
 it('rejects invalid email without a request', () => {
@@ -81,6 +81,7 @@ it('falls back to direct-page attribution for unrecognized sources', async () =>
   render(<NewsletterPage />); submit();
   await screen.findByRole('status');
   expect(trackNewsletterSignup).toHaveBeenCalledWith('newsletter_page');
+  expect(JSON.parse(mockFetch.mock.calls[0][1].body).source).toBe('newsletter_page');
 });
 
 it.each(['confirmation_required', 'sync_pending'])('does not count %s as an active subscription', async status => {

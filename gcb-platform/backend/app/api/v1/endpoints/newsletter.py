@@ -95,6 +95,8 @@ async def subscribe_newsletter(
     # Create new subscription in database
     subscriber = NewsletterSubscriber(
         email=request.email,
+        source=f"website:{request.source}",
+        consent_note="Subscribed through the GCB newsletter signup form.",
         is_active=True
     )
     db.add(subscriber)
