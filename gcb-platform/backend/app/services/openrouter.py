@@ -1,7 +1,13 @@
 """OpenRouter API client"""
+import asyncio
+from urllib.parse import quote
+
 import httpx
 from typing import Dict, List, Optional
 from app.core.config import settings
+from app.services.model_description import valid_model_id
+
+MODEL_DETAILS_TIMEOUT_SECONDS = 10
 
 
 class OpenRouterClient:
@@ -81,6 +87,24 @@ class OpenRouterClient:
         except Exception as e:
             raise Exception(f"Failed to list models: {str(e)}")
     
+    async def get_model_details(self, model: str) -> Optional[Dict]:
+        """Resolve a model (including retired aliases) through the official detail API."""
+        if not valid_model_id(model):
+            return None
+        author, slug = model.split("/")
+        path = f"/model/{quote(author, safe='')}/{quote(slug, safe='')}"
+        try:
+            async with asyncio.timeout(MODEL_DETAILS_TIMEOUT_SECONDS):
+                response = await self.client.get(path, timeout=MODEL_DETAILS_TIMEOUT_SECONDS)
+                response.raise_for_status()
+                payload = response.json()
+                data = payload.get("data") if isinstance(payload, dict) else None
+                if isinstance(data, dict) and valid_model_id(data.get("id", "")):
+                    return data
+        except (httpx.HTTPError, TimeoutError, ValueError):
+            pass
+        return None
+
     async def get_model_info(self, model: str) -> Optional[Dict]:
         """
         Get full information for a specific model including description
@@ -95,7 +119,7 @@ class OpenRouterClient:
         for m in models:
             if m.get("id") == model:
                 return m
-        return None
+        return await self.get_model_details(model)
     
     async def get_model_pricing(self, model: str) -> Dict:
         """

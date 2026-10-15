@@ -59,6 +59,7 @@ async def test_public_fetch_is_bounded_and_has_no_authorization(monkeypatch, mod
 @pytest.fixture
 def router():
     client = AsyncMock()
+    client.get_model_details.return_value = None
     with patch.object(model_sync, "OpenRouterClient", return_value=client):
         yield client
 
@@ -182,3 +183,55 @@ async def test_archived_model_uses_existing_abbreviation_when_absent_from_catalo
     with patch.object(model_sync, "fetch_full_description", AsyncMock(return_value="Model intro archived full text.")):
         assert await model_sync.sync_all_model_descriptions(db_session) == 1
     assert test_model.description == "Model intro archived full text."
+
+
+@pytest.mark.parametrize("description,abbreviated", [
+    ("Model intro.\n\nIts next paragraph contains the full description.", "Model intro. Its next paragraph..."),
+    ("Model intro.\nIts\t next paragraph contains the full description.", "Model intro. Its next paragraph..."),
+    ("Model intro. Its next paragraph contains the full description.", "Model intro.\n\nIts next paragraph…"),
+])
+def test_api_collapsed_whitespace_matches_but_preserves_source(description, abbreviated):
+    assert model_description.extract_full_description(page(description=description), "provider/model", abbreviated) == description
+
+
+def test_whitespace_only_length_difference_is_not_a_continuation():
+    assert model_description.extract_full_description(page(description="Model\n\nintro"), "provider/model", "Model intro...") is None
+
+
+def test_normalizing_whitespace_does_not_accept_different_words():
+    assert model_description.extract_full_description(page(description="Model intro.\n\nDifferent paragraph."), "provider/model", "Model intro. Expected paragraph...") is None
+
+
+@pytest.mark.asyncio
+async def test_existing_formatted_full_description_skips_unnecessary_fetch(test_model):
+    original = "Model intro.\n\nIts next paragraph contains the full description."
+    test_model.description = original
+    with patch.object(model_sync, "fetch_full_description", AsyncMock()) as fetch:
+        assert not await model_sync._update_description(test_model, {"description": "Model intro. Its next paragraph..."})
+        fetch.assert_not_awaited()
+    assert test_model.description == original
+
+
+@pytest.mark.asyncio
+async def test_bulk_resolves_official_alias_and_keeps_record_identity(db_session, test_model, router):
+    original_id = test_model.model_id
+    test_model.description = "Model intro..."
+    router.list_models.return_value = []
+    router.get_model_details.return_value = {"id": "provider/canonical", "description": "Model intro..."}
+    with patch.object(model_sync, "fetch_full_description", AsyncMock(return_value="Model intro full canonical description.")) as fetch:
+        assert await model_sync.sync_all_model_descriptions(db_session) == 1
+        fetch.assert_awaited_once_with("provider/canonical", "Model intro...")
+    assert test_model.model_id == original_id
+    assert test_model.description == "Model intro full canonical description."
+    router.get_model_details.assert_awaited_once_with(original_id)
+
+
+@pytest.mark.asyncio
+async def test_bulk_detail_full_text_needs_no_html(db_session, test_model, router):
+    test_model.description = "Model intro..."
+    router.list_models.return_value = []
+    router.get_model_details.return_value = {"id": "provider/canonical", "description": "Complete official detail description."}
+    with patch.object(model_sync, "fetch_full_description", AsyncMock()) as fetch:
+        assert await model_sync.sync_all_model_descriptions(db_session) == 1
+        fetch.assert_not_awaited()
+    assert test_model.description == "Complete official detail description."

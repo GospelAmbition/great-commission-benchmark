@@ -14,7 +14,7 @@ PAGE_TIMEOUT_SECONDS = 5
 
 
 def valid_model_id(model_id: str) -> bool:
-    return bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:+-]*/[A-Za-z0-9][A-Za-z0-9._:+-]*", model_id))
+    return isinstance(model_id, str) and bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:+-]*/[A-Za-z0-9][A-Za-z0-9._:+-]*", model_id))
 
 
 def _matches_model_url(value, model_id: str) -> bool:
@@ -39,6 +39,14 @@ def abbreviated_prefix(description: Optional[str]) -> Optional[str]:
 
 def is_abbreviated(description: Optional[str]) -> bool:
     return abbreviated_prefix(description) is not None
+
+
+def continues_description_prefix(description: str, prefix: str) -> bool:
+    """Compare API-collapsed whitespace without changing the stored source text."""
+    normalized = " ".join(description.split())
+    normalized_prefix = " ".join(prefix.split())
+    return bool(normalized_prefix and normalized.startswith(normalized_prefix)
+                and len(normalized) > len(normalized_prefix))
 
 
 class _StructuredDataParser(HTMLParser):
@@ -85,8 +93,7 @@ def extract_full_description(html: str, model_id: str, abbreviated: str) -> Opti
             if not (types == "SoftwareApplication" or isinstance(types, list) and "SoftwareApplication" in types) or not _matches_model_url(entity.get("url"), model_id):
                 continue
             description = entity.get("description")
-            if (isinstance(description, str) and description.startswith(prefix)
-                    and len(description) > len(prefix) and not is_abbreviated(description)
+            if (isinstance(description, str) and continues_description_prefix(description, prefix) and not is_abbreviated(description)
                     and len(description.encode("utf-8")) <= MAX_DESCRIPTION_BYTES):
                 return description
     return None
