@@ -651,6 +651,7 @@ class TestAdminDescriptionSync:
         assert response.json()["total_models"] == 4
         assert response.json()["next_offset"] == 3
         assert response.json()["remaining_incomplete"] is None
+        assert response.json()["incomplete_model_ids"] is None
         sync.assert_awaited_once_with(db_session, all_models=True, offset=0, limit=3)
         clear.assert_awaited_once()
 
@@ -662,6 +663,7 @@ class TestAdminDescriptionSync:
         assert response.json()["total_models"] == 4
         assert response.json()["next_offset"] is None
         assert response.json()["remaining_incomplete"] == 4
+        assert response.json()["incomplete_model_ids"] == [f"test/model-{index}" for index in range(4)]
         sync.assert_awaited_once_with(db_session, all_models=False, offset=3, limit=3)
         clear.assert_awaited_once()
 
@@ -705,3 +707,4 @@ class TestAdminDescriptionSync:
         response = client.post("/api/admin/models/sync-descriptions?offset=3&limit=3")
         assert response.status_code == 200
         assert response.json()["remaining_incomplete"] == expected
+        assert response.json()["incomplete_model_ids"] == [f"test/model-{index}" for index in range(expected)]
