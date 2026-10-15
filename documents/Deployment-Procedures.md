@@ -22,6 +22,35 @@ This document defines the deployment procedures, environments, and release workf
 
 ---
 
+## Pull request checks and auto-merge
+
+For `main`, GitHub branch protection requires an up-to-date branch and four
+GitHub Actions checks: **Backend tests**, **Frontend checks**, **Runner tests**,
+and **Local scripts**. Administrators are subject to the same requirements;
+force pushes and branch deletion are disabled. PRs are required, with zero
+mandatory approvals (no previous review requirement existed).
+
+The CI workflow runs every check on every PR to `main`, without path filters.
+Backend tests use isolated test databases, frontend checks include tests/lint/build,
+runner tests use their own Python environment, and local-script tests mock Docker
+and database operations. CI has read-only repository access and no production
+secrets. Check names are stable because branch protection refers to them.
+
+GitHub native auto-merge is enabled at repository level. The separate
+`Enable native auto-merge` workflow opts every non-draft PR to `main` into squash
+auto-merge on open, reopen, ready-for-review, and new commits, including forks.
+Draft PRs are not opted in. The workflow runs from the trusted base branch under
+`pull_request_target`; it only reads PR metadata and requests native auto-merge.
+It never checks out PR code, consumes PR artifacts, or bypasses checks/reviews.
+Its token has only repository contents and pull-request write permissions.
+Manual workflow dispatch reapplies opt-in to existing ready PRs.
+
+Native auto-merge waits for the required checks and GitHub's mergeability rules;
+conflicts or a branch behind `main` must be resolved before merging. New checks
+must be added to branch protection explicitly if they should also block merges.
+Merges can trigger Railway deployments; GitHub checks alone do not verify
+production deployment health.
+
 ## Deployment Overview
 
 ### System Components
