@@ -42,7 +42,7 @@ export function NewsletterSync({ pending, errors, enabled, lastSyncedAt, webhook
     }
   }
 
-  return <Card className="mb-8">
+  return <Card className="h-full min-w-0">
     <CardHeader><CardTitle>MailerLite connection and sync</CardTitle></CardHeader>
     <CardContent className="space-y-3">
       <p className="text-sm">{pending} pending · {errors} need retry · Automatic sync {enabled ? "enabled" : "disabled"}</p>

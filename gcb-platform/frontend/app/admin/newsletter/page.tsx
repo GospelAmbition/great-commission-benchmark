@@ -426,14 +426,12 @@ export default function AdminNewsletterPage() {
 
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 mb-2">
-            <Mail className="h-8 w-8 text-primary" />
-            <h1 className="text-4xl font-bold">Newsletter Subscribers</h1>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Mail className="h-8 w-8 shrink-0 text-primary" />
+            <h1 className="text-3xl sm:text-4xl font-bold">Newsletter Subscribers</h1>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <NewsletterImport onImported={() => { loadSubscribers(); loadStats(); }} />
-            <NewsletterMailerLiteImport onImported={() => { loadSubscribers(); loadStats(); }} />
+          <div className="shrink-0">
             <Button
               variant="outline"
               onClick={handleExportCsv}
@@ -526,7 +524,16 @@ export default function AdminNewsletterPage() {
         </Card>
       </div>
 
-      {stats && <NewsletterSync pending={stats.sync_pending} errors={stats.sync_errors} enabled={stats.sync_enabled} lastSyncedAt={stats.last_synced_at} webhookConfigured={stats.webhook_configured} lastWebhookAt={stats.last_webhook_at} onQueued={() => { loadStats(); loadSubscribers(); }} />}
+      <div className={`grid gap-6 mb-8 ${stats ? "lg:grid-cols-2" : ""}`}>
+        {stats && <NewsletterSync pending={stats.sync_pending} errors={stats.sync_errors} enabled={stats.sync_enabled} lastSyncedAt={stats.last_synced_at} webhookConfigured={stats.webhook_configured} lastWebhookAt={stats.last_webhook_at} onQueued={() => { loadStats(); loadSubscribers(); }} />}
+        <NewsletterMailerLiteImport onImported={() => { loadSubscribers(); loadStats(); }}>
+          <div className="space-y-3 border-b pb-4">
+            <h3 className="font-semibold">Import CSV into the platform</h3>
+            <p className="text-sm text-muted-foreground">Upload a subscriber CSV and review changes before importing.</p>
+            <NewsletterImport onImported={() => { loadSubscribers(); loadStats(); }} />
+          </div>
+        </NewsletterMailerLiteImport>
+      </div>
 
       <NewsletterCampaignSends />
 
