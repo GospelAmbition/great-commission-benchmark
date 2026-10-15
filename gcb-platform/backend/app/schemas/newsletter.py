@@ -1,6 +1,6 @@
 """Newsletter API schemas"""
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
-from typing import Optional
+from typing import Literal, Optional
 
 
 class NewsletterEmailRequest(BaseModel):
@@ -15,6 +15,11 @@ class NewsletterEmailRequest(BaseModel):
 class NewsletterSubscribeRequest(NewsletterEmailRequest):
     """Newsletter subscription request"""
     recaptcha_token: Optional[str] = None
+    source: Literal[
+        "header", "home_hero", "home_results", "model_results", "model_archived",
+        "insights_header", "article_header", "article_end", "leaderboard",
+        "recent_tests", "footer", "newsletter_page",
+    ] = "newsletter_page"
 
 
 class NewsletterSubscribeResponse(BaseModel):

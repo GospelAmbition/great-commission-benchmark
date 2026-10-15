@@ -76,7 +76,7 @@ export default function NewsletterPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email: normalizedEmail, recaptcha_token: recaptchaToken }),
+        body: JSON.stringify({ email: normalizedEmail, source, recaptcha_token: recaptchaToken }),
       });
 
       if (!response.ok) {
