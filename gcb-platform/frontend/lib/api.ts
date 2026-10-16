@@ -298,6 +298,7 @@ export class ApiClient {
       // Bound public reads, including response bodies, so SSR can show its fallback.
       signal: options.signal ?? AbortSignal.timeout(10_000),
       method: options.method || 'GET',
+      next: { revalidate: 300, ...(typeof options.next === "object" ? options.next : {}) },
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,

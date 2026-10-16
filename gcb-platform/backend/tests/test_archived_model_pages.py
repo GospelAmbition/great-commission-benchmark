@@ -1,7 +1,7 @@
 """Archived model URLs remain public without republishing disabled scores."""
 import pytest
 from datetime import datetime, timezone
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 from app.api.v1.endpoints.public import get_model_by_model_id, get_model_detail, list_model_pages
 from app.db.models.model import Model
 from app.db.models.methodology_version import MethodologyVersion
@@ -21,12 +21,12 @@ def test_methodology_version(db_session, test_question_set):
 async def test_archived_model_without_valid_results(db_session, test_model):
     test_model.is_active = False
     db_session.commit()
-    data = await get_model_by_model_id(test_model.model_id, db_session)
+    data = await get_model_by_model_id(test_model.model_id, db_session, Response())
     assert data["is_active"] is False
     assert data["model_id"] == test_model.model_id
     assert "score" not in data
     assert data["related_models"] == []
-    uuid_data = await get_model_detail(test_model.id, db_session)
+    uuid_data = await get_model_detail(test_model.id, db_session, Response())
     assert uuid_data["best_result"] is None
 
 
@@ -34,7 +34,7 @@ async def test_archived_model_without_valid_results(db_session, test_model):
 async def test_unknown_and_active_untested_models_still_404(db_session, test_model):
     for model_id in ["unknown/missing", test_model.model_id]:
         with pytest.raises(HTTPException) as exc:
-            await get_model_by_model_id(model_id, db_session)
+            await get_model_by_model_id(model_id, db_session, Response())
         assert exc.value.status_code == 404
 
 
@@ -45,12 +45,14 @@ async def test_alternatives_require_active_valid_results(db_session, test_model,
     untested = Model(model_id="test-provider/test-new", name="Untested", provider="test-provider", is_active=True)
     db_session.add_all([archived, untested])
     db_session.commit()
-    data = await get_model_by_model_id(archived.model_id, db_session)
+    data = await get_model_by_model_id(archived.model_id, db_session, Response())
     assert [m["model_id"] for m in data["related_models"]] == [test_model.model_id]
     assert data["related_models"][0]["relationship"] == "family"
     test_model.is_active = False
     db_session.commit()
-    data = await get_model_by_model_id(archived.model_id, db_session)
+    from app.core.cache import cache
+    await cache.delete_prefix("model_by_id")
+    data = await get_model_by_model_id(archived.model_id, db_session, Response())
     assert data["related_models"] == []
 
 

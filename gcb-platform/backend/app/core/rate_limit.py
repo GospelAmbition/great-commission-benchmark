@@ -1,9 +1,8 @@
 """Rate limiting middleware and utilities"""
 import time
-from typing import Dict, Optional, Callable
+from typing import Dict
 from collections import defaultdict
 from fastapi import Request, HTTPException, Depends
-from functools import wraps
 
 
 class RateLimiter:
@@ -70,16 +69,25 @@ class RateLimiter:
         if key in self._requests:
             del self._requests[key]
 
+    def reset_all(self):
+        """Clear every tracked key. Used by tests to isolate request budgets."""
+        self._requests.clear()
+
 
 # Global rate limiter instance
 rate_limiter = RateLimiter()
 
 
 # Rate limit configurations
+# Public limits are generous for a person browsing and for Next.js SSR from
+# the frontend service IP, but tight enough to clip a crawler burst
+# (~500 req/min / ~8 req/s observed on 2026-10-16).
 RATE_LIMITS = {
-    "public": {"limit": 100, "window": 60},      # 100 req/min
-    "authenticated": {"limit": 300, "window": 60}, # 300 req/min
-    "submissions": {"limit": 10, "window": 3600}, # 10 req/hour
+    "public": {"limit": 180, "window": 60},
+    "public_burst": {"limit": 40, "window": 10},
+    "authenticated": {"limit": 300, "window": 60},
+    "authenticated_burst": {"limit": 80, "window": 10},
+    "submissions": {"limit": 10, "window": 3600},  # 10 req/hour
 }
 
 
@@ -165,3 +173,143 @@ def rate_limit_authenticated():
 def rate_limit_submissions():
     """Rate limit for submission endpoints: 10 req/hour"""
     return RateLimitDependency("submissions")
+
+
+_RATE_LIMIT_SKIP_EXACT = {"/health"}
+_RATE_LIMIT_SKIP_PREFIXES = (
+    "/api/health",
+    "/api/webhooks",
+    "/api/newsletter/webhooks",
+)
+
+
+def should_skip_rate_limit(path: str, method: str) -> bool:
+    """Health checks, CORS preflight, and inbound webhooks are not throttled."""
+    if method == "OPTIONS":
+        return True
+    if path in _RATE_LIMIT_SKIP_EXACT:
+        return True
+    return any(path.startswith(prefix) for prefix in _RATE_LIMIT_SKIP_PREFIXES)
+
+
+def _rate_limit_response(request: Request, config: dict, reset_time: int):
+    from fastapi.responses import JSONResponse
+    from app.core.config import settings
+
+    headers = {
+        "Retry-After": str(reset_time),
+        "X-RateLimit-Limit": str(config["limit"]),
+        "X-RateLimit-Remaining": "0",
+        "X-RateLimit-Reset": str(reset_time),
+        "X-RateLimit-Window": str(config["window"]),
+        "Cache-Control": "no-store",
+    }
+    origin = request.headers.get("origin")
+    if origin and origin in settings.CORS_ORIGINS:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+    return JSONResponse(
+        status_code=429,
+        content={
+            "detail": {
+                "error": "Rate limit exceeded",
+                "limit": config["limit"],
+                "window_seconds": config["window"],
+                "retry_after": reset_time,
+            }
+        },
+        headers=headers,
+    )
+
+
+class RateLimitMiddleware:
+    """ASGI middleware: per-IP sliding windows before hitting route handlers.
+
+    Starlette's BaseHTTPMiddleware is avoided here so a 429 never waits on
+    the inner app (DB/Redis). CORS headers are copied onto the 429 because
+    this middleware sits outside CORSMiddleware.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        from starlette.requests import Request
+
+        request = Request(scope, receive)
+        if should_skip_rate_limit(request.url.path, request.method):
+            await self.app(scope, receive, send)
+            return
+
+        client_id = get_client_identifier(request)
+        is_auth = bool(
+            request.headers.get("authorization") or request.headers.get("x-api-key")
+        )
+        limit_type = "authenticated" if is_auth else "public"
+        burst_type = f"{limit_type}_burst"
+        burst_cfg = RATE_LIMITS[burst_type]
+        cfg = RATE_LIMITS[limit_type]
+
+        burst_allowed, _, burst_reset = rate_limiter.check_rate_limit(
+            key=f"{burst_type}:{client_id}",
+            limit=burst_cfg["limit"],
+            window_seconds=burst_cfg["window"],
+        )
+        if not burst_allowed:
+            response = _rate_limit_response(request, burst_cfg, burst_reset)
+            await response(scope, receive, send)
+            return
+
+        allowed, remaining, reset_time = rate_limiter.check_rate_limit(
+            key=f"{limit_type}:{client_id}",
+            limit=cfg["limit"],
+            window_seconds=cfg["window"],
+        )
+        if not allowed:
+            response = _rate_limit_response(request, cfg, reset_time)
+            await response(scope, receive, send)
+            return
+
+        request.state.rate_limit_headers = {
+            "X-RateLimit-Limit": str(cfg["limit"]),
+            "X-RateLimit-Remaining": str(remaining),
+            "X-RateLimit-Reset": str(reset_time),
+            "X-RateLimit-Window": str(cfg["window"]),
+        }
+
+        async def send_with_rate_limit_headers(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers") or [])
+                for name, value in request.state.rate_limit_headers.items():
+                    headers.append((name.lower().encode("latin-1"), value.encode("latin-1")))
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, send_with_rate_limit_headers)
+
+
+class ScannerBlockMiddleware:
+    """Return 404 for scanner/exploit paths before any application work."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path") or ""
+        from app.core.scanner_paths import is_scanner_path
+        from fastapi.responses import PlainTextResponse
+
+        if is_scanner_path(path):
+            response = PlainTextResponse("Not Found", status_code=404)
+            await response(scope, receive, send)
+            return
+
+        await self.app(scope, receive, send)

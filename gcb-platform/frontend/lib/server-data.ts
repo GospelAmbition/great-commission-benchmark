@@ -1,11 +1,12 @@
 /**
  * Server-side data loaders for server-rendered public pages.
  *
- * Fetches go straight to the backend (no Next.js proxy hop) with
- * `cache: "no-store"`: the backend's Redis cache is the source of truth,
- * matching the leaderboard and model pages. Each loader is wrapped in
- * React `cache()` so a layout/generateMetadata and its page share one
- * request per render.
+ * Fetches go straight to the backend (no Next.js proxy hop). A 5-minute
+ * Next.js data cache (`revalidate: 300`) absorbs crawler repeats; Redis
+ * remains the source of truth and is invalidated when results publish.
+ * `/api/revalidate` also drops the leaderboard layout cache. Each loader
+ * is wrapped in React `cache()` so a layout/generateMetadata and its page
+ * share one request per render.
  */
 import { cache } from "react";
 import { API_URL, apiClient, type BlogCategory, type BlogPost } from "@/lib/api";
@@ -41,7 +42,7 @@ export function decodeRouteParam(raw: string): string {
 }
 
 async function getJson<T>(path: string): Promise<T | null> {
-  const response = await fetch(`${API_URL}${path}`, { cache: "no-store" });
+  const response = await fetch(`${API_URL}${path}`, { next: { revalidate: 300 } });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`${path} failed with ${response.status}`);
   return response.json();

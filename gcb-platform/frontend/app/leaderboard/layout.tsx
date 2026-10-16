@@ -26,11 +26,10 @@ async function getLeaderboardPageData(): Promise<{
 }> {
   try {
     const response = await fetch(`${API_URL}${LEADERBOARD_PAGE_ENDPOINT}`, {
-      // The API response is already backed by Redis and invalidated whenever a
-      // result is published. Avoid a second, deployment-local Next.js cache
-      // that can continue serving an older model catalog when cross-service
-      // revalidation is delayed or unavailable.
-      cache: "no-store",
+      // Redis is still invalidated on publish. A short Next.js data cache
+      // keeps crawler repeats off the backend; /api/revalidate drops this
+      // layout (and nested leaderboard pages) after new results publish.
+      next: { revalidate: 300 },
     });
     if (!response.ok) return { initialData: null, rawEntries: null };
     const data = await response.json();
