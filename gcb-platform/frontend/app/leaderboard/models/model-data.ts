@@ -14,7 +14,9 @@ export const getModel = cache(async (id: string): Promise<ModelResponse> => {
   }
   const query = new URLSearchParams({ model_id: modelId });
   const response = await fetch(`${API_URL}/api/public/models/by-id?${query}`, {
-    cache: "no-store",
+    // 5-minute Next.js data cache; published results also trigger /api/revalidate
+    // on /leaderboard (layout), which covers nested model pages.
+    next: { revalidate: 300 },
   });
   if (response.status === 404) notFound();
   if (!response.ok) throw new Error("Unable to load model details");

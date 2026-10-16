@@ -21,4 +21,11 @@ echo "This ensures fast startup for health checks."
 # Railway sets PORT environment variable
 PORT=${PORT:-8080}
 echo "=== STARTING UVICORN on port ${PORT} $(date -u '+%Y-%m-%dT%H:%M:%SZ') ==="
-exec uvicorn main:app --host 0.0.0.0 --port ${PORT} --log-level info
+# Single worker: SQLAlchemy pool_size+overflow is per process. Extra workers
+# would multiply Postgres connections without helping the async event loop.
+# limit-concurrency caps piled-up crawler requests; keep-alive stays short
+# so idle scanner connections do not occupy the worker.
+exec uvicorn main:app --host 0.0.0.0 --port ${PORT} --log-level info \
+    --timeout-keep-alive 5 \
+    --timeout-graceful-shutdown 30 \
+    --limit-concurrency 80

@@ -23,6 +23,8 @@ from app.core.config import settings
 logger.info("Config loaded successfully")
 
 from app.core.security_headers import SecurityHeadersMiddleware
+from app.core.http_cache import PublicCacheControlMiddleware
+from app.core.rate_limit import RateLimitMiddleware, ScannerBlockMiddleware
 logger.info("Security headers middleware loaded")
 
 from app.api.v1.router import api_router
@@ -79,10 +81,10 @@ app = FastAPI(
 )
 logger.info("FastAPI app instance created")
 
-# Security headers middleware (must be first)
+# Incoming order (last add_middleware runs first):
+# Scanner 404 -> per-IP rate limit -> CORS -> security headers -> Cache-Control
+app.add_middleware(PublicCacheControlMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
-
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -90,6 +92,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(ScannerBlockMiddleware)
 
 # Include API router
 app.include_router(api_router, prefix="/api")

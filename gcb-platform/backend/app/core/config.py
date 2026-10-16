@@ -86,6 +86,8 @@ class Settings(BaseSettings):
     # so they persist across restarts and deploys.
     # Railway: add a Redis service and set REDIS_URL to its connection string.
     # Leave empty to use the in-memory cache (default for local dev).
+    # The Redis client uses 2s socket connect/read timeouts so a hung Redis
+    # cannot block the FastAPI event loop (see RedisCache).
     REDIS_URL: str = ""
 
     # Google reCAPTCHA v3

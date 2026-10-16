@@ -95,8 +95,15 @@ class TestRateLimitConfigurations:
     def test_public_rate_limit(self):
         """Test public rate limit configuration"""
         config = RATE_LIMITS["public"]
-        assert config["limit"] == 100
+        assert config["limit"] == 180
         assert config["window"] == 60
+
+    def test_public_burst_rate_limit(self):
+        """Test public burst window is tighter than the sustained window"""
+        config = RATE_LIMITS["public_burst"]
+        assert config["limit"] == 40
+        assert config["window"] == 10
+        assert config["limit"] < RATE_LIMITS["public"]["limit"]
     
     def test_authenticated_rate_limit(self):
         """Test authenticated rate limit configuration"""

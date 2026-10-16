@@ -10,6 +10,7 @@ import logging
 from app.core.auth import get_db, get_db_sync
 from app.core.db_errors import raise_if_db_unavailable
 from app.core.cache import cache, make_cache_key, CACHE_TTL, CACHE_STALE_TTL
+from app.core.http_cache import set_public_cache_headers
 from app.db.models.test_run import TestRun
 from app.db.models.model import Model
 from app.db.models.question_set import QuestionSet
@@ -865,14 +866,29 @@ def _archived_model_detail(db: Session, model: Model) -> dict:
 @router.get("/models/by-id")
 async def get_model_by_model_id(
     model_id: str = Query(..., description="Model identifier string (e.g., 'qwen/qwen3-coder-30b')"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    response: Response = None,
 ):
     """Get published results or an archive page by OpenRouter model ID."""
+    cache_key = make_cache_key("model_by_id", {"model_id": model_id})
+    cached_result = await cache.get(cache_key)
+    if cached_result is not None:
+        set_public_cache_headers(response, "HIT")
+        return cached_result
+
     model = db.query(Model).filter(Model.model_id == model_id).first()
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
     if not model.is_active:
-        return _archived_model_detail(db, model)
+        result = _archived_model_detail(db, model)
+        await cache.set(
+            cache_key,
+            result,
+            ttl_seconds=CACHE_TTL["model_by_id"],
+            stale_ttl_seconds=CACHE_STALE_TTL["model_by_id"],
+        )
+        set_public_cache_headers(response, "MISS")
+        return result
     
     # Use shared helper to get model detail data
     data = await get_model_snapshot(db, model)
@@ -893,7 +909,7 @@ async def get_model_by_model_id(
         best_result["scores"].get("verdict_distribution") if best_result else None
     ) or {"ACCEPTED": 0, "COMPROMISED": 0, "REFUSED": 0, "ERROR": 0}
 
-    return {
+    result = {
         "id": str(model.id),
         "model_id": model.model_id,
         "model_name": model.name,
@@ -924,26 +940,49 @@ async def get_model_by_model_id(
         "test_history": test_history,
         "related_articles": _get_related_articles(db, model),
     }
+    await cache.set(
+        cache_key,
+        result,
+        ttl_seconds=CACHE_TTL["model_by_id"],
+        stale_ttl_seconds=CACHE_STALE_TTL["model_by_id"],
+    )
+    set_public_cache_headers(response, "MISS")
+    return result
 
 
 @router.get("/models/{model_id}")
 async def get_model_detail(
     model_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    response: Response = None,
 ):
     """Get published results or archive information by UUID."""
+    cache_key = make_cache_key("model_details", {"model_id": str(model_id)})
+    cached_result = await cache.get(cache_key)
+    if cached_result is not None:
+        set_public_cache_headers(response, "HIT")
+        return cached_result
+
     model = db.query(Model).filter(Model.id == model_id).first()
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
     if not model.is_active:
         archived = _archived_model_detail(db, model)
-        return {
+        result = {
             "model": archived, "is_active": False,
             "best_result": None, "test_history": [], "category_breakdown": {},
             "leaderboard_rank": None, "total_models_tested": 0,
             "related_models": archived["related_models"],
             "related_articles": archived["related_articles"],
         }
+        await cache.set(
+            cache_key,
+            result,
+            ttl_seconds=CACHE_TTL["model_details"],
+            stale_ttl_seconds=CACHE_STALE_TTL["model_details"],
+        )
+        set_public_cache_headers(response, "MISS")
+        return result
     
     # Use shared helper to get model detail data
     data = await get_model_snapshot(db, model)
@@ -954,7 +993,7 @@ async def get_model_detail(
     leaderboard_rank = None
     total_models_tested = db.query(Model).filter(Model.is_active == True).count()
     
-    return {
+    result = {
         "model": {
             "id": str(model.id),
             "name": model.name,
@@ -969,16 +1008,38 @@ async def get_model_detail(
         "total_models_tested": total_models_tested,
         "related_articles": _get_related_articles(db, model),
     }
+    await cache.set(
+        cache_key,
+        result,
+        ttl_seconds=CACHE_TTL["model_details"],
+        stale_ttl_seconds=CACHE_STALE_TTL["model_details"],
+    )
+    set_public_cache_headers(response, "MISS")
+    return result
 
 
 @router.get("/providers/{provider}/articles")
 async def get_provider_articles(
     provider: str,
     limit: int = Query(10, ge=1, le=50),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    response: Response = None,
 ):
     """Get published blog posts linked to models from a given provider."""
-    return {"articles": _get_provider_articles(db, provider, limit)}
+    cache_key = make_cache_key("provider_articles", {"provider": provider, "limit": limit})
+    cached_result = await cache.get(cache_key)
+    if cached_result is not None:
+        set_public_cache_headers(response, "HIT")
+        return cached_result
+    result = {"articles": _get_provider_articles(db, provider, limit)}
+    await cache.set(
+        cache_key,
+        result,
+        ttl_seconds=CACHE_TTL["provider_articles"],
+        stale_ttl_seconds=CACHE_STALE_TTL["provider_articles"],
+    )
+    set_public_cache_headers(response, "MISS")
+    return result
 
 
 @router.get("/versions", response_model=VersionsResponse)

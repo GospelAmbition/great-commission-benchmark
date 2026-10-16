@@ -18,6 +18,9 @@ DERIVED_NAMESPACES = (
     "public_stats",
     "models_list",
     "model_comparison",
+    "model_by_id",
+    "model_details",
+    "provider_articles",
 )
 
 ALL_PUBLISHED_NAMESPACES = ("model_snapshot", *DERIVED_NAMESPACES, "versions")

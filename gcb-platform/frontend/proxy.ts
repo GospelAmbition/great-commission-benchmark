@@ -1,6 +1,31 @@
+import { NextResponse } from "next/server";
 import { auth } from "./auth";
+import {
+  allowRequest,
+  clientIpFromHeaders,
+  isScannerPath,
+} from "./lib/crawler-guard";
 
-export default auth;
+export default auth((req) => {
+  const pathname = req.nextUrl.pathname;
+  if (isScannerPath(pathname)) {
+    return new NextResponse(null, { status: 404 });
+  }
+  // Frontend API routes (warm/revalidate) are not visitor page crawls.
+  if (pathname.startsWith("/api/")) {
+    return;
+  }
+  const ip = clientIpFromHeaders(req.headers);
+  if (!allowRequest(ip)) {
+    return new NextResponse("Too Many Requests", {
+      status: 429,
+      headers: {
+        "Retry-After": "30",
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+});
 
 export const config = {
   matcher: [

@@ -15,6 +15,9 @@ describe("model page lookup", () => {
       expect(await getModel(id)).toEqual(model);
       const url = new URL((fetch as jest.Mock).mock.calls[0][0]);
       expect(url.searchParams.get("model_id")).toBe(model.model_id);
+      expect((fetch as jest.Mock).mock.calls[0][1]).toEqual(
+        expect.objectContaining({ next: { revalidate: 300 } }),
+      );
     },
   );
 

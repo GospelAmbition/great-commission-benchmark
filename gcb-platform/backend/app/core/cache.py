@@ -200,10 +200,21 @@ class RedisCache:
     KEY_PREFIX = "gcb:"
     REFRESHING_SET = "gcb:refreshing"
 
+    # Fail fast so a slow/hung Redis cannot stall the whole worker.
+    SOCKET_TIMEOUT_SECONDS = 2
+    MAX_CONNECTIONS = 20
+
     def __init__(self, redis_url: str):
         import redis.asyncio as aioredis
         self._redis: aioredis.Redis = aioredis.from_url(
-            redis_url, encoding="utf-8", decode_responses=True
+            redis_url,
+            encoding="utf-8",
+            decode_responses=True,
+            socket_connect_timeout=self.SOCKET_TIMEOUT_SECONDS,
+            socket_timeout=self.SOCKET_TIMEOUT_SECONDS,
+            retry_on_timeout=False,
+            health_check_interval=30,
+            max_connections=self.MAX_CONNECTIONS,
         )
 
     def _k(self, key: str) -> str:
@@ -367,6 +378,8 @@ CACHE_TTL = {
     "recent_tests": 86400,       # 24 hours; invalidated when tests/articles change
     "category_rankings": 86400,  # 24 hours
     "model_details": 86400,      # 24 hours
+    "model_by_id": 86400,        # 24 hours; full /models/by-id payload
+    "provider_articles": 86400,  # 24 hours
     "public_stats": 86400,       # 24 hours
     "versions": 86400,           # 24 hours
     "models_list": 86400,        # 24 hours
@@ -382,6 +395,8 @@ CACHE_STALE_TTL = {
     "recent_tests": 2592000,      # 30 days
     "category_rankings": 2592000, # 30 days
     "model_details": 2592000,     # 30 days
+    "model_by_id": 2592000,       # 30 days
+    "provider_articles": 2592000, # 30 days
     "public_stats": 2592000,      # 30 days
     "versions": 2592000,          # 30 days
     "models_list": 2592000,       # 30 days

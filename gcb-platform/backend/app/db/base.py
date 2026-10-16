@@ -12,19 +12,23 @@ logger = logging.getLogger(__name__)
 
 logger.info("Initializing database configuration...")
 
-# Create engine with connection pooling
-# Enable pool_pre_ping to automatically reconnect stale connections
-# This helps handle transient connection errors like "server login has been failing"
+# Connection pool sized for a single uvicorn worker. Overflow exists for
+# brief bursts; pool_timeout fails fast so exhausted pools cannot stall
+# every in-flight request for the SQLAlchemy default of 30s.
+# statement_timeout / lock_timeout keep one slow query from holding a
+# checked-out connection indefinitely (Oct 2026 crawler hang: CPU and
+# Postgres were idle while workers waited on Redis/pool).
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,   # Check connections before using them (reconnects if stale)
     pool_recycle=300,     # Recycle connections after 5 minutes
-    pool_size=5,          # Smaller pool size
-    max_overflow=10,      # Allow some overflow
+    pool_size=5,
+    max_overflow=10,
+    pool_timeout=5,
     connect_args={
-        "connect_timeout": 10,  # 10 second connection timeout (increased for reliability)
-        "options": "-c statement_timeout=30000"  # 30 second statement timeout
-    }
+        "connect_timeout": 5,
+        "options": "-c statement_timeout=15000 -c lock_timeout=5000",
+    },
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

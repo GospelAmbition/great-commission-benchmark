@@ -31,6 +31,15 @@ def isolated_response_cache(monkeypatch):
     yield
 
 
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Keep per-IP budgets from leaking across tests in the same process."""
+    from app.core.rate_limit import rate_limiter
+    rate_limiter.reset_all()
+    yield
+    rate_limiter.reset_all()
+
+
 # Custom UUID type that works with SQLite
 class UUIDType(TypeDecorator):
     """Platform-independent UUID type."""

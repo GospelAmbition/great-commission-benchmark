@@ -53,6 +53,15 @@ export default function robots(): MetadataRoute.Robots {
           // Error pages
           "/_next/",
         ],
+        // Honored by many non-Google crawlers. Combined with per-IP limits
+        // this keeps sequential leaderboard/model crawls from saturating SSR.
+        crawlDelay: 10,
+      },
+      {
+        userAgent: ["AhrefsBot", "SemrushBot", "MJ12bot", "DotBot", "Bytespider"],
+        allow: ["/", "/leaderboard", "/about", "/faq", "/llms.txt"],
+        disallow: ["/admin/", "/dashboard/", "/moderator/", "/api/"],
+        crawlDelay: 30,
       },
       {
         // Specific rules for GPTBot (ChatGPT)

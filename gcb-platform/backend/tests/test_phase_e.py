@@ -89,18 +89,22 @@ class TestRateLimiting:
 
     @pytest.mark.asyncio
     async def test_rate_limit_metadata_present(self, request_and_limiter):
+        from app.core.rate_limit import RATE_LIMITS
         request, dependency = request_and_limiter
+        limit = RATE_LIMITS["public"]["limit"]
         assert await dependency(request) is True
         assert request.state.rate_limit_headers == {
-            "X-RateLimit-Limit": "100", "X-RateLimit-Remaining": "99",
+            "X-RateLimit-Limit": str(limit), "X-RateLimit-Remaining": str(limit - 1),
             "X-RateLimit-Reset": "60", "X-RateLimit-Window": "60",
         }
 
     @pytest.mark.asyncio
     async def test_rate_limit_exceeded(self, request_and_limiter):
         from fastapi import HTTPException
+        from app.core.rate_limit import RATE_LIMITS
         request, dependency = request_and_limiter
-        for _ in range(100):
+        limit = RATE_LIMITS["public"]["limit"]
+        for _ in range(limit):
             assert await dependency(request) is True
         with pytest.raises(HTTPException) as caught:
             await dependency(request)
