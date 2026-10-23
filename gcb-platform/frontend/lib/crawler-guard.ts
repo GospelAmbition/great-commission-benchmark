@@ -54,6 +54,22 @@ export function isScannerPath(path: string): boolean {
   return normalized.endsWith(".php") || normalized.endsWith(".env");
 }
 
+type RequestHeaders = { get(name: string): string | null };
+
+export function isPrefetchRequest(headers: RequestHeaders): boolean {
+  return ["1", "2"].includes(headers.get("next-router-prefetch") || "") ||
+    headers.get("next-router-segment-prefetch") !== null ||
+    headers.get("purpose")?.toLowerCase() === "prefetch" ||
+    /\bprefetch\b/i.test(headers.get("sec-purpose") || "");
+}
+
+// Keep speculative link fetches bounded without charging them to navigation.
+// RSC alone is not a prefetch signal: client-side clicks use it too.
+export function allowPageRequest(ip: string, headers: RequestHeaders, now = Date.now()): boolean {
+  const kind = isPrefetchRequest(headers) ? "prefetch" : "navigation";
+  return allowRequest(`${kind}:${ip}`, now);
+}
+
 export function allowRequest(ip: string, now = Date.now()): boolean {
   const windowHits = (hitsByIp.get(ip) || []).filter(
     (timestamp) => now - timestamp < PAGE_RATE_LIMIT.windowMs,

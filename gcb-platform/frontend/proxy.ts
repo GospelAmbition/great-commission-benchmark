@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "./auth";
 import {
-  allowRequest,
+  allowPageRequest,
   clientIpFromHeaders,
   isScannerPath,
 } from "./lib/crawler-guard";
@@ -16,7 +16,7 @@ export default auth((req) => {
     return;
   }
   const ip = clientIpFromHeaders(req.headers);
-  if (!allowRequest(ip)) {
+  if (!allowPageRequest(ip, req.headers)) {
     return new NextResponse("Too Many Requests", {
       status: 429,
       headers: {
