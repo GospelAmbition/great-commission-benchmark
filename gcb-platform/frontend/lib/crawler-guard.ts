@@ -6,11 +6,13 @@
  * Backend rate limits still apply to direct API clients.
  */
 
+// Generous allowance for readers and agents consuming public content.
+// Applied independently to navigation and prefetch traffic for each IP.
 export const PAGE_RATE_LIMIT = {
   windowMs: 60_000,
-  limit: 90,
+  limit: 600,
   burstWindowMs: 10_000,
-  burstLimit: 25,
+  burstLimit: 150,
 } as const;
 
 const SCANNER_EXACT = new Set([
