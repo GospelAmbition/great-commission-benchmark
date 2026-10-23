@@ -1,6 +1,7 @@
 import {
   PAGE_RATE_LIMIT,
   allowRequest,
+  allowPageRequest,
   clientIpFromHeaders,
   isScannerPath,
   resetCrawlerGuardForTests,
@@ -69,5 +70,42 @@ describe("robots.txt", () => {
 
     const aggressive = rules.find((rule) => Array.isArray(rule.userAgent) && rule.userAgent.includes("AhrefsBot"));
     expect(aggressive?.crawlDelay).toBe(30);
+  });
+});
+
+
+describe("navigation and speculative fetch budgets", () => {
+  const headers = (values: Record<string, string>) => ({
+    get: (name: string) => values[name] ?? null,
+  });
+  beforeEach(resetCrawlerGuardForTests);
+
+  it.each([
+    { "next-router-prefetch": "1" },
+    { "next-router-prefetch": "2" },
+    { "next-router-segment-prefetch": "/_tree" },
+    { purpose: "prefetch" },
+    { "sec-purpose": "prefetch;prerender" },
+  ])("keeps a homepage prefetch burst from blocking refreshes and clicks: %o", (signals) => {
+    const now = 1_000_000;
+    const ip = "192.0.2.1";
+    expect(allowPageRequest(ip, headers({}), now)).toBe(true);
+    for (let i = 0; i < PAGE_RATE_LIMIT.burstLimit; i++) {
+      expect(allowPageRequest(ip, headers(signals as Record<string, string>), now)).toBe(true);
+    }
+    // Prefetch still has a limit, including when a crawler supplies the headers.
+    expect(allowPageRequest(ip, headers(signals as Record<string, string>), now)).toBe(false);
+    expect(allowPageRequest(ip, headers({}), now)).toBe(true);
+    expect(allowPageRequest(ip, headers({ rsc: "1" }), now)).toBe(true);
+  });
+
+  it("still limits repeated navigation, including client-side RSC clicks, and recovers", () => {
+    const now = 1_000_000;
+    for (let i = 0; i < PAGE_RATE_LIMIT.burstLimit; i++) {
+      expect(allowPageRequest("192.0.2.1", headers({ rsc: "1" }), now)).toBe(true);
+    }
+    expect(allowPageRequest("192.0.2.1", headers({}), now)).toBe(false);
+    expect(allowPageRequest("192.0.2.2", headers({}), now)).toBe(true);
+    expect(allowPageRequest("192.0.2.1", headers({}), now + PAGE_RATE_LIMIT.burstWindowMs)).toBe(true);
   });
 });
