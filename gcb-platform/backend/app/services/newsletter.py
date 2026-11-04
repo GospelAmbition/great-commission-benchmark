@@ -1,6 +1,5 @@
 """Newsletter service with MailerLite integration"""
 import logging
-import re
 import httpx
 from typing import Optional, Dict, Any, List, Tuple, Literal
 from app.core.config import settings
@@ -318,12 +317,6 @@ class NewsletterService:
             return [], None
 
     @staticmethod
-    def _strip_html_for_plain(html: str, max_len: int = 12000) -> str:
-        text = re.sub(r"<[^>]+>", " ", html or "")
-        text = re.sub(r"\s+", " ", text).strip()
-        return text[:max_len]
-
-    @staticmethod
     async def create_and_send_instant_regular_campaign(
         *,
         name: str,
@@ -344,7 +337,6 @@ class NewsletterService:
         if not group_id:
             return {"ok": False, "error": "missing_group_id"}
 
-        plain = NewsletterService._strip_html_for_plain(html_content)
         payload: Dict[str, Any] = {
             "name": name[:255],
             "type": "regular",
@@ -354,7 +346,6 @@ class NewsletterService:
                     "from": from_email,
                     "from_name": from_name[:255],
                     "content": html_content,
-                    "plain_text": plain,
                 }
             ],
             "groups": [group_id],

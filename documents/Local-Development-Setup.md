@@ -271,6 +271,7 @@ OPENROUTER_API_KEY=sk-or-xxx
 # Newsletter (MailerLite - optional for local dev)
 # MAILERLITE_API_KEY=
 # MAILERLITE_GROUP_ID=
+# MAILERLITE_FROM=Great Commission Benchmark <team@greatcommissionbenchmark.ai>
 
 # Storage (Railway Simple Storage or S3 - optional for local dev)
 # S3_ACCESS_KEY_ID=

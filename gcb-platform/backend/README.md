@@ -298,7 +298,8 @@ pytest tests/test_phase_e.py -v
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | Optional |
 | `PAYMENT_DEV_MODE` | Bypass payment processing (dev only) | `False` |
 | `RESEND_API_KEY` | Resend email API key | Optional |
-| `EMAIL_FROM` | Email sender address | Required if using email |
+| `EMAIL_FROM` | Transactional email sender (`Name <email>`) | Required if using email |
+| `MAILERLITE_FROM` | MailerLite campaign sender (`Name <email>`). Falls back to `EMAIL_FROM` when unset | Optional |
 | `MAILERLITE_API_KEY` | MailerLite newsletter API key | Optional |
 | `MAILERLITE_GROUP_ID` | MailerLite subscriber group ID (required for API campaign sends) | Optional |
 | `MAILERLITE_PROD_GROUP_ID` | MailerLite production newsletter group ID (preferred over `MAILERLITE_GROUP_ID`) | Optional |
@@ -408,11 +409,16 @@ Admin management endpoints for test recipients:
 - `PATCH /api/admin/newsletter/test-recipients/{recipient_id}`
 - `DELETE /api/admin/newsletter/test-recipients/{recipient_id}` (soft-deactivate)
 
-The campaign sender uses the address parsed from **`EMAIL_FROM`** (`Name <email@domain>`);
-that address must be a verified sender in MailerLite. The custom HTML campaign API
-requires MailerLite's Advanced plan. Dry runs validate audiences and connectivity;
-sender, domain and plan eligibility are checked by MailerLite during creation.
-Confirm the account mailing address and footer in the rendered test email before rollout.
+The campaign sender is parsed from **`MAILERLITE_FROM`** when set, otherwise
+**`EMAIL_FROM`**. Both use `Name <email@domain>`. `MAILERLITE_FROM` is only for
+MailerLite campaigns; transactional Resend mail keeps `EMAIL_FROM`. The MailerLite
+address must be a verified sender (production:
+`Great Commission Benchmark <team@greatcommissionbenchmark.ai>`). Campaign creates
+send HTML in `emails[].content` and omit `plain_text`, which the current Campaigns
+API rejects. The custom HTML campaign API requires MailerLite's Advanced plan. Dry
+runs validate audiences and connectivity; sender, domain and plan eligibility are
+checked by MailerLite during creation. Confirm the account mailing address and
+footer in the rendered test email before rollout.
 
 Recommended operator workflow:
 1. Preview HTML (`/newsletter/preview-html`)

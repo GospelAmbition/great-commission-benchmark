@@ -153,9 +153,46 @@ def test_test_audience_allows_draft_and_routes_only_to_test_group(campaign_setup
     assert response.status_code == 200
     created = next(kwargs["json"] for method, path, kwargs in api.calls if method == "POST" and path == "/campaigns")
     assert created["groups"] == ["qa"]
-    assert '{$unsubscribe}' in created["emails"][0]["content"]
-    assert '{$unsubscribe}' in created["emails"][0]["plain_text"]
-    assert "Designed and created by Gospel Ambition" in created["emails"][0]["content"]
+    email = created["emails"][0]
+    assert "plain_text" not in email
+    assert '{$unsubscribe}' in email["content"]
+    assert "Designed and created by Gospel Ambition" in email["content"]
+    assert "<" in email["content"]
+
+
+@pytest.mark.parametrize("mailerlite_from,expected_email,expected_name", [
+    ("", "noreply@e.greatcommissionbenchmark.ai", "Transactional"),
+    ("   ", "noreply@e.greatcommissionbenchmark.ai", "Transactional"),
+    ("Great Commission Benchmark <team@greatcommissionbenchmark.ai>", "team@greatcommissionbenchmark.ai", "Great Commission Benchmark"),
+])
+def test_campaign_sender_uses_mailerlite_from_or_email_from(campaign_setup, monkeypatch, mailerlite_from, expected_email, expected_name):
+    client, api, post, payload = campaign_setup
+    monkeypatch.setattr(settings, "EMAIL_FROM", "Transactional <noreply@e.greatcommissionbenchmark.ai>")
+    monkeypatch.setattr(settings, "MAILERLITE_FROM", mailerlite_from)
+    response = client.post("/api/admin/newsletter/send", json=payload)
+    assert response.status_code == 200
+    created = next(kwargs["json"] for method, path, kwargs in api.calls if method == "POST" and path == "/campaigns")
+    email = created["emails"][0]
+    assert "plain_text" not in email
+    assert email["from"] == expected_email
+    assert email["from_name"] == expected_name
+    assert email["content"]
+
+
+@pytest.mark.asyncio
+async def test_transactional_email_ignores_mailerlite_from(monkeypatch):
+    sent = {}
+    monkeypatch.setattr(settings, "RESEND_API_KEY", "test-key")
+    monkeypatch.setattr(settings, "EMAIL_FROM", "Transactional <noreply@e.greatcommissionbenchmark.ai>")
+    monkeypatch.setattr(settings, "MAILERLITE_FROM", "Great Commission Benchmark <team@greatcommissionbenchmark.ai>")
+
+    def capture(payload):
+        sent.update(payload)
+        return {"id": "email"}
+
+    monkeypatch.setattr("app.services.email.resend.Emails.send", capture)
+    assert await EmailService.send_email("person@example.com", "Subject", "<p>Hello</p>") is True
+    assert sent["from"] == "Transactional <noreply@e.greatcommissionbenchmark.ai>"
 
 
 @pytest.mark.parametrize("change,expected", [("draft", "published"), ("unconfirmed", "confirm_production_send")])

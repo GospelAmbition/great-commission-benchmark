@@ -224,6 +224,17 @@ Custom HTML requires the MailerLite Advanced plan and a verified sender. Dry run
 check audience readiness without creating a campaign; they do not prove plan,
 sender or domain eligibility. Confirm account footer/address in a real test email.
 
+Campaign creation posts HTML in `emails[].content` and omits `plain_text`.
+MailerLite's current Campaigns API
+([create a campaign](https://developers.mailerlite.com/docs/campaigns.html#create-a-campaign))
+does not accept `plain_text` on `POST /campaigns`; including it returns HTTP 422
+(`The emails.0 field must be an array.`). MailerLite generates the plain-text
+alternative. The campaign sender is `MAILERLITE_FROM` when set, otherwise
+`EMAIL_FROM`. Both use `Name <email@domain>`. `MAILERLITE_FROM` applies only to
+MailerLite campaigns. Transactional mail still uses `EMAIL_FROM` (Resend, verified
+on `e.greatcommissionbenchmark.ai`). The MailerLite-verified sender is
+`Great Commission Benchmark <team@greatcommissionbenchmark.ai>`.
+
 Migration `036` stores send diagnostics and routing. Live PostgreSQL concurrency,
 MailerLite integration, email rendering and actual delivery still require staging.
 Validation: 90 focused backend tests and 23 interface tests pass. TypeScript,
