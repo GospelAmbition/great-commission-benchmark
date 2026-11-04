@@ -168,8 +168,7 @@ async def send_campaign(db, request, actor_id, api=None):
             "name": f"GCB {request.campaign_type} {send_id}", "type": "regular", "groups": [group],
             "emails": [{"subject": (post["title"] or "Great Commission Benchmark")[:255],
                         "from": sender_email, "from_name": sender_name or "Great Commission Benchmark",
-                        "content": html,
-                        "plain_text": NewsletterService._strip_html_for_plain(html) + "\nUnsubscribe: {$unsubscribe}"}],
+                        "content": html}],
         })
         if not isinstance(created, dict) or not created.get("id"):
             raise MailerLiteError("MailerLite did not return a campaign ID")

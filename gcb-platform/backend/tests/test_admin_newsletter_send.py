@@ -153,9 +153,14 @@ def test_test_audience_allows_draft_and_routes_only_to_test_group(campaign_setup
     assert response.status_code == 200
     created = next(kwargs["json"] for method, path, kwargs in api.calls if method == "POST" and path == "/campaigns")
     assert created["groups"] == ["qa"]
-    assert '{$unsubscribe}' in created["emails"][0]["content"]
-    assert '{$unsubscribe}' in created["emails"][0]["plain_text"]
-    assert "Designed and created by Gospel Ambition" in created["emails"][0]["content"]
+    email = created["emails"][0]
+    # MailerLite create/update accept HTML in emails.*.content. plain_text is
+    # response-only; sending it makes POST /campaigns return 422
+    # "The emails.0 field must be an array."
+    assert set(email) == {"subject", "from", "from_name", "content"}
+    assert "plain_text" not in email
+    assert '{$unsubscribe}' in email["content"]
+    assert "Designed and created by Gospel Ambition" in email["content"]
 
 
 @pytest.mark.parametrize("change,expected", [("draft", "published"), ("unconfirmed", "confirm_production_send")])
