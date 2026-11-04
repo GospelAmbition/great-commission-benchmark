@@ -146,9 +146,9 @@ async def send_campaign(db, request, actor_id, api=None):
         raise CampaignError(400, "Configure the MailerLite API key and audience group before sending.")
     if NewsletterService.production_group_id() == NewsletterService.test_group_id():
         raise CampaignError(400, "Production and test audience groups must be different.")
-    sender_name, sender_email = parseaddr(settings.EMAIL_FROM)
+    sender_name, sender_email = parseaddr((settings.MAILERLITE_FROM or "").strip() or settings.EMAIL_FROM)
     if not sender_email or "@" not in sender_email:
-        raise CampaignError(400, "Configure a valid EMAIL_FROM verified sender in MailerLite.")
+        raise CampaignError(400, "Configure a valid MAILERLITE_FROM or EMAIL_FROM verified sender in MailerLite.")
     post, send_id, already_sent = reserve_send(db, request, actor_id)
     step = "preparing"
     try:
@@ -166,10 +166,12 @@ async def send_campaign(db, request, actor_id, api=None):
         record_step(db, send_id, step, target_group_id=group, recipient_count=len(audience))
         created = await api.request("POST", "/campaigns", json={
             "name": f"GCB {request.campaign_type} {send_id}", "type": "regular", "groups": [group],
+            # MailerLite's current Campaigns API accepts HTML in content and
+            # rejects a plain_text key on create (HTTP 422). It generates the
+            # plain-text alternative itself.
             "emails": [{"subject": (post["title"] or "Great Commission Benchmark")[:255],
                         "from": sender_email, "from_name": sender_name or "Great Commission Benchmark",
-                        "content": html,
-                        "plain_text": NewsletterService._strip_html_for_plain(html) + "\nUnsubscribe: {$unsubscribe}"}],
+                        "content": html}],
         })
         if not isinstance(created, dict) or not created.get("id"):
             raise MailerLiteError("MailerLite did not return a campaign ID")

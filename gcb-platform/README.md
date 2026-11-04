@@ -252,8 +252,9 @@ npm run lint:fix              # Fix auto-fixable issues
 | `STRIPE_SECRET_KEY` | Stripe secret key | Production |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | Production |
 | `RESEND_API_KEY` | Resend email service API key | Production |
-| `EMAIL_FROM` | Email sender address | Production |
+| `EMAIL_FROM` | Transactional email sender (`Name <email>`) | Production |
 | `MAILERLITE_API_KEY` | MailerLite newsletter API key | Optional |
+| `MAILERLITE_FROM` | MailerLite campaign sender (`Name <email>`). Falls back to `EMAIL_FROM` when unset | Optional |
 | `S3_ACCESS_KEY_ID` | S3-compatible storage access key | Optional |
 | `S3_SECRET_ACCESS_KEY` | S3-compatible storage secret | Optional |
 | `S3_BUCKET` | Storage bucket name | Optional |

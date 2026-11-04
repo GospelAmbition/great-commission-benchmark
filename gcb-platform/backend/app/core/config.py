@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     EMAIL_FROM: str = "Great Commission Benchmark <noreply@greatcommissionbenchmark.ai>"
     
     # Newsletter (MailerLite)
+    # Optional campaign sender, parsed like EMAIL_FROM ("Name <email>").
+    # Blank falls back to EMAIL_FROM. Transactional Resend mail ignores this.
+    MAILERLITE_FROM: str = ""
     MAILERLITE_API_KEY: str = ""
     MAILERLITE_GROUP_ID: str = ""  # Optional: specific subscriber group ID
     MAILERLITE_TEST_GROUP_ID: str = ""  # Optional: QA/test audience group ID

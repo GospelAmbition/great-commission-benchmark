@@ -97,6 +97,9 @@ EMAIL_FROM=Great Commission Benchmark <noreply@greatcommissionbenchmark.ai>
 # Newsletter (MailerLite)
 MAILERLITE_API_KEY=your-mailerlite-api-key
 MAILERLITE_GROUP_ID=your-group-id  # Optional: specific subscriber group
+# Optional campaign sender (Name <email>). Falls back to EMAIL_FROM when unset.
+# MailerLite campaigns only; transactional mail keeps EMAIL_FROM.
+MAILERLITE_FROM=Great Commission Benchmark <team@greatcommissionbenchmark.ai>
 
 # Storage (Railway Simple Storage - private buckets, served via backend proxy)
 S3_ACCESS_KEY_ID=your-railway-access-key

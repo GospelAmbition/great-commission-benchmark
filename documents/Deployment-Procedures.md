@@ -503,7 +503,7 @@ pip install gcb-runner==1.2.0
 | **Payments** | `STRIPE_*` | Railway variables |
 | **LLM** | `OPENROUTER_API_KEY`, `OPENROUTER_REFERER` | Railway variables |
 | **Email** | `RESEND_API_KEY`, `EMAIL_FROM` | Railway variables |
-| **Newsletter** | `MAILERLITE_API_KEY`, `MAILERLITE_GROUP_ID` | Railway variables |
+| **Newsletter** | `MAILERLITE_API_KEY`, `MAILERLITE_GROUP_ID`, `MAILERLITE_FROM` (`Name <email>`, optional; falls back to `EMAIL_FROM`; MailerLite campaigns only) | Railway variables |
 | **Storage** | `S3_*`, `BACKEND_PUBLIC_URL` | Railway variables |
 | **Analytics** | `NEXT_PUBLIC_UMAMI_*` | Railway variables (frontend only) |
 
